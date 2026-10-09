@@ -1,0 +1,68 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { ApiErrorState } from "@/components/ui/ApiErrorState";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Panel } from "@/components/ui/Panel";
+import { StateMessage } from "@/components/ui/StateMessage";
+import { evaluateRequirementCapacity } from "@/features/capacity/api";
+import { CapacityOverview } from "@/features/capacity/components/CapacityOverview";
+import { MatchCard } from "@/features/matching/components/MatchCard";
+import { getRequirement } from "@/features/requirements/api";
+import { RequirementFacts } from "@/features/requirements/components/RequirementFacts";
+import { requireOrganizationContext } from "@/server/session";
+
+export const metadata: Metadata = { title: "Requirement" };
+
+export default async function RequirementDetailPage({
+  params,
+}: PageProps<"/app/organization/requirements/[id]">) {
+  const { id } = await params;
+  const { canManage } = await requireOrganizationContext();
+  const result = await getRequirement(id);
+  if (!result.ok) {
+    if (result.error.code === "NOT_FOUND" || result.error.code === "VALIDATION_ERROR") notFound();
+    return <ApiErrorState error={result.error} requestId={result.requestId} />;
+  }
+  const { requirement } = result.data;
+  const capacity = canManage ? await evaluateRequirementCapacity(requirement.id) : null;
+
+  return (
+    <>
+      <PageHeader eyebrow="Work requirement" title={requirement.title} />
+      <div className="space-y-6">
+        <Panel>
+          <RequirementFacts requirement={requirement} />
+        </Panel>
+        {!capacity ? (
+          <StateMessage
+            title="Capacity analysis is available to managers and admins"
+            description="Ask an organization admin for the manager role."
+          />
+        ) : !capacity.ok ? (
+          <ApiErrorState error={capacity.error} requestId={capacity.requestId} />
+        ) : (
+          <>
+            <CapacityOverview requirement={requirement} capacity={capacity.data.capacity} />
+            <section aria-labelledby="internal-title">
+              <h2 id="internal-title" className="mb-3 text-lg font-semibold tracking-tight">
+                Internal workforce ({capacity.data.internal.length})
+              </h2>
+              {capacity.data.internal.length === 0 ? (
+                <StateMessage
+                  title="No technicians in your organization yet"
+                  description="The whole headcount is a gap to source externally."
+                />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {capacity.data.internal.map((item) => (
+                    <MatchCard key={item.candidate.id} item={item} />
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
