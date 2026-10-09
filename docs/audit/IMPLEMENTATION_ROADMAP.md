@@ -19,6 +19,23 @@ remote E2E suite `tests/e2e/remote-smoke.test.ts` (`pnpm e2e:remote`). Backend a
 (READY; CORS fail-closed hardening applied locally). Current verdict: **NO-GO until authorized** — see the
 plan §7. Phases 1–7 below are unchanged and remain blocked behind step 0.
 
+## Phase 0.6 (2026-10-09) — sources recovered, staging before anything else
+
+- **Step 0 is now "create STAGING"** (`docs/architecture/ENVIRONMENTS.md` §4): second Supabase project,
+  identical migrations, functions with `--project-ref <staging-ref> --use-api`, three synthetic accounts,
+  Vercel Preview bound to staging, `pnpm e2e:remote` (10 checks). Production deploy only after that passes.
+- Marketplace features (phase 6) stay frozen until staging is verifiable, as requested.
+- Where the recovered candidates land if approved (no new phases; IDs in `FEATURE_INVENTORY.md` §J–M):
+  - Phase 1 (profile): CF-J01 engagement modes, CF-L01 onboarding intent, CF-L03 completeness hint,
+    CF-J04 "employer hidden" rule in BR-8, CF-J11/J12 rules in `BUSINESS_RULES.md`, FD-19 human-in-the-loop sentence.
+  - Phase 2 (qualifications/availability): CF-K19 licence authority, CF-L05 one-tap 72 h window, FD-21 modes (C-8).
+  - Phase 3 (documents/privacy): CF-L09 tool-calibration document type, FD-22 per-case authorisation, CF-K06 expiry alerts.
+  - Phase 4/5 (needs/capacity): CF-K16 publish-time preview (reuse `capacity-evaluate` on draft), FD-28 fields (C-9).
+  - Phase 6 (marketplace): CF-L07 apply preview sheet (= FD-23 Candidate Pack spec), CF-K17/L11 blocker shown to the technician, CF-K09 document request.
+  - Phase 7: CF-K07 AOG outreach (opt-in, FD-24), CF-L10 logbook disclaimer (FD-25), tools priorities (FD-26).
+  - Open decisions before any of the above: C-7/C-14 visibility + org verification, C-10 matching inputs
+    (FD-20, CF-J10, L04, K08), C-12 brand identity, C-13 multi-vertical, C-15 launch order, OD-7 pricing (FD-29, K12, L13).
+
 ## Phase 1 — Identity & profile (P0) · value high · risk low · M
 
 - `professional-profile` EF (GET/PATCH): base location, mobility, years, current status, visibility.

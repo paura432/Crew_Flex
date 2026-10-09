@@ -11,8 +11,9 @@ Design tokens already match S1: navy `#0c2137`, ink `#172c44`, accent `#ff982f`,
 ok/warn/danger, Inter. S1 additionally uses **Outfit** for display headings (Google Fonts) — not adopted
 (self-hosted Inter only; P2).
 
-Phase 0.5 (2026-10-09): no visual source was added (S4–S8 still missing, `SOURCE_INVENTORY.md`), so the
-reference remains S1 and every row below is unchanged. No screen was modified in this phase.
+Phase 0.6 (2026-10-09): S4–S7 were recovered and rendered (`evidence/src-S4…S7-*.jpg`, 26 files). They do
+not change the reference: S1 remains the application design source. Their visual systems are compared in
+§Other prototypes below; the only decision they raise is brand identity (C-12).
 
 ## Global chrome
 
@@ -55,3 +56,16 @@ reference remains S1 and every row below is unchanged. No screen was modified in
 - Day-cell click semantics: S1 toggles a per-day state in local state; the current model stores UTC
   windows. A day click creates/updates/deletes a one-day window; days covered by a longer window are
   shown as covered and edited through the windows panel (no silent splitting of windows).
+
+## Other prototypes (Phase 0.6) — visual systems vs S1
+
+| Src | Canvas / accent                                                                                | Type                                               | Responsive                                                                   | Relation to S1 tokens                                                               | Use                                                                                |
+| --- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| S4  | dark `#04101d`, cyan `#1de0d5`, sky `#42bdf6`, amber `#ffc56c`, glass cards                    | Inter (not loaded; OS fallback), weights 600–900   | 3 breakpoints; at 390 one H1 word and one nowrap badge clip (3 px, masked)   | Incompatible (dark marketing surface)                                               | Marketing only; components are static illustrations; **not** a design-system input |
+| S5  | dark `#050f1d`, cyan `#1fd8d3`, sky `#40b8f7`                                                  | Inter declared, not loaded                         | no overflow at 1440/390; decorative orbit clipped                            | Incompatible; brand assets (monogram, wordmark, tagline) are the only reusable bits | Brand decision C-12 (cyan-dark marketing vs orange-light product)                  |
+| S6  | light `#f5f8fc`, navy `#071527`, orange `#ff7a18`, blue `#1b4cff`, cyan `#59d4ff`              | Inter 800–900 via Google Fonts (blocked in render) | one 900 px breakpoint; "tables" collapse to label-less stacked cells at 390  | Same family as S1 (navy + orange on light canvas); radii 24–36 px larger than S1    | Confirms the S1 identity; company mock-ups are references for phases 4–6 layouts   |
+| S7  | light `#f4f7fb`, navy `#07182f`, ink `#142036`, orange `#ff8a1f`, purple `#9b7cff` for privacy | Inter declared, weights up to 950                  | mobile-only (440 px frame, no media queries); desktop shows a centred column | **Closest to S1** (and to the repo tokens)                                          | Mobile IA reference for the professional side (bottom nav rejected, L14)           |
+
+Documented decision: the application keeps the S1/`DESIGN_SYSTEM.md` tokens (navy `#0c2137`, ink `#172c44`,
+accent `#ff982f`, canvas `#f5f7fa`, Inter). The dark-cyan identity of S4/S5 is a marketing/brand question
+(`OPEN_DECISIONS.md` C-12), not a parity gap of the product UI.

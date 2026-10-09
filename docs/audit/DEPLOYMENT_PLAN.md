@@ -1,4 +1,10 @@
-# Deployment plan — Edge Functions to `sbjkzrkmcekokkqiuvvh` (Phase 0.5)
+# Deployment plan — Edge Functions (Phase 0.5 → retargeted to STAGING in Phase 0.6)
+
+**Phase 0.6 (2026-10-09, evening):** the first deployment target is now the STAGING project described in
+`docs/architecture/ENVIRONMENTS.md` (to be created by the user). The sequence in §3 stays valid with
+`--project-ref <staging-ref> --use-api` on every command and the staging branch domain in `ALLOWED_ORIGINS`;
+production follows only after the ten E2E checks pass on staging. The remote E2E now covers the ten
+mandatory checks (§6 updated).
 
 Status: **PREPARED, NOT EXECUTED.** Every step below is a proposal awaiting explicit authorization.
 Nothing in this phase touched the remote project, GitHub or Vercel.
@@ -80,24 +86,28 @@ Rollback is always "delete the function(s)" — never a schema change, never dat
 - Credentials go only into `.env.e2e` (ignored by git; template `.env.e2e.example`). Rotate/delete the
   accounts when no longer needed.
 
-## 6. E2E that will run (`tests/e2e/remote-smoke.test.ts`, `pnpm e2e:remote`)
+## 6. E2E that will run (`tests/e2e/remote-smoke.test.ts`, `pnpm e2e:remote`, staging only)
 
-| #   | Check                                                                                       | Proves                                   |
-| --- | ------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| 1   | `health` 200 with envelope and UUID request id                                              | deploy + envelope                        |
-| 2   | `professional-availability` without token → 401 `UNAUTHORIZED`                              | JWT verification in production           |
-| 3   | Pro A: POST 201 → GET lists it → PATCH 200                                                  | persistence, ownership from JWT          |
-| 4   | Pro B: GET does not list A's window; PATCH/DELETE A's id → 404; A's window still present    | RLS + ownership filter across real users |
-| 5   | Org admin: POST requirement 201 → capacity 200 (`gap` numeric) → matching 200               | org authorization, RPCs, shared domain   |
-| 6a  | Pro A: POST requirement → 403                                                               | role check from DB, not from client      |
-| 6b  | Pro A: capacity on the org's requirement → 403/404                                          | no cross-organization access             |
-| —   | Cleanup: the window is deleted; the requirement stays (no delete path in V0, synthetic org) | documented residue                       |
+| #   | Check                                                                                                                                         | Proves                                                       |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 0   | `health` 200 with envelope and UUID request id                                                                                                | deploy + envelope                                            |
+| 1   | Sign-in of professional A and B; token accepted by a function                                                                                 | real JWT verification in the target environment              |
+| 2   | Pro A: POST window → 201 with UUID                                                                                                            | create                                                       |
+| 3   | Pro A: PATCH → 200 with new status/end; DELETE → 200 and gone                                                                                 | edit + delete                                                |
+| 4   | Fresh sign-in (new session) lists the edited window with the edited values                                                                    | persistence after reload                                     |
+| 5   | Pro B: list excludes A's window; PATCH/DELETE A's id → 404; direct PostgREST select as B → `[]`                                               | isolation between professionals (function layer **and** RLS) |
+| 6   | Org admin: POST requirement → 201; GET `?id=` returns it                                                                                      | authorized creation                                          |
+| 7   | capacity-evaluate → 200; `required = 1`; `gap = max(0, required − internallyEligible)`                                                        | capacity evaluation                                          |
+| 8   | matching-evaluate twice → identical `summary` and `candidates`; no e-mail-like ids                                                            | deterministic, pseudonymous matching                         |
+| 9   | No token → 401; malformed token → 401; professional POST requirement → 403                                                                    | 401/403                                                      |
+| 10  | Pro A: GET the org's requirement → 404; capacity on it → 403/404; direct PostgREST select → `[]`                                              | cross-organization protection                                |
+| —   | Runner refuses `E2E_SUPABASE_URL` containing the production ref; cleanup deletes the window; one requirement row remains in the synthetic org | safety + documented residue                                  |
 
-Skipped automatically when `.env.e2e` is absent (so `pnpm test:run` stays green offline).
+Currently **9 tests skipped** (no `.env.e2e`): not PASS, not FAIL — not executed.
 
 ## 7. Verdict
 
-**NO-GO today** — not because of the code (audit: READY, gate green) but because the authorizations in
-section 8 of the delivery report are missing: approval to deploy to the only (production) project, creation
-of the synthetic accounts, and the branch being pushed/merged so Vercel and Supabase run the same code.
-Once those are given, the sequence in section 3 is **GO** with the rollback above.
+**NO-GO for production** (unchanged) and **GO for STAGING once it exists**: the code is ready
+(`EDGE_FUNCTIONS_AUDIT.md` §Phase 0.6), the gate is green, the plan and rollback are written, and no step
+touches production. What is missing is human work: create the staging project and accounts (plan in
+`ENVIRONMENTS.md` §4), push the branch, and provide `.env.e2e`.

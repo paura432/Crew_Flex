@@ -92,3 +92,22 @@ authenticated deployed screens, axe/lighthouse.
 
 CF-C01…C04 = **IMPLEMENTED_UNVERIFIED**: fully implemented and tested locally (domain, validation,
 RLS on Postgres 17, Deno handlers, UI), not yet verified against the deployed stack.
+
+## Phase 0.6 (2026-10-09, evening) — executed in this session
+
+| Check                                       | Result                                                                                                                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`                                 | PASS                                                                                                                                                                          |
+| `pnpm typecheck`                            | PASS                                                                                                                                                                          |
+| `pnpm test:run` (Vitest)                    | PASS — 11 files, 101 tests; `tests/e2e/remote-smoke.test.ts` **skipped (9 tests)** because `.env.e2e` is absent — not PASS, not executed                                      |
+| `pnpm format:check`                         | PASS                                                                                                                                                                          |
+| `pnpm lint:edge`                            | PASS — 17 files                                                                                                                                                               |
+| `pnpm typecheck:edge`                       | PASS                                                                                                                                                                          |
+| `pnpm test:edge`                            | PASS — **22 tests** (+1: CORS fail-closed, parsing, exact-origin; preflight tests now set `ALLOWED_ORIGINS` explicitly)                                                       |
+| `pnpm build`                                | PASS                                                                                                                                                                          |
+| `git diff --check`                          | PASS                                                                                                                                                                          |
+| Husky pre-commit                            | ran on the Phase 0.6 commit (lint-staged → typecheck → test:run)                                                                                                              |
+| Local bundling (`deno bundle`, 5 functions) | PASS — all entrypoints bundle with the import map; 7 `src/` modules per function resolved (`EDGE_FUNCTIONS_AUDIT.md` §Phase 0.6). Supabase CLI bundling: to verify on staging |
+| Source renders (S4–S7, 1440/390)            | 26 screenshots; 0 page errors; one blocked Google Fonts request (S6); 3 px masked clip in S4 at 390                                                                           |
+
+Not executed: the ten remote E2E checks (no staging project yet), Playwright UI journeys, axe/lighthouse.

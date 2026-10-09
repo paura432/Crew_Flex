@@ -98,6 +98,8 @@ Deno.test("unsupported methods return METHOD_NOT_ALLOWED", async () => {
 
 Deno.test("CORS: allowlisted origin is echoed, others get no ACAO and never *", async () => {
   const restore = silence();
+  const previousOrigins = Deno.env.get("ALLOWED_ORIGINS");
+  Deno.env.set("ALLOWED_ORIGINS", "http://localhost:3000");
   const allowed = await health(
     new Request("http://fn/health", { headers: { Origin: "http://localhost:3000" } }),
   );
@@ -110,6 +112,8 @@ Deno.test("CORS: allowlisted origin is echoed, others get no ACAO and never *", 
       headers: { Origin: "http://localhost:3000" },
     }),
   );
+  if (previousOrigins === undefined) Deno.env.delete("ALLOWED_ORIGINS");
+  else Deno.env.set("ALLOWED_ORIGINS", previousOrigins);
   restore();
   assertEquals(allowed.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000");
   assertEquals(denied.headers.get("Access-Control-Allow-Origin"), null);

@@ -64,11 +64,13 @@ The client adds `NETWORK_ERROR` when a function cannot be reached.
 `getClaims`, compatible with asymmetric signing keys), `import_map = "./functions/deno.json"`.
 
 Runtime env (platform provided): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEYS`),
-`SB_REGION` (hosted runtime marker). Config secret: `ALLOWED_ORIGINS` (comma-separated browser origins,
-production value `https://crew-flex.vercel.app`). CORS fails closed: in the hosted runtime a missing
-`ALLOWED_ORIGINS` allows no browser origin; the localhost defaults apply only to local
-`supabase functions serve` (template `supabase/functions/.env.example`). Future secrets (e.g.
-`RESEND_API_KEY`) only through `supabase secrets set NAME=value`, read with `Deno.env.get` at runtime.
+Config secret: `ALLOWED_ORIGINS` (comma-separated exact browser origins; production
+`https://crew-flex.vercel.app`, staging its branch domain — `ENVIRONMENTS.md`). **CORS fails closed in
+every environment**: a missing or empty `ALLOWED_ORIGINS` allows no browser origin; there is no runtime
+detection (`SB_REGION` is not consulted) and no localhost default. Local `supabase functions serve` sets
+it explicitly in `supabase/functions/.env` (template `supabase/functions/.env.example`). Server-side calls
+from the Next.js app send no `Origin` and are unaffected. Future secrets (e.g. `RESEND_API_KEY`) only
+through `supabase secrets set NAME=value`, read with `Deno.env.get` at runtime.
 
 ## Local verification
 

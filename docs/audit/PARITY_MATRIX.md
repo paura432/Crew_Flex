@@ -48,16 +48,57 @@ locally), a deployment plan with rollback exists (`DEPLOYMENT_PLAN.md`) and a re
 prepared (`tests/e2e/remote-smoke.test.ts`). Rows CF-C01–C04, CF-F*, CF-G* move to VERIFIED only after
 that suite passes against production.
 
-## Totals (55 features inventoried)
+## Phase 0.6 additions — candidates from S4–S8 (2026-10-09)
+
+32 rows added from the recovered sources (`FEATURE_INVENTORY.md` §J–M). Parity is "Pending" everywhere: no
+UI or backend exists for them, except where the current code already covers the behaviour (PARTIAL /
+IMPLEMENTED_UNVERIFIED). Priority reflects the audit recommendation, not an approved scope.
+
+| ID     | Function                                       | Source | UI actual                   | Backend                      | Visual parity | Functional parity | Status                 | Priority | Evidence                                        |
+| ------ | ---------------------------------------------- | ------ | --------------------------- | ---------------------------- | ------------- | ----------------- | ---------------------- | -------- | ----------------------------------------------- |
+| CF-J01 | Engagement modes                               | S4     | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P2       | `sources/S4-…` §5, `src-S4-1440.jpg`            |
+| CF-J03 | Availability-gated visibility to verified orgs | S4     | Absent                      | none                         | Pending       | OD (C-7, C-14)    | SOURCE_ONLY            | P1 (OD)  | `sources/S4-…` §3.6                             |
+| CF-J04 | Limited profile hides current employer         | S4     | Absent                      | none                         | n/a           | Pending (rule)    | SOURCE_ONLY            | P1       | `sources/S4-…` §3.6                             |
+| CF-J10 | Specialty / environment taxonomy               | S4     | Absent                      | none                         | Pending       | OD (C-10)         | SOURCE_ONLY            | P2 (OD)  | `sources/S4-…` §3.3                             |
+| CF-J11 | Flex-work compliance disclaimer + consent      | S4     | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P1       | `sources/S4-…` §3.4                             |
+| CF-J12 | Recruiting-without-noise rule                  | S4     | n/a                         | none                         | n/a           | Pending (rule)    | SOURCE_ONLY            | P1       | `sources/S4-…` §3.6                             |
+| CF-J13 | Technical-lead role                            | S4     | Absent                      | none                         | n/a           | OD                | SOURCE_ONLY            | P3 (OD)  | `sources/S4-…` §3.7                             |
+| CF-J15 | Multi-vertical brand architecture              | S4     | n/a                         | none                         | n/a           | OD                | SOURCE_ONLY            | P3 (OD)  | `sources/S4-…` §3.1                             |
+| CF-M02 | Multi-vertical core                            | S5     | n/a                         | none                         | n/a           | OD (C-13)         | SOURCE_ONLY            | P3 (OD)  | `sources/S5-…` §3, `src-S5-1440.jpg`            |
+| CF-M04 | "Operaciones" role                             | S5     | Absent                      | none                         | n/a           | OD                | SOURCE_ONLY            | P3 (OD)  | `sources/S5-…` §3                               |
+| CF-M07 | Brand assets / identity                        | S5     | "CF" mark                   | none                         | OD (C-12)     | n/a               | SOURCE_ONLY            | P2 (OD)  | `sources/S5-…` §4, `src-S5-390.jpg`             |
+| CF-M09 | Public contact CTA                             | S5     | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P3       | `sources/S5-…` §2                               |
+| CF-K01 | Company pool / blacklist                       | S6     | Absent                      | none                         | Pending       | OD                | SOURCE_ONLY            | P2 (OD)  | `sources/S6-S7-…`, `src-S6-1440-buscar.jpg`     |
+| CF-K06 | Expiry alerts (pro + org)                      | S6     | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P2       | `src-S6-1440-aplicados.jpg`                     |
+| CF-K07 | AOG fast publish + outreach (opt-in)           | S6     | `urgency` field only        | `work_requirements.urgency`  | Pending       | Pending           | SOURCE_ONLY            | P2       | `src-S6-1440-publicar.jpg`                      |
+| CF-K08 | Reputation ratings in ranking                  | S6     | Absent                      | none                         | n/a           | OD (C-16)         | SOURCE_ONLY            | P3 (OD)  | `sources/S6-S7-…` §3                            |
+| CF-K09 | "Pedir doc." inside application                | S6     | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P2       | `src-S6-1440-aplicados.jpg`                     |
+| CF-K12 | SaaS plans with quotas                         | S6     | Absent                      | none                         | n/a           | OD (OD-7)         | SOURCE_ONLY            | P3 (OD)  | `src-S6-1440.jpg`                               |
+| CF-K15 | Identity / right-to-work KYC                   | S6     | Absent                      | none                         | Pending       | OD (OD-3)         | SOURCE_ONLY            | P2 (OD)  | `sources/S6-S7-…` §3                            |
+| CF-K16 | Publish-time compatible/available counts       | S6     | Capacity board after create | `capacity-evaluate`          | Partial       | Partial           | PARTIAL                | P1       | `src-S6-1440-publicar.jpg`, `/app/organization` |
+| CF-K17 | Blocking document shown to the technician      | S6     | Org side only               | `matching-evaluate` reasons  | Pending       | Partial           | PARTIAL                | P1       | `src-S6-1440-aplicados.jpg`                     |
+| CF-K19 | Licence authority field                        | S6/S8  | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P2       | `src-S6-1440-talento.jpg`                       |
+| CF-L01 | Onboarding intent                              | S7     | Account type only           | sign-up metadata             | Pending       | Pending           | SOURCE_ONLY            | P2       | `src-S7-390.jpg`                                |
+| CF-L02 | Private by default                             | S7     | n/a                         | `visibility default private` | n/a           | Implemented       | IMPLEMENTED_UNVERIFIED | P0       | migration `foundation_v0`                       |
+| CF-L03 | Completeness hint                              | S7     | Metric only                 | none                         | Partial       | Partial           | PARTIAL                | P2       | `src-S7-390-passport.jpg`, `/app/professional`  |
+| CF-L04 | Engines / years per aircraft                   | S7/S4  | Absent                      | none                         | Pending       | OD (C-10)         | SOURCE_ONLY            | P2 (OD)  | `src-S7-390-passport.jpg`                       |
+| CF-L05 | One-tap 72 h window                            | S7     | Absent                      | `professional-availability`  | Pending       | Pending           | SOURCE_ONLY            | P2       | `src-S7-390.jpg`                                |
+| CF-L07 | Apply preview sheet                            | S7/S8  | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P1       | `src-S7-390-apply.jpg`                          |
+| CF-L09 | Tool-calibration document type                 | S7     | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P3       | `src-S7-390-passport.jpg`                       |
+| CF-L10 | Logbook disclaimer + CV-relevant gate          | S7/S8  | Absent                      | none                         | Pending       | Pending           | SOURCE_ONLY            | P3       | `src-S7-390.jpg`                                |
+| CF-L11 | Ineligible listed with reason, no %            | S7     | Org side only               | `evaluateMatch`              | Pending       | Partial           | PARTIAL                | P1       | `src-S7-390-jobs.jpg`                           |
+| CF-L13 | Pay-per-posting model                          | S7/S8  | n/a                         | none                         | n/a           | OD (OD-7)         | SOURCE_ONLY            | P3 (OD)  | `sources/S8-…` §3                               |
+
+## Totals (87 rows: 55 original + 32 recovered)
 
 | Status                  | Count                                                                                        |
 | ----------------------- | -------------------------------------------------------------------------------------------- |
 | VERIFIED                | 1 (CF-A02 public part)                                                                       |
-| IMPLEMENTED_UNVERIFIED  | 14 (incl. 4 from this branch: CF-C01–C04)                                                    |
-| PARTIAL                 | 11                                                                                           |
+| IMPLEMENTED_UNVERIFIED  | 15 (incl. 4 from this branch: CF-C01–C04; +CF-L02)                                           |
+| PARTIAL                 | 15 (+CF-K16, K17, L03, L11)                                                                  |
 | UI_ONLY                 | 3                                                                                            |
 | MOCKED                  | 0 (no mocks in the Next.js app)                                                              |
-| SOURCE_ONLY             | 11                                                                                           |
+| SOURCE_ONLY             | 38 (+27 from S4–S7; 19 further candidates deferred without a row, 10 rejected)               |
 | NOT_FOUND               | 12                                                                                           |
 | BLOCKED                 | 0 code-level; remote verification of all EF-backed features is blocked until deploy approval |
 | REJECT (demo artefacts) | 3                                                                                            |

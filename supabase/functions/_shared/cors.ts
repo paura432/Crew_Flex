@@ -1,23 +1,18 @@
-// CORS allowlist. Never `*` for authenticated endpoints. Production origins are configured
-// with the ALLOWED_ORIGINS function secret (comma-separated, no wildcard).
+// CORS allowlist — fail closed, everywhere.
 //
-// Fail closed: in the hosted runtime (SB_REGION is set by the platform) a missing
-// ALLOWED_ORIGINS allows NO browser origin. The localhost defaults apply only to local
-// `supabase functions serve` (see supabase/functions/.env.example).
-
-const DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
-
-function isHostedRuntime(): boolean {
-  return Boolean(Deno.env.get("SB_REGION"));
-}
+// The only source of allowed browser origins is the ALLOWED_ORIGINS variable (comma-separated,
+// exact origins, no wildcard). When it is missing or empty NO origin is allowed, in production,
+// in staging and in local `supabase functions serve` alike: there is no runtime detection and
+// no localhost default. Local development sets it explicitly in supabase/functions/.env
+// (template: supabase/functions/.env.example). Server-side calls from the Next.js app carry no
+// Origin header and are unaffected; CORS only governs direct browser calls.
 
 export function allowedOrigins(): string[] {
-  const configured = Deno.env.get("ALLOWED_ORIGINS");
-  if (!configured) return isHostedRuntime() ? [] : DEV_ORIGINS;
+  const configured = Deno.env.get("ALLOWED_ORIGINS") ?? "";
   return configured
     .split(",")
     .map((origin) => origin.trim())
-    .filter((origin) => origin.length > 0 && origin !== "*");
+    .filter((origin) => /^https?:\/\/[^/\s*]+$/.test(origin));
 }
 
 export function corsHeaders(req: Request, methods: string[]): Record<string, string> {

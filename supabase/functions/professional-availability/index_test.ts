@@ -25,12 +25,16 @@ for (const method of ["GET", "POST", "PATCH", "DELETE"] as const) {
 
 Deno.test("professional-availability exposes the four methods in CORS preflight", async () => {
   const restore = silence();
+  const previousOrigins = Deno.env.get("ALLOWED_ORIGINS");
+  Deno.env.set("ALLOWED_ORIGINS", "http://localhost:3000");
   const res = await handler(
     new Request("http://fn/professional-availability", {
       method: "OPTIONS",
       headers: { Origin: "http://localhost:3000" },
     }),
   );
+  if (previousOrigins === undefined) Deno.env.delete("ALLOWED_ORIGINS");
+  else Deno.env.set("ALLOWED_ORIGINS", previousOrigins);
   restore();
   assertEquals(res.status, 204);
   assertEquals(
