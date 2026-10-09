@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+/* Design tokens — see docs/product/DESIGN_SYSTEM.md */
+@theme {
+  --color-navy: #0c2137;
+  --color-navy-700: #203b54;
+  --color-ink: #172c44;
+  --color-muted: #5b6f84;
+  --color-line: #dce4ed;
+  --color-canvas: #f5f7fa;
+  --color-accent: #ff982f;
+  --color-accent-hover: #ffa747;
+  --color-blue: #18558f;
+  --color-ok: #16745d;
+  --color-ok-bg: #e7f5ee;
+  --color-warn: #aa5916;
+  --color-warn-bg: #fff0e1;
+  --color-danger: #ad3b44;
+  --color-danger-bg: #fbecee;
+  --color-info-bg: #eaf2fa;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    color: var(--color-ink);
+    background: var(--color-canvas);
+  }
+  body {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
