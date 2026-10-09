@@ -30,6 +30,9 @@ supabase/functions/.env
 *.tsbuildinfo
 next-env.d.ts
 
+# local scratch material (prototypes, PDFs, exports) — never committed
+/tmp/
+
 # debug
 npm-debug.log*
 .pnpm-debug.log*
@@ -37,6 +40,7 @@ npm-debug.log*
 # OS / editor
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 *.pem
 .idea/
 .vscode/*

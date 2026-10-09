@@ -19,6 +19,7 @@ export default defineConfig([
     "out/**",
     "build/**",
     "coverage/**",
+    "tmp/**",
     "next-env.d.ts",
     // Deno code: checked with `deno check` / `deno lint`.
     "supabase/functions/**",

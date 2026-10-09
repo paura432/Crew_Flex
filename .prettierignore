@@ -5,3 +5,4 @@ coverage/
 supabase/.temp/
 next-env.d.ts
 supabase/functions/deno.lock
+tmp/
