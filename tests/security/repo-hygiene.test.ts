@@ -35,7 +35,8 @@ describe("F. frontend contains no privileged credentials", () => {
   it("no tracked file defines a NEXT_PUBLIC_ service role variable", () => {
     const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
       .split("\n")
-      .filter((file) => file && !file.startsWith("tests/security/") && !file.startsWith("docs/"));
+      // Markdown may name the forbidden variable to prohibit it; code and config may not.
+      .filter((file) => file && !file.startsWith("tests/security/") && !file.endsWith(".md"));
     const offenders = tracked.filter((file) => {
       try {
         return /NEXT_PUBLIC_[A-Z_]*SERVICE_ROLE/.test(readFileSync(join(root, file), "utf8"));

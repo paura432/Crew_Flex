@@ -102,3 +102,8 @@ reference unless the professional chose `open` visibility.
 
 Platform role (`profiles.platform_role`: `user` · `platform_admin`) is distinct from organization
 role (`organization_members.role`: `member` · `manager` · `admin`). See `AUTHORIZATION.md`.
+
+## BR-10 Time
+
+All operational timestamps are stored as `timestamptz` and **displayed and entered in UTC** (aviation
+convention; deterministic between server and browser). IMPLEMENTED.
