@@ -398,3 +398,78 @@ describe("audit", () => {
     expect(audit.rows).toEqual([{ action: "qualification.verified" }]);
   });
 });
+
+describe("availability windows ownership (first vertical slice)", () => {
+  const window = (owner: string): [string, string[]] => [
+    `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+       values ($1, '2026-11-10 00:00Z', '2026-11-11 00:00Z', 'available') returning id`,
+    [owner],
+  ];
+
+  it("a professional can create, read, update and delete their own windows", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const created = await tx.query<{ id: string }>(...window(SEED.delta));
+      const id = created.rows[0]?.id;
+      expect(id).toBeTruthy();
+      const updated = await tx.query(
+        "update public.availability_windows set status = 'unavailable' where id = $1",
+        [id],
+      );
+      expect(updated.affectedRows).toBe(1);
+      const deleted = await tx.query("delete from public.availability_windows where id = $1", [id]);
+      expect(deleted.affectedRows).toBe(1);
+    });
+  });
+
+  it("A. a professional cannot read, update or delete another professional's windows", async () => {
+    const { rows } = await db.query<{ id: string }>(
+      "select id from public.availability_windows where technician_profile_id = $1 limit 1",
+      [SEED.echo],
+    );
+    const echoWindow = rows[0]?.id;
+    expect(echoWindow).toBeTruthy();
+    await asUser(db, SEED.delta, async (tx) => {
+      expect(
+        await rowCount(tx, "select * from public.availability_windows where id = $1", [echoWindow]),
+      ).toBe(0);
+      const update = await tx.query(
+        "update public.availability_windows set status = 'unavailable' where id = $1",
+        [echoWindow],
+      );
+      expect(update.affectedRows).toBe(0);
+      const del = await tx.query("delete from public.availability_windows where id = $1", [
+        echoWindow,
+      ]);
+      expect(del.affectedRows).toBe(0);
+    });
+  });
+
+  it("E. a professional cannot create windows on behalf of another professional", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      expect(await queryError(tx, ...window(SEED.echo))).toMatch(/row-level security/);
+    });
+  });
+
+  it("organization admins only see windows of their own members", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const { rows } = await tx.query<{ technician_profile_id: string }>(
+        "select distinct technician_profile_id from public.availability_windows",
+      );
+      const owners = rows.map((r) => r.technician_profile_id).sort();
+      expect(owners).toEqual([SEED.alpha, SEED.bravo, SEED.charlieMember].sort());
+    });
+  });
+
+  it("the database rejects windows that end before they start", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      expect(
+        await queryError(
+          tx,
+          `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+           values ($1, '2026-11-11 00:00Z', '2026-11-10 00:00Z', 'available')`,
+          [SEED.delta],
+        ),
+      ).toMatch(/check constraint/);
+    });
+  });
+});

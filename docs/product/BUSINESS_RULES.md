@@ -50,13 +50,14 @@ No score can compensate a blocker.
 
 ## BR-4 Availability
 
-| Rule   | Statement                                                                                                                                                                                                       |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BR-4.1 | Availability is a set of time windows (`available` / `unavailable`), never a single boolean.                                                                                                                    |
-| BR-4.2 | `unavailable` windows override `available` windows where they overlap.                                                                                                                                          |
-| BR-4.3 | A candidate is available only if the union of `available` minus `unavailable` covers **100 %** of `[startsAt, endsAt)`.                                                                                         |
-| BR-4.4 | **Partial overlap is NOT eligible in V0.** It is reported as `PARTIAL_AVAILABILITY` with the covered percentage so the UI can explain it. Partial coverage across several technicians is LATER (blueprint §06). |
-| BR-4.5 | Adjacent/overlapping available windows merge.                                                                                                                                                                   |
+| Rule   | Statement                                                                                                                                                                                                                         |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-4.1 | Availability is a set of time windows (`available` / `unavailable`), never a single boolean.                                                                                                                                      |
+| BR-4.2 | `unavailable` windows override `available` windows where they overlap.                                                                                                                                                            |
+| BR-4.3 | A candidate is available only if the union of `available` minus `unavailable` covers **100 %** of `[startsAt, endsAt)`.                                                                                                           |
+| BR-4.4 | **Partial overlap is NOT eligible in V0.** It is reported as `PARTIAL_AVAILABILITY` with the covered percentage so the UI can explain it. Partial coverage across several technicians is LATER (blueprint §06).                   |
+| BR-4.5 | Adjacent/overlapping available windows merge.                                                                                                                                                                                     |
+| BR-4.6 | A professional edits only their own windows (JWT subject + RLS). A window spans at most 366 days. A calendar day is a whole UTC day window; days covered by a longer window are edited through that window, never split silently. |
 
 ## BR-5 Soft score
 

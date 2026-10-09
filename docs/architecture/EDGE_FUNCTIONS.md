@@ -6,18 +6,18 @@ in `supabase/functions/`. Shared code in `_shared/`; business logic imported fro
 
 ## Inventory
 
-| Function                      | Methods   | Auth                | Purpose                                                                                                                                               | Status                     |
-| ----------------------------- | --------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `health`                      | GET       | public              | Liveness. Returns `{ status, time }`. No internal details.                                                                                            | IMPLEMENTED (not deployed) |
-| `work-requirements`           | GET, POST | JWT + org role      | GET `?organizationId=&limit=` list (RLS), GET `?id=` one; POST create (admin/manager) via RPC `create_work_requirement` → audit `requirement.created` | IMPLEMENTED (not deployed) |
-| `capacity-evaluate`           | POST      | JWT + admin/manager | `{ requirementId }` → `{ capacity: { required, internallyEligible, gap, coveragePercent }, internal: EvaluatedCandidate[] }`                          | IMPLEMENTED (not deployed) |
-| `matching-evaluate`           | POST      | JWT + admin/manager | `{ requirementId }` → `{ summary: { evaluated, eligible }, candidates: EvaluatedCandidate[] }` (external pool)                                        | IMPLEMENTED (not deployed) |
-| `professional-profile`        | –         | –                   | Edit own technician profile/visibility                                                                                                                | PLANNED (NEXT)             |
-| `professional-qualifications` | –         | –                   | Add/edit own qualifications (always `pending`)                                                                                                        | PLANNED (NEXT)             |
-| `professional-availability`   | –         | –                   | Manage own availability windows                                                                                                                       | PLANNED (NEXT)             |
-| `organization-workforce`      | –         | –                   | Invite members with consent                                                                                                                           | PLANNED (NEXT)             |
+| Function                      | Methods                  | Auth                       | Purpose                                                                                                                                               | Status                     |
+| ----------------------------- | ------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `health`                      | GET                      | public                     | Liveness. Returns `{ status, time }`. No internal details.                                                                                            | IMPLEMENTED (not deployed) |
+| `work-requirements`           | GET, POST                | JWT + org role             | GET `?organizationId=&limit=` list (RLS), GET `?id=` one; POST create (admin/manager) via RPC `create_work_requirement` → audit `requirement.created` | IMPLEMENTED (not deployed) |
+| `capacity-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ capacity: { required, internallyEligible, gap, coveragePercent }, internal: EvaluatedCandidate[] }`                          | IMPLEMENTED (not deployed) |
+| `matching-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ summary: { evaluated, eligible }, candidates: EvaluatedCandidate[] }` (external pool)                                        | IMPLEMENTED (not deployed) |
+| `professional-profile`        | –                        | –                          | Edit own technician profile/visibility                                                                                                                | PLANNED (NEXT)             |
+| `professional-qualifications` | –                        | –                          | Add/edit own qualifications (always `pending`)                                                                                                        | PLANNED (NEXT)             |
+| `professional-availability`   | GET, POST, PATCH, DELETE | JWT (professional account) | Own availability windows: list, create, replace, delete. Ownership = JWT subject; RLS second layer                                                    | IMPLEMENTED (not deployed) |
+| `organization-workforce`      | –                        | –                          | Invite members with consent                                                                                                                           | PLANNED (NEXT)             |
 
-No directories are created for PLANNED functions (no ghost code).
+No directories are created for PLANNED functions (no ghost code). `createHandler` accepts GET/POST/PATCH/DELETE.
 
 ## Response contract (`src/types/api.ts`)
 
@@ -80,7 +80,7 @@ pnpm test:edge       # deno test: envelope, auth rejection, error normalization,
 ```bash
 pnpm exec supabase login
 pnpm exec supabase link --project-ref sbjkzrkmcekokkqiuvvh
-pnpm exec supabase functions deploy health work-requirements capacity-evaluate matching-evaluate
+pnpm exec supabase functions deploy health work-requirements capacity-evaluate matching-evaluate professional-availability
 pnpm exec supabase secrets set ALLOWED_ORIGINS=https://<production-origin>
 ```
 

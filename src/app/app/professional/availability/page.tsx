@@ -1,24 +1,38 @@
 import type { Metadata } from "next";
+import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
-import { AvailabilityTable } from "@/features/professional/components/ProfessionalSections";
-import { loadProfessionalContext } from "@/features/professional/load";
+import { listAvailability } from "@/features/availability/api";
+import { AvailabilityManager } from "@/features/availability/components/AvailabilityManager";
+import { requireSessionActor } from "@/server/session";
 
 export const metadata: Metadata = { title: "Availability" };
 
 export default async function ProfessionalAvailabilityPage() {
-  const { overview } = await loadProfessionalContext();
-  if (!overview) return <StateMessage title="No professional profile" />;
+  const actor = await requireSessionActor();
+  if (actor.profile.account_type !== "professional") {
+    return (
+      <StateMessage
+        title="No professional profile"
+        description="Availability belongs to professional accounts."
+      />
+    );
+  }
+  const result = await listAvailability();
+  const initialMonth = new Date().toISOString().slice(0, 7);
+
   return (
     <>
       <PageHeader
-        title="Availability"
-        description="Time windows (UTC). Unavailable windows override available ones. Editing comes next."
+        eyebrow="My time"
+        title="Chosen availability"
+        description="A free day only enters the market when you mark it as available. Times are UTC; blocked windows override available ones."
       />
-      <Panel>
-        <AvailabilityTable windows={overview.availability} />
-      </Panel>
+      {result.ok ? (
+        <AvailabilityManager windows={result.data.windows} initialMonth={initialMonth} />
+      ) : (
+        <ApiErrorState error={result.error} requestId={result.requestId} />
+      )}
     </>
   );
 }

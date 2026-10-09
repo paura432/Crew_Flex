@@ -4,10 +4,14 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import type { ApiErrorBody, ApiResponse } from "@/types/api";
 
 export type EdgeFunctionName =
-  "health" | "work-requirements" | "capacity-evaluate" | "matching-evaluate";
+  | "health"
+  | "work-requirements"
+  | "capacity-evaluate"
+  | "matching-evaluate"
+  | "professional-availability";
 
 interface InvokeOptions {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   query?: Record<string, string>;
   body?: unknown;
 }

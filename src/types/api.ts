@@ -1,5 +1,6 @@
 // Edge Function response contracts. Type-only module shared by Next.js and the Deno functions.
 // Envelope: docs/architecture/EDGE_FUNCTIONS.md
+import type { AvailabilityStatus } from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { WorkRequirement } from "../domain/work-requirement.ts";
@@ -62,4 +63,25 @@ export interface MatchingResponse {
   requirementId: string;
   summary: { evaluated: number; eligible: number };
   candidates: EvaluatedCandidate[];
+}
+
+export interface AvailabilityWindow {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: AvailabilityStatus;
+  updatedAt: string;
+}
+
+export interface AvailabilityListResponse {
+  windows: AvailabilityWindow[];
+}
+
+export interface AvailabilityWindowResponse {
+  window: AvailabilityWindow;
+}
+
+export interface AvailabilityDeleteResponse {
+  deleted: true;
+  id: string;
 }

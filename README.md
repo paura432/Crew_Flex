@@ -67,7 +67,7 @@ pnpm exec supabase db reset          # applies migrations + seed locally
 pnpm exec supabase login
 pnpm exec supabase link --project-ref sbjkzrkmcekokkqiuvvh
 pnpm exec supabase db push           # non-destructive migrations only, after review
-pnpm exec supabase functions deploy health work-requirements capacity-evaluate matching-evaluate
+pnpm exec supabase functions deploy health work-requirements capacity-evaluate matching-evaluate professional-availability
 pnpm db:types                        # generate src/types/database.generated.ts
 ```
 
@@ -100,7 +100,7 @@ Pre-commit runs lint-staged + typecheck + unit tests. See
 
 ## Edge Functions
 
-`health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`. Contract, errors and auth
+`health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-availability`. Contract, errors and auth
 flow: [`docs/architecture/EDGE_FUNCTIONS.md`](docs/architecture/EDGE_FUNCTIONS.md).
 
 ## Migrations

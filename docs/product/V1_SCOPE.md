@@ -25,8 +25,8 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 
 ## NEXT
 
-- Professional write flows (edit profile, add qualifications, manage availability windows) via
-  `professional-*` Edge Functions.
+- Professional write flows (edit profile, add qualifications) via `professional-*` Edge Functions.
+- Availability: "AOG only" day state and shift-pattern generator (OD C-8).
 - Organization member management (`organization-workforce` function): invite/add members.
 - Platform-admin verification flow (privileged, audited) for qualifications.
 - Private Storage bucket for evidence documents + short-lived signed URLs.

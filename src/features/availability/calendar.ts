@@ -1,0 +1,118 @@
+// Pure helpers that project availability windows onto a month calendar (UTC days).
+// Mirrors the original prototype's per-day calendar on top of the windows model (BR-4):
+// an `unavailable` window overrides `available` wherever they overlap.
+import type { AvailabilityStatus } from "@/domain/availability";
+
+export interface CalendarWindow {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: AvailabilityStatus;
+}
+
+export type DayState = "available" | "unavailable" | "none" | "mixed";
+
+export interface CalendarDay {
+  /** `YYYY-MM-DD` (UTC). */
+  date: string;
+  state: DayState;
+  /** Windows touching this day. */
+  windows: CalendarWindow[];
+  /** True when exactly one window covers the day and it is a single-day window (safe to toggle). */
+  singleDayWindow: CalendarWindow | null;
+}
+
+const DAY_MS = 86_400_000;
+
+export const dayStart = (date: string) => Date.parse(`${date}T00:00:00Z`);
+export const toDate = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/** Days of a month as `YYYY-MM-DD`. `month` is `YYYY-MM`. */
+export function monthDays(month: string): string[] {
+  const [year, m] = month.split("-").map(Number) as [number, number];
+  const count = new Date(Date.UTC(year, m, 0)).getUTCDate();
+  return Array.from({ length: count }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+}
+
+/** 0 = Monday … 6 = Sunday, for the first day of the month. */
+export function monthOffset(month: string): number {
+  return (new Date(dayStart(`${month}-01`)).getUTCDay() + 6) % 7;
+}
+
+export function shiftMonth(month: string, delta: number): string {
+  const [year, m] = month.split("-").map(Number) as [number, number];
+  const d = new Date(Date.UTC(year, m - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function coverageOfDay(windows: CalendarWindow[], start: number, end: number): DayState {
+  const covered = (status: AvailabilityStatus) =>
+    windows
+      .filter((w) => w.status === status)
+      .map((w): [number, number] => [
+        Math.max(Date.parse(w.startsAt), start),
+        Math.min(Date.parse(w.endsAt), end),
+      ])
+      .filter(([s, e]) => e > s);
+  const unavailable = covered("unavailable");
+  const available = covered("available");
+  const fullDay = (ranges: [number, number][]) =>
+    ranges.length > 0 &&
+    ranges
+      .sort((a, b) => a[0] - b[0])
+      .reduce((cursor, [s, e]) => (s <= cursor ? Math.max(cursor, e) : cursor), start) >= end;
+  if (fullDay(unavailable)) return "unavailable";
+  if (unavailable.length > 0) return "mixed";
+  if (fullDay(available)) return "available";
+  if (available.length > 0) return "mixed";
+  return "none";
+}
+
+export function calendarDays(windows: CalendarWindow[], month: string): CalendarDay[] {
+  return monthDays(month).map((date) => {
+    const start = dayStart(date);
+    const end = start + DAY_MS;
+    const touching = windows.filter(
+      (w) => Date.parse(w.startsAt) < end && Date.parse(w.endsAt) > start,
+    );
+    const single =
+      touching.length === 1 &&
+      Date.parse(touching[0]!.startsAt) === start &&
+      Date.parse(touching[0]!.endsAt) === end
+        ? touching[0]!
+        : null;
+    return {
+      date,
+      state: coverageOfDay(touching, start, end),
+      windows: touching,
+      singleDayWindow: single,
+    };
+  });
+}
+
+/** Whole-day window boundaries for a calendar day (UTC). */
+export function dayWindow(date: string): { startsAt: string; endsAt: string } {
+  const start = dayStart(date);
+  return {
+    startsAt: new Date(start).toISOString(),
+    endsAt: new Date(start + DAY_MS).toISOString(),
+  };
+}
+
+export function countDays(
+  windows: CalendarWindow[],
+  status: AvailabilityStatus,
+  from: string,
+  to: string,
+) {
+  let n = 0;
+  for (let t = dayStart(from); t < dayStart(to); t += DAY_MS) {
+    const state = coverageOfDay(
+      windows.filter((w) => Date.parse(w.startsAt) < t + DAY_MS && Date.parse(w.endsAt) > t),
+      t,
+      t + DAY_MS,
+    );
+    if (state === status) n++;
+  }
+  return n;
+}

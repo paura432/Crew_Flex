@@ -48,7 +48,9 @@ function json(body: unknown, status: number, headers: Record<string, string>): R
  * Wraps per-method handlers with: request id, CORS, method check, error normalization,
  * the standard response envelope and a structured log line.
  */
-export function createHandler(fn: string, handlers: Partial<Record<"GET" | "POST", Handler>>) {
+export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+
+export function createHandler(fn: string, handlers: Partial<Record<HttpMethod, Handler>>) {
   const methods = Object.keys(handlers);
 
   return async (req: Request): Promise<Response> => {
@@ -65,7 +67,7 @@ export function createHandler(fn: string, handlers: Partial<Record<"GET" | "POST
     let internal: string | undefined;
 
     try {
-      const handler = handlers[req.method as "GET" | "POST"];
+      const handler = handlers[req.method as HttpMethod];
       if (!handler) throw new ApiError("METHOD_NOT_ALLOWED");
       const result = await handler(ctx);
       status = result.status ?? 200;
