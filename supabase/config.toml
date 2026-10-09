@@ -419,12 +419,16 @@ enabled = true
 # check is disabled. See docs/architecture/EDGE_FUNCTIONS.md.
 [functions.health]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.work-requirements]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.capacity-evaluate]
 verify_jwt = false
+import_map = "./functions/deno.json"
 
 [functions.matching-evaluate]
 verify_jwt = false
+import_map = "./functions/deno.json"
