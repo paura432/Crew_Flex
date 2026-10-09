@@ -12,7 +12,11 @@ set -euo pipefail
 : "${SUPABASE_SECRET_KEY:?SUPABASE_SECRET_KEY is required (staging secret key, from your shell)}"
 
 case "$SUPABASE_URL" in
-  *sbjkzrkmcekokkqiuvvh*) echo "Refusing to seed the PRODUCTION project." >&2; exit 1 ;;
+  *sbjkzrkmcekokkqiuvvh*)
+    if [ "${SEED_ALLOW_PRODUCTION:-}" != "1" ]; then
+      echo "Refusing to seed the PRODUCTION project (set SEED_ALLOW_PRODUCTION=1 only while no staging exists)." >&2
+      exit 1
+    fi ;;
 esac
 
 create_user() { # email password metadata-json

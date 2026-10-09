@@ -111,3 +111,15 @@ RLS on Postgres 17, Deno handlers, UI), not yet verified against the deployed st
 | Source renders (S4–S7, 1440/390)            | 26 screenshots; 0 page errors; one blocked Google Fonts request (S6); 3 px masked clip in S4 at 390                                                                           |
 
 Not executed: the ten remote E2E checks (no staging project yet), Playwright UI journeys, axe/lighthouse.
+
+## Production deployment probes (2026-10-09, 20:05 CEST)
+
+| Probe                                                      | Result                                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `GET /functions/v1/health`                                 | 200, envelope OK, UUID request id                                                     |
+| `GET /functions/v1/professional-availability` (no token)   | 401 `UNAUTHORIZED`                                                                    |
+| `GET`/`POST /functions/v1/work-requirements` (no token)    | 401 / 401                                                                             |
+| `GET /functions/v1/capacity-evaluate`, `matching-evaluate` | 405 (POST-only) ; POST without token → 401                                            |
+| `OPTIONS` from `https://crew-flex.vercel.app`              | 204, exact `Access-Control-Allow-Origin`, methods `GET, POST, PATCH, DELETE, OPTIONS` |
+| `OPTIONS` from `https://evil.example`                      | no `Access-Control-Allow-Origin` header                                               |
+| `pnpm e2e:remote` (10 checks)                              | **NOT RUN** — no synthetic accounts yet                                               |

@@ -76,8 +76,10 @@ describe.skipIf(!configured)("remote E2E: deployed Edge Functions + RLS (staging
   let windowId = "";
 
   beforeAll(async () => {
-    if (env.url!.includes(PRODUCTION_REF)) {
-      throw new Error("E2E must not target the production project");
+    if (env.url!.includes(PRODUCTION_REF) && process.env.E2E_ALLOW_PRODUCTION !== "1") {
+      throw new Error(
+        "E2E must not target the production project (set E2E_ALLOW_PRODUCTION=1 only while no staging exists)",
+      );
     }
     tokenA = await signIn(env.proA[0]!, env.proA[1]!);
     tokenB = await signIn(env.proB[0]!, env.proB[1]!);

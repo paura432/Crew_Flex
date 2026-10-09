@@ -111,3 +111,16 @@ Currently **9 tests skipped** (no `.env.e2e`): not PASS, not FAIL — not execut
 (`EDGE_FUNCTIONS_AUDIT.md` §Phase 0.6), the gate is green, the plan and rollback are written, and no step
 touches production. What is missing is human work: create the staging project and accounts (plan in
 `ENVIRONMENTS.md` §4), push the branch, and provide `.env.e2e`.
+
+## 8. Execution log — production, 2026-10-09 20:05 CEST (authorized by the owner: "directamente a main, no hay stg")
+
+| Step | Command                                                                                    | Result                                                                                                                                                                                                                                       |
+| ---- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `supabase secrets set ALLOWED_ORIGINS=https://crew-flex.vercel.app`                        | OK (`secrets list` → 1 secret)                                                                                                                                                                                                               |
+| 2    | `functions deploy health --use-api --debug`                                                | OK; `GET /functions/v1/health` → 200 `{ok:true,data:{status:"ok"}}`                                                                                                                                                                          |
+| 3    | `functions deploy professional-availability --use-api --debug`                             | OK; the CLI uploaded 7 `src/` modules + 7 `_shared` + `deno.json` (risk F-6 **closed**); GET without token → 401 `UNAUTHORIZED`; preflight from `https://crew-flex.vercel.app` → 204 with exact ACAO and `GET, POST, PATCH, DELETE, OPTIONS` |
+| 4    | `functions deploy work-requirements capacity-evaluate matching-evaluate --use-api --debug` | OK; GET/POST without token → 401; GET on POST-only functions → 405; preflight from `https://evil.example` → no ACAO                                                                                                                          |
+| 5    | `functions list`                                                                           | 5 × ACTIVE, `verify_jwt=false` (JWT verified in code)                                                                                                                                                                                        |
+| 6    | `pnpm e2e:remote`                                                                          | **not run** — no synthetic confirmed accounts exist yet (`.env.e2e` absent); the runner's production guard must also be relaxed deliberately for this one-project setup                                                                      |
+
+Rollback remains `supabase functions delete <name>` per function. No schema or data change was made.

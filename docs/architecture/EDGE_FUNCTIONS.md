@@ -6,16 +6,16 @@ in `supabase/functions/`. Shared code in `_shared/`; business logic imported fro
 
 ## Inventory
 
-| Function                      | Methods                  | Auth                       | Purpose                                                                                                                                               | Status                     |
-| ----------------------------- | ------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `health`                      | GET                      | public                     | Liveness. Returns `{ status, time }`. No internal details.                                                                                            | IMPLEMENTED (not deployed) |
-| `work-requirements`           | GET, POST                | JWT + org role             | GET `?organizationId=&limit=` list (RLS), GET `?id=` one; POST create (admin/manager) via RPC `create_work_requirement` → audit `requirement.created` | IMPLEMENTED (not deployed) |
-| `capacity-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ capacity: { required, internallyEligible, gap, coveragePercent }, internal: EvaluatedCandidate[] }`                          | IMPLEMENTED (not deployed) |
-| `matching-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ summary: { evaluated, eligible }, candidates: EvaluatedCandidate[] }` (external pool)                                        | IMPLEMENTED (not deployed) |
-| `professional-profile`        | –                        | –                          | Edit own technician profile/visibility                                                                                                                | PLANNED (NEXT)             |
-| `professional-qualifications` | –                        | –                          | Add/edit own qualifications (always `pending`)                                                                                                        | PLANNED (NEXT)             |
-| `professional-availability`   | GET, POST, PATCH, DELETE | JWT (professional account) | Own availability windows: list, create, replace, delete. Ownership = JWT subject; RLS second layer                                                    | IMPLEMENTED (not deployed) |
-| `organization-workforce`      | –                        | –                          | Invite members with consent                                                                                                                           | PLANNED (NEXT)             |
+| Function                      | Methods                  | Auth                       | Purpose                                                                                                                                               | Status                            |
+| ----------------------------- | ------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `health`                      | GET                      | public                     | Liveness. Returns `{ status, time }`. No internal details.                                                                                            | DEPLOYED 2026-10-09 (E2E pending) |
+| `work-requirements`           | GET, POST                | JWT + org role             | GET `?organizationId=&limit=` list (RLS), GET `?id=` one; POST create (admin/manager) via RPC `create_work_requirement` → audit `requirement.created` | DEPLOYED 2026-10-09 (E2E pending) |
+| `capacity-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ capacity: { required, internallyEligible, gap, coveragePercent }, internal: EvaluatedCandidate[] }`                          | DEPLOYED 2026-10-09 (E2E pending) |
+| `matching-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ summary: { evaluated, eligible }, candidates: EvaluatedCandidate[] }` (external pool)                                        | DEPLOYED 2026-10-09 (E2E pending) |
+| `professional-profile`        | –                        | –                          | Edit own technician profile/visibility                                                                                                                | PLANNED (NEXT)                    |
+| `professional-qualifications` | –                        | –                          | Add/edit own qualifications (always `pending`)                                                                                                        | PLANNED (NEXT)                    |
+| `professional-availability`   | GET, POST, PATCH, DELETE | JWT (professional account) | Own availability windows: list, create, replace, delete. Ownership = JWT subject; RLS second layer                                                    | DEPLOYED 2026-10-09 (E2E pending) |
+| `organization-workforce`      | –                        | –                          | Invite members with consent                                                                                                                           | PLANNED (NEXT)                    |
 
 No directories are created for PLANNED functions (no ghost code). `createHandler` accepts GET/POST/PATCH/DELETE.
 
@@ -80,7 +80,7 @@ pnpm typecheck:edge  # deno check (includes shared src/domain + src/lib/validati
 pnpm test:edge       # deno test: envelope, auth rejection, error normalization, CORS, limits, mapping
 ```
 
-## Deploy (CLI linked; execution requires explicit authorization — `docs/audit/DEPLOYMENT_PLAN.md`)
+## Deploy (executed on production 2026-10-09 with explicit authorization — log in `docs/audit/DEPLOYMENT_PLAN.md` §8)
 
 ```bash
 pnpm exec supabase secrets set ALLOWED_ORIGINS=https://crew-flex.vercel.app
@@ -93,6 +93,6 @@ pnpm e2e:remote   # synthetic confirmed accounts in .env.e2e (never committed)
 Rollback of any step: `pnpm exec supabase functions delete <name>` (restores today's 404 state). No
 schema or data change is involved.
 
-Functions import shared code from `src/` (outside `supabase/functions`). The CLI bundler follows
-relative imports; verify on first deploy (`supabase functions deploy --debug`). If the bundler
-refuses, move `src/domain` + `src/lib/validation` behind a `_shared` re-export — not copy.
+Functions import shared code from `src/` (outside `supabase/functions`). **Verified on the first deploy**:
+`supabase functions deploy --use-api --debug` uploads the seven `src/` modules reached from each entrypoint
+(`src/domain/*`, `src/lib/validation/*`, `src/types/api.ts`) together with `_shared/*` and `deno.json`.
