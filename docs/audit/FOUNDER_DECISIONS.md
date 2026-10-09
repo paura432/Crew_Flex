@@ -21,6 +21,13 @@ summarised, never quoted with personal details (see `AUDIO_INVENTORY.md`).
 | FD-13 | Audio A2                          | 2026-10-07 | A founders' sync is planned before that meeting (a Friday afternoon)                                                                    | A2, 50–65 s                      | planning                  | INFORMATIONAL                                              | LOW           |
 | FD-14 | Audio A1                          | 2026-09-28 | — (unintelligible)                                                                                                                      | —                                | —                         | TRANSCRIPTION_UNUSABLE                                     | NONE          |
 
+## Phase 0.5 (2026-10-09)
+
+No new decision source became available (S4–S8 not found, no new audio). FD-01…FD-14 are unchanged.
+Two operational decisions surfaced by the backend audit were added to `docs/product/OPEN_DECISIONS.md`
+as OD-9 (staging environment) and OD-10 (public repository), not here, because they come from the
+infrastructure audit rather than from the founders' material.
+
 ## Open questions raised by audio
 
 - None product-specific. The audios confirm urgency and seriousness of the initiative but do not resolve

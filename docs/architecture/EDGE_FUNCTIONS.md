@@ -63,9 +63,12 @@ The client adds `NETWORK_ERROR` when a function cannot be reached.
 `supabase/config.toml`: `verify_jwt = false` for all four functions (JWT verified in code with
 `getClaims`, compatible with asymmetric signing keys), `import_map = "./functions/deno.json"`.
 
-Runtime env (platform provided): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEYS`).
-Optional config secret: `ALLOWED_ORIGINS`. Future secrets (e.g. `RESEND_API_KEY`) only through
-`supabase secrets set NAME=value`, read with `Deno.env.get` at runtime.
+Runtime env (platform provided): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEYS`),
+`SB_REGION` (hosted runtime marker). Config secret: `ALLOWED_ORIGINS` (comma-separated browser origins,
+production value `https://crew-flex.vercel.app`). CORS fails closed: in the hosted runtime a missing
+`ALLOWED_ORIGINS` allows no browser origin; the localhost defaults apply only to local
+`supabase functions serve` (template `supabase/functions/.env.example`). Future secrets (e.g.
+`RESEND_API_KEY`) only through `supabase secrets set NAME=value`, read with `Deno.env.get` at runtime.
 
 ## Local verification
 
@@ -75,14 +78,18 @@ pnpm typecheck:edge  # deno check (includes shared src/domain + src/lib/validati
 pnpm test:edge       # deno test: envelope, auth rejection, error normalization, CORS, limits, mapping
 ```
 
-## Deploy (when the project is accessible — currently BLOCKED, see OPEN_DECISIONS OD-2)
+## Deploy (CLI linked; execution requires explicit authorization — `docs/audit/DEPLOYMENT_PLAN.md`)
 
 ```bash
-pnpm exec supabase login
-pnpm exec supabase link --project-ref sbjkzrkmcekokkqiuvvh
-pnpm exec supabase functions deploy health work-requirements capacity-evaluate matching-evaluate professional-availability
-pnpm exec supabase secrets set ALLOWED_ORIGINS=https://<production-origin>
+pnpm exec supabase secrets set ALLOWED_ORIGINS=https://crew-flex.vercel.app
+pnpm exec supabase functions deploy health --debug
+pnpm exec supabase functions deploy professional-availability --debug
+pnpm exec supabase functions deploy work-requirements capacity-evaluate matching-evaluate --debug
+pnpm e2e:remote   # synthetic confirmed accounts in .env.e2e (never committed)
 ```
+
+Rollback of any step: `pnpm exec supabase functions delete <name>` (restores today's 404 state). No
+schema or data change is involved.
 
 Functions import shared code from `src/` (outside `supabase/functions`). The CLI bundler follows
 relative imports; verify on first deploy (`supabase functions deploy --debug`). If the bundler

@@ -12,6 +12,13 @@ for every new policy/function, and a parity update in `PARITY_MATRIX.md`.
 | Create one synthetic test professional + organization (confirmed e-mail) for E2E                                   | Only way to verify authenticated screens and RLS remotely | Low (synthetic)                       | XS     |
 | Decide e-mail confirmation policy (OD-8)                                                                           | Blocks automated E2E sign-up                              | —                                     | —      |
 
+Phase 0.5 (2026-10-09) detailed this step in `DEPLOYMENT_PLAN.md`: ordered sequence (secret → `health` →
+`professional-availability` → the rest), per-step rollback (`functions delete`), three synthetic
+auto-confirmed accounts created per user (global `mailer_autoconfirm` stays off, OD-8 untouched), and the
+remote E2E suite `tests/e2e/remote-smoke.test.ts` (`pnpm e2e:remote`). Backend audit: `EDGE_FUNCTIONS_AUDIT.md`
+(READY; CORS fail-closed hardening applied locally). Current verdict: **NO-GO until authorized** — see the
+plan §7. Phases 1–7 below are unchanged and remain blocked behind step 0.
+
 ## Phase 1 — Identity & profile (P0) · value high · risk low · M
 
 - `professional-profile` EF (GET/PATCH): base location, mobility, years, current status, visibility.

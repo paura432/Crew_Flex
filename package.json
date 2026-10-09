@@ -12,6 +12,7 @@
     "typecheck:edge": "deno check --config supabase/functions/deno.json supabase/functions/*/index.ts",
     "test": "vitest",
     "test:run": "vitest run",
+    "e2e:remote": "node --env-file=.env.e2e node_modules/vitest/vitest.mjs run tests/e2e",
     "test:edge": "deno test --config supabase/functions/deno.json --allow-env supabase/functions",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

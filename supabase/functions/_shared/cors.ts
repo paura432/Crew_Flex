@@ -1,11 +1,19 @@
 // CORS allowlist. Never `*` for authenticated endpoints. Production origins are configured
 // with the ALLOWED_ORIGINS function secret (comma-separated, no wildcard).
+//
+// Fail closed: in the hosted runtime (SB_REGION is set by the platform) a missing
+// ALLOWED_ORIGINS allows NO browser origin. The localhost defaults apply only to local
+// `supabase functions serve` (see supabase/functions/.env.example).
 
 const DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
 
+function isHostedRuntime(): boolean {
+  return Boolean(Deno.env.get("SB_REGION"));
+}
+
 export function allowedOrigins(): string[] {
   const configured = Deno.env.get("ALLOWED_ORIGINS");
-  if (!configured) return DEV_ORIGINS;
+  if (!configured) return isHostedRuntime() ? [] : DEV_ORIGINS;
   return configured
     .split(",")
     .map((origin) => origin.trim())

@@ -65,6 +65,29 @@ Evidence: `evidence/after-1440-availability.jpg`, `evidence/after-768-availabili
 | Deployed app authenticated screens                                                 | No credentials                                                                                   | Same as above                                                                              |
 | axe/lighthouse accessibility audit                                                 | Not available offline; structural checks only (labels, roles, focus)                             | Add `@axe-core/playwright` with the E2E suite                                              |
 
+## Phase 0.5 (2026-10-09, afternoon) — executed in this session
+
+Baseline on the unchanged tree, then again after the Phase 0.5 changes (CORS fail-closed, `cors_test.ts`,
+`supabase/functions/.env.example`, `.env.e2e.example`, `tests/e2e/remote-smoke.test.ts`, `e2e:remote`
+script, docs).
+
+| Check                                    | Baseline (before)                                                                                                                                                                                                                     | After Phase 0.5 changes                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `pnpm lint`                              | PASS                                                                                                                                                                                                                                  | PASS                                                                               |
+| `pnpm typecheck`                         | PASS                                                                                                                                                                                                                                  | PASS                                                                               |
+| `pnpm test:run`                          | PASS — 11 files, 101 tests                                                                                                                                                                                                            | PASS — 11 files + 1 skipped (remote E2E without `.env.e2e`), 101 passed, 5 skipped |
+| `pnpm format:check`                      | PASS                                                                                                                                                                                                                                  | PASS (after `prettier --write` on the new/edited docs)                             |
+| `pnpm build`                             | PASS                                                                                                                                                                                                                                  | PASS                                                                               |
+| `pnpm lint:edge`                         | PASS — 16 files                                                                                                                                                                                                                       | PASS — 17 files                                                                    |
+| `pnpm typecheck:edge`                    | PASS                                                                                                                                                                                                                                  | PASS                                                                               |
+| `pnpm test:edge`                         | PASS — 19 tests                                                                                                                                                                                                                       | PASS — **21 tests** (+2 CORS allowlist)                                            |
+| `git diff --check`                       | PASS                                                                                                                                                                                                                                  | PASS                                                                               |
+| Husky `pre-commit` (`.husky/pre-commit`) | `pnpm lint-staged` → `pnpm typecheck` → `pnpm test:run`; `.lintstagedrc.json` runs eslint `--fix --max-warnings=0` + prettier on staged code and prettier on json/md/css/yml                                                          | executed on the Phase 0.5 commit                                                   |
+| Env dependency check                     | functions read only `SUPABASE_URL`, `SUPABASE_ANON_KEY` / `SUPABASE_PUBLISHABLE_KEYS` (platform-provided), `ALLOWED_ORIGINS` (optional secret) and `SB_REGION` (platform-provided); the app reads only the two `NEXT_PUBLIC_*` values | no undefined variable                                                              |
+
+Not executed (unchanged reasons): remote E2E (functions not deployed, no synthetic accounts),
+authenticated deployed screens, axe/lighthouse.
+
 ## Status of the slice (per `FEATURE_INVENTORY.md`)
 
 CF-C01…C04 = **IMPLEMENTED_UNVERIFIED**: fully implemented and tested locally (domain, validation,

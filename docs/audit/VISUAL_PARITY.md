@@ -11,6 +11,9 @@ Design tokens already match S1: navy `#0c2137`, ink `#172c44`, accent `#ff982f`,
 ok/warn/danger, Inter. S1 additionally uses **Outfit** for display headings (Google Fonts) — not adopted
 (self-hosted Inter only; P2).
 
+Phase 0.5 (2026-10-09): no visual source was added (S4–S8 still missing, `SOURCE_INVENTORY.md`), so the
+reference remains S1 and every row below is unchanged. No screen was modified in this phase.
+
 ## Global chrome
 
 | Element     | S1                                                                                                                                                                                 | Current                                                                                        | Diff                             | Severity | Planned fix                               | Status  |

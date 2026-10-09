@@ -8,6 +8,12 @@ automated coverage. Evidence for each row: the S1 function/section named, the re
 `IMPLEMENTED_UNVERIFIED` below means: implemented and tested locally (Vitest/PGlite/Deno), **not** verified
 against the deployed app because Edge Functions are not deployed (`SUPABASE_CURRENT_STATE.md`).
 
+Phase 0.5 (2026-10-09): no new features were added to this inventory. The five additional sources
+(S4–S8) announced for this phase were not found (`SOURCE_INVENTORY.md` §Phase 0.5), so no feature that
+might exist only in them could be identified. The backend audit (`EDGE_FUNCTIONS_AUDIT.md`) did not
+change any status: CF-C01–C04 and the organization features stay `IMPLEMENTED_UNVERIFIED` until the
+deployment in `DEPLOYMENT_PLAN.md` is authorized and `pnpm e2e:remote` passes.
+
 ## A · Platform / account
 
 | ID     | Feature                                            | Actor     | Source                          | S1 location                  | Current route   | Expected                                                              | Current                                                  | Backend                          | Tables                                                             | Edge Function       | Permissions                | Tests                                                           | Status                                                                              |

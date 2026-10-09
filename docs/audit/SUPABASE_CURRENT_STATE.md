@@ -47,6 +47,18 @@ confirmation). See `QA_REPORT.md` for what was executed.
 `/register` render; `/app/**` redirects to `/login?next=…` without a session; security headers present
 (`x-frame-options: DENY`, `nosniff`, referrer-policy). Vercel configuration was not inspected or changed.
 
+## Phase 0.5 additions (2026-10-09, afternoon, read-only)
+
+- JWT signing: one **ES256** key published at `/auth/v1/.well-known/jwks.json` → `getClaims()` in the
+  functions verifies tokens locally; no `verify_jwt` gateway dependency.
+- `supabase branches list` → none. No staging branch or second project: deploys go straight to
+  production (`DEPLOYMENT_PLAN.md` §2, OD-9).
+- `functions list` → still `[]`; `secrets list` → still `[]`; `/functions/v1/health` → 404.
+- Auth settings unchanged (`mailer_autoconfirm=false`); the test-account procedure uses per-user
+  auto-confirmation in the Dashboard, never the global setting.
+- Remote compatibility of the five functions is confirmed at type level by `gen types --linked`
+  (`EDGE_FUNCTIONS_AUDIT.md`).
+
 ## Consequence for the parity work
 
 - Anything that calls an Edge Function from the deployed app currently fails (functions not deployed): the

@@ -29,3 +29,18 @@ about Crew Flex outside the repository.
 main prototype, the blueprint, the Fable handoff, two audios, the repo, the deployment and the remote
 project. Any feature that only existed in a missing source is unknown to this audit and is flagged as a
 limitation in the final report.
+
+## Phase 0.5 re-search (2026-10-09, afternoon)
+
+The Phase 0.5 brief stated that the five missing files had been added to `tmp/`. They were **not found**:
+
+| Scope searched                                                                                             | Method                                                                                                                         | Result                                                                                      |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `tmp/` (recursive)                                                                                         | `ls -la`, `find -iname '*.html' -o -iname '*.pdf'`                                                                             | only `crew-flex-fable-5.1.zip`, `fable-src/`, `fable-5.1-redesign/` (unchanged since 13:50) |
+| Whole repo, `/home/pau` (depth 5), `/tmp`                                                                  | names `*premium*`, `*lutes*`, `*recrew*`, `index-1.html`, `*jobslice*`, `*aero*propuesta*`; HTML/PDF modified in the last 24 h | nothing related                                                                             |
+| Windows profile `Downloads`, `Desktop`, `Documents`, `OneDrive`, `Pictures` (depth 6) and `/mnt/c/Users/*` | same names + `*crew*`; HTML/PDF/ZIP modified in the last 3 days                                                                | only S1, S2, S3 and an unrelated `VERSIÓN 30 JULIO (1).html` (another project)              |
+| Entire WSL filesystem (`find / -xdev`, excluding system and dependency directories)                        | same names                                                                                                                     | nothing                                                                                     |
+
+S4–S8 remain `SOURCE_MISSING`; no content was inferred and no previous decision was overwritten. If the
+files exist on another machine or account, copying them into `tmp/` (ignored by git) is enough to resume
+Phase A.

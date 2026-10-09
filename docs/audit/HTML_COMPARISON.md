@@ -98,6 +98,10 @@ product sources**; they post-date the foundation. Decisions:
 `crew-flex-aviation-premium-v2.html`, `crew-flex-web-premium-v2-1.html`, `lutes_recrew_demo.html`,
 `index-1.html`, `JobSlice_Aero_propuesta.pdf` — `SOURCE_MISSING`. No classification possible.
 
+Phase 0.5 (2026-10-09, afternoon): re-searched after the brief said they were placed in `tmp/`; still
+not present anywhere accessible (`SOURCE_INVENTORY.md` §Phase 0.5). No comparison against S1 could be
+made; no ADOPT/ADAPT/DEFER/REJECT entry was invented for them.
+
 ## Contradictions with the current repo direction (→ `docs/product/OPEN_DECISIONS.md`)
 
 | Topic                              | S1                                                                                      | Repo / brief                                           | Entry          |

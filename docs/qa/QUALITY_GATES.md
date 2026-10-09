@@ -46,6 +46,8 @@ remote project is available, also run `supabase db reset` locally and repeat the
 
 ## Not yet automated
 
+- Remote smoke E2E against the deployed Edge Functions: `pnpm e2e:remote` (`tests/e2e/remote-smoke.test.ts`),
+  skipped unless `.env.e2e` provides synthetic confirmed accounts (`docs/audit/DEPLOYMENT_PLAN.md` §6).
 - Playwright journeys (NEXT). V0 responsive/a11y checks were run manually with Playwright Chromium
   at 1440 / 820 / 390 px: no horizontal overflow, no console errors, focus visible.
 - End-to-end against deployed functions (BLOCKED, OD-2).

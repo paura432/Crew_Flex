@@ -86,6 +86,7 @@ Seed users (local stack only): `admin.mro@crewflex.test` (organization admin, pr
 pnpm test          # Vitest watch
 pnpm test:run      # domain, validation, RLS (PGlite), repo hygiene
 pnpm test:edge     # Deno tests for Edge Functions
+pnpm e2e:remote    # remote smoke against deployed functions; needs .env.e2e (synthetic accounts)
 ```
 
 ## Quality gates

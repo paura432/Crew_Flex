@@ -39,6 +39,15 @@ flow needed for a complete product; P2 = supporting / later.
 | CF-I01         | Logbook                                                      | S1       | Absent                         | none                             | Pending                                                         | NOT_FOUND                  | P2       | `proto-1440-technician-logbook.jpg`                                                    |
 | CF-I02         | Tools hub                                                    | S1       | Absent                         | none (client)                    | Pending                                                         | SOURCE_ONLY                | P2       | `proto-1440-technician-herramientas.jpg`                                               |
 
+## Phase 0.5 update (2026-10-09)
+
+Totals unchanged. The announced sources S4–S8 were not found, so no row was added or re-classified from
+them. What changed is the **path to VERIFIED** for every EF-backed row: the five functions passed a
+line-by-line security audit (`EDGE_FUNCTIONS_AUDIT.md`, verdict READY with one CORS hardening applied
+locally), a deployment plan with rollback exists (`DEPLOYMENT_PLAN.md`) and a remote E2E suite is
+prepared (`tests/e2e/remote-smoke.test.ts`). Rows CF-C01–C04, CF-F*, CF-G* move to VERIFIED only after
+that suite passes against production.
+
 ## Totals (55 features inventoried)
 
 | Status                  | Count                                                                                        |
