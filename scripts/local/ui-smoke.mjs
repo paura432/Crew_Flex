@@ -9,6 +9,20 @@ const { chromium } = require("playwright-core");
 const BASE = process.env.BASE ?? "http://localhost:3001";
 const EVIDENCE = process.env.EVIDENCE_DIR ?? "docs/audit/evidence";
 const PW = "crewflex-local-only";
+// Preflight: Next.js loads `.env.production.local` for `next build`/`next start`; a remote backup under
+// that name would silently point a production-mode run at the remote project. Refuse to run then.
+import { existsSync, readFileSync } from "node:fs";
+for (const f of [".env.production.local", ".env.production", ".env"]) {
+  if (existsSync(f)) {
+    console.error(`refusing: ${f} exists and could override .env.local for production-mode runs`);
+    process.exit(2);
+  }
+}
+const envLocal = existsSync(".env.local") ? readFileSync(".env.local", "utf8") : "";
+if (!/NEXT_PUBLIC_SUPABASE_URL=http:\/\/(127\.0\.0\.1|localhost):\d+/.test(envLocal)) {
+  console.error("refusing: .env.local does not point at a local Supabase stack");
+  process.exit(2);
+}
 const results = [];
 const ok = (name, cond, detail = "") => {
   results.push({ name, pass: !!cond, detail });
@@ -262,7 +276,7 @@ const nonLocal = [...hosts].filter((h) => !/^(localhost|127\.0\.0\.1)(:\d+)?$/.t
 ok(
   "16 browser only talked to localhost",
   nonLocal.length === 0,
-  nonLocal.join(",") || "localhost:3001 only",
+  nonLocal.join(",") || `${new URL(BASE).host} only`,
 );
 ok("17 zero console/page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();

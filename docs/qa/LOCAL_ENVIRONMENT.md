@@ -18,7 +18,7 @@ remote project `sbjkzrkmcekokkqiuvvh`; the remote rules in `docs/architecture/EN
 ```bash
 pnpm exec supabase start -x logflare,vector,supavisor,imgproxy,realtime   # first run pulls images; applies migrations + seed.sql
 pnpm exec supabase status -o env                                            # API_URL=http://127.0.0.1:56321, DB_URL=…@127.0.0.1:56322
-cp .env.local .env.production.local   # keep the remote values aside (both files are git-ignored)
+cp .env.local .env.remote.backup      # keep the remote values aside (git-ignored). NEVER name it .env.production*
 printf 'NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:56321\nNEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<PUBLISHABLE_KEY from status>\n' > .env.local
 cp -n supabase/functions/.env.example supabase/functions/.env               # ALLOWED_ORIGINS=localhost origins (local only)
 pnpm exec supabase functions serve --env-file supabase/functions/.env       # the five functions at http://127.0.0.1:56321/functions/v1/<name>
@@ -42,7 +42,12 @@ bash scripts/local/sb-local.sh db reset
   Guard behaviour is covered by `tests/security/local-guard.test.ts`.
 - The repo stays linked to production for the remote procedures; that is why bare `supabase db …` commands
   are not used for local work.
-- `.env.local`, `.env.production.local`, `.env.e2e` and `supabase/functions/.env` are git-ignored.
+- `.env.local`, `.env.remote.backup`, `.env.e2e` and `supabase/functions/.env` are git-ignored.
+- **Pitfall found on 2026-10-10:** Next.js loads `.env.production.local` (and `.env.production`) for
+  `next build` / `next start`, with priority over `.env.local`. A remote backup under that name made two
+  production-mode smoke runs sign in against the remote Auth endpoint with a synthetic e-mail (rejected,
+  no write). The backup is now `.env.remote.backup` and `scripts/local/ui-smoke.mjs` refuses to run when
+  `.env.production*` or `.env` exists or `.env.local` is not local.
 
 ## 4. Synthetic accounts (local only; password for all: `crewflex-local-only`)
 
