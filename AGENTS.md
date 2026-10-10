@@ -52,7 +52,11 @@ Authoritative rules for any agent or engineer working in this repo. Short on pur
 pnpm dev          # Next.js
 pnpm check        # lint, typecheck, unit + RLS tests, format, deno lint/check/test
 pnpm build
+bash scripts/local/sb-local.sh db reset   # LOCAL Docker database only (docs/qa/LOCAL_ENVIRONMENT.md)
 ```
+
+Local database work never uses bare `supabase db …` while the repo is linked to production: go through
+`scripts/local/sb-local.sh`, which refuses `--linked`, `--project-ref` and remote `--db-url`.
 
 Skills: none vendored in this repo. The global `ponytail` (YAGNI) principle guides scope; it is
 not copied here.

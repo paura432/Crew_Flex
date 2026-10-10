@@ -19,6 +19,18 @@ describe("I. remote E2E writes need the authorized ref AND a per-run confirmatio
     expect(ok).toEqual({ ok: true, ref: PRODUCTION_REF });
   });
 
+  it("accepts the local Docker stack without any condition (never production)", () => {
+    expect(evaluateProductionGuard({ url: "http://127.0.0.1:56321" })).toEqual({
+      ok: true,
+      ref: "local",
+    });
+    expect(evaluateProductionGuard({ url: "http://localhost:56321" })).toEqual({
+      ok: true,
+      ref: "local",
+    });
+    expect(evaluateProductionGuard({ url: "https://localhost.evil.example" }).ok).toBe(false);
+  });
+
   it("refuses a URL that is not a Supabase project", () => {
     const r = evaluateProductionGuard({
       url: "https://example.com",

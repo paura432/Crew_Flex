@@ -59,9 +59,10 @@ in any `.env*` file used by the frontend.
 | Config                       | `supabase/config.toml`                                                   |
 
 ```bash
-# Local stack (needs Docker)
-pnpm exec supabase start
-pnpm exec supabase db reset          # applies migrations + seed locally
+# Local stack (needs Docker; ports 563xx, see docs/qa/LOCAL_ENVIRONMENT.md)
+pnpm exec supabase start -x logflare,vector,supavisor,imgproxy,realtime
+bash scripts/local/sb-local.sh db reset   # local-only wrapper: applies migrations + seed, refuses remote targets
+pnpm exec supabase functions serve --env-file supabase/functions/.env
 
 # Remote project (needs an account with access to the project)
 pnpm exec supabase login
@@ -77,8 +78,9 @@ pnpm db:types                        # generate src/types/database.generated.ts
 pnpm dev     # http://localhost:3000
 ```
 
-Seed users (local stack only): `admin.mro@crewflex.test` (organization admin, product example),
-`charlie@crewflex.test` (plain member), `delta@crewflex.test` (professional).
+Seed users (local stack only, password `crewflex-local-only`): 3 organization admins, a manager, 4 internal
+technicians and 14 external professionals covering every eligibility outcome. Full table and the local
+procedure: [`docs/qa/LOCAL_ENVIRONMENT.md`](docs/qa/LOCAL_ENVIRONMENT.md).
 
 ## Tests
 

@@ -123,3 +123,14 @@ Not executed: the ten remote E2E checks (no staging project yet), Playwright UI 
 | `OPTIONS` from `https://crew-flex.vercel.app`              | 204, exact `Access-Control-Allow-Origin`, methods `GET, POST, PATCH, DELETE, OPTIONS` |
 | `OPTIONS` from `https://evil.example`                      | no `Access-Control-Allow-Origin` header                                               |
 | `pnpm e2e:remote` (10 checks)                              | **NOT RUN** — no synthetic accounts yet                                               |
+
+## Local Docker environment (2026-10-10) — executed in this session
+
+| Check                                                                                      | Result                                                                                                             |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `supabase start` (ports 563xx), migrations `20261009120000` + `20261009120100`, `seed.sql` | applied on a fresh volume; row counts in `docs/qa/LOCAL_ENVIRONMENT.md` §4                                         |
+| `pnpm test:run` (PGlite RLS suite on the extended seed)                                    | PASS — 29 RLS tests; three seed-derived expectations updated (4 internal, 10 external candidates, 3 named)         |
+| `pnpm e2e:remote` against the local stack (13 checks)                                      | PASS — 13 passed, 0 skipped                                                                                        |
+| Browser flows (headless Chromium, 20 checks)                                               | 19 PASS; console check fails only on Next dev-overlay `Performance.measure` messages and the expected 404 resource |
+| `tests/security/local-guard.test.ts`                                                       | PASS — 3 tests (remote flags, remote db-url, remote subcommands refused)                                           |
+| Remote project                                                                             | not touched                                                                                                        |

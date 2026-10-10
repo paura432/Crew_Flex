@@ -161,7 +161,7 @@ describe("C. organization roles", () => {
         await rowCount(tx, "select * from public.work_requirements where organization_id = $1", [
           mroId,
         ]),
-      ).toBe(1);
+      ).toBe(2);
       const update = await tx.query(
         "update public.organizations set name = 'pwned' where id = $1",
         [mroId],
@@ -322,7 +322,7 @@ describe("candidate enumeration and data minimization", () => {
       );
       // Only the internal workforce (members of the organization) is visible.
       expect(rows.map((r) => r.profile_id).sort()).toEqual(
-        [SEED.alpha, SEED.bravo, SEED.charlieMember].sort(),
+        [SEED.alpha, SEED.bravo, SEED.charlieMember, SEED.managerMro].sort(),
       );
     });
   });
@@ -338,8 +338,10 @@ describe("candidate enumeration and data minimization", () => {
 
       const internal = rows.filter((r) => r.candidate_pool === "internal");
       const external = rows.filter((r) => r.candidate_pool === "external");
-      expect(internal).toHaveLength(3);
-      expect(external).toHaveLength(6);
+      // Seed: internal = Alpha, Bravo, Charlie, Ops Manager; external = every anonymous/open
+      // technician holding at least one relevant active qualification (Hotel is private).
+      expect(internal).toHaveLength(4);
+      expect(external).toHaveLength(10);
       expect(rows.some((r) => r.candidate_ref === SEED.hotelPrivate)).toBe(false);
       for (const candidate of external) {
         expect(candidate.candidate_ref).toMatch(/^CF-[0-9A-F]{10}$/);
@@ -348,6 +350,7 @@ describe("candidate enumeration and data minimization", () => {
       expect(named.map((r) => r.candidate_display_name).sort()).toEqual([
         "Technician Echo",
         "Technician Juliett",
+        "Technician Quebec",
       ]);
       // Only qualifications relevant to the requirement are exposed.
       const relevant = new Set(["B1.1", "TR-A320", "EWIS", "HF", "FTS", "SMS"]);

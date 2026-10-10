@@ -8,6 +8,9 @@
  *   2. the operator confirmed this run explicitly: E2E_WRITE_CONFIRM=WRITE:<ref>:<today UTC> was
  *      typed on the command line — it expires daily and must not be stored in `.env.e2e`.
  * `scripts/e2e/*.sh` implement the same two conditions in bash.
+ *
+ * A LOCAL target (http://127.0.0.1:<port> or http://localhost:<port>, the Docker stack of
+ * `supabase start`) is never production: it is accepted without either condition.
  */
 export const PRODUCTION_REF = "sbjkzrkmcekokkqiuvvh";
 
@@ -22,6 +25,16 @@ export interface GuardInput {
 }
 
 export type GuardResult = { ok: true; ref: string } | { ok: false; reason: string };
+
+export function isLocalUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === "http:" && (hostname === "127.0.0.1" || hostname === "localhost");
+  } catch {
+    return false;
+  }
+}
 
 export function projectRefOf(url: string | undefined): string | undefined {
   if (!url) return undefined;
@@ -39,6 +52,7 @@ export function expectedConfirmation(ref: string, today = new Date()): string {
 }
 
 export function evaluateProductionGuard(input: GuardInput): GuardResult {
+  if (isLocalUrl(input.url)) return { ok: true, ref: "local" };
   const ref = projectRefOf(input.url);
   if (!ref) return { ok: false, reason: "E2E_SUPABASE_URL is not a https://<ref>.supabase.co URL" };
   if (!input.authorizedRef) {
