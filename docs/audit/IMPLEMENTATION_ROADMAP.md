@@ -36,6 +36,14 @@ plan §7. Phases 1–7 below are unchanged and remain blocked behind step 0.
   - Open decisions before any of the above: C-7/C-14 visibility + org verification, C-10 matching inputs
     (FD-20, CF-J10, L04, K08), C-12 brand identity, C-13 multi-vertical, C-15 launch order, OD-7 pricing (FD-29, K12, L13).
 
+## Phase 0.7 (2026-10-10) — main-only, production activation
+
+- **Staging is cancelled** (OD-9 resolved temporarily): one environment, `main` → Vercel → Supabase
+  `sbjkzrkmcekokkqiuvvh`; `docs/architecture/ENVIRONMENTS.md` rewritten, staging wrapper not merged.
+- The five functions and `ALLOWED_ORIGINS` were already deployed on 2026-10-09; Phase 0.7 verifies them
+  with the guarded remote E2E (`tests/e2e/guard.ts`) and the deployed UI, then unblocks Phases 1–7.
+- Phases 1–7 keep their order; everything connects to the same project.
+
 ## Phase 1 — Identity & profile (P0) · value high · risk low · M
 
 - `professional-profile` EF (GET/PATCH): base location, mobility, years, current status, visibility.

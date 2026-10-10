@@ -67,7 +67,7 @@ pnpm exec supabase db reset          # applies migrations + seed locally
 pnpm exec supabase login
 pnpm exec supabase link --project-ref sbjkzrkmcekokkqiuvvh
 pnpm exec supabase db push           # non-destructive migrations only, after review
-pnpm exec supabase functions deploy health work-requirements capacity-evaluate matching-evaluate professional-availability
+pnpm exec supabase functions deploy <name> --project-ref sbjkzrkmcekokkqiuvvh --use-api   # one at a time
 pnpm db:types                        # generate src/types/database.generated.ts
 ```
 
@@ -86,7 +86,7 @@ Seed users (local stack only): `admin.mro@crewflex.test` (organization admin, pr
 pnpm test          # Vitest watch
 pnpm test:run      # domain, validation, RLS (PGlite), repo hygiene
 pnpm test:edge     # Deno tests for Edge Functions
-pnpm e2e:remote    # remote smoke against deployed functions; needs .env.e2e (synthetic accounts)
+pnpm e2e:remote    # remote E2E on the single project; needs .env.e2e + E2E_WRITE_CONFIRM per run (ENVIRONMENTS.md §3)
 ```
 
 ## Quality gates
@@ -103,6 +103,12 @@ Pre-commit runs lint-staged + typecheck + unit tests. See
 
 `health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-availability`. Contract, errors and auth
 flow: [`docs/architecture/EDGE_FUNCTIONS.md`](docs/architecture/EDGE_FUNCTIONS.md).
+
+## Git workflow (main-only, temporary — OD-9)
+
+`main` is the only permanent branch and deploys automatically to Vercel Production, which uses the single
+Supabase project. Before every push: `pnpm check`, `pnpm build`, `git diff --check`. No force-push, no
+history rewrite. Details and the risk statement: [`docs/architecture/ENVIRONMENTS.md`](docs/architecture/ENVIRONMENTS.md).
 
 ## Migrations
 

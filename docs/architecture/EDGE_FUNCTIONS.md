@@ -65,7 +65,7 @@ The client adds `NETWORK_ERROR` when a function cannot be reached.
 
 Runtime env (platform provided): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEYS`),
 Config secret: `ALLOWED_ORIGINS` (comma-separated exact browser origins; production
-`https://crew-flex.vercel.app`, staging its branch domain — `ENVIRONMENTS.md`). **CORS fails closed in
+`https://crew-flex.vercel.app` — the only environment, `ENVIRONMENTS.md`). **CORS fails closed in
 every environment**: a missing or empty `ALLOWED_ORIGINS` allows no browser origin; there is no runtime
 detection (`SB_REGION` is not consulted) and no localhost default. Local `supabase functions serve` sets
 it explicitly in `supabase/functions/.env` (template `supabase/functions/.env.example`). Server-side calls
@@ -87,7 +87,7 @@ pnpm exec supabase secrets set ALLOWED_ORIGINS=https://crew-flex.vercel.app
 pnpm exec supabase functions deploy health --debug
 pnpm exec supabase functions deploy professional-availability --debug
 pnpm exec supabase functions deploy work-requirements capacity-evaluate matching-evaluate --debug
-pnpm e2e:remote   # synthetic confirmed accounts in .env.e2e (never committed)
+E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:<today> pnpm e2e:remote   # guarded; synthetic accounts in .env.e2e
 ```
 
 Rollback of any step: `pnpm exec supabase functions delete <name>` (restores today's 404 state). No

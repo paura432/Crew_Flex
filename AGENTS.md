@@ -40,8 +40,11 @@ Authoritative rules for any agent or engineer working in this repo. Short on pur
 - **No PASS without running it.** Never delete or skip a failing test. A reasonable bug gets a
   regression test.
 - **Docs and code stay in sync** in the same commit.
-- Commits: small, conventional (`feat:`, `fix:`, `docs:`, `chore:`, `test:`), on a feature branch.
-  Never push to or merge into `main` directly; no force-push.
+- Commits: small, conventional (`feat:`, `fix:`, `docs:`, `chore:`, `test:`). **Main-only (temporary,
+  OD-9, since 2026-10-10):** `main` is the single permanent branch and deploys straight to Vercel
+  Production and the single Supabase project; work on `main` (or a short-lived local branch merged
+  fast-forward), run the full quality gate before every push, never force-push or rewrite history.
+  Remote test writes need the two-condition guard in `docs/architecture/ENVIRONMENTS.md` §3.
 
 ## Commands
 

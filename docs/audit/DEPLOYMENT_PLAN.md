@@ -121,6 +121,41 @@ touches production. What is missing is human work: create the staging project an
 | 3    | `functions deploy professional-availability --use-api --debug`                             | OK; the CLI uploaded 7 `src/` modules + 7 `_shared` + `deno.json` (risk F-6 **closed**); GET without token → 401 `UNAUTHORIZED`; preflight from `https://crew-flex.vercel.app` → 204 with exact ACAO and `GET, POST, PATCH, DELETE, OPTIONS` |
 | 4    | `functions deploy work-requirements capacity-evaluate matching-evaluate --use-api --debug` | OK; GET/POST without token → 401; GET on POST-only functions → 405; preflight from `https://evil.example` → no ACAO                                                                                                                          |
 | 5    | `functions list`                                                                           | 5 × ACTIVE, `verify_jwt=false` (JWT verified in code)                                                                                                                                                                                        |
-| 6    | `pnpm e2e:remote`                                                                          | **not run** — no synthetic confirmed accounts exist yet (`.env.e2e` absent); the runner's production guard must also be relaxed deliberately for this one-project setup                                                                      |
+| 6    | `pnpm e2e:remote`                                                                          | **not run** — no synthetic confirmed accounts exist yet (`.env.e2e` absent); superseded by the two-condition guard of §9                                                                                                                     |
 
 Rollback remains `supabase functions delete <name>` per function. No schema or data change was made.
+
+## 9. Phase 0.7 — main-only production activation (2026-10-10)
+
+### 9.1 Preflight (read-only, executed 2026-10-10)
+
+| Item            | State                                                                                                                                                                                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Git             | `main` = `origin/main` = `47d0db4`; tree clean. `feat/crewflex-parity-migration` is one commit ahead (`4400efd`, staging wrapper) and is **not merged** (out of scope now)                                                                              |
+| Supabase CLI    | 2.120.0, linked to `sbjkzrkmcekokkqiuvvh` (`Crew_Flex`, ACTIVE_HEALTHY, Postgres 17.11)                                                                                                                                                                 |
+| Migrations      | local = remote: `20261009120000`, `20261009120100`; nothing pending, no migration needed                                                                                                                                                                |
+| Schema / RLS    | 10 tables, `relrowsecurity = true` on all, 26 policies                                                                                                                                                                                                  |
+| Data            | 1 confirmed real user (professional profile + technician row); 0 organizations, members, windows, requirements, audit events                                                                                                                            |
+| Edge Functions  | 5 × ACTIVE, version 1 each, `verify_jwt=false` (JWT verified in code), import map on; code unchanged since the deploy (`git diff f79d5f5 main -- supabase/functions src/domain src/lib/validation` is empty)                                            |
+| Secrets (names) | `ALLOWED_ORIGINS` + the platform-managed `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_DB_URL`, `SUPABASE_JWKS`, `SUPABASE_PUBLISHABLE_KEYS`, `SUPABASE_SECRET_KEYS`, `SUPABASE_SERVICE_ROLE_KEY`                                                      |
+| Probes          | `health` 200 + UUID request id; `professional-availability`/`work-requirements` 401 without token; `capacity-evaluate`/`matching-evaluate` 405 on GET; preflight from `https://crew-flex.vercel.app` → exact ACAO, from `https://evil.example` → none   |
+| Auth            | e-mail provider on, `mailer_autoconfirm=false` (unchanged)                                                                                                                                                                                              |
+| Vercel          | Production deploy of `47d0db4` succeeded (GitHub deployments API); `/app/professional/availability` → 307 to `/login?next=…` without session. Env vars not inspectable without a Vercel token: verified indirectly by the authenticated UI check (§9.3) |
+| Unexpected      | A project named `Crew_Flex_staging` (`qzvtcazcgkvyluhzvfyf`, created 2026-10-09 16:53, ACTIVE_HEALTHY) exists in the account. Not used by any procedure; its fate is the owner's decision (pause/delete), nothing in the repo targets it                |
+
+### 9.2 Deployment package (requires explicit authorization)
+
+Nothing new to deploy: the functions on production are the current code. The package is **verification
+with writes** on the only project:
+
+| Step | Action                                                                                                                                                                                           | Writes                                                                                | Rollback / cleanup                                     |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| A    | `git push origin main` (docs + guarded E2E; no runtime change) → Vercel redeploys `main`                                                                                                         | none in Supabase                                                                      | revert commit, push                                    |
+| B    | `scripts/e2e/seed-users.sh`: three auto-confirmed synthetic accounts (`e2e…` addresses) via Auth Admin API; secret key read once from the CLI, shell only                                        | 3 `auth.users`, 3 profiles, 2 technician rows, 1 org + 1 membership                   | step E                                                 |
+| C    | `pnpm e2e:remote` with `E2E_WRITE_CONFIRM` (ten checks)                                                                                                                                          | 1 availability window (deleted by the suite), 1 work requirement in the synthetic org | step E                                                 |
+| D    | Authenticated UI check on `https://crew-flex.vercel.app` with synthetic Pro A: sign-in, create/edit/reload/delete a window; confirms Vercel points at the project (`sb-<ref>-auth-token` cookie) | windows created and deleted by the operator                                           | step E                                                 |
+| E    | `scripts/e2e/cleanup-synthetic.sh --dry-run`, then without flag: deletes only the synthetic users, their org and its requirement                                                                 | scoped deletes                                                                        | n/a (synthetic only); or keep the accounts for Phase 1 |
+
+Not in the package: migrations, function redeploys, Auth settings, Vercel settings, the `Crew_Flex_staging`
+project. If any step fails, stop and report; functions stay as they are (rollback = `functions delete`
+or redeploy from `47d0db4`).

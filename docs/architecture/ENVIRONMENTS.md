@@ -1,114 +1,74 @@
-# Environments — STAGING / PRODUCTION
+# Environments — MAIN-ONLY (single production environment)
 
-Status (2026-10-09): **PRODUCTION exists; STAGING is designed, not created.** Creating it needs the
-human steps in §4. Nothing here has been executed.
+Status (2026-10-10, Phase 0.7): **Crew Flex has one environment.** `main` → Vercel Production → Supabase
+`sbjkzrkmcekokkqiuvvh`. There is no staging project, no Supabase branch, no staging Git branch and no
+staging Vercel domain, by decision of the owner (OD-9, resolved temporarily). The staging design that
+previously lived in this file is kept in Git history (`4400efd` on `feat/crewflex-parity-migration`,
+`47d0db4` on `main`) and is **not** an active procedure.
 
-## 1. Why a second project (not a Supabase preview branch)
-
-| Option                                              | Fit                                                                                                                                                                                                      |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Supabase **preview branch** of production           | Requires the Supabase GitHub integration + Pro plan; branches share the parent's Auth settings and are coupled to the production project. Not isolated enough for a first E2E of security-relevant code. |
-| **Separate Supabase project** (`Crew_Flex_staging`) | Fully isolated data, Auth, secrets and functions; identical migrations via `supabase db push`; cheapest to reason about; what this document specifies.                                                   |
-
-## 2. Topology
+## 1. Topology
 
 ```
-GitHub paura432/Crew_Flex
-  ├─ main ───────────────▶ Vercel Production  ──▶ Supabase PRODUCTION  sbjkzrkmcekokkqiuvvh
-  └─ staging (long-lived)▶ Vercel Preview*    ──▶ Supabase STAGING     <staging-ref>   (to create)
-       ▲ feature branches merge here first (PR → staging), then staging → main (PR)
+GitHub paura432/Crew_Flex · main ──▶ Vercel Production https://crew-flex.vercel.app
+                                        └──▶ Supabase PRODUCTION sbjkzrkmcekokkqiuvvh (eu-central-1)
 ```
 
-\* Vercel Preview deployments of the `staging` branch get a **stable branch URL** (Vercel "branch domain",
-e.g. `crew-flex-staging.vercel.app`) so the staging CORS allowlist can be exact. Preview deployments of
-other branches reuse Preview env vars (= staging) — they never touch production.
+| Concern            | Value                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| Git                | `main` is the only permanent branch; short-lived local branches are optional, `main` is pushed directly |
+| Vercel             | Production = `main` (auto-deploy on push). No Preview/branch domain is part of the procedure            |
+| Supabase           | `sbjkzrkmcekokkqiuvvh` (`Crew_Flex`), linked locally (`supabase/.temp/project-ref`)                     |
+| Schema             | `supabase/migrations/*` applied with `supabase db push` (linked) after local review                     |
+| Edge Functions     | `supabase functions deploy <name> --project-ref sbjkzrkmcekokkqiuvvh --use-api`                         |
+| Function secrets   | `ALLOWED_ORIGINS=https://crew-flex.vercel.app` (set 2026-10-09); nothing else is custom                 |
+| Vercel env vars    | Production scope: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` of that project    |
+| Auth               | e-mail confirmation ON; E2E accounts are auto-confirmed individually (Admin API), never globally        |
+| Data               | real users **and** clearly synthetic E2E accounts (`e2e…@` / `…+e2e…@`), cleaned after each campaign    |
+| Local `.env.local` | points to the same project (read-only use; authenticated writes only through the app as yourself)       |
 
-| Concern             | PRODUCTION                                     | STAGING                                                                |
-| ------------------- | ---------------------------------------------- | ---------------------------------------------------------------------- |
-| Supabase project    | `sbjkzrkmcekokkqiuvvh` (eu-central-1)          | new project, same region, Free/Micro                                   |
-| Schema              | `supabase/migrations/*` via `db push`          | identical files, identical command, `--project-ref <staging-ref>`      |
-| RLS / grants / RPCs | from the same migrations                       | identical (nothing environment-specific in SQL)                        |
-| Edge Functions      | `functions deploy --project-ref <prod-ref>`    | identical code, `--project-ref <staging-ref>`                          |
-| Function secrets    | `ALLOWED_ORIGINS=https://crew-flex.vercel.app` | `ALLOWED_ORIGINS=https://<staging-branch-domain>`                      |
-| Auth                | e-mail confirmation ON (unchanged)             | e-mail confirmation ON; test users auto-confirmed per user (Admin API) |
-| Data                | real                                           | **synthetic only**: 2 professionals, 1 organization, 1 org admin       |
-| Vercel env vars     | Production scope: prod URL + publishable key   | Preview scope: staging URL + staging publishable key                   |
-| Local `.env.local`  | —                                              | points to staging (never to production)                                |
-| `.env.e2e`          | never                                          | staging accounts                                                       |
+The code is environment-agnostic: the app reads only the two `NEXT_PUBLIC_*` values (`src/lib/env.ts`);
+functions read platform-provided variables plus `ALLOWED_ORIGINS`.
 
-The code is environment-agnostic: the app reads only `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`src/lib/env.ts`); functions read platform-provided variables plus
-`ALLOWED_ORIGINS`. No environment is hard-coded except the guard in `tests/e2e/remote-smoke.test.ts` that
-refuses to run against the production ref.
+## 2. Risk assumed and compensating controls
 
-## 3. Values you must provide
+Every push to `main` is a production deploy and every remote test runs on real infrastructure. Accepted
+on 2026-10-10 because the product has a single real account and no customer data yet. Compensations:
 
-| Value                          | Where it comes from                                                     | Where it goes                                                                |
-| ------------------------------ | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Supabase organization id       | `pnpm exec supabase orgs list`                                          | `projects create --org-id`                                                   |
-| Staging DB password            | generated by you (password manager)                                     | `projects create --db-password` (never stored in repo)                       |
-| `<staging-ref>`                | output of `projects create` / `projects list`                           | every `--project-ref` below; `docs/` may name it                             |
-| Staging publishable key        | `pnpm exec supabase projects api-keys --project-ref <staging-ref>`      | Vercel Preview env, `.env.local`, `.env.e2e`                                 |
-| Staging **secret** key         | same command (`sb_secret_…`)                                            | only your terminal, only for `scripts/staging/seed-users.sh`; never in files |
-| Vercel branch domain           | Vercel → Project → Settings → Domains → add, assign to branch `staging` | `ALLOWED_ORIGINS` of staging; E2E docs                                       |
-| Three test e-mails + passwords | you (synthetic addresses on a domain you control, e.g. `e2e+pro-a@…`)   | `scripts/staging/seed-users.sh` input; `.env.e2e`                            |
+| Control                                                                                                                                             | Where                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Quality gate before every push: `pnpm check`, `pnpm build`, `git diff --check`; Husky pre-commit (lint-staged, typecheck, tests)                    | `package.json`, `.husky/pre-commit`                                        |
+| Migrations: non-destructive only, reviewed, `db push --dry-run` first, never `reset`/`DROP`/`TRUNCATE` remotely                                     | `AGENTS.md`, `README.md`                                                   |
+| Functions: deploy one at a time, smallest first, verify with probes between steps; rollback = `functions delete` or redeploy of the previous commit | `docs/audit/DEPLOYMENT_PLAN.md`                                            |
+| RLS on every table (26 policies) + JWT verified in code; the service role is never read by functions                                                | migrations, `supabase/functions/_shared`, `repo-hygiene` test              |
+| Remote E2E writes need **two** conditions: authorized ref == URL ref == linked ref, and a per-run confirmation typed on the command line            | `tests/e2e/guard.ts`, `scripts/e2e/_guard.sh`, `e2e-production-guard` test |
+| Synthetic data only, obviously named, scoped cleanup script; global Auth settings untouched; no notifications, no mass matching                     | `scripts/e2e/seed-users.sh`, `scripts/e2e/cleanup-synthetic.sh`            |
+| Every remote mutation is logged in `docs/audit/DEPLOYMENT_PLAN.md` with date, command and result                                                    | execution logs §8–§9                                                       |
 
-## 4. Exact plan (commands run by you; each step is reversible, none touches production)
+Re-evaluate OD-9 (a separate staging project) before the first real organization onboards or before
+any migration that rewrites existing rows.
+
+## 3. Remote E2E on the single project (authorized runs only)
 
 ```bash
-# 4.1 Create the project (one-time). Region = same as production.
-pnpm exec supabase orgs list
-pnpm exec supabase projects create Crew_Flex_staging --org-id <org-id> --region eu-central-1 \
-  --db-password '<generated-password>' --size micro
-pnpm exec supabase projects list            # note <staging-ref>; wait for ACTIVE_HEALTHY
-
-# 4.2 Apply the versioned migrations (identical to production). Dry-run first.
-pnpm exec supabase db push --project-ref <staging-ref> --dry-run
-pnpm exec supabase db push --project-ref <staging-ref>
-pnpm exec supabase migration list --project-ref <staging-ref>   # local == remote
-
-# 4.3 Verify the schema is what the code expects (types must be byte-identical to the committed file)
-pnpm exec supabase gen types typescript --project-id <staging-ref> --schema public \
-  | diff - src/types/database.generated.ts && echo "schema parity OK"
-
-# 4.4 Secrets, then functions (smallest first; --use-api because this machine has no Docker)
-pnpm exec supabase secrets set --project-ref <staging-ref> ALLOWED_ORIGINS=https://<staging-branch-domain>
-pnpm exec supabase functions deploy health --project-ref <staging-ref> --use-api --debug
-curl -s https://<staging-ref>.supabase.co/functions/v1/health            # {"ok":true,...}
-pnpm exec supabase functions deploy professional-availability --project-ref <staging-ref> --use-api --debug
-pnpm exec supabase functions deploy work-requirements capacity-evaluate matching-evaluate \
-  --project-ref <staging-ref> --use-api --debug
-pnpm exec supabase functions list --project-ref <staging-ref>
-
-# 4.5 Synthetic users (auto-confirmed individually; the global confirmation setting is NOT changed)
-SUPABASE_URL=https://<staging-ref>.supabase.co SUPABASE_SECRET_KEY='<sb_secret_…>' \
-  bash scripts/staging/seed-users.sh      # prompts for the three e-mails/passwords; prints nothing secret
-
-# 4.6 Vercel (Dashboard): Settings → Environment Variables, scope **Preview** only:
-#     NEXT_PUBLIC_SUPABASE_URL = https://<staging-ref>.supabase.co
-#     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = <staging publishable key>
-#     Settings → Domains: add <staging-branch-domain>, assign to Git branch "staging".
-#     Settings → Git: Production Branch stays "main".
-
-# 4.7 Git: create the long-lived staging branch from this feature branch and push (your identity)
-git checkout -b staging feat/crewflex-parity-migration && git push -u origin staging
-#     → Vercel builds a Preview at <staging-branch-domain> using the Preview env vars (= staging).
-
-# 4.8 E2E against staging (never production)
-cp .env.e2e.example .env.e2e && $EDITOR .env.e2e       # staging URL/key + the three accounts
-pnpm e2e:remote
+cp .env.e2e.example .env.e2e            # production URL + publishable key + the 3 synthetic accounts
+set -a; . ./.env.e2e; set +a
+# 1. create the accounts once (secret key from `supabase projects api-keys --project-ref <ref> --reveal`, shell only)
+SUPABASE_SECRET_KEY='<sb_secret_…>' E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) \
+  bash scripts/e2e/seed-users.sh
+# 2. run the ten checks (writes one window, deletes it; leaves one requirement in the synthetic org)
+E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) pnpm e2e:remote
+# 3. remove the synthetic accounts and their rows when the campaign is over
+E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) bash scripts/e2e/cleanup-synthetic.sh --dry-run
+E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) bash scripts/e2e/cleanup-synthetic.sh
 ```
 
-Rollback per step: 4.1 `projects delete <staging-ref>`; 4.4 `functions delete <name> --project-ref <staging-ref>`;
-4.5 delete the users in the Dashboard; 4.6 remove the Preview variables; 4.7 delete the branch. Production
-is not referenced by any step.
+Without `E2E_AUTHORIZED_PROJECT_REF` matching the URL and the linked project, or without the per-run
+`E2E_WRITE_CONFIRM`, the suite throws before signing in and the scripts exit with code 2. A skipped suite is
+never reported as PASS.
 
-## 5. Guard-rails
+## 4. Guard-rails
 
-- `supabase link` stays on production only because it already is; **every staging command passes
-  `--project-ref <staging-ref>` explicitly**. Do not re-link to staging (easy to forget to switch back).
-- Migrations are applied to staging first, always. A migration is "promotable" only after the RLS suite,
-  `db push --dry-run` on staging and the E2E pass there.
-- Function code is the same artefact for both environments; only secrets differ.
-- Synthetic data only; no production export/import, ever.
-- The E2E runner refuses the production ref; `.env.e2e` is git-ignored; secret keys are never written to disk by any repo script.
+- `supabase link` stays on `sbjkzrkmcekokkqiuvvh`; deploy commands still name `--project-ref` explicitly.
+- Nothing destructive remotely: no `db reset`, `DROP`, `TRUNCATE`, mass `DELETE`, unjustified `migration repair`.
+- Secrets never touch the repo: `sb_secret_…`, DB passwords and tokens live only in the operator's shell.
+- Any future second environment is a new decision (OD-9), not an implicit side effect of a script.
