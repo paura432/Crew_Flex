@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# cleanup-test-rows.sh — remove the rows that local test runs leave behind, LOCAL Docker stack only.
+#
+# The E2E suite creates one `E2E <timestamp>` work requirement per run and the browser smoke one
+# `Local UI check · …` (V0 has no delete path for requirements). Everything else (the deterministic
+# seed, the 22 synthetic accounts, their qualifications and windows) is left untouched.
+# Goes through scripts/local/sb-local.sh, which refuses any remote target.
+# Usage: bash scripts/local/cleanup-test-rows.sh [--dry-run]
+set -euo pipefail
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
+WHERE="title like 'E2E %' or title like 'Local UI check%' or title like 'E2E should fail%'"
+if [ "${1:-}" = "--dry-run" ]; then
+  bash scripts/local/sb-local.sh db query "select title, created_at from public.work_requirements where $WHERE order by created_at"
+  exit 0
+fi
+# work_requirement_qualifications cascade with the requirement; audit rows stay (append-only, synthetic).
+bash scripts/local/sb-local.sh db query "delete from public.work_requirements where $WHERE returning title"

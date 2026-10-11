@@ -53,7 +53,22 @@ describe("G. environment files", () => {
     expect(isIgnored(".env.local")).toBe(true);
     expect(isIgnored(".env")).toBe(true);
     expect(isIgnored(".env.production.local")).toBe(true);
+    expect(isIgnored(".env.remote.backup")).toBe(true);
+    expect(isIgnored("supabase/functions/.env")).toBe(true);
     expect(isIgnored(".env.example")).toBe(false);
+  });
+
+  it("the remote env backup uses a name Next.js never loads and no script reads it", () => {
+    // Next.js loads .env, .env.local, .env.<mode>, .env.<mode>.local — nothing else.
+    expect(".env.remote.backup").not.toMatch(
+      /^\.env(\.local|\.(development|production|test)(\.local)?)?$/,
+    );
+    const readers = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
+      .split("\n")
+      .filter((f) => /\.(ts|tsx|mjs|js|sh|json|toml)$/.test(f) && !f.startsWith("tests/security/"))
+      .filter((f) => readFileSync(join(root, f), "utf8").includes(".env.remote.backup"));
+    // Only the docs mention the backup; no script, config or source loads it.
+    expect(readers).toEqual([]);
   });
 
   it(".env.example contains variable names only, no values", () => {
