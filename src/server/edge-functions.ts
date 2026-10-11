@@ -8,7 +8,9 @@ export type EdgeFunctionName =
   | "work-requirements"
   | "capacity-evaluate"
   | "matching-evaluate"
-  | "professional-availability";
+  | "professional-availability"
+  | "professional-profile"
+  | "professional-qualifications";
 
 interface InvokeOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";

@@ -3,6 +3,12 @@
 import type { AvailabilityStatus } from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
+import type { ProfessionalProfile } from "../domain/professional.ts";
+import type {
+  QualificationStatus,
+  QualificationType,
+  VerificationStatus,
+} from "../domain/qualification.ts";
 import type { WorkRequirement } from "../domain/work-requirement.ts";
 
 export type ApiErrorCode =
@@ -82,6 +88,35 @@ export interface AvailabilityWindowResponse {
 }
 
 export interface AvailabilityDeleteResponse {
+  deleted: true;
+  id: string;
+}
+
+export interface ProfessionalProfileResponse {
+  profile: ProfessionalProfile & { updatedAt: string };
+}
+
+/** A qualification declared by the professional. `verificationStatus` is read-only for them. */
+export interface Qualification {
+  id: string;
+  type: QualificationType;
+  status: QualificationStatus;
+  /** Calendar dates `YYYY-MM-DD` or null. */
+  issuedAt: string | null;
+  expiresAt: string | null;
+  verificationStatus: VerificationStatus;
+  updatedAt: string;
+}
+
+export interface QualificationListResponse {
+  qualifications: Qualification[];
+}
+
+export interface QualificationResponse {
+  qualification: Qualification;
+}
+
+export interface QualificationDeleteResponse {
   deleted: true;
   id: string;
 }

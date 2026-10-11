@@ -1,5 +1,6 @@
 import { StatusChip, type Tone } from "@/components/ui/StatusChip";
 import { StateMessage } from "@/components/ui/StateMessage";
+import type { CompletenessItem } from "@/domain/professional";
 import type { VerificationStatus } from "@/domain/qualification";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type {
@@ -26,6 +27,17 @@ export const VISIBILITY_COPY: Record<ProfileVisibility, { label: string; detail:
     label: "Open",
     detail: "Your name is shown in matching results. Contact still requires your consent.",
   },
+};
+
+/** Concrete next step for the passport completeness metric (CF-L03). */
+export const COMPLETENESS_HINT: Record<CompletenessItem, string> = {
+  display_name: "Next: add your professional name",
+  base_location: "Next: set your base",
+  years_experience: "Next: add your years of experience",
+  licence_or_rating: "Next: declare a licence or type rating",
+  verified_qualification: "Next: a reviewer verifies a qualification",
+  availability: "Next: publish available days",
+  visibility: "Next: choose anonymous or open visibility",
 };
 
 export function ProfileFacts({ profile }: { profile: TechnicianProfileRow }) {

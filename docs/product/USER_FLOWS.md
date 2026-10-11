@@ -36,10 +36,13 @@ Sign out from the app shell.
 `/app/organization/workforce`: members of the organization with role and, for technicians, their
 qualifications and verification status.
 
-## UF-5 Professional (PARTIAL)
+## UF-5 Professional (IMPLEMENTED, local)
 
-`/app/professional` overview, `/profile`, `/qualifications`, `/availability` show the user's own data
-(read under RLS). Editing is NEXT.
+`/app/professional` overview (passport completeness + next step), `/profile` (edit name, base, years,
+status, mobility, visibility → `professional-profile`), `/qualifications` (declare / edit dates /
+withdraw / remove → `professional-qualifications`; review state read-only), `/availability`
+(`professional-availability`). Every write goes through an Edge Function with the JWT subject as
+owner; the page re-reads after save, so a reload shows the persisted state.
 
 ## UF-6 Candidate Pack / application / coverage (PLANNED)
 

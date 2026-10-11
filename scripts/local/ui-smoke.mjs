@@ -33,9 +33,13 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME, head
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const page = await ctx.newPage();
 const errors = [];
-page.on("pageerror", (e) => errors.push(String(e)));
+const expectedErrorUrls = new Set(); // pages whose 404 is the behaviour under test (cross-org)
+const isExpected404 = (text, url) =>
+  /status of 404/.test(text) && [...expectedErrorUrls].some((u) => url.startsWith(u));
+page.on("pageerror", (e) => errors.push(`${String(e)} @ ${page.url()}`));
 page.on("console", (m) => {
-  if (m.type() === "error") errors.push(m.text());
+  if (m.type() === "error" && !isExpected404(m.text(), page.url()))
+    errors.push(`${m.text()} @ ${page.url()}`);
 });
 const hosts = new Set();
 page.on("request", (r) => hosts.add(new URL(r.url()).host));
@@ -46,6 +50,19 @@ const shot = (name) =>
     quality: 70,
     fullPage: false,
   });
+/** Same page at the three reference widths (docs/qa/QUALITY_GATES.md): 1440 / 768 / 390. */
+async function responsiveShots(name) {
+  for (const width of [1440, 768, 390]) {
+    await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+    await page.waitForTimeout(300);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+    ok(`${name} @${width}: no horizontal overflow`, !overflow, "");
+    await shot(`${name}-${width}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+}
 
 async function login(email) {
   await page.goto(`${BASE}/login`);
@@ -143,6 +160,98 @@ await page
 await page.waitForTimeout(2500);
 after = await page.locator("li:has(button:has-text('Delete'))").filter({ hasText: "2031" }).count();
 ok("5 delete window", after === 0, `${after} rows with 2031 left`);
+
+// 1b. Passport: edit → save → reload persists → restore seed values
+await page.goto(`${BASE}/app/professional/profile`);
+await page.waitForLoadState("networkidle");
+const originalYears = await page.inputValue("#yearsExperience");
+const originalBase = await page.inputValue("#baseLocation");
+await responsiveShots("10-passport");
+await page.fill("#baseLocation", "Valencia (VLC)");
+await page.fill("#yearsExperience", String(Number(originalYears || 0) + 1));
+await page.selectOption("#currentStatus", "between_contracts");
+await page.click("main form button[type=submit]");
+await page.waitForSelector("[role=status]:has-text('Passport updated')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "5b passport edit persists after reload (base, years, status)",
+  (await page.inputValue("#baseLocation")) === "Valencia (VLC)" &&
+    (await page.inputValue("#yearsExperience")) === String(Number(originalYears || 0) + 1) &&
+    (await page.inputValue("#currentStatus")) === "between_contracts",
+  `${await page.inputValue("#baseLocation")} / ${await page.inputValue("#yearsExperience")}`,
+);
+await shot("11-passport-edited-after-reload");
+await page.fill("#displayName", "");
+await page.click("main form button[type=submit]");
+ok(
+  "5c client validation blocks an empty professional name",
+  (await page.locator("#displayName-error").count()) === 1,
+  "",
+);
+await page.goto(`${BASE}/app/professional/profile`);
+await page.waitForLoadState("networkidle");
+await page.fill("#baseLocation", originalBase);
+await page.fill("#yearsExperience", originalYears);
+await page.selectOption("#currentStatus", "contractor");
+await page.click("main form button[type=submit]");
+await page.waitForSelector("[role=status]:has-text('Passport updated')", { timeout: 15000 });
+
+// 1c. Qualifications: declare (pending) → edit expiry → reload persists → remove
+await page.goto(`${BASE}/app/professional/qualifications`);
+await page.waitForLoadState("networkidle");
+const qualsBefore = await page.locator("li:has(button:has-text('Remove'))").count();
+await responsiveShots("12-qualifications");
+await page.selectOption("#qualificationTypeId", { label: "B2 · Part-66 B2 — Avionics" });
+await page.click("main form button[type=submit]:has-text('Declare')");
+ok(
+  "5d BR-2.7: B2 without expiry is refused client-side",
+  /requires an expiry date/.test(
+    await page
+      .locator("#expiresAt-error")
+      .innerText()
+      .catch(() => ""),
+  ),
+  "",
+);
+await page.fill("#issuedAt", "2024-01-15");
+await page.fill("#expiresAt", "2031-01-15");
+await page.click("main form button[type=submit]:has-text('Declare')");
+await page.waitForSelector("[role=status]:has-text('B2 declared')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+const b2Row = page
+  .locator("li:has(button:has-text('Remove'))")
+  .filter({ has: page.locator("span.font-mono", { hasText: /^B2$/ }) })
+  .first();
+ok(
+  "5e declared B2 persists after reload as Held · Pending review",
+  (await page.locator("li:has(button:has-text('Remove'))").count()) === qualsBefore + 1 &&
+    /pending review/i.test(await b2Row.innerText()) &&
+    /\bheld\b/i.test(await b2Row.innerText()),
+  (await b2Row.innerText().catch(() => "no row")).replace(/\s+/g, " ").slice(0, 120),
+);
+await shot("13-qualification-declared");
+await b2Row.locator("button:has-text('Edit')").click();
+await page.fill("#expiresAt", "2032-01-15");
+await page.click("main form button[type=submit]:has-text('Save')");
+await page.waitForSelector("[role=status]:has-text('B2 updated')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "5f edited expiry persists after reload",
+  /15 Jan 2032/.test(await b2Row.innerText()),
+  (await b2Row.innerText()).replace(/\s+/g, " ").slice(0, 120),
+);
+await b2Row.locator("button:has-text('Remove')").click();
+await page.waitForSelector("[role=status]:has-text('B2 removed')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "5g removed B2 is gone (seed state restored)",
+  (await page.locator("li:has(button:has-text('Remove'))").count()) === qualsBefore,
+  "",
+);
 await page.goto(`${BASE}/app/organization`);
 await page.waitForLoadState("networkidle");
 ok(
@@ -236,6 +345,7 @@ await logout();
 
 // 3. Cross-organization: admin.other cannot open the MAD requirement
 await login("admin.other@crewflex.test");
+expectedErrorUrls.add(madUrl);
 await page.goto(madUrl);
 await page.waitForLoadState("networkidle");
 const foreign = await page.locator("body").innerText();
@@ -248,6 +358,7 @@ await page.goto(`${madUrl}/matches`);
 await page.waitForLoadState("networkidle");
 ok("13b …and on its matches", /not found|404/i.test(await page.locator("body").innerText()), "");
 await shot("09-cross-org-404");
+expectedErrorUrls.delete(madUrl);
 await logout();
 
 // 4. Manager role can see capacity; plain member cannot

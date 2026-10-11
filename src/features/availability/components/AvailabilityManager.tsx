@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { Metric } from "@/components/ui/Metric";
+import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { AvailabilityStatus } from "@/domain/availability";
@@ -58,21 +59,6 @@ const DAY_LABEL: Record<DayState, string> = {
 const toLocalInput = (iso: string) => iso.slice(0, 16);
 const toIso = (local: string) => (local ? `${local}:00Z` : "");
 
-function errorCopy(result: Extract<AvailabilityActionResult, { ok: false }>) {
-  switch (result.code) {
-    case "UNAUTHORIZED":
-      return "Your session expired. Sign in again.";
-    case "FORBIDDEN":
-      return result.message;
-    case "NETWORK_ERROR":
-      return "The service could not be reached. Nothing was saved — retry.";
-    case "NOT_FOUND":
-      return "This window no longer exists. Reload the page.";
-    default:
-      return result.message;
-  }
-}
-
 export function AvailabilityManager({
   windows,
   initialMonth,
@@ -84,11 +70,7 @@ export function AvailabilityManager({
   const [picker, setPicker] = useState<Picker>("available");
   const [editing, setEditing] = useState<AvailabilityWindow | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [notice, setNotice] = useState<{
-    tone: "ok" | "danger";
-    text: string;
-    requestId?: string;
-  } | null>(null);
+  const [notice, setNotice] = useState<NoticeState | null>(null);
   const [pending, startTransition] = useTransition();
 
   const days = calendarDays(windows, month);
@@ -111,7 +93,7 @@ export function AvailabilityManager({
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice({ tone: "danger", text: errorCopy(result), requestId: result.requestId });
+        setNotice(actionErrorCopy(result));
       }
     });
   }
@@ -171,21 +153,7 @@ export function AvailabilityManager({
 
   return (
     <div className="space-y-6">
-      {notice && (
-        <p
-          role={notice.tone === "danger" ? "alert" : "status"}
-          className={`rounded-lg border px-4 py-3 text-sm ${
-            notice.tone === "danger"
-              ? "border-danger/30 bg-danger-bg text-danger"
-              : "border-ok/30 bg-ok-bg text-ok"
-          }`}
-        >
-          {notice.text}
-          {notice.requestId && (
-            <span className="mt-1 block font-mono text-xs">Reference: {notice.requestId}</span>
-          )}
-        </p>
-      )}
+      <Notice notice={notice} />
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Metric

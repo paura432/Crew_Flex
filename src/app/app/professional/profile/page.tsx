@@ -1,33 +1,37 @@
 import type { Metadata } from "next";
+import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
-import {
-  ProfileFacts,
-  VISIBILITY_COPY,
-} from "@/features/professional/components/ProfessionalSections";
-import { loadProfessionalContext } from "@/features/professional/load";
+import { getProfessionalProfile } from "@/features/professional/api";
+import { ProfileForm } from "@/features/professional/components/ProfileForm";
+import { requireSessionActor } from "@/server/session";
 
-export const metadata: Metadata = { title: "Profile" };
+export const metadata: Metadata = { title: "Passport" };
 
 export default async function ProfessionalProfilePage() {
-  const { overview } = await loadProfessionalContext();
-  if (!overview) return <StateMessage title="No professional profile" />;
+  const actor = await requireSessionActor();
+  if (actor.profile.account_type !== "professional") {
+    return (
+      <StateMessage
+        title="No professional profile"
+        description="The passport belongs to professional accounts."
+      />
+    );
+  }
+  const result = await getProfessionalProfile();
+
   return (
     <>
       <PageHeader
-        title="Profile"
-        description="Editing your profile and visibility comes in the next phase."
+        eyebrow="My passport"
+        title="Your profile, connected."
+        description="What you update here is reflected in matching and in your dossier. Qualifications and availability have their own pages."
       />
-      <div className="space-y-6">
-        <Panel title="Professional data">
-          <ProfileFacts profile={overview.profile} />
-        </Panel>
-        <Panel title="Visibility">
-          <p className="font-semibold">{VISIBILITY_COPY[overview.profile.visibility].label}</p>
-          <p className="text-muted">{VISIBILITY_COPY[overview.profile.visibility].detail}</p>
-        </Panel>
-      </div>
+      {result.ok ? (
+        <ProfileForm profile={result.data.profile} />
+      ) : (
+        <ApiErrorState error={result.error} requestId={result.requestId} />
+      )}
     </>
   );
 }

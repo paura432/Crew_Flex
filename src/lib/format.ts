@@ -1,5 +1,6 @@
 // Display formatting. All operational times are shown in UTC (aviation convention, and
 // deterministic between server and browser).
+import type { Mobility, TechnicianStatus } from "@/domain/professional";
 import type { RequirementStatus, Shift, Urgency } from "@/domain/work-requirement";
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", {
@@ -48,4 +49,16 @@ export const STATUS_LABEL: Record<RequirementStatus, string> = {
   covered: "Covered",
   cancelled: "Cancelled",
   closed: "Closed",
+};
+
+export const MOBILITY_LABEL: Record<Mobility, string> = {
+  local: "Local (home base only)",
+  national: "National",
+  international: "International",
+};
+
+export const TECHNICIAN_STATUS_LABEL: Record<TechnicianStatus, string> = {
+  employed: "Employed",
+  contractor: "Contractor",
+  between_contracts: "Between contracts",
 };

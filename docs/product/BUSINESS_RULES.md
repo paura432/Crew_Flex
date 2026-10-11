@@ -22,14 +22,16 @@ same change.
 
 A held qualification is evaluated **against the requirement period**, not against "today".
 
-| Rule   | Statement                                                                                                       |
-| ------ | --------------------------------------------------------------------------------------------------------------- |
-| BR-2.1 | `status = withdrawn` is treated as **not held**.                                                                |
-| BR-2.2 | `expiresAt` is a date. It is valid through the whole UTC day.                                                   |
-| BR-2.3 | `expiresAt < date(startsAt)` → **expired**.                                                                     |
-| BR-2.4 | `date(startsAt) ≤ expiresAt < date(endsAt)` → **expires during requirement** (not valid for the full period).   |
-| BR-2.5 | `expiresAt = null` → no expiry.                                                                                 |
-| BR-2.6 | Self-declared qualifications start as `verification_status = pending`. A professional can never set `verified`. |
+| Rule   | Statement                                                                                                                                                                                                                                                                     |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-2.1 | `status = withdrawn` is treated as **not held**.                                                                                                                                                                                                                              |
+| BR-2.2 | `expiresAt` is a date. It is valid through the whole UTC day.                                                                                                                                                                                                                 |
+| BR-2.3 | `expiresAt < date(startsAt)` → **expired**.                                                                                                                                                                                                                                   |
+| BR-2.4 | `date(startsAt) ≤ expiresAt < date(endsAt)` → **expires during requirement** (not valid for the full period).                                                                                                                                                                 |
+| BR-2.5 | `expiresAt = null` → no expiry.                                                                                                                                                                                                                                               |
+| BR-2.6 | Self-declared qualifications start as `verification_status = pending`. A professional can never set `verified`.                                                                                                                                                               |
+| BR-2.7 | Catalog types flagged `requires_expiry` cannot be declared or kept active without `expiresAt` (`expiryIssueFor`, enforced by the `professional-qualifications` function and the form).                                                                                        |
+| BR-2.8 | A professional may edit the dates, set `status` to `withdrawn` / back to `active`, or remove a declaration. Changing dates of a reviewed qualification resets it to `pending` (trigger); withdrawing/re-activating does not. The type is immutable: remove and declare again. |
 
 ## BR-3 Eligibility (hard filters) — `evaluateMatch()`
 
@@ -108,3 +110,10 @@ role (`organization_members.role`: `member` · `manager` · `admin`). See `AUTHO
 
 All operational timestamps are stored as `timestamptz` and **displayed and entered in UTC** (aviation
 convention; deterministic between server and browser). IMPLEMENTED.
+
+## BR-11 Passport completeness — `profileCompleteness()`
+
+Seven items the professional controls, equally weighted, rounded percent, plus the ordered list of
+missing items so the UI shows one concrete next step (CF-L03): professional name · base · years of
+experience > 0 · an active licence or type rating · an active **verified** qualification · at least one
+`available` window · visibility other than `private`. Deterministic, never looks at "today". IMPLEMENTED.

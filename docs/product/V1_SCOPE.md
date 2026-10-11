@@ -7,25 +7,25 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 
 ## NOW (Foundation V0)
 
-| Item                                                                                    | Status                                         |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Repo, quality gates (ESLint, Prettier, Husky, lint-staged, Vitest)                      | IMPLEMENTED                                    |
-| Product + architecture documentation                                                    | IMPLEMENTED                                    |
-| Email/password auth (sign in, sign up, sign out, session refresh)                       | IMPLEMENTED                                    |
-| `/app/**` protected (proxy redirect + server-side session check)                        | IMPLEMENTED                                    |
-| Data model V0 + RLS from first migration                                                | IMPLEMENTED                                    |
-| Edge Functions: `health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate` | IMPLEMENTED                                    |
-| Deterministic matching + capacity (pure TS, tested)                                     | IMPLEMENTED                                    |
-| Organization dashboard with capacity overview                                           | IMPLEMENTED                                    |
-| Requirements list / create / detail / matches                                           | IMPLEMENTED                                    |
-| Organization workforce (read-only list)                                                 | IMPLEMENTED                                    |
-| Professional shell + profile/qualifications/availability (read-only)                    | PARTIAL                                        |
-| Audit foundation (`requirement.created`, `qualification.verified`)                      | IMPLEMENTED                                    |
-| Remote apply of migrations + function deploy                                            | BLOCKED (see final report / `ARCHITECTURE.md`) |
+| Item                                                                                        | Status                                          |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Repo, quality gates (ESLint, Prettier, Husky, lint-staged, Vitest)                          | IMPLEMENTED                                     |
+| Product + architecture documentation                                                        | IMPLEMENTED                                     |
+| Email/password auth (sign in, sign up, sign out, session refresh)                           | IMPLEMENTED                                     |
+| `/app/**` protected (proxy redirect + server-side session check)                            | IMPLEMENTED                                     |
+| Data model V0 + RLS from first migration                                                    | IMPLEMENTED                                     |
+| Edge Functions: `health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`     | IMPLEMENTED                                     |
+| Deterministic matching + capacity (pure TS, tested)                                         | IMPLEMENTED                                     |
+| Organization dashboard with capacity overview                                               | IMPLEMENTED                                     |
+| Requirements list / create / detail / matches                                               | IMPLEMENTED                                     |
+| Organization workforce (read-only list)                                                     | IMPLEMENTED                                     |
+| Professional passport (edit) + qualifications (declare/edit/withdraw/remove) + availability | IMPLEMENTED (local; functions not yet deployed) |
+| Audit foundation (`requirement.created`, `qualification.verified`)                          | IMPLEMENTED                                     |
+| Remote apply of migrations + function deploy                                                | BLOCKED (see final report / `ARCHITECTURE.md`)  |
 
 ## NEXT
 
-- Professional write flows (edit profile, add qualifications) via `professional-*` Edge Functions.
+- Deploy `professional-profile` and `professional-qualifications` to production (explicit authorization).
 - Availability: "AOG only" day state and shift-pattern generator (OD C-8).
 - Organization member management (`organization-workforce` function): invite/add members.
 - Platform-admin verification flow (privileged, audited) for qualifications.

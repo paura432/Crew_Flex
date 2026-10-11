@@ -1,5 +1,8 @@
 import "server-only";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { UpdateProfessionalProfileInput } from "@/lib/validation/professional";
+import { invokeEdgeFunction } from "@/server/edge-functions";
+import type { ProfessionalProfileResponse } from "@/types/api";
 import type {
   AvailabilityWindowRow,
   TechnicianProfileRow,
@@ -47,3 +50,13 @@ export async function getOwnProfessionalOverview(
     availability: availability.data,
   };
 }
+
+/** Own passport through the `professional-profile` Edge Function (JWT subject = owner). */
+export const getProfessionalProfile = () =>
+  invokeEdgeFunction<ProfessionalProfileResponse>("professional-profile");
+
+export const updateProfessionalProfile = (input: UpdateProfessionalProfileInput) =>
+  invokeEdgeFunction<ProfessionalProfileResponse>("professional-profile", {
+    method: "PATCH",
+    body: input,
+  });

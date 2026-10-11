@@ -1,6 +1,16 @@
 import "server-only";
 import type { QualificationType } from "@/domain/qualification";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type {
+  CreateQualificationInput,
+  UpdateQualificationInput,
+} from "@/lib/validation/professional";
+import { invokeEdgeFunction } from "@/server/edge-functions";
+import type {
+  QualificationDeleteResponse,
+  QualificationListResponse,
+  QualificationResponse,
+} from "@/types/api";
 import type { QualificationTypeRow } from "@/types/database";
 
 /** Reference catalog — direct read under RLS (ADR-001 §4). */
@@ -21,3 +31,26 @@ export async function listQualificationTypes(): Promise<QualificationType[] | nu
     requiresExpiry: row.requires_expiry,
   }));
 }
+
+/** Own declarations through the `professional-qualifications` Edge Function (JWT subject = owner). */
+export const listQualifications = () =>
+  invokeEdgeFunction<QualificationListResponse>("professional-qualifications");
+
+export const createQualification = (input: CreateQualificationInput) =>
+  invokeEdgeFunction<QualificationResponse>("professional-qualifications", {
+    method: "POST",
+    body: input,
+  });
+
+export const updateQualification = (id: string, input: UpdateQualificationInput) =>
+  invokeEdgeFunction<QualificationResponse>("professional-qualifications", {
+    method: "PATCH",
+    query: { id },
+    body: input,
+  });
+
+export const deleteQualification = (id: string) =>
+  invokeEdgeFunction<QualificationDeleteResponse>("professional-qualifications", {
+    method: "DELETE",
+    query: { id },
+  });

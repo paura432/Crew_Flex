@@ -6,16 +6,16 @@ in `supabase/functions/`. Shared code in `_shared/`; business logic imported fro
 
 ## Inventory
 
-| Function                      | Methods                  | Auth                       | Purpose                                                                                                                                               | Status                            |
-| ----------------------------- | ------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `health`                      | GET                      | public                     | Liveness. Returns `{ status, time }`. No internal details.                                                                                            | DEPLOYED 2026-10-09 (E2E pending) |
-| `work-requirements`           | GET, POST                | JWT + org role             | GET `?organizationId=&limit=` list (RLS), GET `?id=` one; POST create (admin/manager) via RPC `create_work_requirement` → audit `requirement.created` | DEPLOYED 2026-10-09 (E2E pending) |
-| `capacity-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ capacity: { required, internallyEligible, gap, coveragePercent }, internal: EvaluatedCandidate[] }`                          | DEPLOYED 2026-10-09 (E2E pending) |
-| `matching-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ summary: { evaluated, eligible }, candidates: EvaluatedCandidate[] }` (external pool)                                        | DEPLOYED 2026-10-09 (E2E pending) |
-| `professional-profile`        | –                        | –                          | Edit own technician profile/visibility                                                                                                                | PLANNED (NEXT)                    |
-| `professional-qualifications` | –                        | –                          | Add/edit own qualifications (always `pending`)                                                                                                        | PLANNED (NEXT)                    |
-| `professional-availability`   | GET, POST, PATCH, DELETE | JWT (professional account) | Own availability windows: list, create, replace, delete. Ownership = JWT subject; RLS second layer                                                    | DEPLOYED 2026-10-09 (E2E pending) |
-| `organization-workforce`      | –                        | –                          | Invite members with consent                                                                                                                           | PLANNED (NEXT)                    |
+| Function                      | Methods                  | Auth                       | Purpose                                                                                                                                                                           | Status                                       |
+| ----------------------------- | ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `health`                      | GET                      | public                     | Liveness. Returns `{ status, time }`. No internal details.                                                                                                                        | DEPLOYED 2026-10-09 (E2E pending)            |
+| `work-requirements`           | GET, POST                | JWT + org role             | GET `?organizationId=&limit=` list (RLS), GET `?id=` one; POST create (admin/manager) via RPC `create_work_requirement` → audit `requirement.created`                             | DEPLOYED 2026-10-09 (E2E pending)            |
+| `capacity-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ capacity: { required, internallyEligible, gap, coveragePercent }, internal: EvaluatedCandidate[] }`                                                      | DEPLOYED 2026-10-09 (E2E pending)            |
+| `matching-evaluate`           | POST                     | JWT + admin/manager        | `{ requirementId }` → `{ summary: { evaluated, eligible }, candidates: EvaluatedCandidate[] }` (external pool)                                                                    | DEPLOYED 2026-10-09 (E2E pending)            |
+| `professional-profile`        | GET, PATCH               | JWT (professional account) | Own passport: `profiles.display_name` + `technician_profiles` (base, mobility, years, status, visibility). Full replacement; strict schema rejects identity/privileged fields     | IMPLEMENTED (local 2026-10-11, not deployed) |
+| `professional-qualifications` | GET, POST, PATCH, DELETE | JWT (professional account) | Own declarations: list with catalog type; declare (always `pending`, BR-2.7 checked against the catalog row); edit dates / withdraw; remove. `verification_status` never writable | IMPLEMENTED (local 2026-10-11, not deployed) |
+| `professional-availability`   | GET, POST, PATCH, DELETE | JWT (professional account) | Own availability windows: list, create, replace, delete. Ownership = JWT subject; RLS second layer                                                                                | DEPLOYED 2026-10-09 (E2E pending)            |
+| `organization-workforce`      | –                        | –                          | Invite members with consent                                                                                                                                                       | PLANNED (NEXT)                               |
 
 No directories are created for PLANNED functions (no ghost code). `createHandler` accepts GET/POST/PATCH/DELETE.
 
@@ -60,7 +60,7 @@ The client adds `NETWORK_ERROR` when a function cannot be reached.
 
 ## Configuration
 
-`supabase/config.toml`: `verify_jwt = false` for all four functions (JWT verified in code with
+`supabase/config.toml`: `verify_jwt = false` for all seven functions (JWT verified in code with
 `getClaims`, compatible with asymmetric signing keys), `import_map = "./functions/deno.json"`.
 
 Runtime env (platform provided): `SUPABASE_URL`, `SUPABASE_ANON_KEY` (or `SUPABASE_PUBLISHABLE_KEYS`),

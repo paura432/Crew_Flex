@@ -13,6 +13,9 @@
  *   1 sign-in · 2 create availability · 3 edit + delete · 4 persistence across a fresh session ·
  *   5 isolation between professionals · 6 authorized requirement creation · 7 capacity ·
  *   8 deterministic matching · 9 401/403 · 10 cross-organization protection.
+ * Phase 1 (profile + qualifications): 11 passport edit + persistence + isolation · 12 declaration
+ *   stays pending, verification cannot be supplied, BR-2.7 · 13 B cannot touch A's declaration ·
+ *   14 a withdrawn hard qualification changes matching deterministically (restored afterwards).
  */
 import { createClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync } from "node:fs";
@@ -42,6 +45,22 @@ interface Envelope {
 }
 
 type Window = { id: string; startsAt: string; endsAt: string; status: string };
+type Profile = {
+  displayName: string;
+  baseLocation: string | null;
+  mobility: string;
+  yearsExperience: number | null;
+  currentStatus: string;
+  visibility: string;
+};
+type Qualification = {
+  id: string;
+  type: { id: string; code: string; requiresExpiry: boolean };
+  status: string;
+  issuedAt: string | null;
+  expiresAt: string | null;
+  verificationStatus: string;
+};
 
 function userClient(token?: string) {
   return createClient(env.url!, env.key!, {
@@ -84,6 +103,8 @@ describe.skipIf(!configured)(
     let tokenA = "";
     let tokenB = "";
     let windowId = "";
+    let originalProfile: Profile | null = null;
+    let declaredId = "";
 
     beforeAll(async () => {
       const guard = evaluateProductionGuard({
@@ -104,6 +125,20 @@ describe.skipIf(!configured)(
           method: "DELETE",
           token: tokenA,
           query: { id: windowId },
+        });
+      }
+      if (originalProfile) {
+        await call("professional-profile", {
+          method: "PATCH",
+          token: tokenA,
+          body: originalProfile,
+        });
+      }
+      if (declaredId) {
+        await call("professional-qualifications", {
+          method: "DELETE",
+          token: tokenA,
+          query: { id: declaredId },
         });
       }
     });
@@ -218,6 +253,167 @@ describe.skipIf(!configured)(
       windowId = "";
     });
 
+    it("11. professional A edits the passport; it persists in a fresh session; B is untouched", async () => {
+      const before = await call("professional-profile", { token: tokenA });
+      expect(before.status).toBe(200);
+      const profile = before.body.data?.profile as Profile;
+      const editable: Profile = {
+        displayName: profile.displayName,
+        baseLocation: profile.baseLocation,
+        mobility: profile.mobility,
+        yearsExperience: profile.yearsExperience,
+        currentStatus: profile.currentStatus,
+        visibility: profile.visibility,
+      };
+      originalProfile = editable;
+      const bBefore = (await call("professional-profile", { token: tokenB })).body.data
+        ?.profile as Profile;
+
+      const edited = await call("professional-profile", {
+        method: "PATCH",
+        token: tokenA,
+        body: {
+          ...editable,
+          yearsExperience: (editable.yearsExperience ?? 0) + 1,
+          baseLocation: "E2E base",
+        },
+      });
+      expect(edited.status).toBe(200);
+      expect((edited.body.data?.profile as Profile).baseLocation).toBe("E2E base");
+
+      const fresh = await call("professional-profile", {
+        token: await signIn(env.proA[0]!, env.proA[1]!),
+      });
+      expect((fresh.body.data?.profile as Profile).baseLocation).toBe("E2E base");
+      expect((fresh.body.data?.profile as Profile).yearsExperience).toBe(
+        (editable.yearsExperience ?? 0) + 1,
+      );
+
+      const bAfter = (await call("professional-profile", { token: tokenB })).body.data
+        ?.profile as Profile;
+      expect(bAfter).toEqual(bBefore);
+
+      // Privileged or identity fields are rejected, not silently ignored (strict schema).
+      for (const extra of [
+        { platformRole: "platform_admin" },
+        { profileId: "00000000-0000-4000-8000-000000000022" },
+      ]) {
+        const refused = await call("professional-profile", {
+          method: "PATCH",
+          token: tokenA,
+          body: { ...editable, ...extra },
+        });
+        expect(refused.status).toBe(400);
+        expect(refused.body.error?.code).toBe("VALIDATION_ERROR");
+      }
+
+      const restored = await call("professional-profile", {
+        method: "PATCH",
+        token: tokenA,
+        body: editable,
+      });
+      expect(restored.status).toBe(200);
+      originalProfile = null;
+    });
+
+    it("12. a declaration starts pending, cannot be verified by its owner and respects BR-2.7", async () => {
+      const catalog = await userClient(tokenA)
+        .from("qualification_types")
+        .select("id, code, requires_expiry")
+        .in("code", ["B2", "TR-A350"]);
+      expect(catalog.error).toBeNull();
+      const b2 = catalog.data!.find((t) => t.code === "B2")!;
+      const a350 = catalog.data!.find((t) => t.code === "TR-A350")!;
+
+      const noExpiry = await call("professional-qualifications", {
+        method: "POST",
+        token: tokenA,
+        body: { qualificationTypeId: b2.id },
+      });
+      expect(noExpiry.status).toBe(400); // B2 requires an expiry date
+
+      const preVerified = await call("professional-qualifications", {
+        method: "POST",
+        token: tokenA,
+        body: { qualificationTypeId: a350.id, verificationStatus: "verified" },
+      });
+      expect(preVerified.status).toBe(400);
+
+      const created = await call("professional-qualifications", {
+        method: "POST",
+        token: tokenA,
+        body: { qualificationTypeId: a350.id, issuedAt: "2024-01-01" },
+      });
+      expect(created.status).toBe(201);
+      const q = created.body.data?.qualification as Qualification;
+      declaredId = q.id;
+      expect(q.verificationStatus).toBe("pending");
+      expect(q.type.code).toBe("TR-A350");
+
+      const duplicate = await call("professional-qualifications", {
+        method: "POST",
+        token: tokenA,
+        body: { qualificationTypeId: a350.id },
+      });
+      expect(duplicate.status).toBe(409);
+
+      const direct = await userClient(tokenA)
+        .from("technician_qualifications")
+        .update({ verification_status: "verified" })
+        .eq("id", declaredId)
+        .select("id");
+      expect(direct.error?.code).toBe("42501"); // column grant: not even the owner
+
+      const edited = await call("professional-qualifications", {
+        method: "PATCH",
+        token: tokenA,
+        query: { id: declaredId },
+        body: { issuedAt: "2024-01-01", expiresAt: "2030-01-01", status: "active" },
+      });
+      expect(edited.status).toBe(200);
+      expect((edited.body.data?.qualification as Qualification).expiresAt).toBe("2030-01-01");
+      expect((edited.body.data?.qualification as Qualification).verificationStatus).toBe("pending");
+
+      const fresh = await call("professional-qualifications", {
+        token: await signIn(env.proA[0]!, env.proA[1]!),
+      });
+      const list = fresh.body.data?.qualifications as Qualification[];
+      expect(list.find((x) => x.id === declaredId)?.expiresAt).toBe("2030-01-01");
+    });
+
+    it("13. professional B cannot see, edit or delete A's declaration", async () => {
+      const listed = await call("professional-qualifications", { token: tokenB });
+      expect(
+        (listed.body.data?.qualifications as Qualification[]).some((x) => x.id === declaredId),
+      ).toBe(false);
+      const patched = await call("professional-qualifications", {
+        method: "PATCH",
+        token: tokenB,
+        query: { id: declaredId },
+        body: { issuedAt: null, expiresAt: null, status: "withdrawn" },
+      });
+      expect(patched.status).toBe(404);
+      const deleted = await call("professional-qualifications", {
+        method: "DELETE",
+        token: tokenB,
+        query: { id: declaredId },
+      });
+      expect(deleted.status).toBe(404);
+      const direct = await userClient(tokenB)
+        .from("technician_qualifications")
+        .select("id")
+        .eq("id", declaredId);
+      expect(direct.data).toEqual([]);
+
+      const gone = await call("professional-qualifications", {
+        method: "DELETE",
+        token: tokenA,
+        query: { id: declaredId },
+      });
+      expect(gone.status).toBe(200);
+      declaredId = "";
+    });
+
     it("9b. a professional cannot create work requirements (403)", async () => {
       const { status, body } = await call("work-requirements", {
         method: "POST",
@@ -321,6 +517,57 @@ describe.skipIf(!configured)(
         // Private professionals (default visibility) must never appear.
         const candidates = first.body.data?.candidates as { candidate: { id: string } }[];
         for (const c of candidates) expect(c.candidate.id).not.toMatch(/@/);
+      });
+
+      it("14. withdrawing a hard qualification changes matching deterministically (then restored)", async () => {
+        // Seed scenario: Delta (professional A) is one of the 3 eligible externals for the MAD need.
+        const mad = await userClient(tokenOrg)
+          .from("work_requirements")
+          .select("id")
+          .eq("title", "B1.1 · A320 line maintenance reinforcement")
+          .limit(1)
+          .maybeSingle();
+        if (!mad.data) return; // not the seeded organization: nothing to assert
+        const madId = String(mad.data.id);
+        const evaluate = async () =>
+          (
+            await call("matching-evaluate", {
+              method: "POST",
+              token: tokenOrg,
+              body: { requirementId: madId },
+            })
+          ).body.data?.summary as { evaluated: number; eligible: number };
+        const baseline = await evaluate();
+
+        const mine = (await call("professional-qualifications", { token: tokenA })).body.data
+          ?.qualifications as Qualification[];
+        const fts = mine.find((q) => q.type.code === "FTS");
+        if (!fts || fts.verificationStatus !== "verified") return; // account is not Delta
+        const withdraw = await call("professional-qualifications", {
+          method: "PATCH",
+          token: tokenA,
+          query: { id: fts.id },
+          body: { issuedAt: fts.issuedAt, expiresAt: fts.expiresAt, status: "withdrawn" },
+        });
+        expect(withdraw.status).toBe(200);
+        try {
+          const after = await evaluate();
+          expect(after.evaluated).toBe(baseline.evaluated);
+          expect(after.eligible).toBe(baseline.eligible - 1);
+        } finally {
+          const restore = await call("professional-qualifications", {
+            method: "PATCH",
+            token: tokenA,
+            query: { id: fts.id },
+            body: { issuedAt: fts.issuedAt, expiresAt: fts.expiresAt, status: "active" },
+          });
+          expect(restore.status).toBe(200);
+          // Same dates → the review state is untouched (only date changes reset it).
+          expect((restore.body.data?.qualification as Qualification).verificationStatus).toBe(
+            "verified",
+          );
+        }
+        expect(await evaluate()).toEqual(baseline);
       });
 
       it("10. a professional outside the organization cannot read or evaluate its requirement", async () => {

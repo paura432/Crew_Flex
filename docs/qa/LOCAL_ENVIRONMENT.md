@@ -111,6 +111,20 @@ Row counts after `db reset`: 22 users/profiles, 19 technician profiles, 3 organi
   tests, Prettier, deno lint/check, 22 Deno tests), `pnpm build`, `git diff --check`. Screenshots
   `docs/audit/evidence/local-01…09-*.jpg` refreshed.
 - Each run of the E2E suite leaves one `E2E <timestamp>` requirement and the smoke one
-  `Local UI check · B2 A330` in the synthetic organizations (V0 has no delete path); harmless, cleared by `db reset`.
+  `Local UI check · B2 A330` in the synthetic organizations (V0 has no delete path). Remove them with
+  `bash scripts/local/cleanup-test-rows.sh` (`--dry-run` lists; goes through `sb-local.sh`, local only;
+  everything else in the seed is untouched). Passport/qualification tests restore the seed values themselves.
 - `next build`/`next typegen` terminate a running `pnpm dev` (exit 143): run the gates first, then start dev.
 - Remote project untouched: no `--linked`, no deploy, no push, no secret or Vercel change.
+
+## 7. Phase 1 — passport and qualifications (2026-10-11, local only)
+
+- Seven functions served locally (`professional-profile`, `professional-qualifications` added);
+  `supabase/config.toml` carries their `verify_jwt = false` blocks. Not deployed.
+- Verification: `pnpm check` (lint, typecheck, Vitest incl. RLS F-block, Prettier, Deno lint/check,
+  32 Deno tests), `pnpm build`, local E2E 17/17, browser smoke with the passport and qualification
+  flows at 1440/768/390 (`docs/audit/evidence/local-10…13-*.jpg`). Full report:
+  `docs/audit/PHASE1_PROFILE_QUALIFICATIONS.md`.
+- Seed accounts exercised: `delta` (external, anonymous; edits passport, declares B2/TR-A350, withdraws
+  FTS → MAD eligible 3 → 2 → restored), `echo` (professional B, isolation), `admin.mro` (matching),
+  `alpha` (organization admin reads but cannot edit a member's qualification).

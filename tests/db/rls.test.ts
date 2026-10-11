@@ -278,6 +278,200 @@ describe("D. verification tampering", () => {
   });
 });
 
+describe("F. professional passport and qualifications ownership (phase 1)", () => {
+  it("a professional edits their own passport fields and nothing privileged", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const name = await tx.query<{ display_name: string }>(
+        "update public.profiles set display_name = 'Technician Delta II' where id = $1 returning display_name",
+        [SEED.delta],
+      );
+      expect(name.rows[0]?.display_name).toBe("Technician Delta II");
+      const tech = await tx.query<{ years_experience: number; visibility: string }>(
+        `update public.technician_profiles
+         set base_location = 'Valencia (VLC)', mobility = 'national', years_experience = 13,
+             current_status = 'between_contracts', visibility = 'open'
+         where profile_id = $1 returning years_experience, visibility`,
+        [SEED.delta],
+      );
+      expect(tech.rows[0]).toEqual({ years_experience: 13, visibility: "open" });
+      expect(
+        await queryError(
+          tx,
+          "update public.profiles set platform_role = 'platform_admin' where id = $1",
+          [SEED.delta],
+        ),
+      ).toMatch(/permission denied/);
+      expect(
+        await queryError(
+          tx,
+          "update public.profiles set account_type = 'organization' where id = $1",
+          [SEED.delta],
+        ),
+      ).toMatch(/permission denied/);
+      expect(
+        await queryError(
+          tx,
+          "update public.technician_profiles set years_experience = 61 where profile_id = $1",
+          [SEED.delta],
+        ),
+      ).toMatch(/check constraint/);
+    });
+  });
+
+  it("professional B cannot edit A's passport (no rows affected, no error oracle)", async () => {
+    await asUser(db, SEED.echo, async (tx) => {
+      const name = await tx.query(
+        "update public.profiles set display_name = 'Mallory' where id = $1 returning id",
+        [SEED.delta],
+      );
+      expect(name.rows).toEqual([]);
+      const tech = await tx.query(
+        "update public.technician_profiles set visibility = 'open' where profile_id = $1 returning profile_id",
+        [SEED.delta],
+      );
+      expect(tech.rows).toEqual([]);
+    });
+    await asUser(db, SEED.delta, async (tx) => {
+      const { rows } = await tx.query<{ display_name: string; visibility: string }>(
+        `select p.display_name, t.visibility from public.profiles p
+         join public.technician_profiles t on t.profile_id = p.id where p.id = $1`,
+        [SEED.delta],
+      );
+      expect(rows[0]).toEqual({ display_name: "Technician Delta", visibility: "anonymous" });
+    });
+  });
+
+  it("a professional declares, re-dates, withdraws and removes their own qualification", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const created = await tx.query<{ id: string; verification_status: string; status: string }>(
+        `insert into public.technician_qualifications (technician_profile_id, qualification_type_id, issued_at, expires_at)
+         select $1, id, date '2024-01-01', date '2030-01-01' from public.qualification_types where code = 'B2'
+         returning id, verification_status, status`,
+        [SEED.delta],
+      );
+      const id = created.rows[0]!.id;
+      expect(created.rows[0]).toMatchObject({ verification_status: "pending", status: "active" });
+
+      const dated = await tx.query<{ expires_at: string; verification_status: string }>(
+        "update public.technician_qualifications set expires_at = date '2031-01-01' where id = $1 returning expires_at, verification_status",
+        [id],
+      );
+      expect(dated.rows[0]?.verification_status).toBe("pending");
+
+      const withdrawn = await tx.query<{ status: string }>(
+        "update public.technician_qualifications set status = 'withdrawn' where id = $1 returning status",
+        [id],
+      );
+      expect(withdrawn.rows[0]?.status).toBe("withdrawn");
+
+      expect(
+        await queryError(
+          tx,
+          "update public.technician_qualifications set verification_status = 'verified' where id = $1",
+          [id],
+        ),
+      ).toMatch(/permission denied/);
+
+      const removed = await tx.query(
+        "delete from public.technician_qualifications where id = $1 returning id",
+        [id],
+      );
+      expect(removed.rows).toHaveLength(1);
+    });
+  });
+
+  it("withdrawing and re-activating keeps the review state; changing dates resets it", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const fts = (
+        await tx.query<{ id: string; verification_status: string }>(
+          `select q.id, q.verification_status from public.technician_qualifications q
+           join public.qualification_types t on t.id = q.qualification_type_id
+           where q.technician_profile_id = $1 and t.code = 'FTS'`,
+          [SEED.delta],
+        )
+      ).rows[0]!;
+      expect(fts.verification_status).toBe("verified");
+      const toggled = await tx.query<{ verification_status: string }>(
+        "update public.technician_qualifications set status = 'withdrawn' where id = $1 returning verification_status",
+        [fts.id],
+      );
+      expect(toggled.rows[0]?.verification_status).toBe("verified");
+      const back = await tx.query<{ verification_status: string }>(
+        "update public.technician_qualifications set status = 'active' where id = $1 returning verification_status",
+        [fts.id],
+      );
+      expect(back.rows[0]?.verification_status).toBe("verified");
+      const redated = await tx.query<{ verification_status: string }>(
+        "update public.technician_qualifications set issued_at = date '2021-01-01' where id = $1 returning verification_status",
+        [fts.id],
+      );
+      expect(redated.rows[0]?.verification_status).toBe("pending");
+    });
+  });
+
+  it("professional B cannot read, edit, withdraw or delete A's qualifications nor declare for A", async () => {
+    const aQualification = (
+      await db.query<{ id: string }>(
+        "select id from public.technician_qualifications where technician_profile_id = $1 limit 1",
+        [SEED.delta],
+      )
+    ).rows[0]!.id;
+    await asUser(db, SEED.echo, async (tx) => {
+      expect(
+        await rowCount(tx, "select * from public.technician_qualifications where id = $1", [
+          aQualification,
+        ]),
+      ).toBe(0);
+      const edited = await tx.query(
+        "update public.technician_qualifications set status = 'withdrawn', expires_at = null where id = $1 returning id",
+        [aQualification],
+      );
+      expect(edited.rows).toEqual([]);
+      const deleted = await tx.query(
+        "delete from public.technician_qualifications where id = $1 returning id",
+        [aQualification],
+      );
+      expect(deleted.rows).toEqual([]);
+      expect(
+        await queryError(
+          tx,
+          `insert into public.technician_qualifications (technician_profile_id, qualification_type_id)
+           select $1, id from public.qualification_types where code = 'NDT-UT2'`,
+          [SEED.delta],
+        ),
+      ).toMatch(/row-level security/);
+    });
+  });
+
+  it("organization admins see a member's qualifications but cannot edit them", async () => {
+    const alphaQualification = (
+      await db.query<{ id: string }>(
+        "select id from public.technician_qualifications where technician_profile_id = $1 limit 1",
+        [SEED.alpha],
+      )
+    ).rows[0]!.id;
+    await asUser(db, SEED.adminMro, async (tx) => {
+      expect(
+        await rowCount(tx, "select * from public.technician_qualifications where id = $1", [
+          alphaQualification,
+        ]),
+      ).toBe(1);
+      const edited = await tx.query(
+        "update public.technician_qualifications set expires_at = date '2099-01-01' where id = $1 returning id",
+        [alphaQualification],
+      );
+      expect(edited.rows).toEqual([]);
+      expect(
+        await queryError(
+          tx,
+          "update public.technician_qualifications set verification_status = 'verified' where id = $1",
+          [alphaQualification],
+        ),
+      ).toMatch(/permission denied/);
+    });
+  });
+});
+
 describe("E. identity cannot be supplied by the caller", () => {
   it("requirements cannot be created on behalf of another user", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
