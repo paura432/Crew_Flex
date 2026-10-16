@@ -66,7 +66,17 @@ export function fromDatabaseError(error: PostgrestLikeError): ApiError {
     case "23514": // check_violation
       return new ApiError("VALIDATION_ERROR");
     case "23505": // unique_violation
+    case "40001": // serialization_failure (PostgREST normally retries these itself)
+    case "CF412": // optimistic concurrency: changed since the client loaded it (20261015130100)
       return new ApiError("CONFLICT");
+    case "55000": // object_not_in_prerequisite_state (e.g. qualification no longer awaiting review)
+      return new ApiError("CONFLICT", "The item changed and is no longer in the expected state.");
+    case "P0002": // no_data_found raised by our RPCs
+      return new ApiError("NOT_FOUND");
+    case "0A000": // feature_not_supported: a flow disabled in this database (e.g. qualification review)
+      return new ApiError("NOT_FOUND", "This service is not available.");
+    case "CF409": // idempotency key reused with a different request (migration 20261015130200)
+      return new ApiError("CONFLICT", "This request was already submitted with different data.");
     case "PGRST116": // no rows for single()
       return new ApiError("NOT_FOUND");
     default:

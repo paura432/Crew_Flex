@@ -1,6 +1,7 @@
 // Professional qualifications — own declarations only (licences, type ratings, training, approvals).
 //   GET    /professional-qualifications            → own qualifications with their catalog type
 //   POST   /professional-qualifications { qualificationTypeId, issuedAt?, expiresAt? }   → 201, pending
+//          (Idempotency-Key: a retried declaration returns the original row with 200, not a 409)
 //   PATCH  /professional-qualifications?id=<uuid> { issuedAt, expiresAt, status }
 //   DELETE /professional-qualifications?id=<uuid>
 // Declaration ≠ verification: a professional can declare, edit the dates or withdraw, never verify.
@@ -11,7 +12,7 @@ import { z } from "zod";
 import { requireActor, type Actor } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
-import { parseJsonBody, parseQuery } from "../_shared/validation.ts";
+import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_shared/validation.ts";
 import {
   QUALIFICATION_CATEGORIES,
   QUALIFICATION_STATUSES,
@@ -32,7 +33,7 @@ import type {
 } from "../../../src/types/api.ts";
 
 const SELECT =
-  "id, status, issued_at, expires_at, verification_status, updated_at, qualification_types!inner ( id, code, name, category, requires_expiry )";
+  "id, status, issued_at, expires_at, verification_status, reviewed_at, updated_at, qualification_types!inner ( id, code, name, category, requires_expiry )";
 
 const typeRow = z.object({
   id: z.string(),
@@ -48,6 +49,7 @@ const row = z.object({
   issued_at: z.string().nullable(),
   expires_at: z.string().nullable(),
   verification_status: z.enum(VERIFICATION_STATUSES),
+  reviewed_at: z.string().nullable(),
   updated_at: z.string(),
   qualification_types: typeRow,
 });
@@ -63,7 +65,11 @@ export function toType(raw: unknown): QualificationType {
   };
 }
 
-export function toQualification(raw: unknown): Qualification {
+/**
+ * `review_note` is not column-readable (organizations must not read it); the owner gets the reasons
+ * through own_qualification_reviews() and they are merged by id.
+ */
+export function toQualification(raw: unknown, reviewNote: string | null = null): Qualification {
   const r = row.parse(raw);
   return {
     id: r.id,
@@ -72,6 +78,8 @@ export function toQualification(raw: unknown): Qualification {
     issuedAt: r.issued_at,
     expiresAt: r.expires_at,
     verificationStatus: r.verification_status,
+    reviewNote,
+    reviewedAt: r.reviewed_at ? new Date(r.reviewed_at).toISOString() : null,
     updatedAt: new Date(r.updated_at).toISOString(),
   };
 }
@@ -102,23 +110,40 @@ async function catalogType(actor: Actor, id: string): Promise<QualificationType>
   if (error) throw fromDatabaseError(error);
   if (!data) {
     throw new ApiError("VALIDATION_ERROR", undefined, [
-      { path: "qualificationTypeId", message: "Unknown qualification type" },
+      { path: "qualificationTypeId", message: "v.qualification.unknown" },
     ]);
   }
   return toType(data);
 }
 
+const noteRow = z.object({ qualification_id: z.string(), review_note: z.string() });
+
+/** Reviewer reasons for the caller's own qualifications (owner-only DEFINER function). */
+async function ownReviewNotes(actor: Actor): Promise<Map<string, string>> {
+  const { data, error } = await actor.client.rpc("own_qualification_reviews");
+  if (error) throw fromDatabaseError(error);
+  return new Map(
+    z
+      .array(noteRow.passthrough())
+      .parse(data ?? [])
+      .map((r) => [r.qualification_id, r.review_note]),
+  );
+}
+
 export const handler = createHandler("professional-qualifications", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
-    const { data, error } = await actor.client
-      .from("technician_qualifications")
-      .select(SELECT)
-      .eq("technician_profile_id", actor.id)
-      .limit(200);
+    const [{ data, error }, notes] = await Promise.all([
+      actor.client
+        .from("technician_qualifications")
+        .select(SELECT)
+        .eq("technician_profile_id", actor.id)
+        .limit(200),
+      ownReviewNotes(actor),
+    ]);
     if (error) throw fromDatabaseError(error);
     const qualifications = (data ?? [])
-      .map(toQualification)
+      .map((row) => toQualification(row, notes.get((row as { id: string }).id) ?? null))
       .sort((a, b) => a.type.code.localeCompare(b.type.code));
     return { data: { qualifications } satisfies QualificationListResponse };
   },
@@ -130,19 +155,24 @@ export const handler = createHandler("professional-qualifications", {
     const type = await catalogType(actor, input.qualificationTypeId);
     requireExpiryRule(type, input.expiresAt);
     // verification_status is left to its default ('pending'); the insert policy enforces it too.
+    const created = await actor.client.rpc("declare_qualification", {
+      p_idempotency_key: idempotencyKey(ctx.req),
+      p_qualification_type_id: type.id,
+      p_issued_at: input.issuedAt,
+      p_expires_at: input.expiresAt,
+    });
+    if (created.error) throw fromDatabaseError(created.error); // 23505 → CONFLICT (already declared)
+    const { id, replayed } = createdRow(created.data);
     const { data, error } = await actor.client
       .from("technician_qualifications")
-      .insert({
-        technician_profile_id: actor.id,
-        qualification_type_id: type.id,
-        issued_at: input.issuedAt,
-        expires_at: input.expiresAt,
-      })
       .select(SELECT)
-      .single();
-    if (error) throw fromDatabaseError(error); // 23505 → CONFLICT (already declared)
+      .eq("id", id)
+      .eq("technician_profile_id", actor.id)
+      .maybeSingle();
+    if (error) throw fromDatabaseError(error);
+    if (!data) throw new ApiError("NOT_FOUND"); // replay of a declaration removed since
     return {
-      status: 201,
+      status: replayed ? 200 : 201,
       data: { qualification: toQualification(data) } satisfies QualificationResponse,
     };
   },

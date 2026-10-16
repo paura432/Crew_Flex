@@ -1,6 +1,6 @@
 // Professional availability windows — own data only.
 //   GET    /professional-availability?limit=        → list own windows (RLS)
-//   POST   /professional-availability { startsAt, endsAt, status }
+//   POST   /professional-availability { startsAt, endsAt, status }   (Idempotency-Key: 201 · 200 replay)
 //   PATCH  /professional-availability?id=<uuid> { startsAt, endsAt, status }
 //   DELETE /professional-availability?id=<uuid>
 // The technician id is ALWAYS the JWT subject: the body never carries ownership. RLS enforces
@@ -9,7 +9,7 @@ import { z } from "zod";
 import { requireActor, type Actor } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
-import { parseJsonBody, parseQuery } from "../_shared/validation.ts";
+import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_shared/validation.ts";
 import { AVAILABILITY_STATUSES } from "../../../src/domain/availability.ts";
 import {
   availabilityWindowIdQuery,
@@ -74,18 +74,26 @@ export const handler = createHandler("professional-availability", {
     const actor = await requireActor(ctx);
     const input = await parseJsonBody(ctx.req, createAvailabilityWindowInput);
     await requireTechnician(actor);
+    const created = await actor.client.rpc("create_availability_window", {
+      p_idempotency_key: idempotencyKey(ctx.req),
+      p_starts_at: input.startsAt,
+      p_ends_at: input.endsAt,
+      p_status: input.status,
+    });
+    if (created.error) throw fromDatabaseError(created.error);
+    const { id, replayed } = createdRow(created.data);
     const { data, error } = await actor.client
       .from("availability_windows")
-      .insert({
-        technician_profile_id: actor.id,
-        starts_at: input.startsAt,
-        ends_at: input.endsAt,
-        status: input.status,
-      })
       .select(SELECT)
-      .single();
+      .eq("id", id)
+      .eq("technician_profile_id", actor.id)
+      .maybeSingle();
     if (error) throw fromDatabaseError(error);
-    return { status: 201, data: { window: toWindow(data) } satisfies AvailabilityWindowResponse };
+    if (!data) throw new ApiError("NOT_FOUND"); // replay of a window deleted since
+    return {
+      status: replayed ? 200 : 201,
+      data: { window: toWindow(data) } satisfies AvailabilityWindowResponse,
+    };
   },
 
   PATCH: async (ctx) => {

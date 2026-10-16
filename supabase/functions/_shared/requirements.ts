@@ -1,12 +1,7 @@
 // Data access + row → domain mapping for work requirements and candidate pools.
 // Rows are parsed (not cast) so schema drift fails loudly instead of corrupting results.
 import { z } from "zod";
-import { AVAILABILITY_STATUSES } from "../../../src/domain/availability.ts";
 import type { Candidate } from "../../../src/domain/matching.ts";
-import {
-  QUALIFICATION_STATUSES,
-  VERIFICATION_STATUSES,
-} from "../../../src/domain/qualification.ts";
 import {
   REQUIREMENT_LEVELS,
   REQUIREMENT_STATUSES,
@@ -14,7 +9,10 @@ import {
   URGENCIES,
   type WorkRequirement,
 } from "../../../src/domain/work-requirement.ts";
-import type { CandidateSummary } from "../../../src/types/api.ts";
+import { toCandidate } from "../../../src/lib/candidate-pool.ts";
+
+export { toCandidate };
+import type { CandidateSummary, ExternalPoolCoverage } from "../../../src/types/api.ts";
 import type { Actor } from "./auth.ts";
 import { ApiError, fromDatabaseError } from "./errors.ts";
 
@@ -85,43 +83,6 @@ export async function loadRequirement(actor: Actor, id: string): Promise<WorkReq
   return toWorkRequirement(data);
 }
 
-const poolRow = z.object({
-  candidate_ref: z.string(),
-  candidate_pool: z.enum(["internal", "external"]),
-  candidate_display_name: z.string().nullable(),
-  candidate_base_location: z.string().nullable(),
-  candidate_years_experience: z.number().nullable(),
-  candidate_qualifications: z.array(
-    z.object({
-      qualificationTypeId: z.string(),
-      code: z.string(),
-      status: z.enum(QUALIFICATION_STATUSES),
-      verificationStatus: z.enum(VERIFICATION_STATUSES),
-      expiresAt: z.string().nullable(),
-    }),
-  ),
-  candidate_availability: z.array(
-    z.object({ startsAt: z.string(), endsAt: z.string(), status: z.enum(AVAILABILITY_STATUSES) }),
-  ),
-});
-
-export function toCandidate(raw: unknown): Candidate {
-  const row = poolRow.parse(raw);
-  return {
-    id: row.candidate_ref,
-    pool: row.candidate_pool,
-    displayName: row.candidate_display_name,
-    baseLocation: row.candidate_base_location,
-    yearsExperience: row.candidate_years_experience,
-    qualifications: row.candidate_qualifications,
-    availability: row.candidate_availability.map((w) => ({
-      ...w,
-      startsAt: toIso(w.startsAt),
-      endsAt: toIso(w.endsAt),
-    })),
-  };
-}
-
 /**
  * Matchable data for both pools in ONE database call (no N+1). The definer function
  * re-checks that the actor is admin/manager of the requirement's organization.
@@ -132,6 +93,25 @@ export async function loadCandidatePool(actor: Actor, requirementId: string): Pr
   });
   if (error) throw fromDatabaseError(error);
   return z.array(z.unknown()).parse(data).map(toCandidate);
+}
+
+const coverageRow = z.object({
+  prefiltered: z.number().int().min(0),
+  hard_eligible: z.number().int().min(0),
+  cap: z.number().int().min(1),
+});
+
+/** Counts that tell the UI whether the capped external pool was exhaustive (no identities). */
+export async function loadExternalPoolCoverage(
+  actor: Actor,
+  requirementId: string,
+): Promise<ExternalPoolCoverage> {
+  const { data, error } = await actor.client.rpc("get_requirement_external_pool_summary", {
+    p_requirement_id: requirementId,
+  });
+  if (error) throw fromDatabaseError(error);
+  const row = coverageRow.parse(Array.isArray(data) ? data[0] : data);
+  return { prefiltered: row.prefiltered, hardEligible: row.hard_eligible, cap: row.cap };
 }
 
 export function toCandidateSummary(candidate: Candidate): CandidateSummary {

@@ -444,3 +444,12 @@ import_map = "./functions/deno.json"
 [functions.professional-qualifications]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+[functions.user-preferences]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+# Local only until OD-3 / D-01 is approved (fails closed without QUALIFICATION_REVIEW_ENABLED=true).
+[functions.qualification-reviews]
+verify_jwt = false
+import_map = "./functions/deno.json"

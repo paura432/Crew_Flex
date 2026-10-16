@@ -1,9 +1,19 @@
 // POST /matching-evaluate { requirementId } → deterministic, explainable external matches.
 // LLM ≠ eligibility engine: this is pure rule evaluation (src/domain/matching.ts).
 import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
+import { ApiError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
-import { loadCandidatePool, loadRequirement, toCandidateSummary } from "../_shared/requirements.ts";
+import {
+  loadCandidatePool,
+  loadExternalPoolCoverage,
+  loadRequirement,
+  toCandidateSummary,
+} from "../_shared/requirements.ts";
 import { parseJsonBody } from "../_shared/validation.ts";
+import {
+  assertEvaluableRequirement,
+  InvalidRequirementError,
+} from "../../../src/domain/capacity.ts";
 import { compareMatches, evaluateMatch } from "../../../src/domain/matching.ts";
 import { evaluateRequirementInput } from "../../../src/lib/validation/work-requirement.ts";
 import type { MatchingResponse } from "../../../src/types/api.ts";
@@ -14,10 +24,19 @@ export const handler = createHandler("matching-evaluate", {
     const { requirementId } = await parseJsonBody(ctx.req, evaluateRequirementInput);
     const requirement = await loadRequirement(actor, requirementId);
     await requireOrganizationRole(actor, requirement.organizationId, ["admin", "manager"]);
+    try {
+      assertEvaluableRequirement(requirement);
+    } catch (error) {
+      if (error instanceof InvalidRequirementError)
+        throw new ApiError("VALIDATION_ERROR", error.message);
+      throw error;
+    }
 
-    const external = (await loadCandidatePool(actor, requirementId)).filter(
-      (c) => c.pool === "external",
-    );
+    const [pool, coverage] = await Promise.all([
+      loadCandidatePool(actor, requirementId),
+      loadExternalPoolCoverage(actor, requirementId),
+    ]);
+    const external = pool.filter((c) => c.pool === "external");
     const candidates = external
       .map((candidate) => ({
         candidate: toCandidateSummary(candidate),
@@ -31,6 +50,7 @@ export const handler = createHandler("matching-evaluate", {
         summary: {
           evaluated: candidates.length,
           eligible: candidates.filter((c) => c.match.eligible).length,
+          pool: coverage,
         },
         candidates,
       } satisfies MatchingResponse,

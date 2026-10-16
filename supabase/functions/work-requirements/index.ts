@@ -1,11 +1,12 @@
 // GET  /work-requirements           → requirements of the actor's organizations (RLS)
 // GET  /work-requirements?id=<uuid> → one requirement
-// POST /work-requirements           → create (admin/manager), atomic RPC under RLS, audited
+// POST /work-requirements           → create (admin/manager), atomic RPC under RLS, audited,
+//                                      idempotent per `Idempotency-Key` (201 created · 200 replay)
 import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
-import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
+import { fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { loadRequirement, REQUIREMENT_SELECT, toWorkRequirement } from "../_shared/requirements.ts";
-import { parseJsonBody, parseQuery } from "../_shared/validation.ts";
+import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_shared/validation.ts";
 import {
   createWorkRequirementInput,
   listWorkRequirementsQuery,
@@ -45,7 +46,9 @@ export const handler = createHandler("work-requirements", {
     const input = await parseJsonBody(ctx.req, createWorkRequirementInput);
     await requireOrganizationRole(actor, input.organizationId, ["admin", "manager"]);
 
-    const { data: id, error } = await actor.client.rpc("create_work_requirement", {
+    const key = idempotencyKey(ctx.req);
+    const { data, error } = await actor.client.rpc("create_work_requirement_idempotent", {
+      p_idempotency_key: key,
       p_organization_id: input.organizationId,
       p_title: input.title,
       p_location: input.location,
@@ -59,11 +62,14 @@ export const handler = createHandler("work-requirements", {
         requirement_level: q.level,
       })),
     });
-    if (error) throw fromDatabaseError(error);
-    if (typeof id !== "string") throw new ApiError("INTERNAL_ERROR");
+    if (error) throw fromDatabaseError(error); // CF409 → CONFLICT (key reused, other payload)
+    const { id, replayed } = createdRow(data);
 
     const requirement = await loadRequirement(actor, id);
-    return { status: 201, data: { requirement } satisfies WorkRequirementResponse };
+    return {
+      status: replayed ? 200 : 201,
+      data: { requirement } satisfies WorkRequirementResponse,
+    };
   },
 });
 

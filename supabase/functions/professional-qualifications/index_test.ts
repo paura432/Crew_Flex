@@ -53,6 +53,7 @@ Deno.test("rows map to the API contract with the catalog type and calendar dates
     issued_at: "2020-01-15",
     expires_at: "2029-06-30",
     verification_status: "pending",
+    reviewed_at: null,
     updated_at: "2026-10-09T10:00:00+00:00",
     qualification_types: {
       id: "t1",
@@ -75,6 +76,34 @@ Deno.test("rows map to the API contract with the catalog type and calendar dates
     issuedAt: "2020-01-15",
     expiresAt: "2029-06-30",
     verificationStatus: "pending",
+    reviewNote: null,
+    reviewedAt: null,
     updatedAt: "2026-10-09T10:00:00.000Z",
   });
+});
+
+Deno.test("a rejected row carries the reviewer's reason to its owner", () => {
+  const q = toQualification(
+    {
+      id: "q2",
+      status: "active",
+      issued_at: null,
+      expires_at: "2029-06-30",
+      verification_status: "rejected",
+      reviewed_at: "2026-10-15T11:00:00+00:00",
+      updated_at: "2026-10-15T11:00:00+00:00",
+      qualification_types: {
+        id: "t1",
+        code: "B1.1",
+        name: "B1.1",
+        category: "LICENSE",
+        requires_expiry: true,
+      },
+    },
+    "Licence number does not match the register",
+  );
+  assertEquals(
+    [q.reviewNote, q.reviewedAt],
+    ["Licence number does not match the register", "2026-10-15T11:00:00.000Z"],
+  );
 });

@@ -35,6 +35,38 @@ export async function parseJsonBody<S extends z.ZodType>(
   return result.data;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * `Idempotency-Key` (I-1): one UUID per logical create, chosen by the client and reused on retries.
+ * A malformed key is a 400. A missing key falls back to a fresh one (no deduplication) so callers
+ * that predate the header keep working; the web app always sends it.
+ */
+export function idempotencyKey(req: Request): string {
+  const header = req.headers.get("idempotency-key");
+  if (header === null) return crypto.randomUUID();
+  if (!UUID.test(header.trim())) {
+    throw new ApiError("VALIDATION_ERROR", undefined, [
+      { path: "Idempotency-Key", message: "v.idempotencyKey.invalid" },
+    ]);
+  }
+  return header.trim().toLowerCase();
+}
+
+/** The idempotent create RPCs return one `{ id, replayed }` row. */
+export function createdRow(data: unknown): { id: string; replayed: boolean } {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (
+    typeof row !== "object" ||
+    row === null ||
+    typeof (row as { id?: unknown }).id !== "string" ||
+    typeof (row as { replayed?: unknown }).replayed !== "boolean"
+  ) {
+    throw new ApiError("INTERNAL_ERROR");
+  }
+  return row as { id: string; replayed: boolean };
+}
+
 export function parseQuery<S extends z.ZodType>(url: URL, schema: S): z.infer<S> {
   const result = schema.safeParse(Object.fromEntries(url.searchParams));
   if (!result.success) throw toApiError(result.error);

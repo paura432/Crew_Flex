@@ -36,24 +36,28 @@ Deno.test(
   },
 );
 
-Deno.test("rows map to the API contract (name from profiles, latest updated_at)", () => {
-  const profile = toProfile({
-    profile_id: "p1",
-    base_location: "Madrid (MAD)",
-    mobility: "national",
-    years_experience: 9,
-    current_status: "employed",
-    visibility: "private",
-    updated_at: "2026-10-01T10:00:00+00:00",
-    profiles: { display_name: "Technician Alpha", updated_at: "2026-10-02T10:00:00+00:00" },
-  });
-  assertEquals(profile, {
-    displayName: "Technician Alpha",
-    baseLocation: "Madrid (MAD)",
-    mobility: "national",
-    yearsExperience: 9,
-    currentStatus: "employed",
-    visibility: "private",
-    updatedAt: "2026-10-02T10:00:00.000Z",
-  });
-});
+Deno.test(
+  "rows map to the API contract (name from profiles, version = technician_profiles.updated_at)",
+  () => {
+    const profile = toProfile({
+      profile_id: "p1",
+      base_location: "Madrid (MAD)",
+      mobility: "national",
+      years_experience: 9,
+      current_status: "employed",
+      visibility: "private",
+      updated_at: "2026-10-01T10:00:00+00:00",
+      profiles: { display_name: "Technician Alpha", updated_at: "2026-10-02T10:00:00+00:00" },
+    });
+    assertEquals(profile, {
+      displayName: "Technician Alpha",
+      baseLocation: "Madrid (MAD)",
+      mobility: "national",
+      yearsExperience: 9,
+      currentStatus: "employed",
+      visibility: "private",
+      // profiles.updated_at (2026-10-02, e.g. a language change) is not the passport version (review L5).
+      updatedAt: "2026-10-01T10:00:00.000Z",
+    });
+  },
+);

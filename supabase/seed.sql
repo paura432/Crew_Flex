@@ -127,32 +127,37 @@ insert into public.availability_windows (technician_profile_id, starts_at, ends_
   ('00000000-0000-4000-8000-000000000026', '2026-10-01 00:00Z', '2026-10-20 12:00Z', 'available');
 
 -- Requirements
-insert into public.work_requirements
+-- One statement per requirement: BR-1.4 is checked when it commits (migration 20261015130000).
+with wr as (
+  insert into public.work_requirements
   (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
-select id, 'B1.1 · A320 line maintenance reinforcement', 'Madrid (MAD)',
-  '2026-10-18 20:00Z', '2026-10-22 06:00Z', 'night', 2, 'urgent', 'open',
-  '00000000-0000-4000-8000-000000000001'
-from public.organizations where name = 'Demo MRO Madrid';
-
+  select id, 'B1.1 · A320 line maintenance reinforcement', 'Madrid (MAD)',
+    '2026-10-18 20:00Z', '2026-10-22 06:00Z', 'night', 2, 'urgent', 'open',
+    '00000000-0000-4000-8000-000000000001'
+  from public.organizations where name = 'Demo MRO Madrid'
+  returning id
+)
 insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
 select wr.id, qt.id, case when qt.code = 'SMS' then 'soft' else 'hard' end::public.requirement_level
-from public.work_requirements wr
+from wr
 cross join public.qualification_types qt
-where wr.title = 'B1.1 · A320 line maintenance reinforcement'
-  and qt.code in ('B1.1', 'TR-A320', 'EWIS', 'HF', 'FTS', 'SMS');
+where qt.code in ('B1.1', 'TR-A320', 'EWIS', 'HF', 'FTS', 'SMS');
 
-insert into public.work_requirements
+-- One statement per requirement: BR-1.4 is checked when it commits (migration 20261015130000).
+with wr as (
+  insert into public.work_requirements
   (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
-select id, 'B2 · A330 avionics check support', 'Lisboa (LIS)',
-  '2026-11-02 07:00Z', '2026-11-06 19:00Z', 'day', 1, 'planned', 'open',
-  '00000000-0000-4000-8000-000000000002'
-from public.organizations where name = 'Demo Aero Services Lisbon';
-
+  select id, 'B2 · A330 avionics check support', 'Lisboa (LIS)',
+    '2026-11-02 07:00Z', '2026-11-06 19:00Z', 'day', 1, 'planned', 'open',
+    '00000000-0000-4000-8000-000000000002'
+  from public.organizations where name = 'Demo Aero Services Lisbon'
+  returning id
+)
 insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
 select wr.id, qt.id, 'hard'
-from public.work_requirements wr
+from wr
 cross join public.qualification_types qt
-where wr.title = 'B2 · A330 avionics check support' and qt.code in ('B2', 'TR-A330');
+where qt.code in ('B2', 'TR-A330');
 
 -- =============================================================================================
 -- Local-dev extension (2026-10-10): more explainable cases. Same conventions, same password.
@@ -237,28 +242,34 @@ insert into public.availability_windows (technician_profile_id, starts_at, ends_
 -- Quebec: no windows at all → NOT_AVAILABLE.
 
 -- Requirements
-insert into public.work_requirements
+-- One statement per requirement: BR-1.4 is checked when it commits (migration 20261015130000).
+with wr as (
+  insert into public.work_requirements
   (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
-select id, 'B1.1 · B737 AOG recovery', 'Barcelona (BCN)',
-  '2026-10-25 06:00Z', '2026-10-26 18:00Z', 'flexible', 1, 'aog', 'open',
-  '00000000-0000-4000-8000-000000000003'
-from public.organizations where name = 'Demo Airline Ops Barcelona';
-
+  select id, 'B1.1 · B737 AOG recovery', 'Barcelona (BCN)',
+    '2026-10-25 06:00Z', '2026-10-26 18:00Z', 'flexible', 1, 'aog', 'open',
+    '00000000-0000-4000-8000-000000000003'
+  from public.organizations where name = 'Demo Airline Ops Barcelona'
+  returning id
+)
 insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
 select wr.id, qt.id, case when qt.code = 'HF' then 'soft' else 'hard' end::public.requirement_level
-from public.work_requirements wr
+from wr
 cross join public.qualification_types qt
-where wr.title = 'B1.1 · B737 AOG recovery' and qt.code in ('B1.1', 'TR-B737', 'HF');
+where qt.code in ('B1.1', 'TR-B737', 'HF');
 
-insert into public.work_requirements
+-- One statement per requirement: BR-1.4 is checked when it commits (migration 20261015130000).
+with wr as (
+  insert into public.work_requirements
   (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
-select id, 'CAT-A · line support (cancelled)', 'Madrid (MAD)',
-  '2026-09-01 06:00Z', '2026-09-05 18:00Z', 'day', 1, 'planned', 'cancelled',
-  '00000000-0000-4000-8000-000000000001'
-from public.organizations where name = 'Demo MRO Madrid';
-
+  select id, 'CAT-A · line support (cancelled)', 'Madrid (MAD)',
+    '2026-09-01 06:00Z', '2026-09-05 18:00Z', 'day', 1, 'planned', 'cancelled',
+    '00000000-0000-4000-8000-000000000001'
+  from public.organizations where name = 'Demo MRO Madrid'
+  returning id
+)
 insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
 select wr.id, qt.id, 'hard'
-from public.work_requirements wr
+from wr
 cross join public.qualification_types qt
-where wr.title = 'CAT-A · line support (cancelled)' and qt.code = 'CAT-A';
+where qt.code = 'CAT-A';
