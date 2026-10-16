@@ -24,6 +24,20 @@ if (!/NEXT_PUBLIC_SUPABASE_URL=http:\/\/(127\.0\.0\.1|localhost):\d+/.test(envLo
   process.exit(2);
 }
 const results = [];
+// Words that only exist in the English catalog. Seeing them while the UI is Spanish = untranslated text.
+const EN_SENTINELS =
+  /\b(Sign out|Sign in|Requirements|Availability|Qualifications|Workforce|Overview|Settings|Save changes|Declare|Passport|Dashboard|Create account|Not found|Eligible|Blockers|Pending review|Verified|Gap|Coverage)\b/;
+async function expectSpanish(name) {
+  const lang = await page.evaluate(() => document.documentElement.lang);
+  const text = await page.locator("body").innerText();
+  const hits = [...new Set(text.match(new RegExp(EN_SENTINELS.source, "g")) ?? [])];
+  // "Verified"/"Pending review" may appear inside user data? No: codes and names are not English words.
+  ok(
+    `${name}: html lang=es and no English UI strings`,
+    lang === "es" && hits.length === 0,
+    `lang=${lang} ${hits.join(",")}`,
+  );
+}
 const ok = (name, cond, detail = "") => {
   results.push({ name, pass: !!cond, detail });
   console.log(`${cond ? "PASS" : "FAIL"} ${name} ${detail}`);
@@ -64,13 +78,25 @@ async function responsiveShots(name) {
   await page.setViewportSize({ width: 1440, height: 900 });
 }
 
-async function login(email) {
+async function login(email, { ensureEnglish = true } = {}) {
   await page.goto(`${BASE}/login`);
   await page.fill("#email", email);
   await page.fill("#password", PW);
   await page.click("button[type=submit]");
-  await page.waitForURL((u) => u.pathname.startsWith("/app"), { timeout: 30000 });
+  // `/app` itself redirects by account type; wait for the workspace route, not the redirect page.
+  await page.waitForURL((u) => /^\/app\/(professional|organization)/.test(u.pathname), {
+    timeout: 30000,
+  });
   await page.waitForLoadState("networkidle");
+  // The English checks below assume the account's persisted language is English (seed = none).
+  if (ensureEnglish && (await page.evaluate(() => document.documentElement.lang)) !== "en") {
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=en]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+    await page.goto(`${BASE}/app`);
+    await page.waitForLoadState("networkidle");
+  }
 }
 async function logout() {
   if (errors.length)
@@ -93,6 +119,48 @@ async function logout() {
     .evaluate((f) => f.requestSubmit());
   await page.waitForURL((u) => !u.pathname.startsWith("/app"), { timeout: 20000 });
 }
+
+const publishableKey = /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=(\S+)/.exec(envLocal)?.[1];
+const supabaseUrl = /NEXT_PUBLIC_SUPABASE_URL=(\S+)/.exec(envLocal)?.[1];
+/** Direct local API call as a seed account (used only to restore seed state after a UI change). */
+async function asSeedUser(email, fn, { method = "GET", query = {}, body } = {}) {
+  const auth = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: publishableKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password: PW }),
+  }).then((r) => r.json());
+  const url = new URL(`/functions/v1/${fn}`, supabaseUrl);
+  for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
+  return fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${auth.access_token}`,
+      apikey: publishableKey,
+      "Content-Type": "application/json",
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }).then((r) => r.json());
+}
+
+/** Golf's B1.1 is the seed's "pending" case; an interrupted earlier run may have left it verified. */
+async function ensureGolfPending() {
+  const own = await asSeedUser("golf@crewflex.test", "professional-qualifications");
+  const b11 = own.data.qualifications.find((q) => q.type.code === "B1.1");
+  if (b11.verificationStatus === "pending") return true;
+  for (const expiresAt of ["2029-06-29", b11.expiresAt]) {
+    await asSeedUser("golf@crewflex.test", "professional-qualifications", {
+      method: "PATCH",
+      query: { id: b11.id },
+      body: { issuedAt: b11.issuedAt, expiresAt, status: "active" },
+    });
+  }
+  const again = await asSeedUser("golf@crewflex.test", "professional-qualifications");
+  return (
+    again.data.qualifications.find((q) => q.type.code === "B1.1").verificationStatus === "pending"
+  );
+}
+
+ok("0 seed precondition: Golf's B1.1 is pending", await ensureGolfPending(), "");
 
 // 1. Technician: login, profile, availability CRUD + reload, logout
 await login("delta@crewflex.test");
@@ -252,6 +320,48 @@ ok(
   (await page.locator("li:has(button:has-text('Remove'))").count()) === qualsBefore,
   "",
 );
+// 1d. Settings: Spanish → navigate → reload → still Spanish (flow 6); screenshots in Spanish
+await page.goto(`${BASE}/app/settings`);
+await page.waitForLoadState("networkidle");
+ok(
+  "5h settings page reachable from the professional nav",
+  /Language \/ Idioma|Idioma \/ Language/.test(await page.locator("main").innerText()),
+  "",
+);
+await responsiveShots("14-settings-en");
+await page.locator("[role=radio][lang=es]").first().click();
+await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+await page.goto(`${BASE}/app/professional`);
+await page.waitForLoadState("networkidle");
+await expectSpanish("5i overview after switching to Spanish");
+await responsiveShots("15-overview-es");
+await page.goto(`${BASE}/app/professional/qualifications`);
+await page.waitForLoadState("networkidle");
+await expectSpanish("5j qualifications in Spanish");
+await responsiveShots("16-qualifications-es");
+await page.goto(`${BASE}/app/professional/availability`);
+await page.waitForLoadState("networkidle");
+await expectSpanish("5k availability in Spanish");
+await shot("17-availability-es");
+await page.reload();
+await page.waitForLoadState("networkidle");
+await expectSpanish("5l Spanish persists after reload (flow 6)");
+// Flow 7 (inverse): English → sign out → sign in → still English (preference, not just the cookie)
+await page.goto(`${BASE}/app/settings`);
+await page.waitForLoadState("networkidle");
+await page.locator("[role=radio][lang=en]").first().click();
+await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+await ctx.clearCookies();
+await login("delta@crewflex.test", { ensureEnglish: false });
+await page.goto(`${BASE}/app/professional`);
+await page.waitForLoadState("networkidle");
+ok(
+  "5m English persists after sign out/in with cookies cleared (flow 7, DB preference)",
+  (await page.evaluate(() => document.documentElement.lang)) === "en" &&
+    /professional space/i.test(await page.locator("main").innerText()),
+  await page.evaluate(() => document.documentElement.lang),
+);
+
 await page.goto(`${BASE}/app/organization`);
 await page.waitForLoadState("networkidle");
 ok(
@@ -310,7 +420,7 @@ ok(
 );
 ok(
   "11b blockers explained: pending, rejected, missing (withdrawn/TR), partial availability",
-  /not verified \(pending\)/.test(matches) &&
+  /not verified \(pending review\)/.test(matches) &&
     /not verified \(rejected\)/.test(matches) &&
     /Missing (B1\.1|TR-A320)/.test(matches) &&
     /Available for only \d+(\.\d+)?% of the requirement period/.test(matches),
@@ -323,6 +433,47 @@ ok(
     .join("; "),
 );
 await shot("07-matching-results");
+// Organization admin in Spanish (flow 6 for the organization role) → dashboard, matches, form
+await page.goto(`${BASE}/app/settings`);
+await page.waitForLoadState("networkidle");
+await page.locator("[role=radio][lang=es]").first().click();
+await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+await page.goto(`${BASE}/app/organization`);
+await page.waitForLoadState("networkidle");
+await expectSpanish("11c organization dashboard in Spanish");
+await responsiveShots("18-organization-es");
+await page.goto(`${madUrl}/matches`);
+await page.waitForLoadState("networkidle");
+await expectSpanish("11d matching results in Spanish");
+const matchesEs = await page.locator("main").innerText();
+ok(
+  "11e matching logic identical in Spanish (3 elegibles de 10, bloqueos explicados)",
+  /3\s*elegibles de\s*10/.test(matchesEs) &&
+    /Falta TR-A320/.test(matchesEs) &&
+    /no verificada \(verificación pendiente\)/i.test(matchesEs),
+  matchesEs.match(/\d+\s*elegibles de\s*\d+ evaluados/)?.[0] ?? matchesEs.slice(0, 120),
+);
+await responsiveShots("19-matches-es");
+await page.goto(`${BASE}/app/organization/requirements/new`);
+await page.waitForLoadState("networkidle");
+await expectSpanish("11f requirement form in Spanish");
+await page.click("main form button[type=submit]");
+ok(
+  "11g validation messages in Spanish",
+  /El título/.test(
+    await page
+      .locator("#title-error")
+      .innerText()
+      .catch(() => ""),
+  ),
+  "",
+);
+await shot("20-requirement-form-es-validation");
+await page.goto(`${BASE}/app/settings`);
+await page.waitForLoadState("networkidle");
+await page.locator("[role=radio][lang=en]").first().click();
+await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+
 await page.goto(`${BASE}/app/organization/requirements/new`);
 await page.waitForLoadState("networkidle");
 await page.fill("#title", "Local UI check · B2 A330");
@@ -381,6 +532,164 @@ ok(
   "",
 );
 await logout();
+
+// 6. Remediation 2026-10-15 (docs/audit/CREWFLEX_REMEDIATION_2026_10_15.md)
+// 6a. Matching states how complete the external evaluation was (candidate-pool finding)
+await login("manager.mro@crewflex.test");
+await page.goto(`${madUrl}/matches`);
+await page.waitForLoadState("networkidle");
+ok(
+  "18 matching states the external evaluation is exhaustive (10 of 10)",
+  /Every professional in the network who holds at least one required qualification was evaluated \(10\)/.test(
+    await page.locator("main").innerText(),
+  ),
+  "",
+);
+// 6b. The review queue is not reachable for organization roles (404) and not in their navigation
+await page.goto(`${BASE}/app/admin/verifications`);
+await page.waitForLoadState("networkidle");
+ok(
+  "19 manager: /app/admin/verifications is a 404 and has no nav entry",
+  /not found/i.test(await page.locator("body").innerText()) &&
+    (await page.locator("nav a[href='/app/admin/verifications']").count()) === 0,
+  "",
+);
+await logout();
+
+// 6c. Platform admin verifies Golf's pending B1.1 → matching changes → seed restored
+await login("platform.admin@crewflex.test");
+ok(
+  "20 platform admin sees the Verifications entry",
+  (await page.locator("a[href='/app/admin/verifications']").count()) > 0,
+  "",
+);
+await page.goto(`${BASE}/app/admin/verifications`);
+await page.waitForLoadState("networkidle");
+const golfCard = page
+  .locator("li")
+  .filter({ hasText: "Technician Golf" })
+  .filter({ hasText: "B1.1" });
+ok("21 Golf's pending B1.1 is in the queue", (await golfCard.count()) === 1, "");
+await responsiveShots("22-verifications");
+await golfCard.locator("button[value=rejected]").click();
+ok(
+  "21b rejecting without a reason is refused before any request",
+  /Give a reason to reject/.test(await golfCard.innerText()),
+  "",
+);
+await golfCard.locator("textarea[name=note]").fill("Smoke: checked against the authority register");
+await golfCard.locator("button[value=verified]").click();
+await page.waitForSelector("[role=status]:has-text('Verified. The qualification now counts')", {
+  timeout: 15000,
+});
+ok("21c verify confirmed only after the server answered", true, "");
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "21d decision persisted: Golf's B1.1 left the queue and the history shows it",
+  (await page
+    .locator("li")
+    .filter({ hasText: "Technician Golf" })
+    .filter({ hasText: "B1.1" })
+    .count()) === 0 &&
+    /Latest decisions[\s\S]*Verified/i.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+await login("manager.mro@crewflex.test");
+await page.goto(`${madUrl}/matches`);
+await page.waitForLoadState("networkidle");
+ok(
+  "21e matching after verification: 4 eligible of 10",
+  /4 eligible of 10 evaluated/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+// Restore: re-dating a reviewed qualification sends it back to pending (BR-2.8).
+ok("21f seed restored (Golf's B1.1 pending again)", await ensureGolfPending(), "");
+
+// 6d. Passport saved in two tabs: the second save is a conflict, nothing is overwritten (I-3)
+await login("foxtrot@crewflex.test");
+const tab2 = await ctx.newPage();
+await page.goto(`${BASE}/app/professional/profile`);
+await tab2.goto(`${BASE}/app/professional/profile`);
+await Promise.all([page.waitForLoadState("networkidle"), tab2.waitForLoadState("networkidle")]);
+const foxtrotBase = await page.inputValue("#baseLocation");
+await page.fill("#baseLocation", "Sevilla (SVQ)");
+await page.click("main form button[type=submit]");
+await page.waitForSelector("[role=status]:has-text('Passport updated')", { timeout: 15000 });
+await tab2.fill("#baseLocation", "Bilbao (BIO)");
+await tab2.click("main form button[type=submit]");
+await tab2.waitForSelector("[role=alert]:has-text('changed in another window')", {
+  timeout: 15000,
+});
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "22 second tab gets a conflict; the first save is kept, the form keeps the user's input",
+  (await page.inputValue("#baseLocation")) === "Sevilla (SVQ)" &&
+    (await tab2.inputValue("#baseLocation")) === "Bilbao (BIO)",
+  "",
+);
+await tab2.close();
+await page.fill("#baseLocation", foxtrotBase);
+await page.click("main form button[type=submit]");
+await page.waitForSelector("[role=status]:has-text('Passport updated')", { timeout: 15000 });
+
+// 6e. Overview separates profile completeness from verification (8.2); mobile nav shows every item (8.3)
+await page.goto(`${BASE}/app/professional`);
+await page.waitForLoadState("networkidle");
+const overviewText = await page.locator("main").innerText();
+ok(
+  "23 overview: completeness is labelled as such and verification is shown as 'N of M'",
+  /Profile completeness/i.test(overviewText) && /\d+ of \d+/.test(overviewText),
+  "",
+);
+for (const width of [360, 390]) {
+  await page.setViewportSize({ width, height: 900 });
+  await page.waitForTimeout(300);
+  const clipped = await page.evaluate((w) => {
+    return [...document.querySelectorAll("aside nav a")]
+      .map((a) => ({ text: a.textContent, box: a.getBoundingClientRect() }))
+      .filter(({ box }) => box.right > w + 0.5 || box.left < -0.5)
+      .map(({ text }) => text);
+  }, width);
+  ok(
+    `24 nav @${width}: every item fully visible (no clipped tab)`,
+    clipped.length === 0,
+    clipped.join(","),
+  );
+  const spilling = await page.evaluate(() =>
+    [...document.querySelectorAll("main .rounded-xl")]
+      .filter((card) => card.scrollWidth > card.clientWidth + 1)
+      .map((card) => card.textContent?.slice(0, 40)),
+  );
+  ok(
+    `24b cards @${width}: no content spills out of a card`,
+    spilling.length === 0,
+    spilling.join(" | "),
+  );
+  await shot(`23-overview-nav-${width}`);
+}
+await page.setViewportSize({ width: 1440, height: 900 });
+await logout();
+
+// 5b. Public pages: the compact switcher works before sign-in (cookie only) and the login page follows it
+await page.goto(`${BASE}/login`);
+await page.waitForLoadState("networkidle");
+await page.locator("[role=radio][lang=es]").first().click();
+await page.waitForTimeout(1500);
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "16a login page in Spanish before sign-in (cookie)",
+  (await page.evaluate(() => document.documentElement.lang)) === "es" &&
+    /Iniciar sesión/.test(await page.locator("main").innerText()),
+  "",
+);
+await shot("21-login-es");
+await page.locator("[role=radio][lang=en]").first().click();
+await page.waitForTimeout(1500);
 
 // 5. Only localhost was used
 const nonLocal = [...hosts].filter((h) => !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h));

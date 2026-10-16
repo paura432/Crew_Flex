@@ -3,7 +3,8 @@
 #
 # Safety (docs/qa/LOCAL_ENVIRONMENT.md):
 #   - refuses `--linked`, `--project-ref`, `--db-url` with a non-local host, and any `link`, `projects`,
-#     `secrets`, `functions deploy`, `db push`, `migration up/repair` subcommand (those can reach remote);
+#     `secrets`, `functions deploy`, `db push`, `migration repair` subcommand (those can reach remote);
+#     `migration up` is allowed only with the forced `--local` (applies pending migrations without reset);
 #   - appends `--local` to db/migration/functions-serve commands that accept it;
 #   - before any db command, reads `supabase status -o env` and requires the DB and API URLs to point at
 #     127.0.0.1 or localhost.
@@ -22,7 +23,7 @@ for a in "$@"; do
   esac
 done
 case "$1 ${2:-}" in
-  "link "*|"projects "*|"secrets "*|"functions deploy"|"functions delete"|"functions download"|"db push"|"db dump"|"migration up"|"migration repair"|"branches "*|"orgs "*)
+  "link "*|"projects "*|"secrets "*|"functions deploy"|"functions delete"|"functions download"|"db push"|"db dump"|"migration repair"|"branches "*|"orgs "*)
     die "'$1 ${2:-}' is not a local-only operation" ;;
 esac
 
@@ -41,7 +42,7 @@ check_status() {
 
 ARGS=("$@")
 case "$1 ${2:-}" in
-  "db reset"|"db query"|"db diff"|"db lint"|"migration list"|"migration fetch"|"inspect "*)
+  "db reset"|"db query"|"db diff"|"db lint"|"migration list"|"migration fetch"|"migration up"|"inspect "*)
     check_status; ARGS+=(--local) ;;
   "db start"|"start "*|"start"|"stop "*|"stop"|"status "*|"status"|"functions serve"|"gen types")
     ;;
