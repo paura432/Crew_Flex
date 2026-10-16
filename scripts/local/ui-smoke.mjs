@@ -23,6 +23,13 @@ if (!/NEXT_PUBLIC_SUPABASE_URL=http:\/\/(127\.0\.0\.1|localhost):\d+/.test(envLo
   console.error("refusing: .env.local does not point at a local Supabase stack");
   process.exit(2);
 }
+// Steps 20–22 exercise the platform-admin review, which the Next server hides unless enabled (OD-3).
+if (!/^QUALIFICATION_REVIEW_ENABLED=true$/m.test(envLocal)) {
+  console.error(
+    "refusing: set QUALIFICATION_REVIEW_ENABLED=true in .env.local (local review flow)",
+  );
+  process.exit(2);
+}
 const results = [];
 // Words that only exist in the English catalog. Seeing them while the UI is Spanish = untranslated text.
 const EN_SENTINELS =

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { signOutAction } from "@/features/auth/actions";
+import { canOpenQualificationReview } from "@/server/feature-flags";
 import type { SessionActor } from "@/server/session";
 import { NavLinks, type NavItem } from "./NavLinks";
 
@@ -22,7 +23,8 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/availability", label: tNav("availability") },
   ];
   const accountNav: NavItem[] = [{ href: "/app/settings", label: tNav("settings") }];
-  // Shown only to platform admins (UI convenience; the page, function and RPC re-check the role).
+  // Shown only to platform admins while the review is enabled (OD-3, server-side flag). UI
+  // convenience: the page, function and RPC re-check both the flag and the role.
   const platformNav: NavItem[] = [
     { href: "/app/admin/verifications", label: tNav("verifications") },
   ];
@@ -32,7 +34,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
       ? [{ label: organization?.name ?? tNav("organization"), items: organizationNav }]
       : []),
     ...(isProfessional ? [{ label: tNav("professional"), items: professionalNav }] : []),
-    ...(actor.profile.platform_role === "platform_admin"
+    ...(canOpenQualificationReview(actor.profile)
       ? [{ label: tNav("platform"), items: platformNav }]
       : []),
     { label: tNav("account"), items: accountNav },

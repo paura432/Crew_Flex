@@ -9,6 +9,7 @@ import { getReviewQueue } from "@/features/reviews/api";
 import { ReviewQueue } from "@/features/reviews/components/ReviewQueue";
 import type { Locale } from "@/i18n/config";
 import { formatDateTime } from "@/i18n/format";
+import { canOpenQualificationReview, isQualificationReviewEnabled } from "@/server/feature-flags";
 import { requireSessionActor } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,12 +18,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Platform-admin review queue (phase 6). Not a public page: anyone else gets a 404 here, and the
- * Edge Function + RPC refuse them anyway. Local only until OD-3 / D-01 is approved.
+ * Platform-admin review queue (phase 6). Not a public page: while the review is disabled (OD-3,
+ * server-side flag, off by default) everyone gets a 404 before any session or Edge Function call;
+ * when enabled, anyone but a platform admin still gets a 404, and the Edge Function + RPC refuse
+ * them anyway.
  */
 export default async function VerificationsPage() {
+  if (!isQualificationReviewEnabled()) notFound();
   const actor = await requireSessionActor();
-  if (actor.profile.platform_role !== "platform_admin") notFound();
+  if (!canOpenQualificationReview(actor.profile)) notFound();
   const [t, locale, result] = await Promise.all([
     getTranslations("admin.reviews"),
     getLocale() as Promise<Locale>,

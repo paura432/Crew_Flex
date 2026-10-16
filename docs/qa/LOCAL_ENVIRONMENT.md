@@ -156,8 +156,9 @@ supabase_db_crew-flex` (volume kept), wait for `supabase status`, retry. No rese
   (`tests/db`, all migrations + seed from scratch).
 - The seed now inserts each requirement and its qualifications in **one statement** (BR-1.4 is checked at
   commit since `20261015130000`).
-- Local review flow needs both switches: `QUALIFICATION_REVIEW_ENABLED=true` in `supabase/functions/.env`
-  (template updated) and, once per local database, `docker exec supabase_db_crew-flex psql -U postgres -c
+- Local review flow needs three switches: `QUALIFICATION_REVIEW_ENABLED=true` in `.env.local` (Next.js
+  server flag: navigation entry, `/app/admin/verifications`, review action — 404/refused otherwise),
+  the same variable in `supabase/functions/.env` (template updated) and, once per local database, `docker exec supabase_db_crew-flex psql -U postgres -c
 "insert into app_private.feature_flags (name, enabled) values ('qualification_review', true)"`. Never set
   either remotely before OD-3 is approved. (`alter database … set` of a custom parameter is not allowed for
   the Supabase `postgres` role, hence the table.)
