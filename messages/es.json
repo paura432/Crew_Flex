@@ -1,0 +1,704 @@
+{
+  "common": {
+    "appName": "Crew Flex",
+    "brandTag": "AVIATION",
+    "skipToContent": "Saltar al contenido",
+    "signOut": "Cerrar sesión",
+    "save": "Guardar",
+    "saveChanges": "Guardar cambios",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "remove": "Quitar",
+    "delete": "Eliminar",
+    "add": "Añadir",
+    "retry": "Reintentar",
+    "reload": "Recarga la página.",
+    "back": "Volver",
+    "loading": "Cargando…",
+    "reference": "Referencia: {id}",
+    "notSet": "Sin indicar",
+    "checkFields": "Revisa los campos marcados.",
+    "utcNote": "Horas en UTC.",
+    "notFoundTitle": "No encontrado",
+    "notFoundDescription": "Esta página no existe o no tienes acceso a ella.",
+    "backToApp": "Volver a Crew Flex",
+    "errorTitle": "No se ha podido mostrar esta página",
+    "errorHint": "Inténtalo de nuevo en un momento."
+  },
+  "meta": {
+    "description": "Convierte cualificaciones, disponibilidad y demanda operativa en capacidad técnica movilizable.",
+    "signIn": "Iniciar sesión",
+    "register": "Crear cuenta",
+    "professional": "Profesional",
+    "passport": "Pasaporte",
+    "qualifications": "Cualificaciones",
+    "availability": "Disponibilidad",
+    "organization": "Panel de la organización",
+    "requirements": "Necesidades de personal",
+    "newRequirement": "Nueva necesidad",
+    "requirement": "Necesidad",
+    "matches": "Profesionales elegibles",
+    "workforce": "Plantilla",
+    "settings": "Configuración",
+    "verifications": "Revisión de cualificaciones"
+  },
+  "nav": {
+    "organization": "Organización",
+    "professional": "Profesional",
+    "account": "Cuenta",
+    "dashboard": "Resumen",
+    "requirements": "Necesidades",
+    "workforce": "Plantilla",
+    "overview": "Mi espacio",
+    "profile": "Mi pasaporte",
+    "qualifications": "Cualificaciones",
+    "availability": "Disponibilidad",
+    "settings": "Configuración",
+    "platform": "Plataforma",
+    "verifications": "Verificaciones"
+  },
+  "landing": {
+    "eyebrow": "Personal de mantenimiento aeronáutico",
+    "title": "Convierte cualificaciones, disponibilidad y demanda en capacidad técnica movilizable.",
+    "lead": "Define lo que necesitas (2 × B1.1, familia A320, EWIS + HF + FTS, Madrid, turno de noche) y comprueba al instante qué cubre tu propia plantilla, cuál es el déficit y qué profesionales cumplen de verdad. Cada resultado se explica.",
+    "createAccount": "Crear cuenta",
+    "signIn": "Iniciar sesión",
+    "flowLabel": "Flujo centrado en la capacidad",
+    "flow": {
+      "requirement": "Necesidad de la organización",
+      "workforce": "Plantilla interna",
+      "gap": "Déficit de cobertura",
+      "network": "Red externa elegible",
+      "coverage": "Cobertura"
+    }
+  },
+  "locale": {
+    "label": "Idioma",
+    "es": "Español",
+    "en": "English",
+    "switcherAria": "Idioma"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Iniciar sesión",
+      "lead": "Accede a tu espacio de Crew Flex.",
+      "noAccount": "¿Sin cuenta?",
+      "createOne": "Crea una",
+      "submit": "Iniciar sesión",
+      "submitting": "Iniciando sesión…",
+      "email": "Correo electrónico",
+      "password": "Contraseña"
+    },
+    "register": {
+      "title": "Crear cuenta",
+      "lead": "Tu perfil es privado por defecto. Tú decides qué se ve y cuándo.",
+      "already": "¿Ya estás registrado?",
+      "signIn": "Inicia sesión",
+      "submit": "Crear cuenta",
+      "submitting": "Creando la cuenta…",
+      "checkInboxTitle": "Revisa tu bandeja de entrada",
+      "checkInboxText": "Hemos enviado un enlace de confirmación a {email}. Confírmalo y después inicia sesión.",
+      "registeringAs": "Me registro como",
+      "organization": "Organización",
+      "organizationDetail": "MRO, aerolínea, operador",
+      "professional": "Profesional",
+      "professionalDetail": "Técnico / ingeniero",
+      "yourName": "Tu nombre",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "passwordHint": "Al menos 10 caracteres.",
+      "organizationName": "Nombre de la organización",
+      "organizationType": "Tipo de organización",
+      "country": "País (código ISO)",
+      "countryHint": "p. ej. ES"
+    },
+    "errors": {
+      "VALIDATION_ERROR": "Revisa los campos marcados.",
+      "INVALID_CREDENTIALS": "El correo o la contraseña no son correctos.",
+      "EMAIL_NOT_CONFIRMED": "Confirma tu correo antes de iniciar sesión.",
+      "USER_EXISTS": "Ya existe una cuenta con este correo.",
+      "WEAK_PASSWORD": "Elige una contraseña más segura.",
+      "NETWORK_ERROR": "No se ha podido contactar con el servicio de autenticación. Reintenta.",
+      "UNKNOWN": "La autenticación ha fallado. Inténtalo de nuevo."
+    },
+    "orgType": {
+      "mro": "MRO",
+      "airline": "Aerolínea",
+      "operator": "Operador",
+      "staffing_agency": "Agencia de personal",
+      "other": "Otra"
+    }
+  },
+  "api": {
+    "UNAUTHORIZED": {
+      "title": "Tu sesión ha caducado",
+      "description": "Vuelve a iniciar sesión para continuar."
+    },
+    "FORBIDDEN": {
+      "title": "No tienes permiso",
+      "description": "Tu rol en esta organización no permite esta acción. Pídeselo a un administrador."
+    },
+    "VALIDATION_ERROR": {
+      "title": "Solicitud no válida",
+      "description": "Algunos valores no son válidos."
+    },
+    "NOT_FOUND": {
+      "title": "No encontrado",
+      "description": "Puede que se haya eliminado o que no tengas acceso."
+    },
+    "METHOD_NOT_ALLOWED": {
+      "title": "No admitido",
+      "description": "Esta operación no está admitida."
+    },
+    "CONFLICT": {
+      "title": "Conflicto",
+      "description": "Los datos han cambiado. Recarga e inténtalo de nuevo."
+    },
+    "PAYLOAD_TOO_LARGE": {
+      "title": "Solicitud demasiado grande",
+      "description": "Reduce la cantidad de datos."
+    },
+    "NETWORK_ERROR": {
+      "title": "Servicio no disponible",
+      "description": "Crew Flex no ha podido contactar con el backend. Comprueba tu conexión y reintenta."
+    },
+    "INTERNAL_ERROR": {
+      "title": "Error del servidor",
+      "description": "Algo ha fallado de nuestro lado. Inténtalo de nuevo en un momento."
+    },
+    "signInAgain": "Iniciar sesión de nuevo",
+    "action": {
+      "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+      "unreachable": "No se ha podido contactar con el servicio. No se ha guardado nada; reintenta.",
+      "gone": "Este elemento ya no existe. Recarga la página.",
+      "conflict": "Ya has declarado esta cualificación. Edita la existente."
+    }
+  },
+  "v": {
+    "invalid": "Valor no válido",
+    "idempotencyKey": {
+      "invalid": "Este formulario ha caducado. Recarga la página e inténtalo de nuevo."
+    },
+    "email": {
+      "invalid": "Introduce un correo electrónico válido"
+    },
+    "password": {
+      "required": "Introduce tu contraseña",
+      "min": "Usa al menos 10 caracteres",
+      "max": "Usa como máximo 72 caracteres"
+    },
+    "name": {
+      "required": "Introduce tu nombre",
+      "max": "Como máximo 120 caracteres"
+    },
+    "orgName": {
+      "min": "Introduce el nombre de la organización",
+      "max": "Como máximo 160 caracteres"
+    },
+    "orgType": {
+      "invalid": "Elige un tipo de organización"
+    },
+    "country": {
+      "invalid": "Usa un código de país de 2 letras, p. ej. ES"
+    },
+    "start": {
+      "required": "El inicio debe ser una fecha y hora (UTC)"
+    },
+    "end": {
+      "required": "El fin debe ser una fecha y hora (UTC)",
+      "afterStart": "El fin debe ser posterior al inicio"
+    },
+    "window": {
+      "status": "Elige disponible o no disponible",
+      "maxDays": "Una ventana puede abarcar como máximo 366 días",
+      "id": "Se necesita un identificador de ventana válido"
+    },
+    "organization": {
+      "required": "La organización es obligatoria"
+    },
+    "title": {
+      "required": "El título es obligatorio",
+      "min": "El título debe tener al menos 3 caracteres",
+      "max": "El título debe tener como máximo 120 caracteres"
+    },
+    "location": {
+      "required": "La ubicación es obligatoria",
+      "min": "La ubicación debe tener al menos 2 caracteres",
+      "max": "La ubicación debe tener como máximo 80 caracteres"
+    },
+    "shift": {
+      "invalid": "Elige un turno"
+    },
+    "headcount": {
+      "number": "El número de personas debe ser un número",
+      "int": "El número de personas debe ser un entero",
+      "min": "Se necesita al menos 1 persona",
+      "max": "Como máximo 50 personas"
+    },
+    "urgency": {
+      "invalid": "Elige una urgencia"
+    },
+    "requirement": {
+      "maxDays": "Una necesidad puede durar como máximo 366 días",
+      "id": "Se necesita un identificador de necesidad válido"
+    },
+    "qualifications": {
+      "min": "Añade al menos una cualificación",
+      "max": "Como máximo 20 cualificaciones",
+      "duplicate": "Cada cualificación solo puede añadirse una vez",
+      "hard": "Al menos una cualificación debe ser obligatoria"
+    },
+    "qualification": {
+      "select": "Selecciona una cualificación del catálogo",
+      "level": "Elige obligatoria o deseable",
+      "unknown": "Tipo de cualificación desconocido",
+      "id": "Se necesita un identificador de cualificación válido",
+      "status": "Elige activa o retirada"
+    },
+    "displayName": {
+      "required": "El nombre profesional es obligatorio",
+      "max": "El nombre profesional debe tener como máximo 120 caracteres"
+    },
+    "base": {
+      "text": "La base debe ser texto",
+      "max": "La base debe tener como máximo 80 caracteres"
+    },
+    "mobility": {
+      "invalid": "Elige movilidad local, nacional o internacional"
+    },
+    "years": {
+      "number": "Los años de experiencia deben ser un número",
+      "int": "Los años de experiencia deben ser un entero",
+      "min": "Los años de experiencia no pueden ser negativos",
+      "max": "Los años de experiencia deben ser como máximo 60"
+    },
+    "status": {
+      "invalid": "Elige tu situación actual"
+    },
+    "visibility": {
+      "invalid": "Elige privado, anónimo o abierto"
+    },
+    "date": {
+      "invalid": "Introduce una fecha (AAAA-MM-DD)"
+    },
+    "expiry": {
+      "beforeIssue": "La caducidad no puede ser anterior a la emisión",
+      "required": "Esta cualificación requiere fecha de caducidad"
+    },
+    "locale": {
+      "invalid": "Elige Español o English"
+    },
+    "form": {
+      "window": "Ventana no válida.",
+      "qualification": "Cualificación no válida."
+    },
+    "review": {
+      "reasonRequired": "Indica un motivo para rechazar (el profesional lo leerá).",
+      "noteMax": "Usa como máximo 500 caracteres"
+    }
+  },
+  "domain": {
+    "shift": {
+      "day": "Día",
+      "night": "Noche",
+      "split": "Partido",
+      "flexible": "Flexible"
+    },
+    "urgency": {
+      "planned": "Planificada",
+      "urgent": "Urgente",
+      "aog": "AOG"
+    },
+    "requirementStatus": {
+      "draft": "Borrador",
+      "open": "Abierta",
+      "covered": "Cubierta",
+      "cancelled": "Cancelada",
+      "closed": "Cerrada"
+    },
+    "level": {
+      "hard": "Obligatoria",
+      "soft": "Deseable"
+    },
+    "verification": {
+      "verified": "Verificada",
+      "pending": "Verificación pendiente",
+      "rejected": "Rechazada",
+      "expired": "Caducada"
+    },
+    "held": {
+      "active": "Vigente",
+      "withdrawn": "Retirada"
+    },
+    "visibility": {
+      "private": {
+        "label": "Privado",
+        "detail": "Nunca apareces en el matching de las organizaciones."
+      },
+      "anonymous": {
+        "label": "Anónimo",
+        "detail": "Tus cualificaciones relevantes pueden emparejarse; tu identidad queda oculta."
+      },
+      "open": {
+        "label": "Abierto",
+        "detail": "Tu nombre se muestra en los resultados. El contacto sigue requiriendo tu consentimiento."
+      }
+    },
+    "mobility": {
+      "local": "Local (solo base habitual)",
+      "national": "Nacional",
+      "international": "Internacional"
+    },
+    "technicianStatus": {
+      "employed": "En plantilla",
+      "contractor": "Contractor",
+      "between_contracts": "Entre contratos"
+    },
+    "category": {
+      "LICENSE": "Licencias",
+      "TYPE_RATING": "Type ratings",
+      "TRAINING": "Formación y cursos",
+      "APPROVAL": "Habilitaciones",
+      "SKILL": "Capacidades"
+    },
+    "role": {
+      "member": "Miembro",
+      "manager": "Manager",
+      "admin": "Administrador"
+    },
+    "accountType": {
+      "professional": "Profesional",
+      "organization": "Organización"
+    }
+  },
+  "professional": {
+    "noProfileTitle": "Sin perfil profesional",
+    "noProfileDescription": "Esta cuenta es una cuenta de organización.",
+    "overview": {
+      "eyebrow": "Espacio profesional",
+      "passport": "Perfil completado",
+      "complete": "Todos los elementos del perfil están completos. No es un estado de verificación.",
+      "qualifications": "Cualificaciones",
+      "verified": "Verificadas",
+      "windows": "Ventanas de disponibilidad",
+      "visibility": "Visibilidad",
+      "profile": "Perfil",
+      "editPassport": "Editar pasaporte",
+      "verifiedOf": "{verified} de {total}",
+      "awaiting": "{count, plural, one {# pendiente de revisión} other {# pendientes de revisión}}",
+      "nextTitle": "Próximos pasos",
+      "rejectedNext": "{count, plural, one {# cualificación ha sido rechazada por un revisor. Lee el motivo y corrígela.} other {# cualificaciones han sido rechazadas por un revisor. Lee los motivos y corrígelas.}}",
+      "awaitingNext": "{count, plural, one {# cualificación espera a un revisor. Hasta que se verifique no cuenta para los requisitos obligatorios.} other {# cualificaciones esperan a un revisor. Hasta que se verifiquen no cuentan para los requisitos obligatorios.}}",
+      "openQualifications": "Abrir cualificaciones",
+      "doIt": "Ir"
+    },
+    "hint": {
+      "display_name": "Siguiente: añade tu nombre profesional",
+      "base_location": "Siguiente: indica tu base",
+      "years_experience": "Siguiente: añade tus años de experiencia",
+      "licence_or_rating": "Siguiente: declara una licencia o type rating",
+      "verified_qualification": "Siguiente: un revisor verifica una cualificación",
+      "availability": "Siguiente: publica días disponibles",
+      "visibility": "Siguiente: elige visibilidad anónima o abierta"
+    },
+    "facts": {
+      "base": "Base",
+      "mobility": "Movilidad",
+      "experience": "Experiencia",
+      "status": "Situación",
+      "visibility": "Visibilidad",
+      "years": "{count, plural, one {# año} other {# años}}"
+    },
+    "passport": {
+      "eyebrow": "Mi pasaporte",
+      "title": "Tu perfil, conectado.",
+      "description": "Lo que actualizas aquí se refleja en el matching y en tu expediente. Las cualificaciones y la disponibilidad tienen sus propias páginas.",
+      "noProfileDescription": "El pasaporte pertenece a las cuentas profesionales.",
+      "identity": "01 · Identidad",
+      "name": "Nombre profesional",
+      "base": "Base habitual",
+      "baseHint": "Aeropuerto o ciudad, p. ej. Madrid (MAD)",
+      "experience": "02 · Experiencia y movilidad",
+      "years": "Años de experiencia",
+      "status": "Situación actual",
+      "mobility": "Movilidad",
+      "visibilityTitle": "03 · Visibilidad en la red",
+      "visibilityIntro": "El matching respeta tu elección. Los perfiles privados nunca aparecen ante las organizaciones; el contacto siempre requiere tu consentimiento.",
+      "visibilityAria": "Visibilidad",
+      "saved": "Pasaporte actualizado. El matching usa los nuevos datos.",
+      "conflict": "Tu pasaporte se modificó en otra ventana o dispositivo. No se ha guardado nada: recarga la página para ver la versión más reciente y vuelve a aplicar tus cambios."
+    }
+  },
+  "qualifications": {
+    "title": "Cualificaciones",
+    "eyebrow": "Mi pasaporte",
+    "description": "Licencias, type ratings, formación y habilitaciones, con fechas de emisión y caducidad. Tú declaras; un revisor autorizado verifica. Un curso debe seguir vigente hasta el último día de una necesidad para superar su filtro obligatorio.",
+    "noProfileDescription": "Las cualificaciones pertenecen a las cuentas profesionales.",
+    "catalogErrorTitle": "No se ha podido cargar el catálogo de cualificaciones",
+    "catalogErrorDescription": "Recarga la página. Tus declaraciones están a salvo.",
+    "declareTitle": "Declarar una cualificación",
+    "editTitle": "Editar {code}",
+    "intro": "Las cualificaciones autodeclaradas quedan <b>pendientes</b> hasta que un revisor autorizado las verifica. Solo las verificadas satisfacen requisitos obligatorios.",
+    "reviewState": "{name}. Estado de revisión:",
+    "datesResetHint": "Cambiar las fechas la devuelve a verificación pendiente.",
+    "qualification": "Cualificación",
+    "select": "Selecciona del catálogo…",
+    "issued": "Emisión",
+    "expires": "Caducidad",
+    "held": "Vigencia",
+    "active": "Activa",
+    "withdrawn": "Retirada (no la posees)",
+    "declare": "Declarar",
+    "declared": "{code} declarada: pendiente de revisión hasta que se verifique.",
+    "updated": "{code} actualizada.",
+    "updatedReset": "{code} actualizada: vuelve a verificación pendiente porque han cambiado sus fechas.",
+    "removed": "{code} eliminada.",
+    "allDeclared": "Has declarado todos los tipos del catálogo.",
+    "empty": "Aún no hay cualificaciones. Declara arriba tu licencia y tus type ratings; entran en el matching cuando se verifican.",
+    "expiryRequiredHint": "{code} requiere fecha de caducidad",
+    "expiryOptionalHint": "Déjalo vacío si la cualificación no caduca",
+    "issuedOn": "Emitida el {date}",
+    "validUntil": "Válida hasta el {date}",
+    "noExpiry": "Sin caducidad",
+    "group": "{category} ({count})",
+    "reviewReason": "Revisor: {reason}"
+  },
+  "availability": {
+    "eyebrow": "Mi tiempo",
+    "title": "Disponibilidad elegida",
+    "description": "Un día libre solo entra en el mercado cuando lo marcas como disponible. Las horas son UTC; las ventanas bloqueadas prevalecen sobre las disponibles.",
+    "noProfileDescription": "La disponibilidad pertenece a las cuentas profesionales.",
+    "metrics": {
+      "available": "Disponibles",
+      "availableDetail": "Días publicados este mes",
+      "blocked": "Bloqueados",
+      "blockedDetail": "Días marcados como no disponibles",
+      "windows": "Ventanas",
+      "windowsDetail": "Ventanas de tiempo guardadas"
+    },
+    "picker": {
+      "available": "Disponible",
+      "unavailable": "Bloqueado",
+      "clear": "Descanso (limpiar)"
+    },
+    "pickerLabel": "Estado a aplicar",
+    "pickerHint": "Elige un estado y pulsa los días para aplicarlo. Los días son UTC.",
+    "day": {
+      "available": "Disponible",
+      "unavailable": "Bloqueado",
+      "mixed": "Parcial",
+      "none": "Descanso"
+    },
+    "weekday": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mié",
+      "thu": "Jue",
+      "fri": "Vie",
+      "sat": "Sáb",
+      "sun": "Dom"
+    },
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "coveredByLonger": "El {date} está cubierto por una ventana más larga. Edita o elimina esa ventana en la lista de abajo.",
+    "dayCleared": "{date} limpiado",
+    "daySet": "{date} marcado como {state}",
+    "windowUpdated": "Ventana actualizada",
+    "windowAdded": "Ventana añadida",
+    "windowDeleted": "Ventana eliminada",
+    "editWindow": "Editar ventana",
+    "addWindow": "Añadir una ventana de tiempo",
+    "starts": "Inicio (UTC)",
+    "ends": "Fin (UTC)",
+    "status": "Estado",
+    "statusAvailable": "Disponible",
+    "statusUnavailable": "No disponible",
+    "savedWindows": "Ventanas guardadas ({count})",
+    "emptyHint": "Aún no hay ventanas de disponibilidad. Marca días en el calendario o añade una ventana arriba; solo entras en el matching cuando estás disponible durante todo el periodo de la necesidad."
+  },
+  "organization": {
+    "dashboard": {
+      "title": "Operaciones",
+      "noRequirementsTitle": "Aún no hay necesidades",
+      "noRequirementsDescription": "Crea una necesidad para ver tu capacidad técnica y el déficit a cubrir.",
+      "managersOnlyTitle": "El análisis de capacidad está disponible para managers y administradores",
+      "managersOnlyDescription": "Pide el rol de manager a un administrador de la organización.",
+      "requirements": "Necesidades",
+      "viewAll": "Ver todas",
+      "newRequirement": "Nueva necesidad"
+    },
+    "requirements": {
+      "title": "Necesidades de personal",
+      "description": "Necesidades operativas, sus cualificaciones y su periodo. Horas en UTC.",
+      "caption": "Necesidades de personal",
+      "columns": {
+        "requirement": "Necesidad",
+        "period": "Periodo (UTC)",
+        "need": "Personas",
+        "qualifications": "Cualificaciones",
+        "status": "Estado"
+      },
+      "soft": "(deseable)",
+      "requiredQualifications": "Cualificaciones requeridas",
+      "hardRequirement": "requisito obligatorio",
+      "softRequirement": "deseable (valorable)"
+    },
+    "detail": {
+      "eyebrow": "Necesidad de personal",
+      "internalWorkforce": "Plantilla interna ({count})",
+      "noTechniciansTitle": "Aún no hay técnicos en tu organización",
+      "noTechniciansDescription": "Todo el personal necesario es déficit a cubrir externamente.",
+      "facts": {
+        "location": "Ubicación",
+        "starts": "Inicio",
+        "ends": "Fin",
+        "shift": "Turno",
+        "headcount": "Personas"
+      }
+    },
+    "new": {
+      "title": "Nueva necesidad de personal",
+      "description": "Describe la necesidad operativa real. Crew Flex evalúa primero tu capacidad interna.",
+      "noPermissionTitle": "No tienes permiso",
+      "noPermissionDescription": "Solo los managers y administradores de la organización pueden crear necesidades.",
+      "catalogErrorTitle": "No se ha podido cargar el catálogo de cualificaciones",
+      "sectionNeed": "01 · Necesidad",
+      "sectionPeriod": "02 · Periodo (UTC)",
+      "sectionQualifications": "03 · Cualificaciones",
+      "fields": {
+        "title": "Título",
+        "location": "Ubicación",
+        "headcount": "Personas",
+        "urgency": "Urgencia",
+        "starts": "Inicio (UTC)",
+        "ends": "Fin (UTC)",
+        "shift": "Turno"
+      },
+      "titlePlaceholder": "B1.1 · Refuerzo de línea A320",
+      "locationPlaceholder": "Madrid (MAD)",
+      "qualificationsIntro": "Los requisitos <b>obligatorios</b> descartan candidatos; los <b>deseables</b> solo afectan a la puntuación. Hace falta al menos un requisito obligatorio.",
+      "levelAria": "Nivel del requisito {code}",
+      "submit": "Crear necesidad",
+      "submitting": "Creando…",
+      "forbidden": "Tu rol no puede crear necesidades en esta organización.",
+      "unreachable": "No se ha podido contactar con el servicio. Tus datos siguen aquí; reintenta.",
+      "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión."
+    },
+    "matches": {
+      "eyebrow": "Red externa · vista previa del matching",
+      "description": "{location} · {period}. Los requisitos obligatorios son filtros: ninguna puntuación compensa uno ausente.",
+      "back": "Volver a la necesidad",
+      "emptyTitle": "No hay profesionales emparejables para estas cualificaciones",
+      "emptyDescription": "Solo se evalúan los profesionales que han elegido ser emparejables y poseen al menos una de las cualificaciones requeridas.",
+      "summary": "<b>{eligible}</b> elegibles de {evaluated} evaluados. Los profesionales anónimos se muestran con una referencia válida solo para esta necesidad.",
+      "coverage": {
+        "complete": "Se ha evaluado a todos los profesionales de la red con al menos una de las cualificaciones requeridas ({prefiltered}).",
+        "nearMissesTrimmed": "{prefiltered} profesionales tienen al menos una cualificación requerida; se han evaluado {evaluated}. Los {hardEligible} que cumplen todos los requisitos obligatorios y están disponibles se han evaluado primero; el resto son los casos más próximos.",
+        "eligibleTruncated": "Resultado parcial: {hardEligible} profesionales cumplen todos los requisitos obligatorios y están disponibles, pero se evalúan como máximo {cap} por consulta. Esta lista no es toda la red: acota la necesidad (periodo, cualificaciones) para ver el resto."
+      }
+    },
+    "workforce": {
+      "title": "Plantilla interna",
+      "description": "Miembros de tu organización y el estado de sus cualificaciones. Añadir miembros (invitaciones con consentimiento) llegará después.",
+      "errorTitle": "No se ha podido cargar la plantilla",
+      "empty": "Aún no hay miembros",
+      "noQualifications": "Sin cualificaciones registradas.",
+      "organizationUser": "Usuario de la organización (no técnico).",
+      "memberQualifications": "Cualificaciones de {name}",
+      "managersOnlyTitle": "La plantilla es visible para managers y administradores",
+      "managersOnlyDescription": "Los datos de cualificación de los miembros solo se comparten con managers y administradores de la organización."
+    }
+  },
+  "capacity": {
+    "title": "Capacidad técnica",
+    "required": "Necesarios",
+    "internallyEligible": "Elegibles internos",
+    "gap": "Déficit",
+    "gapDetail": "{count} × a cubrir externamente",
+    "coveredInternally": "Cubierto internamente",
+    "coverage": "Cobertura",
+    "viewEligible": "Ver profesionales externos elegibles",
+    "detail": "Detalle de la necesidad"
+  },
+  "matching": {
+    "eligible": "Elegible",
+    "notEligible": "No elegible",
+    "anonymous": "Profesional anónimo {ref}",
+    "baseNotShared": "Base no compartida",
+    "years": "{count, plural, one {# año de experiencia} other {# años de experiencia}}",
+    "softScore": "Puntuación deseable",
+    "blockers": "Bloqueos",
+    "met": "Cumple: ",
+    "notMet": "No cumple: ",
+    "availabilityLabel": "Disponibilidad",
+    "check": {
+      "metVerifiedUntil": "Verificada · válida hasta el {date}",
+      "metVerified": "Verificada",
+      "metPending": "Autodeclarada · verificación pendiente",
+      "missing": "No la posee",
+      "notVerified": "No verificada ({status})",
+      "expired": "Caducada el {date}",
+      "expiresDuring": "Caduca durante la necesidad ({date})"
+    },
+    "availability": {
+      "full": "Cubre toda la necesidad",
+      "none": "No disponible",
+      "partial": "Cubre el {percent}% del periodo"
+    },
+    "blocker": {
+      "missing": "Falta {code}",
+      "notVerified": "{code} no verificada ({status})",
+      "expired": "{code} caducó el {date}",
+      "expiresDuring": "{code} caduca durante la necesidad ({date})",
+      "notAvailable": "No disponible en las fechas de la necesidad",
+      "partial": "Disponible solo el {percent}% del periodo de la necesidad"
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "description": "Tu cuenta y cómo ves Crew Flex. Los datos de negocio están en tu pasaporte o en las páginas de la organización.",
+    "language": "Idioma / Language",
+    "languageDescription": "La interfaz, las fechas y los mensajes siguen esta elección en todos los dispositivos donde inicies sesión. Los códigos de licencia, los tipos de aeronave y tus propios datos nunca se traducen.",
+    "saved": "Idioma actualizado.",
+    "account": "Cuenta",
+    "name": "Nombre",
+    "accountType": "Tipo de cuenta",
+    "organization": "Organización",
+    "role": "Rol"
+  },
+  "admin": {
+    "reviews": {
+      "eyebrow": "Plataforma",
+      "title": "Revisión de cualificaciones",
+      "description": "Las cualificaciones autodeclaradas esperan aquí hasta que un administrador de la plataforma las comprueba. Solo las cualificaciones obligatorias verificadas hacen elegible a un profesional.",
+      "evidenceNote": "Todavía no se guardan documentos acreditativos (la cartera documental no está construida). Comprueba cada declaración con la autoridad emisora o con los documentos originales del profesional antes de verificar. Tu decisión y la referencia de la petición quedan auditadas.",
+      "pendingTitle": "Pendientes de revisión ({count})",
+      "emptyTitle": "Nada que revisar",
+      "emptyDescription": "Todas las declaraciones activas están decididas.",
+      "professional": "Profesional",
+      "declared": "Declarada el",
+      "issued": "Emisión",
+      "expires": "Caducidad",
+      "notGiven": "No indicada",
+      "noExpiry": "Sin caducidad",
+      "note": "Motivo o referencia",
+      "noteHint": "Obligatorio para rechazar. Lo verá el profesional; no incluyas datos personales.",
+      "verify": "Verificar",
+      "reject": "Rechazar",
+      "verifiedDone": "Verificada. La cualificación ya cuenta para el matching.",
+      "rejectedDone": "Rechazada. El profesional puede ver el motivo.",
+      "alreadyDecided": "Esta declaración ya se decidió o ha cambiado. Recarga la cola.",
+      "historyTitle": "Últimas decisiones",
+      "historyEmpty": "Todavía no hay decisiones.",
+      "when": "Cuándo",
+      "decision": "Decisión",
+      "reasonGiven": "Motivo indicado",
+      "reference": "Referencia de la petición",
+      "decisionVerified": "Verificada",
+      "decisionRejected": "Rechazada",
+      "yes": "Sí",
+      "no": "No"
+    }
+  }
+}

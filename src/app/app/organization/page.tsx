@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,7 +12,10 @@ import { listRequirements } from "@/features/requirements/api";
 import { RequirementsList } from "@/features/requirements/components/RequirementsList";
 import { requireOrganizationContext } from "@/server/session";
 
-export const metadata: Metadata = { title: "Organization dashboard" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return { title: t("organization") };
+}
 
 /** Next open requirement that has not ended yet (request time), else the earliest open one. */
 function focusRequirement(requirements: WorkRequirement[]) {
@@ -33,25 +37,28 @@ async function FocusCapacity({ requirement }: { requirement: WorkRequirement }) 
 }
 
 export default async function OrganizationDashboard() {
-  const { organization, canManage } = await requireOrganizationContext();
+  const [{ organization, canManage }, t] = await Promise.all([
+    requireOrganizationContext(),
+    getTranslations("organization.dashboard"),
+  ]);
   const result = await listRequirements(organization.id);
   const focus = result.ok ? focusRequirement(result.data.requirements) : undefined;
 
   const newButton = canManage && (
     <ButtonLink href="/app/organization/requirements/new" variant="primary">
-      New requirement
+      {t("newRequirement")}
     </ButtonLink>
   );
 
   return (
     <>
-      <PageHeader eyebrow={organization.name} title="Operations" actions={newButton} />
+      <PageHeader eyebrow={organization.name} title={t("title")} actions={newButton} />
       {!result.ok ? (
         <ApiErrorState error={result.error} requestId={result.requestId} />
       ) : result.data.requirements.length === 0 ? (
         <StateMessage
-          title="No requirements yet"
-          description="Create a requirement to see your technical capacity and the gap to cover."
+          title={t("noRequirementsTitle")}
+          description={t("noRequirementsDescription")}
           action={newButton || undefined}
         />
       ) : (
@@ -59,15 +66,15 @@ export default async function OrganizationDashboard() {
           {focus && canManage && <FocusCapacity requirement={focus} />}
           {focus && !canManage && (
             <StateMessage
-              title="Capacity analysis is available to managers and admins"
-              description="Ask an organization admin for the manager role."
+              title={t("managersOnlyTitle")}
+              description={t("managersOnlyDescription")}
             />
           )}
           <Panel
-            title="Requirements"
+            title={t("requirements")}
             actions={
               <ButtonLink href="/app/organization/requirements" variant="ghost">
-                View all
+                {t("viewAll")}
               </ButtonLink>
             }
           >

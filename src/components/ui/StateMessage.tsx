@@ -27,7 +27,7 @@ export function StateMessage({
   );
 }
 
-export function LoadingState({ label = "Loading…" }: { label?: string }) {
+export function LoadingState({ label }: { label: string }) {
   return (
     <div role="status" aria-live="polite" className="space-y-3">
       <span className="sr-only">{label}</span>

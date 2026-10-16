@@ -1,0 +1,704 @@
+{
+  "common": {
+    "appName": "Crew Flex",
+    "brandTag": "AVIATION",
+    "skipToContent": "Skip to content",
+    "signOut": "Sign out",
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "remove": "Remove",
+    "delete": "Delete",
+    "add": "Add",
+    "retry": "Try again",
+    "reload": "Reload the page.",
+    "back": "Back",
+    "loading": "Loading…",
+    "reference": "Reference: {id}",
+    "notSet": "Not set",
+    "checkFields": "Check the highlighted fields.",
+    "utcNote": "Times are UTC.",
+    "notFoundTitle": "Not found",
+    "notFoundDescription": "This page does not exist or you do not have access to it.",
+    "backToApp": "Back to Crew Flex",
+    "errorTitle": "This page could not be displayed",
+    "errorHint": "Try again in a moment."
+  },
+  "meta": {
+    "description": "Turn qualifications, availability and operational demand into mobilisable technical capacity.",
+    "signIn": "Sign in",
+    "register": "Create account",
+    "professional": "Professional",
+    "passport": "Passport",
+    "qualifications": "Qualifications",
+    "availability": "Availability",
+    "organization": "Organization dashboard",
+    "requirements": "Requirements",
+    "newRequirement": "New requirement",
+    "requirement": "Requirement",
+    "matches": "Eligible professionals",
+    "workforce": "Workforce",
+    "settings": "Settings",
+    "verifications": "Qualification review"
+  },
+  "nav": {
+    "organization": "Organization",
+    "professional": "Professional",
+    "account": "Account",
+    "dashboard": "Dashboard",
+    "requirements": "Requirements",
+    "workforce": "Workforce",
+    "overview": "Overview",
+    "profile": "Passport",
+    "qualifications": "Qualifications",
+    "availability": "Availability",
+    "settings": "Settings",
+    "platform": "Platform",
+    "verifications": "Verifications"
+  },
+  "landing": {
+    "eyebrow": "Aircraft maintenance workforce",
+    "title": "Turn qualifications, availability and demand into mobilisable technical capacity.",
+    "lead": "Define what you need — 2 × B1.1, A320 family, EWIS + HF + FTS, Madrid, night shift — and see immediately what your own workforce covers, what the gap is, and which professionals really qualify. Every result is explained.",
+    "createAccount": "Create account",
+    "signIn": "Sign in",
+    "flowLabel": "Capacity-first flow",
+    "flow": {
+      "requirement": "Organization requirement",
+      "workforce": "Internal workforce",
+      "gap": "Capacity gap",
+      "network": "Eligible external network",
+      "coverage": "Coverage"
+    }
+  },
+  "locale": {
+    "label": "Language",
+    "es": "Español",
+    "en": "English",
+    "switcherAria": "Language"
+  },
+  "auth": {
+    "signIn": {
+      "title": "Sign in",
+      "lead": "Access your Crew Flex workspace.",
+      "noAccount": "No account?",
+      "createOne": "Create one",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "email": "Email",
+      "password": "Password"
+    },
+    "register": {
+      "title": "Create account",
+      "lead": "Your profile stays private by default. You decide what is visible and when.",
+      "already": "Already registered?",
+      "signIn": "Sign in",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "checkInboxTitle": "Check your inbox",
+      "checkInboxText": "We sent a confirmation link to {email}. Confirm it, then sign in.",
+      "registeringAs": "I am registering as",
+      "organization": "Organization",
+      "organizationDetail": "MRO, airline, operator",
+      "professional": "Professional",
+      "professionalDetail": "Technician / engineer",
+      "yourName": "Your name",
+      "email": "Email",
+      "password": "Password",
+      "passwordHint": "At least 10 characters.",
+      "organizationName": "Organization name",
+      "organizationType": "Organization type",
+      "country": "Country (ISO code)",
+      "countryHint": "e.g. ES"
+    },
+    "errors": {
+      "VALIDATION_ERROR": "Check the highlighted fields.",
+      "INVALID_CREDENTIALS": "Email or password is incorrect.",
+      "EMAIL_NOT_CONFIRMED": "Confirm your email before signing in.",
+      "USER_EXISTS": "An account with this email already exists.",
+      "WEAK_PASSWORD": "Choose a stronger password.",
+      "NETWORK_ERROR": "Could not reach the authentication service. Retry.",
+      "UNKNOWN": "Authentication failed. Try again."
+    },
+    "orgType": {
+      "mro": "MRO",
+      "airline": "Airline",
+      "operator": "Operator",
+      "staffing_agency": "Staffing agency",
+      "other": "Other"
+    }
+  },
+  "api": {
+    "UNAUTHORIZED": {
+      "title": "Your session has expired",
+      "description": "Sign in again to continue."
+    },
+    "FORBIDDEN": {
+      "title": "You don't have permission",
+      "description": "Your role in this organization does not allow this action. Ask an admin."
+    },
+    "VALIDATION_ERROR": {
+      "title": "Invalid request",
+      "description": "Some values are not valid."
+    },
+    "NOT_FOUND": {
+      "title": "Not found",
+      "description": "It may have been removed or you lack access."
+    },
+    "METHOD_NOT_ALLOWED": {
+      "title": "Not supported",
+      "description": "This operation is not supported."
+    },
+    "CONFLICT": {
+      "title": "Conflict",
+      "description": "The data changed. Reload and try again."
+    },
+    "PAYLOAD_TOO_LARGE": {
+      "title": "Request too large",
+      "description": "Reduce the amount of data."
+    },
+    "NETWORK_ERROR": {
+      "title": "Service unreachable",
+      "description": "Crew Flex could not reach the backend. Check your connection and retry."
+    },
+    "INTERNAL_ERROR": {
+      "title": "Server error",
+      "description": "Something failed on our side. Try again in a moment."
+    },
+    "signInAgain": "Sign in again",
+    "action": {
+      "sessionExpired": "Your session expired. Sign in again.",
+      "unreachable": "The service could not be reached. Nothing was saved — retry.",
+      "gone": "This item no longer exists. Reload the page.",
+      "conflict": "You already declared this qualification. Edit the existing one instead."
+    }
+  },
+  "v": {
+    "invalid": "Invalid value",
+    "idempotencyKey": {
+      "invalid": "This form expired. Reload the page and try again."
+    },
+    "email": {
+      "invalid": "Enter a valid email address"
+    },
+    "password": {
+      "required": "Enter your password",
+      "min": "Use at least 10 characters",
+      "max": "Use at most 72 characters"
+    },
+    "name": {
+      "required": "Enter your name",
+      "max": "At most 120 characters"
+    },
+    "orgName": {
+      "min": "Enter the organization name",
+      "max": "At most 160 characters"
+    },
+    "orgType": {
+      "invalid": "Choose an organization type"
+    },
+    "country": {
+      "invalid": "Use a 2-letter country code, e.g. ES"
+    },
+    "start": {
+      "required": "Start must be a date and time (UTC)"
+    },
+    "end": {
+      "required": "End must be a date and time (UTC)",
+      "afterStart": "End must be after start"
+    },
+    "window": {
+      "status": "Choose available or unavailable",
+      "maxDays": "A window can span at most 366 days",
+      "id": "A valid window id is required"
+    },
+    "organization": {
+      "required": "Organization is required"
+    },
+    "title": {
+      "required": "Title is required",
+      "min": "Title must have at least 3 characters",
+      "max": "Title must have at most 120 characters"
+    },
+    "location": {
+      "required": "Location is required",
+      "min": "Location must have at least 2 characters",
+      "max": "Location must have at most 80 characters"
+    },
+    "shift": {
+      "invalid": "Choose a shift"
+    },
+    "headcount": {
+      "number": "Headcount must be a number",
+      "int": "Headcount must be a whole number",
+      "min": "Headcount must be at least 1",
+      "max": "Headcount must be at most 50"
+    },
+    "urgency": {
+      "invalid": "Choose an urgency"
+    },
+    "requirement": {
+      "maxDays": "A requirement can last at most 366 days",
+      "id": "A valid requirement id is required"
+    },
+    "qualifications": {
+      "min": "Add at least one qualification",
+      "max": "At most 20 qualifications",
+      "duplicate": "Each qualification can only be added once",
+      "hard": "At least one qualification must be a hard requirement"
+    },
+    "qualification": {
+      "select": "Select a qualification from the catalog",
+      "level": "Choose hard or soft",
+      "unknown": "Unknown qualification type",
+      "id": "A valid qualification id is required",
+      "status": "Choose active or withdrawn"
+    },
+    "displayName": {
+      "required": "Professional name is required",
+      "max": "Professional name must have at most 120 characters"
+    },
+    "base": {
+      "text": "Base must be text",
+      "max": "Base must have at most 80 characters"
+    },
+    "mobility": {
+      "invalid": "Choose local, national or international mobility"
+    },
+    "years": {
+      "number": "Years of experience must be a number",
+      "int": "Years of experience must be a whole number",
+      "min": "Years of experience cannot be negative",
+      "max": "Years of experience must be at most 60"
+    },
+    "status": {
+      "invalid": "Choose your current status"
+    },
+    "visibility": {
+      "invalid": "Choose private, anonymous or open"
+    },
+    "date": {
+      "invalid": "Enter a date (YYYY-MM-DD)"
+    },
+    "expiry": {
+      "beforeIssue": "Expiry cannot be before the issue date",
+      "required": "This qualification requires an expiry date"
+    },
+    "locale": {
+      "invalid": "Choose Español or English"
+    },
+    "form": {
+      "window": "Invalid window.",
+      "qualification": "Invalid qualification."
+    },
+    "review": {
+      "reasonRequired": "Give a reason to reject (the professional will read it).",
+      "noteMax": "Use at most 500 characters"
+    }
+  },
+  "domain": {
+    "shift": {
+      "day": "Day",
+      "night": "Night",
+      "split": "Split",
+      "flexible": "Flexible"
+    },
+    "urgency": {
+      "planned": "Planned",
+      "urgent": "Urgent",
+      "aog": "AOG"
+    },
+    "requirementStatus": {
+      "draft": "Draft",
+      "open": "Open",
+      "covered": "Covered",
+      "cancelled": "Cancelled",
+      "closed": "Closed"
+    },
+    "level": {
+      "hard": "Hard",
+      "soft": "Soft"
+    },
+    "verification": {
+      "verified": "Verified",
+      "pending": "Pending review",
+      "rejected": "Rejected",
+      "expired": "Expired"
+    },
+    "held": {
+      "active": "Held",
+      "withdrawn": "Withdrawn"
+    },
+    "visibility": {
+      "private": {
+        "label": "Private",
+        "detail": "You never appear in organization matching."
+      },
+      "anonymous": {
+        "label": "Anonymous",
+        "detail": "Your relevant qualifications can be matched; your identity stays hidden."
+      },
+      "open": {
+        "label": "Open",
+        "detail": "Your name is shown in matching results. Contact still requires your consent."
+      }
+    },
+    "mobility": {
+      "local": "Local (home base only)",
+      "national": "National",
+      "international": "International"
+    },
+    "technicianStatus": {
+      "employed": "Employed",
+      "contractor": "Contractor",
+      "between_contracts": "Between contracts"
+    },
+    "category": {
+      "LICENSE": "Licences",
+      "TYPE_RATING": "Type ratings",
+      "TRAINING": "Training and courses",
+      "APPROVAL": "Approvals",
+      "SKILL": "Skills"
+    },
+    "role": {
+      "member": "Member",
+      "manager": "Manager",
+      "admin": "Admin"
+    },
+    "accountType": {
+      "professional": "Professional",
+      "organization": "Organization"
+    }
+  },
+  "professional": {
+    "noProfileTitle": "No professional profile",
+    "noProfileDescription": "This account is an organization account.",
+    "overview": {
+      "eyebrow": "Professional space",
+      "passport": "Profile completeness",
+      "complete": "All profile items done. This is not a verification status.",
+      "qualifications": "Qualifications",
+      "verified": "Verified",
+      "windows": "Availability windows",
+      "visibility": "Visibility",
+      "profile": "Profile",
+      "editPassport": "Edit passport",
+      "verifiedOf": "{verified} of {total}",
+      "awaiting": "{count, plural, one {# awaiting review} other {# awaiting review}}",
+      "nextTitle": "Next steps",
+      "rejectedNext": "{count, plural, one {# qualification was rejected by a reviewer. Read the reason and correct it.} other {# qualifications were rejected by a reviewer. Read the reasons and correct them.}}",
+      "awaitingNext": "{count, plural, one {# qualification is waiting for a reviewer. Until it is verified it does not count for hard requirements.} other {# qualifications are waiting for a reviewer. Until they are verified they do not count for hard requirements.}}",
+      "openQualifications": "Open qualifications",
+      "doIt": "Go"
+    },
+    "hint": {
+      "display_name": "Next: add your professional name",
+      "base_location": "Next: set your base",
+      "years_experience": "Next: add your years of experience",
+      "licence_or_rating": "Next: declare a licence or type rating",
+      "verified_qualification": "Next: a reviewer verifies a qualification",
+      "availability": "Next: publish available days",
+      "visibility": "Next: choose anonymous or open visibility"
+    },
+    "facts": {
+      "base": "Base",
+      "mobility": "Mobility",
+      "experience": "Experience",
+      "status": "Status",
+      "visibility": "Visibility",
+      "years": "{count, plural, one {# year} other {# years}}"
+    },
+    "passport": {
+      "eyebrow": "My passport",
+      "title": "Your profile, connected.",
+      "description": "What you update here is reflected in matching and in your dossier. Qualifications and availability have their own pages.",
+      "noProfileDescription": "The passport belongs to professional accounts.",
+      "identity": "01 · Identity",
+      "name": "Professional name",
+      "base": "Base",
+      "baseHint": "Airport or city, e.g. Madrid (MAD)",
+      "experience": "02 · Experience and mobility",
+      "years": "Years of experience",
+      "status": "Current status",
+      "mobility": "Mobility",
+      "visibilityTitle": "03 · Visibility in the network",
+      "visibilityIntro": "Matching respects your choice. Private profiles never appear to organizations; contact always requires your consent.",
+      "visibilityAria": "Visibility",
+      "saved": "Passport updated. Matching uses the new data.",
+      "conflict": "Your passport was changed in another window or device. Nothing was saved: reload the page to see the latest version, then apply your changes again."
+    }
+  },
+  "qualifications": {
+    "title": "Qualifications",
+    "eyebrow": "My passport",
+    "description": "Licences, type ratings, training and approvals, with issue and expiry dates. You declare; an authorized reviewer verifies. A course must stay valid through the last day of a requirement to pass its hard filter.",
+    "noProfileDescription": "Qualifications belong to professional accounts.",
+    "catalogErrorTitle": "The qualification catalog could not be loaded",
+    "catalogErrorDescription": "Reload the page. Your declarations are safe.",
+    "declareTitle": "Declare a qualification",
+    "editTitle": "Edit {code}",
+    "intro": "Self-declared qualifications stay <b>pending</b> until an authorized reviewer verifies them. Only verified ones satisfy hard requirements.",
+    "reviewState": "{name}. Review state:",
+    "datesResetHint": "Changing the dates sends it back to pending review.",
+    "qualification": "Qualification",
+    "select": "Select from the catalog…",
+    "issued": "Issued",
+    "expires": "Expires",
+    "held": "Held",
+    "active": "Active",
+    "withdrawn": "Withdrawn (not held)",
+    "declare": "Declare",
+    "declared": "{code} declared — pending review until verified.",
+    "updated": "{code} updated.",
+    "updatedReset": "{code} updated — back to pending review because its dates changed.",
+    "removed": "{code} removed.",
+    "allDeclared": "You have declared every type in the catalog.",
+    "empty": "No qualifications yet. Declare your licence and type ratings above — they enter matching once verified.",
+    "expiryRequiredHint": "{code} requires an expiry date",
+    "expiryOptionalHint": "Leave empty when the qualification does not expire",
+    "issuedOn": "Issued {date}",
+    "validUntil": "Valid until {date}",
+    "noExpiry": "No expiry",
+    "group": "{category} ({count})",
+    "reviewReason": "Reviewer: {reason}"
+  },
+  "availability": {
+    "eyebrow": "My time",
+    "title": "Chosen availability",
+    "description": "A free day only enters the market when you mark it as available. Times are UTC; blocked windows override available ones.",
+    "noProfileDescription": "Availability belongs to professional accounts.",
+    "metrics": {
+      "available": "Available",
+      "availableDetail": "Days published this month",
+      "blocked": "Blocked",
+      "blockedDetail": "Days marked unavailable",
+      "windows": "Windows",
+      "windowsDetail": "Saved time windows"
+    },
+    "picker": {
+      "available": "Available",
+      "unavailable": "Blocked",
+      "clear": "Rest (clear)"
+    },
+    "pickerLabel": "State to apply",
+    "pickerHint": "Select a state, then click the days to apply it. Days are UTC.",
+    "day": {
+      "available": "Available",
+      "unavailable": "Blocked",
+      "mixed": "Partial",
+      "none": "Rest"
+    },
+    "weekday": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "coveredByLonger": "{date} is covered by a longer window. Edit or delete that window in the list below.",
+    "dayCleared": "{date} cleared",
+    "daySet": "{date} set to {state}",
+    "windowUpdated": "Window updated",
+    "windowAdded": "Window added",
+    "windowDeleted": "Window deleted",
+    "editWindow": "Edit window",
+    "addWindow": "Add a time window",
+    "starts": "Starts (UTC)",
+    "ends": "Ends (UTC)",
+    "status": "Status",
+    "statusAvailable": "Available",
+    "statusUnavailable": "Unavailable",
+    "savedWindows": "Saved windows ({count})",
+    "emptyHint": "No availability windows yet. Mark days in the calendar or add a window above — you only enter matching when you are available for the whole requirement period."
+  },
+  "organization": {
+    "dashboard": {
+      "title": "Operations",
+      "noRequirementsTitle": "No requirements yet",
+      "noRequirementsDescription": "Create a requirement to see your technical capacity and the gap to cover.",
+      "managersOnlyTitle": "Capacity analysis is available to managers and admins",
+      "managersOnlyDescription": "Ask an organization admin for the manager role.",
+      "requirements": "Requirements",
+      "viewAll": "View all",
+      "newRequirement": "New requirement"
+    },
+    "requirements": {
+      "title": "Work requirements",
+      "description": "Operational needs, their qualifications and period. Times in UTC.",
+      "caption": "Work requirements",
+      "columns": {
+        "requirement": "Requirement",
+        "period": "Period (UTC)",
+        "need": "Need",
+        "qualifications": "Qualifications",
+        "status": "Status"
+      },
+      "soft": "(soft)",
+      "requiredQualifications": "Required qualifications",
+      "hardRequirement": "hard requirement",
+      "softRequirement": "soft (nice to have)"
+    },
+    "detail": {
+      "eyebrow": "Work requirement",
+      "internalWorkforce": "Internal workforce ({count})",
+      "noTechniciansTitle": "No technicians in your organization yet",
+      "noTechniciansDescription": "The whole headcount is a gap to source externally.",
+      "facts": {
+        "location": "Location",
+        "starts": "Starts",
+        "ends": "Ends",
+        "shift": "Shift",
+        "headcount": "Headcount"
+      }
+    },
+    "new": {
+      "title": "New work requirement",
+      "description": "Describe the real operational need. Crew Flex evaluates your internal capacity first.",
+      "noPermissionTitle": "You don't have permission",
+      "noPermissionDescription": "Only organization managers and admins can create requirements.",
+      "catalogErrorTitle": "The qualification catalog could not be loaded",
+      "sectionNeed": "01 · Need",
+      "sectionPeriod": "02 · Period (UTC)",
+      "sectionQualifications": "03 · Qualifications",
+      "fields": {
+        "title": "Title",
+        "location": "Location",
+        "headcount": "Headcount",
+        "urgency": "Urgency",
+        "starts": "Starts (UTC)",
+        "ends": "Ends (UTC)",
+        "shift": "Shift"
+      },
+      "titlePlaceholder": "B1.1 · A320 line maintenance reinforcement",
+      "locationPlaceholder": "Madrid (MAD)",
+      "qualificationsIntro": "<b>Hard</b> requirements filter candidates out; <b>soft</b> ones only affect the score. At least one hard requirement is needed.",
+      "levelAria": "{code} requirement level",
+      "submit": "Create requirement",
+      "submitting": "Creating…",
+      "forbidden": "Your role cannot create requirements in this organization.",
+      "unreachable": "The service could not be reached. Your data is still here — retry.",
+      "sessionExpired": "Your session expired. Sign in again."
+    },
+    "matches": {
+      "eyebrow": "External network · matching preview",
+      "description": "{location} · {period}. Hard requirements are filters: no score compensates a missing one.",
+      "back": "Back to requirement",
+      "emptyTitle": "No matchable professionals for these qualifications",
+      "emptyDescription": "Only professionals who chose to be matchable and hold at least one of the required qualifications are evaluated.",
+      "summary": "<b>{eligible}</b> eligible of {evaluated} evaluated. Anonymous professionals are shown with a reference that is only valid for this requirement.",
+      "coverage": {
+        "complete": "Every professional in the network who holds at least one required qualification was evaluated ({prefiltered}).",
+        "nearMissesTrimmed": "{prefiltered} professionals hold at least one required qualification; {evaluated} were evaluated. All {hardEligible} who meet every hard requirement and are available were evaluated first; the others are the closest near misses.",
+        "eligibleTruncated": "Partial result: {hardEligible} professionals meet every hard requirement and are available, but at most {cap} are evaluated per request. This list is not the whole network — narrow the requirement (period, qualifications) to see the rest."
+      }
+    },
+    "workforce": {
+      "title": "Internal workforce",
+      "description": "Members of your organization and their qualification status. Adding members (invitations with consent) comes next.",
+      "errorTitle": "The workforce could not be loaded",
+      "empty": "No members yet",
+      "noQualifications": "No qualifications recorded.",
+      "organizationUser": "Organization user (not a technician).",
+      "memberQualifications": "{name} qualifications",
+      "managersOnlyTitle": "The workforce is visible to managers and admins",
+      "managersOnlyDescription": "Members' qualification data is shared only with organization managers and admins."
+    }
+  },
+  "capacity": {
+    "title": "Technical capacity",
+    "required": "Required",
+    "internallyEligible": "Internally eligible",
+    "gap": "Gap",
+    "gapDetail": "{count} × to source externally",
+    "coveredInternally": "Covered internally",
+    "coverage": "Coverage",
+    "viewEligible": "View eligible external professionals",
+    "detail": "Requirement detail"
+  },
+  "matching": {
+    "eligible": "Eligible",
+    "notEligible": "Not eligible",
+    "anonymous": "Anonymous professional {ref}",
+    "baseNotShared": "Base not shared",
+    "years": "{count, plural, one {# year experience} other {# years experience}}",
+    "softScore": "Soft score",
+    "blockers": "Blockers",
+    "met": "Met: ",
+    "notMet": "Not met: ",
+    "availabilityLabel": "Availability",
+    "check": {
+      "metVerifiedUntil": "Verified · valid until {date}",
+      "metVerified": "Verified",
+      "metPending": "Self-declared · pending verification",
+      "missing": "Not held",
+      "notVerified": "Not verified ({status})",
+      "expired": "Expired {date}",
+      "expiresDuring": "Expires during the requirement ({date})"
+    },
+    "availability": {
+      "full": "Covers the entire requirement",
+      "none": "Not available",
+      "partial": "Covers {percent}% of the period"
+    },
+    "blocker": {
+      "missing": "Missing {code}",
+      "notVerified": "{code} not verified ({status})",
+      "expired": "{code} expired on {date}",
+      "expiresDuring": "{code} expires during the requirement ({date})",
+      "notAvailable": "Not available on the requirement dates",
+      "partial": "Available for only {percent}% of the requirement period"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Your account and how Crew Flex looks to you. Business data lives in your passport or organization pages.",
+    "language": "Language / Idioma",
+    "languageDescription": "The interface, dates and messages follow this choice on every device where you sign in. Licence codes, aircraft types and your own data are never translated.",
+    "saved": "Language updated.",
+    "account": "Account",
+    "name": "Name",
+    "accountType": "Account type",
+    "organization": "Organization",
+    "role": "Role"
+  },
+  "admin": {
+    "reviews": {
+      "eyebrow": "Platform",
+      "title": "Qualification review",
+      "description": "Self-declared qualifications wait here until a platform administrator checks them. Only verified hard qualifications make a professional eligible.",
+      "evidenceNote": "No evidence documents are stored yet (the document wallet is not built). Check each declaration with the issuing authority or the professional's original documents before verifying. Your decision and the request reference are audited.",
+      "pendingTitle": "Pending review ({count})",
+      "emptyTitle": "Nothing to review",
+      "emptyDescription": "Every active declaration has been decided.",
+      "professional": "Professional",
+      "declared": "Declared on",
+      "issued": "Issued",
+      "expires": "Expires",
+      "notGiven": "Not given",
+      "noExpiry": "No expiry",
+      "note": "Reason or reference",
+      "noteHint": "Required to reject. Visible to the professional; do not include personal data.",
+      "verify": "Verify",
+      "reject": "Reject",
+      "verifiedDone": "Verified. The qualification now counts for matching.",
+      "rejectedDone": "Rejected. The professional can see the reason.",
+      "alreadyDecided": "This declaration was already decided or changed. Reload the queue.",
+      "historyTitle": "Latest decisions",
+      "historyEmpty": "No decisions yet.",
+      "when": "When",
+      "decision": "Decision",
+      "reasonGiven": "Reason given",
+      "reference": "Request reference",
+      "decisionVerified": "Verified",
+      "decisionRejected": "Rejected",
+      "yes": "Yes",
+      "no": "No"
+    }
+  }
+}

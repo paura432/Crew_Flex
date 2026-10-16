@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // Security headers for every route. CSP is intentionally not set yet: Next.js inline
 // runtime scripts need a nonce-based CSP, tracked in docs/product/SECURITY_PRIVACY.md.
@@ -28,4 +29,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Locale resolved per request (cookie / preference / browser), no locale segment in the URL.
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+export default withNextIntl(nextConfig);

@@ -36,10 +36,11 @@ export async function listQualificationTypes(): Promise<QualificationType[] | nu
 export const listQualifications = () =>
   invokeEdgeFunction<QualificationListResponse>("professional-qualifications");
 
-export const createQualification = (input: CreateQualificationInput) =>
+export const createQualification = (input: CreateQualificationInput, idempotencyKey: string) =>
   invokeEdgeFunction<QualificationResponse>("professional-qualifications", {
     method: "POST",
     body: input,
+    headers: { "Idempotency-Key": idempotencyKey },
   });
 
 export const updateQualification = (id: string, input: UpdateQualificationInput) =>

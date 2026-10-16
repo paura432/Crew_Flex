@@ -32,6 +32,12 @@ describe("J. local CLI wrapper never reaches a remote project", () => {
     }
   });
 
+  it("migration up is allowed only against the local stack (remote flags still refused)", () => {
+    const { status, stderr } = run("migration", "up", "--linked");
+    expect(status).toBe(2);
+    expect(stderr).toContain("remote targeting is not allowed");
+  });
+
   it("refuses --db-url unless the host is 127.0.0.1 or localhost", () => {
     const remote = run(
       "db",
@@ -58,7 +64,6 @@ describe("J. local CLI wrapper never reaches a remote project", () => {
       ["secrets", "set", "X=1"],
       ["functions", "deploy", "health"],
       ["db", "push"],
-      ["migration", "up"],
       ["migration", "repair", "1"],
       ["branches", "list"],
     ]) {

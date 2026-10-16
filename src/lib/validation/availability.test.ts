@@ -19,10 +19,10 @@ describe("createAvailabilityWindowInput", () => {
   });
 
   it.each([
-    [{ endsAt: "2026-10-18T00:00:00Z" }, "endsAt", "End must be after start"],
-    [{ endsAt: "2027-12-01T00:00:00Z" }, "endsAt", "A window can span at most 366 days"],
-    [{ status: "maybe" }, "status", "Choose available or unavailable"],
-    [{ startsAt: "18/10/2026" }, "startsAt", "Start must be a date and time (UTC)"],
+    [{ endsAt: "2026-10-18T00:00:00Z" }, "endsAt", "v.end.afterStart"],
+    [{ endsAt: "2027-12-01T00:00:00Z" }, "endsAt", "v.window.maxDays"],
+    [{ status: "maybe" }, "status", "v.window.status"],
+    [{ startsAt: "18/10/2026" }, "startsAt", "v.start.required"],
   ])("rejects %o", (override, field, message) => {
     expect(errorsFor({ ...valid, ...override })[field]).toBe(message);
   });

@@ -3,19 +3,19 @@ import { evaluateMatch } from "@/domain/matching";
 import { candidate, FULL_HARD_SET, madRequirement, QT } from "../../../fixtures/domain";
 import { explainAvailability, explainBlocker, explainCheck } from "./explain";
 
-describe("match explanations", () => {
-  it("explains a verified, valid qualification", () => {
+describe("match explanations (structured, locale-independent)", () => {
+  it("explains a verified, valid qualification with its expiry", () => {
     const result = evaluateMatch(madRequirement(), candidate("c"));
     const b11 = result.qualificationChecks.find((c) => c.code === "B1.1");
     expect(explainCheck(b11!)).toEqual({
       label: "B1.1",
-      detail: "Verified · valid until 31 Dec 2028",
+      detail: { key: "check.metVerifiedUntil", params: { date: "2028-12-31" } },
       tone: "ok",
       met: true,
     });
   });
 
-  it("explains blockers in plain language", () => {
+  it("explains blockers as keys with the data the copy needs", () => {
     const result = evaluateMatch(
       madRequirement(),
       candidate("c", {
@@ -24,13 +24,16 @@ describe("match explanations", () => {
       }),
     );
     expect(result.blockers.map(explainBlocker)).toEqual([
-      "Missing B1.1",
-      "Not available on the requirement dates",
+      { key: "blocker.missing", params: { code: "B1.1" } },
+      { key: "blocker.notAvailable" },
     ]);
   });
 
-  it("explains partial availability", () => {
-    expect(explainAvailability(48.78).detail).toBe("Covers 48.78% of the period");
+  it("explains partial availability with the covered percent", () => {
+    expect(explainAvailability(48.78).detail).toEqual({
+      key: "availability.partial",
+      params: { percent: 48.78 },
+    });
     expect(explainAvailability(100).met).toBe(true);
   });
 });

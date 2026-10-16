@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,13 +12,20 @@ import { getRequirement } from "@/features/requirements/api";
 import { RequirementFacts } from "@/features/requirements/components/RequirementFacts";
 import { requireOrganizationContext } from "@/server/session";
 
-export const metadata: Metadata = { title: "Requirement" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return { title: t("requirement") };
+}
 
 export default async function RequirementDetailPage({
   params,
 }: PageProps<"/app/organization/requirements/[id]">) {
-  const { id } = await params;
-  const { canManage } = await requireOrganizationContext();
+  const [{ id }, { canManage }, t, tDashboard] = await Promise.all([
+    params,
+    requireOrganizationContext(),
+    getTranslations("organization.detail"),
+    getTranslations("organization.dashboard"),
+  ]);
   const result = await getRequirement(id);
   if (!result.ok) {
     if (result.error.code === "NOT_FOUND" || result.error.code === "VALIDATION_ERROR") notFound();
@@ -28,15 +36,15 @@ export default async function RequirementDetailPage({
 
   return (
     <>
-      <PageHeader eyebrow="Work requirement" title={requirement.title} />
+      <PageHeader eyebrow={t("eyebrow")} title={requirement.title} />
       <div className="space-y-6">
         <Panel>
           <RequirementFacts requirement={requirement} />
         </Panel>
         {!capacity ? (
           <StateMessage
-            title="Capacity analysis is available to managers and admins"
-            description="Ask an organization admin for the manager role."
+            title={tDashboard("managersOnlyTitle")}
+            description={tDashboard("managersOnlyDescription")}
           />
         ) : !capacity.ok ? (
           <ApiErrorState error={capacity.error} requestId={capacity.requestId} />
@@ -45,12 +53,12 @@ export default async function RequirementDetailPage({
             <CapacityOverview requirement={requirement} capacity={capacity.data.capacity} />
             <section aria-labelledby="internal-title">
               <h2 id="internal-title" className="mb-3 text-lg font-semibold tracking-tight">
-                Internal workforce ({capacity.data.internal.length})
+                {t("internalWorkforce", { count: capacity.data.internal.length })}
               </h2>
               {capacity.data.internal.length === 0 ? (
                 <StateMessage
-                  title="No technicians in your organization yet"
-                  description="The whole headcount is a gap to source externally."
+                  title={t("noTechniciansTitle")}
+                  description={t("noTechniciansDescription")}
                 />
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">

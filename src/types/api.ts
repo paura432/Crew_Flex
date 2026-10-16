@@ -4,7 +4,9 @@ import type { AvailabilityStatus } from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
+import type { Locale } from "../i18n/config.ts";
 import type {
+  QualificationCategory,
   QualificationStatus,
   QualificationType,
   VerificationStatus,
@@ -65,9 +67,20 @@ export interface CapacityResponse {
   internal: EvaluatedCandidate[];
 }
 
+/**
+ * How complete the external evaluation is (get_requirement_external_pool_summary). `prefiltered`:
+ * external professionals holding at least one required qualification; `hardEligible`: those who
+ * pass every hard filter (selected first); `cap`: maximum evaluated per request. Counts only.
+ */
+export interface ExternalPoolCoverage {
+  prefiltered: number;
+  hardEligible: number;
+  cap: number;
+}
+
 export interface MatchingResponse {
   requirementId: string;
-  summary: { evaluated: number; eligible: number };
+  summary: { evaluated: number; eligible: number; pool: ExternalPoolCoverage };
   candidates: EvaluatedCandidate[];
 }
 
@@ -105,6 +118,9 @@ export interface Qualification {
   issuedAt: string | null;
   expiresAt: string | null;
   verificationStatus: VerificationStatus;
+  /** Reviewer's reason (phase 6); always set for rejections. */
+  reviewNote: string | null;
+  reviewedAt: string | null;
   updatedAt: string;
 }
 
@@ -119,4 +135,38 @@ export interface QualificationResponse {
 export interface QualificationDeleteResponse {
   deleted: true;
   id: string;
+}
+
+export interface PreferencesResponse {
+  preferences: { locale: Locale | null; updatedAt: string };
+}
+
+/** Platform-admin review queue (`qualification-reviews`, phase 6). Minimal data: no e-mail, no documents. */
+export interface ReviewQueueItem {
+  id: string;
+  professional: { id: string; displayName: string; baseLocation: string | null };
+  type: { code: string; name: string; category: QualificationCategory };
+  issuedAt: string | null;
+  expiresAt: string | null;
+  declaredAt: string;
+  /** Version the decision is about (sent back as `expectedUpdatedAt`). */
+  updatedAt: string;
+}
+
+export interface ReviewHistoryItem {
+  qualificationId: string;
+  reviewerId: string | null;
+  decision: "verified" | "rejected";
+  noteProvided: boolean;
+  requestId: string | null;
+  at: string;
+}
+
+export interface ReviewQueueResponse {
+  pending: ReviewQueueItem[];
+  recent: ReviewHistoryItem[];
+}
+
+export interface ReviewDecisionResponse {
+  qualification: { id: string; verificationStatus: VerificationStatus; reviewedAt: string };
 }

@@ -32,17 +32,17 @@ describe("createWorkRequirementInput", () => {
   });
 
   it.each([
-    [{ headcount: 0 }, "headcount", "Headcount must be at least 1"],
-    [{ headcount: 2.5 }, "headcount", "Headcount must be a whole number"],
-    [{ title: "  " }, "title", "Title must have at least 3 characters"],
-    [{ location: "" }, "location", "Location must have at least 2 characters"],
-    [{ endsAt: "2026-10-18T19:00:00Z" }, "endsAt", "End must be after start"],
-    [{ endsAt: "2027-12-01T00:00:00Z" }, "endsAt", "A requirement can last at most 366 days"],
-    [{ qualifications: [] }, "qualifications", "Add at least one qualification"],
+    [{ headcount: 0 }, "headcount", "v.headcount.min"],
+    [{ headcount: 2.5 }, "headcount", "v.headcount.int"],
+    [{ title: "  " }, "title", "v.title.min"],
+    [{ location: "" }, "location", "v.location.min"],
+    [{ endsAt: "2026-10-18T19:00:00Z" }, "endsAt", "v.end.afterStart"],
+    [{ endsAt: "2027-12-01T00:00:00Z" }, "endsAt", "v.requirement.maxDays"],
+    [{ qualifications: [] }, "qualifications", "v.qualifications.min"],
     [
       { qualifications: [{ qualificationTypeId: SMS, level: "soft" }] },
       "qualifications",
-      "At least one qualification must be a hard requirement",
+      "v.qualifications.hard",
     ],
     [
       {
@@ -52,10 +52,10 @@ describe("createWorkRequirementInput", () => {
         ],
       },
       "qualifications",
-      "Each qualification can only be added once",
+      "v.qualifications.duplicate",
     ],
-    [{ urgency: "asap" }, "urgency", "Choose an urgency"],
-    [{ startsAt: "18/10/2026" }, "startsAt", "Start date and time are required"],
+    [{ urgency: "asap" }, "urgency", "v.urgency.invalid"],
+    [{ startsAt: "18/10/2026" }, "startsAt", "v.start.required"],
   ])("rejects %o", (override, field, message) => {
     expect(errorsFor({ ...valid, ...override })[field]).toBe(message);
   });
@@ -71,9 +71,7 @@ describe("createWorkRequirementInput", () => {
       qualificationTypeId: `11111111-1111-4111-8111-${String(i).padStart(12, "0")}`,
       level: "hard",
     }));
-    expect(errorsFor({ ...valid, qualifications }).qualifications).toBe(
-      "At most 20 qualifications",
-    );
+    expect(errorsFor({ ...valid, qualifications }).qualifications).toBe("v.qualifications.max");
   });
 });
 

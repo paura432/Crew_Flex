@@ -6,6 +6,7 @@ import {
   availabilityWindowIdQuery,
   createAvailabilityWindowInput,
 } from "@/lib/validation/availability";
+import { idempotencyKeySchema } from "@/lib/validation/idempotency";
 import type { ApiErrorBody, ApiResponse } from "@/types/api";
 import {
   createAvailabilityWindow,
@@ -53,10 +54,15 @@ const invalid = (fieldErrors: FieldErrors): AvailabilityActionResult => ({
 });
 
 /** Server-side validation first (never trusts the client), then the Edge Function. */
-export async function createWindowAction(input: unknown): Promise<AvailabilityActionResult> {
+export async function createWindowAction(
+  input: unknown,
+  idempotencyKey: unknown,
+): Promise<AvailabilityActionResult> {
   const parsed = createAvailabilityWindowInput.safeParse(input);
   if (!parsed.success) return invalid(toFieldErrors(parsed.error));
-  return fromResponse(await createAvailabilityWindow(parsed.data));
+  const key = idempotencyKeySchema.safeParse(idempotencyKey);
+  if (!key.success) return invalid({ form: "v.idempotencyKey.invalid" });
+  return fromResponse(await createAvailabilityWindow(parsed.data, key.data));
 }
 
 export async function updateWindowAction(

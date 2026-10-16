@@ -1,26 +1,18 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import type { QualificationCategory, QualificationType } from "@/domain/qualification";
+import { QUALIFICATION_CATEGORIES, type QualificationType } from "@/domain/qualification";
 import type { RequirementLevel } from "@/domain/work-requirement";
 import { SHIFTS, URGENCIES } from "@/domain/work-requirement";
-import { SHIFT_LABEL, URGENCY_LABEL } from "@/lib/format";
+import { resolveFieldErrors } from "@/i18n/validation";
+import { useIdempotencyKey } from "@/lib/idempotency";
+import { toUtcIso } from "@/lib/format";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { createWorkRequirementInput } from "@/lib/validation/work-requirement";
 import { createRequirementAction } from "../actions";
-
-const CATEGORY_LABEL: Record<QualificationCategory, string> = {
-  LICENSE: "Licences",
-  TYPE_RATING: "Type ratings",
-  TRAINING: "Training",
-  APPROVAL: "Approvals",
-  SKILL: "Skills",
-};
-
-/** `datetime-local` values are entered and stored as UTC (shown as UTC everywhere). */
-const toUtcIso = (local: string) => (local ? `${local}:00Z` : "");
 
 export function RequirementForm({
   organizationId,
@@ -29,12 +21,17 @@ export function RequirementForm({
   organizationId: string;
   qualificationTypes: QualificationType[];
 }) {
+  const t = useTranslations("organization.new");
+  const tDomain = useTranslations("domain");
+  const tRoot = useTranslations();
   const [selected, setSelected] = useState<Map<string, RequirementLevel>>(new Map());
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [rawErrors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<{ message: string; requestId?: string } | null>(
     null,
   );
   const [pending, startTransition] = useTransition();
+  const idempotency = useIdempotencyKey();
+  const errors = resolveFieldErrors(tRoot, rawErrors);
 
   const toggle = (id: string, include: boolean) =>
     setSelected((current) => {
@@ -72,19 +69,21 @@ export function RequirementForm({
     }
     setErrors({});
     startTransition(async () => {
-      const result = await createRequirementAction(parsed.data);
+      const result = await createRequirementAction(parsed.data, idempotency.keyFor(parsed.data));
       // On success the action redirects; we only get here on failure.
       if (result.status === "error") {
         setErrors(result.fieldErrors ?? {});
         setServerError({
           message:
             result.code === "FORBIDDEN"
-              ? "Your role cannot create requirements in this organization."
+              ? t("forbidden")
               : result.code === "NETWORK_ERROR"
-                ? "The service could not be reached. Your data is still here — retry."
+                ? t("unreachable")
                 : result.code === "UNAUTHORIZED"
-                  ? "Your session expired. Sign in again."
-                  : result.message,
+                  ? t("sessionExpired")
+                  : result.code === "VALIDATION_ERROR"
+                    ? tRoot("common.checkFields")
+                    : tRoot(`api.${result.code}.description`),
           requestId: result.requestId,
         });
       }
@@ -109,29 +108,31 @@ export function RequirementForm({
         >
           <p className="font-semibold">{serverError.message}</p>
           {serverError.requestId && (
-            <p className="mt-1 font-mono text-xs">Reference: {serverError.requestId}</p>
+            <p className="mt-1 font-mono text-xs">
+              {tRoot("common.reference", { id: serverError.requestId })}
+            </p>
           )}
         </div>
       )}
 
       <fieldset className="grid gap-5 md:grid-cols-2">
         <legend className="mb-3 text-sm font-semibold tracking-[0.12em] text-muted uppercase">
-          01 · Need
+          {t("sectionNeed")}
         </legend>
-        <Field id="title" label="Title" error={errors.title}>
-          <input {...input("title")} placeholder="B1.1 · A320 line maintenance reinforcement" />
+        <Field id="title" label={t("fields.title")} error={errors.title}>
+          <input {...input("title")} placeholder={t("titlePlaceholder")} />
         </Field>
-        <Field id="location" label="Location" error={errors.location}>
-          <input {...input("location")} placeholder="Madrid (MAD)" />
+        <Field id="location" label={t("fields.location")} error={errors.location}>
+          <input {...input("location")} placeholder={t("locationPlaceholder")} />
         </Field>
-        <Field id="headcount" label="Headcount" error={errors.headcount}>
+        <Field id="headcount" label={t("fields.headcount")} error={errors.headcount}>
           <input {...input("headcount")} type="number" min={1} max={50} defaultValue={1} />
         </Field>
-        <Field id="urgency" label="Urgency" error={errors.urgency}>
+        <Field id="urgency" label={t("fields.urgency")} error={errors.urgency}>
           <select {...input("urgency")} defaultValue="planned">
             {URGENCIES.map((u) => (
               <option key={u} value={u}>
-                {URGENCY_LABEL[u]}
+                {tDomain(`urgency.${u}`)}
               </option>
             ))}
           </select>
@@ -140,19 +141,19 @@ export function RequirementForm({
 
       <fieldset className="grid gap-5 md:grid-cols-3">
         <legend className="mb-3 text-sm font-semibold tracking-[0.12em] text-muted uppercase">
-          02 · Period (UTC)
+          {t("sectionPeriod")}
         </legend>
-        <Field id="startsAt" label="Starts (UTC)" error={errors.startsAt}>
+        <Field id="startsAt" label={t("fields.starts")} error={errors.startsAt}>
           <input {...input("startsAt")} type="datetime-local" />
         </Field>
-        <Field id="endsAt" label="Ends (UTC)" error={errors.endsAt}>
+        <Field id="endsAt" label={t("fields.ends")} error={errors.endsAt}>
           <input {...input("endsAt")} type="datetime-local" />
         </Field>
-        <Field id="shift" label="Shift" error={errors.shift}>
+        <Field id="shift" label={t("fields.shift")} error={errors.shift}>
           <select {...input("shift")} defaultValue="day">
             {SHIFTS.map((s) => (
               <option key={s} value={s}>
-                {SHIFT_LABEL[s]}
+                {tDomain(`shift.${s}`)}
               </option>
             ))}
           </select>
@@ -161,12 +162,12 @@ export function RequirementForm({
 
       <fieldset aria-describedby={errors.qualifications ? "qualifications-error" : undefined}>
         <legend className="mb-1 text-sm font-semibold tracking-[0.12em] text-muted uppercase">
-          03 · Qualifications
+          {t("sectionQualifications")}
         </legend>
         <p className="mb-4 text-sm text-muted">
-          <strong className="text-ink">Hard</strong> requirements filter candidates out;{" "}
-          <strong className="text-ink">soft</strong> ones only affect the score. At least one hard
-          requirement is needed.
+          {t.rich("qualificationsIntro", {
+            b: (chunks) => <strong className="text-ink">{chunks}</strong>,
+          })}
         </p>
         {errors.qualifications && (
           <p id="qualifications-error" className="mb-3 text-sm font-medium text-danger">
@@ -174,12 +175,12 @@ export function RequirementForm({
           </p>
         )}
         <div className="grid gap-6 md:grid-cols-2">
-          {(Object.keys(CATEGORY_LABEL) as QualificationCategory[]).map((category) => {
+          {QUALIFICATION_CATEGORIES.map((category) => {
             const items = byCategory[category];
             if (!items?.length) return null;
             return (
               <div key={category}>
-                <h3 className="mb-2 text-sm font-semibold">{CATEGORY_LABEL[category]}</h3>
+                <h3 className="mb-2 text-sm font-semibold">{tDomain(`category.${category}`)}</h3>
                 <ul className="divide-y divide-line rounded-lg border border-line bg-white">
                   {items.map((q) => {
                     const level = selected.get(q.id);
@@ -199,13 +200,13 @@ export function RequirementForm({
                         </label>
                         {level && (
                           <select
-                            aria-label={`${q.code} requirement level`}
+                            aria-label={t("levelAria", { code: q.code })}
                             value={level}
                             onChange={(e) => setLevel(q.id, e.target.value as RequirementLevel)}
                             className="min-h-9 rounded-md border border-line bg-white px-2 text-sm"
                           >
-                            <option value="hard">Hard</option>
-                            <option value="soft">Soft</option>
+                            <option value="hard">{tDomain("level.hard")}</option>
+                            <option value="soft">{tDomain("level.soft")}</option>
                           </select>
                         )}
                       </li>
@@ -220,9 +221,9 @@ export function RequirementForm({
 
       <div className="flex flex-wrap gap-3">
         <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-          {pending ? "Creating…" : "Create requirement"}
+          {pending ? t("submitting") : t("submit")}
         </Button>
-        <ButtonLink href="/app/organization/requirements">Cancel</ButtonLink>
+        <ButtonLink href="/app/organization/requirements">{tRoot("common.cancel")}</ButtonLink>
       </div>
     </form>
   );

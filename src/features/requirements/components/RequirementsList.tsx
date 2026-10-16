@@ -1,32 +1,38 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { WorkRequirement } from "@/domain/work-requirement";
-import { formatPeriod, SHIFT_LABEL } from "@/lib/format";
+import { formatPeriod } from "@/i18n/format";
 import { QualificationChips, RequirementStatusChip, UrgencyChip } from "./RequirementBadges";
 
 const detailHref = (id: string) => `/app/organization/requirements/${id}` as const;
 
 /** Table on ≥ md, stacked list on mobile (no horizontal scroll). */
-export function RequirementsList({ requirements }: { requirements: WorkRequirement[] }) {
+export async function RequirementsList({ requirements }: { requirements: WorkRequirement[] }) {
+  const [t, tDomain, locale] = await Promise.all([
+    getTranslations("organization.requirements"),
+    getTranslations("domain"),
+    getLocale(),
+  ]);
   return (
     <>
       <table className="hidden w-full text-left text-sm md:table">
-        <caption className="sr-only">Work requirements</caption>
+        <caption className="sr-only">{t("caption")}</caption>
         <thead className="border-b border-line text-xs tracking-wide text-muted uppercase">
           <tr>
             <th scope="col" className="py-2 pr-4 font-semibold">
-              Requirement
+              {t("columns.requirement")}
             </th>
             <th scope="col" className="py-2 pr-4 font-semibold">
-              Period (UTC)
+              {t("columns.period")}
             </th>
             <th scope="col" className="py-2 pr-4 font-semibold">
-              Need
+              {t("columns.need")}
             </th>
             <th scope="col" className="py-2 pr-4 font-semibold">
-              Qualifications
+              {t("columns.qualifications")}
             </th>
             <th scope="col" className="py-2 font-semibold">
-              Status
+              {t("columns.status")}
             </th>
           </tr>
         </thead>
@@ -40,8 +46,8 @@ export function RequirementsList({ requirements }: { requirements: WorkRequireme
                 <div className="text-muted">{r.location}</div>
               </td>
               <td className="py-3 pr-4 whitespace-nowrap tabular-nums">
-                {formatPeriod(r.startsAt, r.endsAt)}
-                <div className="text-muted">{SHIFT_LABEL[r.shift]}</div>
+                {formatPeriod(locale, r.startsAt, r.endsAt)}
+                <div className="text-muted">{tDomain(`shift.${r.shift}`)}</div>
               </td>
               <td className="py-3 pr-4 tabular-nums">
                 <span className="font-semibold">{r.headcount}</span> ×
@@ -71,8 +77,8 @@ export function RequirementsList({ requirements }: { requirements: WorkRequireme
               {r.title}
             </Link>
             <p className="text-sm text-muted tabular-nums">
-              {r.location} · {formatPeriod(r.startsAt, r.endsAt)} · {SHIFT_LABEL[r.shift]} ·{" "}
-              {r.headcount} ×
+              {r.location} · {formatPeriod(locale, r.startsAt, r.endsAt)} ·{" "}
+              {tDomain(`shift.${r.shift}`)} · {r.headcount} ×
             </p>
             <QualificationChips qualifications={r.qualifications} />
           </li>

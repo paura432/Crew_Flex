@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
@@ -12,21 +13,24 @@ import {
   type ProfessionalProfile,
   type ProfileVisibility,
 } from "@/domain/professional";
-import { MOBILITY_LABEL, TECHNICIAN_STATUS_LABEL } from "@/lib/format";
+import { resolveFieldErrors } from "@/i18n/validation";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { updateProfessionalProfileInput } from "@/lib/validation/professional";
 import { updateProfileAction } from "../actions";
-import { VISIBILITY_COPY } from "./ProfessionalSections";
 
 /**
  * "Mi pasaporte" (prototype S1): identity, experience & mobility, network visibility — the fields
  * the data model justifies. One form, one save, full replacement (no partial updates).
  */
-export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
+export function ProfileForm({ profile }: { profile: ProfessionalProfile & { updatedAt: string } }) {
+  const t = useTranslations("professional.passport");
+  const tDomain = useTranslations("domain");
+  const tRoot = useTranslations();
   const [visibility, setVisibility] = useState<ProfileVisibility>(profile.visibility);
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [rawErrors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [pending, startTransition] = useTransition();
+  const errors = resolveFieldErrors(tRoot, rawErrors);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,6 +43,7 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
       yearsExperience: years === "" ? null : Number(years),
       currentStatus: String(form.get("currentStatus") ?? ""),
       visibility,
+      expectedUpdatedAt: profile.updatedAt,
     };
     const parsed = updateProfessionalProfileInput.safeParse(payload);
     setNotice(null);
@@ -50,10 +55,15 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
     startTransition(async () => {
       const result = await updateProfileAction(parsed.data);
       if (result.ok) {
-        setNotice({ tone: "ok", text: "Passport updated. Matching uses the new data." });
+        setNotice({ tone: "ok", text: t("saved") });
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(actionErrorCopy(result));
+        // Optimistic concurrency (I-3): nothing was saved; the form keeps the user's input.
+        setNotice(
+          result.code === "CONFLICT"
+            ? { tone: "danger", text: t("conflict"), requestId: result.requestId }
+            : actionErrorCopy(tRoot, result),
+        );
       }
     });
   }
@@ -69,21 +79,24 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
-      <Notice notice={notice} />
+      <Notice
+        notice={notice}
+        referenceLabel={tRoot("common.reference", { id: notice?.requestId ?? "" })}
+      />
 
-      <Panel title="01 · Identity">
+      <Panel title={t("identity")}>
         <div className="grid gap-5 md:grid-cols-2">
-          <Field id="displayName" label="Professional name" error={errors.displayName}>
+          <Field id="displayName" label={t("name")} error={errors.displayName}>
             <input {...input("displayName")} defaultValue={profile.displayName} maxLength={120} />
           </Field>
           <Field
             id="baseLocation"
-            label="Base"
-            hint="Airport or city, e.g. Madrid (MAD)"
+            label={t("base")}
+            hint={t("baseHint")}
             error={errors.baseLocation}
           >
             <input
-              {...input("baseLocation", "Airport or city, e.g. Madrid (MAD)")}
+              {...input("baseLocation", t("baseHint"))}
               defaultValue={profile.baseLocation ?? ""}
               maxLength={80}
               placeholder="Madrid (MAD)"
@@ -92,9 +105,9 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
         </div>
       </Panel>
 
-      <Panel title="02 · Experience and mobility">
+      <Panel title={t("experience")}>
         <div className="grid gap-5 md:grid-cols-3">
-          <Field id="yearsExperience" label="Years of experience" error={errors.yearsExperience}>
+          <Field id="yearsExperience" label={t("years")} error={errors.yearsExperience}>
             <input
               {...input("yearsExperience")}
               type="number"
@@ -105,20 +118,20 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
               defaultValue={profile.yearsExperience ?? ""}
             />
           </Field>
-          <Field id="currentStatus" label="Current status" error={errors.currentStatus}>
+          <Field id="currentStatus" label={t("status")} error={errors.currentStatus}>
             <select {...input("currentStatus")} defaultValue={profile.currentStatus}>
               {TECHNICIAN_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {TECHNICIAN_STATUS_LABEL[s]}
+                  {tDomain(`technicianStatus.${s}`)}
                 </option>
               ))}
             </select>
           </Field>
-          <Field id="mobility" label="Mobility" error={errors.mobility}>
+          <Field id="mobility" label={t("mobility")} error={errors.mobility}>
             <select {...input("mobility")} defaultValue={profile.mobility}>
               {MOBILITIES.map((m) => (
                 <option key={m} value={m}>
-                  {MOBILITY_LABEL[m]}
+                  {tDomain(`mobility.${m}`)}
                 </option>
               ))}
             </select>
@@ -126,19 +139,15 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
         </div>
       </Panel>
 
-      <Panel title="03 · Visibility in the network">
-        <p className="mb-4 text-sm text-muted">
-          Matching respects your choice. Private profiles never appear to organizations; contact
-          always requires your consent.
-        </p>
+      <Panel title={t("visibilityTitle")}>
+        <p className="mb-4 text-sm text-muted">{t("visibilityIntro")}</p>
         <div
           role="radiogroup"
-          aria-label="Visibility"
+          aria-label={t("visibilityAria")}
           aria-describedby={errors.visibility ? "visibility-error" : undefined}
           className="grid gap-3 md:grid-cols-3"
         >
           {PROFILE_VISIBILITIES.map((value) => {
-            const copy = VISIBILITY_COPY[value];
             const selected = visibility === value;
             return (
               <button
@@ -152,8 +161,10 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
                   selected ? "border-navy bg-info-bg ring-2 ring-navy" : "border-line bg-white"
                 }`}
               >
-                <span className="block font-semibold">{copy.label}</span>
-                <span className="mt-1 block text-sm text-muted">{copy.detail}</span>
+                <span className="block font-semibold">{tDomain(`visibility.${value}.label`)}</span>
+                <span className="mt-1 block text-sm text-muted">
+                  {tDomain(`visibility.${value}.detail`)}
+                </span>
               </button>
             );
           })}
@@ -168,7 +179,7 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile }) {
       {errors.form && <p className="text-sm font-medium text-danger">{errors.form}</p>}
       <div className="flex flex-wrap gap-3">
         <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-          {pending ? "Saving…" : "Save changes"}
+          {pending ? tRoot("common.saving") : tRoot("common.saveChanges")}
         </Button>
       </div>
     </form>

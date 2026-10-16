@@ -13,14 +13,16 @@ export function Metric({
   value,
   detail,
   tone = "neutral",
+  className = "",
 }: {
   label: string;
   value: string | number;
   detail?: string;
   tone?: Tone;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-line bg-white px-5 py-4">
+    <div className={`min-w-0 rounded-xl border border-line bg-white px-5 py-4 ${className}`}>
       <dt className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</dt>
       <dd className={`mt-1 text-3xl font-bold tracking-tight tabular-nums ${valueTone[tone]}`}>
         {value}

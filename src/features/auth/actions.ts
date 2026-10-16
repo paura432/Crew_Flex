@@ -12,22 +12,23 @@ interface AuthErrorLike {
   status?: number;
 }
 
-function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode; message: string } {
+/** Maps provider errors to stable codes; the UI translates them (`auth.errors.*`). */
+function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode } {
   if (error.name === "AuthRetryableFetchError" || error.status === 0) {
-    return { code: "NETWORK_ERROR", message: "Could not reach the authentication service. Retry." };
+    return { code: "NETWORK_ERROR" };
   }
   switch (error.code) {
     case "invalid_credentials":
-      return { code: "INVALID_CREDENTIALS", message: "Email or password is incorrect." };
+      return { code: "INVALID_CREDENTIALS" };
     case "email_not_confirmed":
-      return { code: "EMAIL_NOT_CONFIRMED", message: "Confirm your email before signing in." };
+      return { code: "EMAIL_NOT_CONFIRMED" };
     case "user_already_exists":
     case "email_exists":
-      return { code: "USER_EXISTS", message: "An account with this email already exists." };
+      return { code: "USER_EXISTS" };
     case "weak_password":
-      return { code: "WEAK_PASSWORD", message: "Choose a stronger password." };
+      return { code: "WEAK_PASSWORD" };
     default:
-      return { code: "UNKNOWN", message: "Authentication failed. Try again." };
+      return { code: "UNKNOWN" };
   }
 }
 
@@ -49,7 +50,6 @@ export async function signInAction(
     return {
       status: "error",
       code: "VALIDATION_ERROR",
-      message: "Check the highlighted fields.",
       fieldErrors: toFieldErrors(parsed.error),
       values: echoValues(formData, ["email"]),
     };
@@ -86,7 +86,6 @@ export async function signUpAction(
     return {
       status: "error",
       code: "VALIDATION_ERROR",
-      message: "Check the highlighted fields.",
       fieldErrors: toFieldErrors(parsed.error),
       values: echoValues(formData, SIGN_UP_ECHO),
     };

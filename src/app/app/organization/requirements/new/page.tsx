@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
@@ -6,16 +7,23 @@ import { listQualificationTypes } from "@/features/qualifications/api";
 import { RequirementForm } from "@/features/requirements/components/RequirementForm";
 import { requireOrganizationContext } from "@/server/session";
 
-export const metadata: Metadata = { title: "New requirement" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return { title: t("newRequirement") };
+}
 
 export default async function NewRequirementPage() {
-  const { organization, canManage } = await requireOrganizationContext();
+  const [{ organization, canManage }, t, tCommon] = await Promise.all([
+    requireOrganizationContext(),
+    getTranslations("organization.new"),
+    getTranslations("common"),
+  ]);
   if (!canManage) {
     return (
       <StateMessage
         tone="danger"
-        title="You don't have permission"
-        description="Only organization managers and admins can create requirements."
+        title={t("noPermissionTitle")}
+        description={t("noPermissionDescription")}
       />
     );
   }
@@ -23,16 +31,12 @@ export default async function NewRequirementPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow={organization.name}
-        title="New work requirement"
-        description="Describe the real operational need. Crew Flex evaluates your internal capacity first."
-      />
+      <PageHeader eyebrow={organization.name} title={t("title")} description={t("description")} />
       {qualificationTypes === null ? (
         <StateMessage
           tone="danger"
-          title="The qualification catalog could not be loaded"
-          description="Reload the page."
+          title={t("catalogErrorTitle")}
+          description={tCommon("reload")}
         />
       ) : (
         <Panel>

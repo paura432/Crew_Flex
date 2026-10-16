@@ -8,12 +8,15 @@ export interface NavItem {
   label: string;
 }
 
-/** Client only for `aria-current` on the active link. */
+/**
+ * Client only for `aria-current` on the active link. Below `lg` the items wrap onto as many rows as
+ * needed: a horizontally scrolling strip hid the last item ("Availability") with no affordance.
+ */
 export function NavLinks({ items, label }: { items: NavItem[]; label: string }) {
   const pathname = usePathname();
   return (
     <nav aria-label={label}>
-      <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+      <ul className="flex flex-wrap gap-1 lg:flex-col">
         {items.map((item) => {
           const active =
             item.href === pathname ||

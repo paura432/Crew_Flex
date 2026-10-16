@@ -14,8 +14,9 @@ export type AuthFormState =
   | { status: "check_email"; email: string }
   | {
       status: "error";
+      /** Translated by the form (`auth.errors.<code>`); no prose crosses the boundary. */
       code: AuthErrorCode;
-      message: string;
+      /** `v.*` keys resolved by the form. */
       fieldErrors?: FieldErrors;
       /** Echoed non-secret values so the form keeps them (never the password). */
       values?: Record<string, string>;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
@@ -6,15 +7,22 @@ import { listAvailability } from "@/features/availability/api";
 import { AvailabilityManager } from "@/features/availability/components/AvailabilityManager";
 import { requireSessionActor } from "@/server/session";
 
-export const metadata: Metadata = { title: "Availability" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("meta");
+  return { title: t("availability") };
+}
 
 export default async function ProfessionalAvailabilityPage() {
-  const actor = await requireSessionActor();
+  const [actor, t, tProfessional] = await Promise.all([
+    requireSessionActor(),
+    getTranslations("availability"),
+    getTranslations("professional"),
+  ]);
   if (actor.profile.account_type !== "professional") {
     return (
       <StateMessage
-        title="No professional profile"
-        description="Availability belongs to professional accounts."
+        title={tProfessional("noProfileTitle")}
+        description={t("noProfileDescription")}
       />
     );
   }
@@ -23,11 +31,7 @@ export default async function ProfessionalAvailabilityPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="My time"
-        title="Chosen availability"
-        description="A free day only enters the market when you mark it as available. Times are UTC; blocked windows override available ones."
-      />
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
       {result.ok ? (
         <AvailabilityManager windows={result.data.windows} initialMonth={initialMonth} />
       ) : (

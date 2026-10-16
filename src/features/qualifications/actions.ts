@@ -1,6 +1,7 @@
 "use server";
 
 import { toFieldErrors } from "@/lib/validation/errors";
+import { idempotencyKeySchema } from "@/lib/validation/idempotency";
 import {
   createQualificationInput,
   qualificationIdQuery,
@@ -16,10 +17,15 @@ import { createQualification, deleteQualification, updateQualification } from ".
 const PATHS = ["/app/professional/qualifications"];
 
 /** Declares a qualification: always `pending` (BR-2.6); the owner is the JWT subject. */
-export async function addQualificationAction(input: unknown): Promise<ProfileActionResult> {
+export async function addQualificationAction(
+  input: unknown,
+  idempotencyKey: unknown,
+): Promise<ProfileActionResult> {
   const parsed = createQualificationInput.safeParse(input);
   if (!parsed.success) return invalidResult(toFieldErrors(parsed.error));
-  return fromProfessionalResponse(await createQualification(parsed.data), PATHS);
+  const key = idempotencyKeySchema.safeParse(idempotencyKey);
+  if (!key.success) return invalidResult({ form: "v.idempotencyKey.invalid" });
+  return fromProfessionalResponse(await createQualification(parsed.data, key.data), PATHS);
 }
 
 export async function updateQualificationAction(

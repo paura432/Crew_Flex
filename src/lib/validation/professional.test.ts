@@ -129,7 +129,7 @@ describe("createQualificationInput / updateQualificationInput", () => {
   it("BR-2.7: requires_expiry types need an expiry date", () => {
     expect(expiryIssueFor({ code: "B1.1", requiresExpiry: true }, null)).toEqual({
       path: "expiresAt",
-      message: "B1.1 requires an expiry date",
+      message: "v.expiry.required",
     });
     expect(expiryIssueFor({ code: "B1.1", requiresExpiry: true }, "2029-06-30")).toBeNull();
     expect(expiryIssueFor({ code: "TR-A320", requiresExpiry: false }, null)).toBeNull();

@@ -1,33 +1,28 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
+import { resolveFieldErrors } from "@/i18n/validation";
+import { ORGANIZATION_TYPES } from "@/lib/validation/auth";
 import { signUpAction } from "../actions";
 import { initialAuthState } from "../state";
 import { FormAlert } from "./FormAlert";
 
-const ORGANIZATION_TYPES = [
-  ["mro", "MRO"],
-  ["airline", "Airline"],
-  ["operator", "Operator"],
-  ["staffing_agency", "Staffing agency"],
-  ["other", "Other"],
-] as const;
-
 export function RegisterForm() {
+  const t = useTranslations("auth.register");
+  const tRoot = useTranslations();
   const [state, formAction, pending] = useActionState(signUpAction, initialAuthState);
   const [accountType, setAccountType] = useState<"professional" | "organization">("organization");
-  const errors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
+  const errors = state.status === "error" ? resolveFieldErrors(tRoot, state.fieldErrors ?? {}) : {};
   const values = state.status === "error" ? (state.values ?? {}) : {};
 
   if (state.status === "check_email") {
     return (
       <div role="status" className="rounded-lg border border-ok/30 bg-ok-bg px-4 py-3 text-ok">
-        <p className="font-semibold">Check your inbox</p>
-        <p className="text-sm">
-          We sent a confirmation link to {state.email}. Confirm it, then sign in.
-        </p>
+        <p className="font-semibold">{t("checkInboxTitle")}</p>
+        <p className="text-sm">{t("checkInboxText", { email: state.email })}</p>
       </div>
     );
   }
@@ -57,12 +52,12 @@ export function RegisterForm() {
     >
       <FormAlert state={state} />
       <fieldset>
-        <legend className="mb-2 text-sm font-semibold">I am registering as</legend>
+        <legend className="mb-2 text-sm font-semibold">{t("registeringAs")}</legend>
         <div className="grid grid-cols-2 gap-2">
           {(
             [
-              ["organization", "Organization", "MRO, airline, operator"],
-              ["professional", "Professional", "Technician / engineer"],
+              ["organization", t("organization"), t("organizationDetail")],
+              ["professional", t("professional"), t("professionalDetail")],
             ] as const
           ).map(([value, label, detail]) => (
             <label
@@ -85,39 +80,43 @@ export function RegisterForm() {
         </div>
       </fieldset>
 
-      {text("displayName", "Your name", { autoComplete: "name" })}
-      {text("email", "Email", { type: "email", autoComplete: "email" })}
-      {text("password", "Password", {
+      {text("displayName", t("yourName"), { autoComplete: "name" })}
+      {text("email", t("email"), { type: "email", autoComplete: "email" })}
+      {text("password", t("password"), {
         type: "password",
         autoComplete: "new-password",
-        hint: "At least 10 characters.",
+        hint: t("passwordHint"),
       })}
 
       {accountType === "organization" && (
         <>
-          {text("organizationName", "Organization name", { autoComplete: "organization" })}
+          {text("organizationName", t("organizationName"), { autoComplete: "organization" })}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="organizationType" label="Organization type" error={errors.organizationType}>
+            <Field
+              id="organizationType"
+              label={t("organizationType")}
+              error={errors.organizationType}
+            >
               <select
                 id="organizationType"
                 name="organizationType"
                 defaultValue={values.organizationType || "mro"}
                 className={controlClass}
               >
-                {ORGANIZATION_TYPES.map(([value, label]) => (
+                {ORGANIZATION_TYPES.map((value) => (
                   <option key={value} value={value}>
-                    {label}
+                    {tRoot(`auth.orgType.${value}`)}
                   </option>
                 ))}
               </select>
             </Field>
-            {text("country", "Country (ISO code)", { hint: "e.g. ES", autoComplete: "country" })}
+            {text("country", t("country"), { hint: t("countryHint"), autoComplete: "country" })}
           </div>
         </>
       )}
 
       <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-        {pending ? "Creating account…" : "Create account"}
+        {pending ? t("submitting") : t("submit")}
       </Button>
     </form>
   );

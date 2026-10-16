@@ -34,7 +34,7 @@ export const getSessionActor = cache(async (): Promise<SessionActor | null> => {
   const [profileResult, membershipResult] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, display_name, account_type, platform_role")
+      .select("id, display_name, account_type, platform_role, preferred_locale")
       .eq("id", sub)
       .maybeSingle()
       .overrideTypes<ProfileRow, { merge: false }>(),

@@ -1,12 +1,18 @@
-// Human explanations of deterministic match results. Pure: no JSX, testable.
+// Structured explanations of deterministic match results: message keys + parameters, resolved by
+// the UI in the active locale (messages/*.json → `matching.*`). Pure: no JSX, no formatting, testable.
 import type { MatchBlocker, QualificationCheck } from "@/domain/matching";
-import { formatDate } from "@/lib/format";
+import type { VerificationStatus } from "@/domain/qualification";
 
 export type CheckTone = "ok" | "warn" | "danger";
 
+export interface ExplainedText {
+  key: string;
+  params?: { code?: string; status?: VerificationStatus; date?: string; percent?: number };
+}
+
 export interface ExplainedCheck {
   label: string;
-  detail: string;
+  detail: ExplainedText;
   tone: CheckTone;
   met: boolean;
 }
@@ -21,67 +27,77 @@ export function explainCheck(check: QualificationCheck): ExplainedCheck {
         detail:
           check.verificationStatus === "verified"
             ? check.expiresAt
-              ? `Verified · valid until ${formatDate(check.expiresAt)}`
-              : "Verified"
-            : "Self-declared · pending verification",
+              ? { key: "check.metVerifiedUntil", params: { date: check.expiresAt } }
+              : { key: "check.metVerified" }
+            : { key: "check.metPending" },
         tone: check.verificationStatus === "verified" ? "ok" : "warn",
         met: true,
       };
     case "missing":
-      return { label: check.code, detail: "Not held", tone: failTone, met: false };
+      return { label: check.code, detail: { key: "check.missing" }, tone: failTone, met: false };
     case "not_verified":
       return {
         label: check.code,
-        detail: `Not verified (${check.verificationStatus ?? "pending"})`,
+        detail: {
+          key: "check.notVerified",
+          params: { status: check.verificationStatus ?? "pending" },
+        },
         tone: failTone,
         met: false,
       };
     case "expired":
       return {
         label: check.code,
-        detail: `Expired ${check.expiresAt ? formatDate(check.expiresAt) : ""}`.trim(),
+        detail: { key: "check.expired", params: { date: check.expiresAt ?? "" } },
         tone: failTone,
         met: false,
       };
     case "expires_during":
       return {
         label: check.code,
-        detail: `Expires during the requirement (${check.expiresAt ? formatDate(check.expiresAt) : "?"})`,
+        detail: { key: "check.expiresDuring", params: { date: check.expiresAt ?? "" } },
         tone: failTone,
         met: false,
       };
   }
 }
 
-export function explainBlocker(blocker: MatchBlocker): string {
+export function explainBlocker(blocker: MatchBlocker): ExplainedText {
   switch (blocker.code) {
     case "MISSING_HARD_QUALIFICATION":
-      return `Missing ${blocker.qualification}`;
+      return { key: "blocker.missing", params: { code: blocker.qualification } };
     case "HARD_QUALIFICATION_NOT_VERIFIED":
-      return `${blocker.qualification} not verified (${blocker.verificationStatus})`;
+      return {
+        key: "blocker.notVerified",
+        params: { code: blocker.qualification, status: blocker.verificationStatus },
+      };
     case "HARD_QUALIFICATION_EXPIRED":
-      return `${blocker.qualification} expired on ${formatDate(blocker.expiresAt)}`;
+      return {
+        key: "blocker.expired",
+        params: { code: blocker.qualification, date: blocker.expiresAt },
+      };
     case "HARD_QUALIFICATION_EXPIRES_DURING_REQUIREMENT":
-      return `${blocker.qualification} expires during the requirement (${formatDate(blocker.expiresAt)})`;
+      return {
+        key: "blocker.expiresDuring",
+        params: { code: blocker.qualification, date: blocker.expiresAt },
+      };
     case "NOT_AVAILABLE":
-      return "Not available on the requirement dates";
+      return { key: "blocker.notAvailable" };
     case "PARTIAL_AVAILABILITY":
-      return `Available for only ${blocker.coveredPercent}% of the requirement period`;
+      return { key: "blocker.partial", params: { percent: blocker.coveredPercent } };
   }
 }
 
 export function explainAvailability(coveredPercent: number): ExplainedCheck {
   if (coveredPercent === 100) {
-    return {
-      label: "Availability",
-      detail: "Covers the entire requirement",
-      tone: "ok",
-      met: true,
-    };
+    return { label: "availability", detail: { key: "availability.full" }, tone: "ok", met: true };
   }
   return {
-    label: "Availability",
-    detail: coveredPercent === 0 ? "Not available" : `Covers ${coveredPercent}% of the period`,
+    label: "availability",
+    detail:
+      coveredPercent === 0
+        ? { key: "availability.none" }
+        : { key: "availability.partial", params: { percent: coveredPercent } },
     tone: "danger",
     met: false,
   };

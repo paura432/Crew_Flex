@@ -1,17 +1,20 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip, type Tone } from "@/components/ui/StatusChip";
-import type {
-  QualificationCategory,
-  QualificationType,
-  VerificationStatus,
+import {
+  QUALIFICATION_CATEGORIES,
+  type QualificationType,
+  type VerificationStatus,
 } from "@/domain/qualification";
-import { formatDate } from "@/lib/format";
+import { formatDate } from "@/i18n/format";
+import { resolveFieldErrors } from "@/i18n/validation";
+import { useIdempotencyKey } from "@/lib/idempotency";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import {
   createQualificationInput,
@@ -26,26 +29,11 @@ import {
   updateQualificationAction,
 } from "../actions";
 
-export const CATEGORY_LABEL: Record<QualificationCategory, string> = {
-  LICENSE: "Licences",
-  TYPE_RATING: "Type ratings",
-  TRAINING: "Training and courses",
-  APPROVAL: "Approvals",
-  SKILL: "Skills",
-};
-const CATEGORY_ORDER = Object.keys(CATEGORY_LABEL) as QualificationCategory[];
-
 export const VERIFICATION_TONE: Record<VerificationStatus, Tone> = {
   verified: "ok",
   pending: "warn",
   rejected: "danger",
   expired: "danger",
-};
-const VERIFICATION_LABEL: Record<VerificationStatus, string> = {
-  verified: "Verified",
-  pending: "Pending review",
-  rejected: "Rejected",
-  expired: "Expired",
 };
 
 const toNull = (value: FormDataEntryValue | null) => {
@@ -64,15 +52,21 @@ export function QualificationsManager({
   qualifications: Qualification[];
   catalog: QualificationType[];
 }) {
+  const t = useTranslations("qualifications");
+  const tDomain = useTranslations("domain");
+  const tRoot = useTranslations();
+  const locale = useLocale();
   const [editing, setEditing] = useState<Qualification | null>(null);
   const [typeId, setTypeId] = useState("");
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [rawErrors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [pending, startTransition] = useTransition();
+  const idempotency = useIdempotencyKey();
+  const errors = resolveFieldErrors(tRoot, rawErrors);
 
   const heldTypeIds = new Set(qualifications.map((q) => q.type.id));
-  const available = catalog.filter((t) => !heldTypeIds.has(t.id));
-  const selectedType = catalog.find((t) => t.id === typeId) ?? null;
+  const available = catalog.filter((type) => !heldTypeIds.has(type.id));
+  const selectedType = catalog.find((type) => type.id === typeId) ?? null;
   const byCategory = Object.groupBy(qualifications, (q) => q.type.category);
 
   function run(label: string, task: () => Promise<ProfileActionResult>) {
@@ -80,12 +74,13 @@ export function QualificationsManager({
     startTransition(async () => {
       const result = await task();
       if (result.ok) {
+        idempotency.release();
         setNotice({ tone: "ok", text: label });
         setEditing(null);
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(actionErrorCopy(result));
+        setNotice(actionErrorCopy(tRoot, result));
       }
     });
   }
@@ -109,9 +104,9 @@ export function QualificationsManager({
       return;
     }
     setErrors({});
-    const code = selectedType?.code ?? "Qualification";
-    run(`${code} declared — pending review until verified.`, () =>
-      addQualificationAction(parsed.data),
+    const code = selectedType?.code ?? "";
+    run(t("declared", { code }), () =>
+      addQualificationAction(parsed.data, idempotency.keyFor(parsed.data)),
     );
   }
 
@@ -141,8 +136,8 @@ export function QualificationsManager({
       current.issuedAt !== parsed.data.issuedAt || current.expiresAt !== parsed.data.expiresAt;
     const label =
       changedDates && current.verificationStatus !== "pending"
-        ? `${current.type.code} updated — back to pending review because its dates changed.`
-        : `${current.type.code} updated.`;
+        ? t("updatedReset", { code: current.type.code })
+        : t("updated", { code: current.type.code });
     run(label, () => updateQualificationAction(current.id, parsed.data));
   }
 
@@ -156,35 +151,34 @@ export function QualificationsManager({
   });
 
   const expiryHint = (type: QualificationType | null) =>
-    type?.requiresExpiry
-      ? `${type.code} requires an expiry date`
-      : "Leave empty when the qualification does not expire";
+    type?.requiresExpiry ? t("expiryRequiredHint", { code: type.code }) : t("expiryOptionalHint");
 
   return (
     <div className="space-y-6">
-      <Notice notice={notice} />
+      <Notice
+        notice={notice}
+        referenceLabel={tRoot("common.reference", { id: notice?.requestId ?? "" })}
+      />
 
-      <Panel title={editing ? `Edit ${editing.type.code}` : "Declare a qualification"}>
+      <Panel title={editing ? t("editTitle", { code: editing.type.code }) : t("declareTitle")}>
         {editing ? (
           <form key={editing.id} onSubmit={onEdit} noValidate className="space-y-4">
             <p className="text-sm text-muted">
-              {editing.type.name}. Review state:{" "}
+              {t("reviewState", { name: editing.type.name })}{" "}
               <StatusChip tone={VERIFICATION_TONE[editing.verificationStatus]}>
-                {VERIFICATION_LABEL[editing.verificationStatus]}
+                {tDomain(`verification.${editing.verificationStatus}`)}
               </StatusChip>
               {editing.verificationStatus !== "pending" && (
-                <span className="mt-1 block">
-                  Changing the dates sends it back to pending review.
-                </span>
+                <span className="mt-1 block">{t("datesResetHint")}</span>
               )}
             </p>
             <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
-              <Field id="issuedAt" label="Issued" error={errors.issuedAt}>
+              <Field id="issuedAt" label={t("issued")} error={errors.issuedAt}>
                 <input {...input("issuedAt")} type="date" defaultValue={editing.issuedAt ?? ""} />
               </Field>
               <Field
                 id="expiresAt"
-                label="Expires"
+                label={t("expires")}
                 hint={expiryHint(editing.type)}
                 error={errors.expiresAt}
               >
@@ -194,15 +188,15 @@ export function QualificationsManager({
                   defaultValue={editing.expiresAt ?? ""}
                 />
               </Field>
-              <Field id="status" label="Held" error={errors.status}>
+              <Field id="status" label={t("held")} error={errors.status}>
                 <select {...input("status")} defaultValue={editing.status}>
-                  <option value="active">Active</option>
-                  <option value="withdrawn">Withdrawn (not held)</option>
+                  <option value="active">{t("active")}</option>
+                  <option value="withdrawn">{t("withdrawn")}</option>
                 </select>
               </Field>
               <div className="flex gap-2">
                 <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-                  {pending ? "Saving…" : "Save"}
+                  {pending ? tRoot("common.saving") : tRoot("common.save")}
                 </Button>
                 <Button
                   onClick={() => {
@@ -211,7 +205,7 @@ export function QualificationsManager({
                   }}
                   disabled={pending}
                 >
-                  Cancel
+                  {tRoot("common.cancel")}
                 </Button>
               </div>
             </div>
@@ -219,13 +213,12 @@ export function QualificationsManager({
         ) : (
           <form onSubmit={onAdd} noValidate className="space-y-4">
             <p className="text-sm text-muted">
-              Self-declared qualifications stay <strong className="text-ink">pending</strong> until
-              an authorized reviewer verifies them. Only verified ones satisfy hard requirements.
+              {t.rich("intro", { b: (chunks) => <strong className="text-ink">{chunks}</strong> })}
             </p>
             <div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
               <Field
                 id="qualificationTypeId"
-                label="Qualification"
+                label={t("qualification")}
                 error={errors.qualificationTypeId}
               >
                 <select
@@ -233,15 +226,15 @@ export function QualificationsManager({
                   value={typeId}
                   onChange={(e) => setTypeId(e.target.value)}
                 >
-                  <option value="">Select from the catalog…</option>
-                  {CATEGORY_ORDER.map((category) => {
-                    const items = available.filter((t) => t.category === category);
+                  <option value="">{t("select")}</option>
+                  {QUALIFICATION_CATEGORIES.map((category) => {
+                    const items = available.filter((type) => type.category === category);
                     if (items.length === 0) return null;
                     return (
-                      <optgroup key={category} label={CATEGORY_LABEL[category]}>
-                        {items.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.code} · {t.name}
+                      <optgroup key={category} label={tDomain(`category.${category}`)}>
+                        {items.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {type.code} · {type.name}
                           </option>
                         ))}
                       </optgroup>
@@ -249,24 +242,22 @@ export function QualificationsManager({
                   })}
                 </select>
               </Field>
-              <Field id="issuedAt" label="Issued" error={errors.issuedAt}>
+              <Field id="issuedAt" label={t("issued")} error={errors.issuedAt}>
                 <input {...input("issuedAt")} type="date" />
               </Field>
               <Field
                 id="expiresAt"
-                label="Expires"
+                label={t("expires")}
                 hint={expiryHint(selectedType)}
                 error={errors.expiresAt}
               >
                 <input {...input("expiresAt", expiryHint(selectedType))} type="date" />
               </Field>
               <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-                {pending ? "Saving…" : "Declare"}
+                {pending ? tRoot("common.saving") : t("declare")}
               </Button>
             </div>
-            {available.length === 0 && (
-              <p className="text-sm text-muted">You have declared every type in the catalog.</p>
-            )}
+            {available.length === 0 && <p className="text-sm text-muted">{t("allDeclared")}</p>}
           </form>
         )}
         {errors.form && <p className="mt-2 text-sm font-medium text-danger">{errors.form}</p>}
@@ -274,17 +265,20 @@ export function QualificationsManager({
 
       {qualifications.length === 0 ? (
         <Panel>
-          <p className="text-sm text-muted">
-            No qualifications yet. Declare your licence and type ratings above — they enter matching
-            once verified.
-          </p>
+          <p className="text-sm text-muted">{t("empty")}</p>
         </Panel>
       ) : (
-        CATEGORY_ORDER.map((category) => {
+        QUALIFICATION_CATEGORIES.map((category) => {
           const items = byCategory[category];
           if (!items?.length) return null;
           return (
-            <Panel key={category} title={`${CATEGORY_LABEL[category]} (${items.length})`}>
+            <Panel
+              key={category}
+              title={t("group", {
+                category: tDomain(`category.${category}`),
+                count: items.length,
+              })}
+            >
               <ul className="divide-y divide-line">
                 {items.map((q) => (
                   <li
@@ -295,15 +289,24 @@ export function QualificationsManager({
                     <span className="min-w-0 text-muted">
                       {q.type.name}
                       <span className="mt-0.5 block text-xs tabular-nums">
-                        {q.issuedAt ? `Issued ${formatDate(q.issuedAt)} · ` : ""}
-                        {q.expiresAt ? `Valid until ${formatDate(q.expiresAt)}` : "No expiry"}
+                        {q.issuedAt
+                          ? `${t("issuedOn", { date: formatDate(locale, q.issuedAt) })} · `
+                          : ""}
+                        {q.expiresAt
+                          ? t("validUntil", { date: formatDate(locale, q.expiresAt) })
+                          : t("noExpiry")}
                       </span>
+                      {q.verificationStatus === "rejected" && q.reviewNote && (
+                        <span className="mt-1 block text-xs text-danger">
+                          {t("reviewReason", { reason: q.reviewNote })}
+                        </span>
+                      )}
                     </span>
                     <StatusChip tone={q.status === "withdrawn" ? "neutral" : "info"}>
-                      {q.status === "withdrawn" ? "Withdrawn" : "Held"}
+                      {tDomain(`held.${q.status}`)}
                     </StatusChip>
                     <StatusChip tone={VERIFICATION_TONE[q.verificationStatus]}>
-                      {VERIFICATION_LABEL[q.verificationStatus]}
+                      {tDomain(`verification.${q.verificationStatus}`)}
                     </StatusChip>
                     <div className="flex gap-2">
                       <Button
@@ -315,16 +318,18 @@ export function QualificationsManager({
                           setNotice(null);
                         }}
                       >
-                        Edit
+                        {tRoot("common.edit")}
                       </Button>
                       <Button
                         className="min-h-8 px-3 text-xs text-danger"
                         disabled={pending}
                         onClick={() =>
-                          run(`${q.type.code} removed.`, () => deleteQualificationAction(q.id))
+                          run(t("removed", { code: q.type.code }), () =>
+                            deleteQualificationAction(q.id),
+                          )
                         }
                       >
-                        Remove
+                        {tRoot("common.remove")}
                       </Button>
                     </div>
                   </li>

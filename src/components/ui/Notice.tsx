@@ -1,3 +1,5 @@
+import { resolveMessage, translateKey, type MessageResolver } from "@/i18n/validation";
+
 /** Inline outcome of a form action: success (status) or failure (alert) with the request reference. */
 export interface NoticeState {
   tone: "ok" | "danger";
@@ -5,7 +7,13 @@ export interface NoticeState {
   requestId?: string;
 }
 
-export function Notice({ notice }: { notice: NoticeState | null }) {
+export function Notice({
+  notice,
+  referenceLabel,
+}: {
+  notice: NoticeState | null;
+  referenceLabel: string;
+}) {
   if (!notice) return null;
   return (
     <p
@@ -17,28 +25,35 @@ export function Notice({ notice }: { notice: NoticeState | null }) {
       }`}
     >
       {notice.text}
-      {notice.requestId && (
-        <span className="mt-1 block font-mono text-xs">Reference: {notice.requestId}</span>
-      )}
+      {notice.requestId && <span className="mt-1 block font-mono text-xs">{referenceLabel}</span>}
     </p>
   );
 }
 
-/** User-facing copy for the error codes a professional can hit while saving their own data. */
-export function actionErrorCopy(result: {
-  code: string;
-  message: string;
-  requestId?: string;
-}): NoticeState {
+/**
+ * User-facing copy for the error codes a user can hit while saving their own data.
+ * `t` is a root translator (full keys); server messages that are `v.*` keys are resolved too.
+ */
+export function actionErrorCopy(
+  t: MessageResolver,
+  result: { code: string; message: string; requestId?: string },
+): NoticeState {
+  const k = (key: string) => translateKey(t, key);
   const text =
     result.code === "UNAUTHORIZED"
-      ? "Your session expired. Sign in again."
+      ? k("api.action.sessionExpired")
       : result.code === "NETWORK_ERROR"
-        ? "The service could not be reached. Nothing was saved — retry."
+        ? k("api.action.unreachable")
         : result.code === "NOT_FOUND"
-          ? "This item no longer exists. Reload the page."
+          ? k("api.action.gone")
           : result.code === "CONFLICT"
-            ? "You already declared this qualification. Edit the existing one instead."
-            : result.message;
+            ? k("api.action.conflict")
+            : result.code === "FORBIDDEN"
+              ? k("api.FORBIDDEN.description")
+              : result.code === "INTERNAL_ERROR"
+                ? k("api.INTERNAL_ERROR.description")
+                : result.message === "common.checkFields"
+                  ? k("common.checkFields")
+                  : resolveMessage(t, result.message);
   return { tone: "danger", text, requestId: result.requestId };
 }

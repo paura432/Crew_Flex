@@ -2,6 +2,7 @@
 // Enums are derived from the generated schema (`database.generated.ts`, `pnpm db:types`) so they
 // cannot drift from the database. Rows are NOT domain objects — map them.
 import type { QualificationCategory, VerificationStatus } from "../domain/qualification.ts";
+import type { Locale } from "../i18n/config.ts";
 import type { Database } from "./database.generated";
 
 type Enums = Database["public"]["Enums"];
@@ -17,6 +18,8 @@ export interface ProfileRow {
   display_name: string;
   account_type: AccountType;
   platform_role: PlatformRole;
+  /** UI language chosen by the user; null = cookie/browser decide (I18N_STRATEGY §3). */
+  preferred_locale: Locale | null;
 }
 
 export interface OrganizationRow {

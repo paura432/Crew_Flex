@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
@@ -8,8 +9,11 @@ import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notic
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { AvailabilityStatus } from "@/domain/availability";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMonth } from "@/i18n/format";
+import { resolveFieldErrors } from "@/i18n/validation";
+import { useIdempotencyKey } from "@/lib/idempotency";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
+import { toLocalInput, toUtcIso as toIso } from "@/lib/format";
 import { createAvailabilityWindowInput } from "@/lib/validation/availability";
 import type { AvailabilityWindow } from "@/types/api";
 import {
@@ -29,17 +33,12 @@ import {
 
 type Picker = AvailabilityStatus | "clear";
 
-const MONTH_FMT = new Intl.DateTimeFormat("en-GB", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
-const PICKER_OPTIONS: { value: Picker; label: string; cls: string }[] = [
-  { value: "available", label: "Available", cls: "border-ok/40 bg-ok-bg text-ok" },
-  { value: "unavailable", label: "Blocked", cls: "border-line bg-canvas text-ink" },
-  { value: "clear", label: "Rest (clear)", cls: "border-line bg-white text-muted" },
+const PICKER_OPTIONS: { value: Picker; cls: string }[] = [
+  { value: "available", cls: "border-ok/40 bg-ok-bg text-ok" },
+  { value: "unavailable", cls: "border-line bg-canvas text-ink" },
+  { value: "clear", cls: "border-line bg-white text-muted" },
 ];
 
 const DAY_STYLE: Record<DayState, string> = {
@@ -48,16 +47,6 @@ const DAY_STYLE: Record<DayState, string> = {
   mixed: "border-warn/40 bg-warn-bg text-warn",
   none: "border-line bg-white text-muted",
 };
-const DAY_LABEL: Record<DayState, string> = {
-  available: "Available",
-  unavailable: "Blocked",
-  mixed: "Partial",
-  none: "Rest",
-};
-
-/** `datetime-local` value ↔ ISO UTC (the UI edits UTC wall-clock, as everywhere in the app). */
-const toLocalInput = (iso: string) => iso.slice(0, 16);
-const toIso = (local: string) => (local ? `${local}:00Z` : "");
 
 export function AvailabilityManager({
   windows,
@@ -66,12 +55,18 @@ export function AvailabilityManager({
   windows: AvailabilityWindow[];
   initialMonth: string;
 }) {
+  const t = useTranslations("availability");
+  const tRoot = useTranslations();
+  const locale = useLocale();
   const [month, setMonth] = useState(initialMonth);
   const [picker, setPicker] = useState<Picker>("available");
   const [editing, setEditing] = useState<AvailabilityWindow | null>(null);
-  const [errors, setErrors] = useState<FieldErrors>({});
+  const [rawErrors, setErrors] = useState<FieldErrors>({});
+  const errors = resolveFieldErrors(tRoot, rawErrors);
+  const dayLabel = (state: DayState) => t(`day.${state}`);
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [pending, startTransition] = useTransition();
+  const idempotency = useIdempotencyKey();
 
   const days = calendarDays(windows, month);
   const cells = [
@@ -88,12 +83,13 @@ export function AvailabilityManager({
     startTransition(async () => {
       const result = await task();
       if (result.ok) {
+        idempotency.release();
         setNotice({ tone: "ok", text: label });
         setEditing(null);
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(actionErrorCopy(result));
+        setNotice(actionErrorCopy(tRoot, result));
       }
     });
   }
@@ -102,25 +98,24 @@ export function AvailabilityManager({
     const day = days.find((d) => d.date === date);
     if (!day) return;
     if (day.windows.length > 0 && !day.singleDayWindow) {
-      setNotice({
-        tone: "danger",
-        text: `${date} is covered by a longer window. Edit or delete that window in the list below.`,
-      });
+      setNotice({ tone: "danger", text: t("coveredByLonger", { date }) });
       return;
     }
     const existing = day.singleDayWindow;
     if (picker === "clear") {
-      if (existing) run(`${date} cleared`, () => deleteWindowAction(existing.id));
+      if (existing) run(t("dayCleared", { date }), () => deleteWindowAction(existing.id));
       return;
     }
     const input = { ...dayWindow(date), status: picker };
     if (existing) {
       if (existing.status === picker) return;
-      run(`${date} set to ${DAY_LABEL[picker].toLowerCase()}`, () =>
+      run(t("daySet", { date, state: dayLabel(picker).toLowerCase() }), () =>
         updateWindowAction(existing.id, input),
       );
     } else {
-      run(`${date} set to ${DAY_LABEL[picker].toLowerCase()}`, () => createWindowAction(input));
+      run(t("daySet", { date, state: dayLabel(picker).toLowerCase() }), () =>
+        createWindowAction(input, idempotency.keyFor(input)),
+      );
     }
   }
 
@@ -138,8 +133,9 @@ export function AvailabilityManager({
       return;
     }
     setErrors({});
-    if (editing) run("Window updated", () => updateWindowAction(editing.id, parsed.data));
-    else run("Window added", () => createWindowAction(parsed.data));
+    if (editing) run(t("windowUpdated"), () => updateWindowAction(editing.id, parsed.data));
+    else
+      run(t("windowAdded"), () => createWindowAction(parsed.data, idempotency.keyFor(parsed.data)));
   }
 
   const input = (id: string) => ({
@@ -153,34 +149,45 @@ export function AvailabilityManager({
 
   return (
     <div className="space-y-6">
-      <Notice notice={notice} />
+      <Notice
+        notice={notice}
+        referenceLabel={tRoot("common.reference", { id: notice?.requestId ?? "" })}
+      />
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Metric
-          label="Available"
+          label={t("metrics.available")}
           value={availableDays}
-          detail="Days published this month"
+          detail={t("metrics.availableDetail")}
           tone={availableDays > 0 ? "ok" : "neutral"}
         />
-        <Metric label="Blocked" value={blockedDays} detail="Days marked unavailable" />
-        <Metric label="Windows" value={windows.length} detail="Saved time windows" />
+        <Metric
+          label={t("metrics.blocked")}
+          value={blockedDays}
+          detail={t("metrics.blockedDetail")}
+        />
+        <Metric
+          label={t("metrics.windows")}
+          value={windows.length}
+          detail={t("metrics.windowsDetail")}
+        />
       </dl>
 
       <Panel
-        title={MONTH_FMT.format(new Date(`${monthStart}T00:00:00Z`))}
+        title={formatMonth(locale, `${monthStart}T00:00:00Z`)}
         actions={
           <div className="flex gap-2">
-            <Button aria-label="Previous month" onClick={() => setMonth(shiftMonth(month, -1))}>
+            <Button aria-label={t("prevMonth")} onClick={() => setMonth(shiftMonth(month, -1))}>
               ←
             </Button>
-            <Button aria-label="Next month" onClick={() => setMonth(shiftMonth(month, 1))}>
+            <Button aria-label={t("nextMonth")} onClick={() => setMonth(shiftMonth(month, 1))}>
               →
             </Button>
           </div>
         }
       >
-        <div className="mb-1 flex flex-wrap gap-2" role="group" aria-label="State to apply">
-          {PICKER_OPTIONS.map(({ value, label, cls }) => (
+        <div className="mb-1 flex flex-wrap gap-2" role="group" aria-label={t("pickerLabel")}>
+          {PICKER_OPTIONS.map(({ value, cls }) => (
             <button
               key={value}
               type="button"
@@ -188,18 +195,16 @@ export function AvailabilityManager({
               onClick={() => setPicker(value)}
               className={`min-h-9 rounded-lg border px-3 text-sm font-semibold ${cls} aria-[pressed=true]:ring-2 aria-[pressed=true]:ring-navy`}
             >
-              {label}
+              {t(`picker.${value}`)}
             </button>
           ))}
         </div>
-        <p className="mb-4 text-sm text-muted">
-          Select a state, then click the days to apply it. Days are UTC.
-        </p>
+        <p className="mb-4 text-sm text-muted">{t("pickerHint")}</p>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold tracking-wide text-muted uppercase">
           {WEEKDAYS.map((d) => (
             <div key={d} className="py-1">
-              {d}
+              {t(`weekday.${d}`)}
             </div>
           ))}
         </div>
@@ -213,14 +218,14 @@ export function AvailabilityManager({
                 type="button"
                 disabled={pending}
                 onClick={() => onDayClick(day.date)}
-                aria-label={`${day.date}: ${DAY_LABEL[day.state]}`}
+                aria-label={`${day.date}: ${dayLabel(day.state)}`}
                 className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors hover:ring-2 hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[day.state]}`}
               >
                 <span className="text-base font-bold tabular-nums">
                   {Number(day.date.slice(-2))}
                 </span>
                 <span className="hidden text-[11px] leading-none sm:block">
-                  {DAY_LABEL[day.state]}
+                  {dayLabel(day.state)}
                 </span>
               </button>
             ),
@@ -228,14 +233,14 @@ export function AvailabilityManager({
         </div>
       </Panel>
 
-      <Panel title={editing ? "Edit window" : "Add a time window"}>
+      <Panel title={editing ? t("editWindow") : t("addWindow")}>
         <form
           key={editing?.id ?? "new"}
           onSubmit={onSubmit}
           noValidate
           className="grid gap-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end"
         >
-          <Field id="startsAt" label="Starts (UTC)" error={errors.startsAt}>
+          <Field id="startsAt" label={t("starts")} error={errors.startsAt}>
             <input
               {...input("startsAt")}
               type="datetime-local"
@@ -243,7 +248,7 @@ export function AvailabilityManager({
               defaultValue={editing ? toLocalInput(editing.startsAt) : ""}
             />
           </Field>
-          <Field id="endsAt" label="Ends (UTC)" error={errors.endsAt}>
+          <Field id="endsAt" label={t("ends")} error={errors.endsAt}>
             <input
               {...input("endsAt")}
               type="datetime-local"
@@ -251,15 +256,19 @@ export function AvailabilityManager({
               defaultValue={editing ? toLocalInput(editing.endsAt) : ""}
             />
           </Field>
-          <Field id="status" label="Status" error={errors.status}>
+          <Field id="status" label={t("status")} error={errors.status}>
             <select {...input("status")} defaultValue={editing?.status ?? "available"}>
-              <option value="available">Available</option>
-              <option value="unavailable">Unavailable</option>
+              <option value="available">{t("statusAvailable")}</option>
+              <option value="unavailable">{t("statusUnavailable")}</option>
             </select>
           </Field>
           <div className="flex gap-2">
             <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-              {pending ? "Saving…" : editing ? "Save" : "Add"}
+              {pending
+                ? tRoot("common.saving")
+                : editing
+                  ? tRoot("common.save")
+                  : tRoot("common.add")}
             </Button>
             {editing && (
               <Button
@@ -268,7 +277,7 @@ export function AvailabilityManager({
                   setErrors({});
                 }}
               >
-                Cancel
+                {tRoot("common.cancel")}
               </Button>
             )}
           </div>
@@ -276,22 +285,19 @@ export function AvailabilityManager({
         {errors.form && <p className="mt-2 text-sm font-medium text-danger">{errors.form}</p>}
       </Panel>
 
-      <Panel title={`Saved windows (${windows.length})`}>
+      <Panel title={t("savedWindows", { count: windows.length })}>
         {windows.length === 0 ? (
-          <p className="text-sm text-muted">
-            No availability windows yet. Mark days in the calendar or add a window above — you only
-            enter matching when you are available for the whole requirement period.
-          </p>
+          <p className="text-sm text-muted">{t("emptyHint")}</p>
         ) : (
           <ul className="divide-y divide-line">
             {windows.map((w) => (
               <li key={w.id} className="grid gap-2 py-3 text-sm sm:flex sm:items-center sm:gap-3">
                 <StatusChip tone={w.status === "available" ? "ok" : "neutral"}>
-                  {w.status}
+                  {t(w.status === "available" ? "statusAvailable" : "statusUnavailable")}
                 </StatusChip>
                 <span className="min-w-0 flex-1 tabular-nums">
-                  {formatDateTime(w.startsAt)} <span className="text-muted">→</span>{" "}
-                  <span className="whitespace-nowrap">{formatDateTime(w.endsAt)}</span>
+                  {formatDateTime(locale, w.startsAt)} <span className="text-muted">→</span>{" "}
+                  <span className="whitespace-nowrap">{formatDateTime(locale, w.endsAt)}</span>
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -303,14 +309,14 @@ export function AvailabilityManager({
                     }}
                     disabled={pending}
                   >
-                    Edit
+                    {tRoot("common.edit")}
                   </Button>
                   <Button
                     className="min-h-8 px-3 text-xs text-danger"
                     disabled={pending}
-                    onClick={() => run("Window deleted", () => deleteWindowAction(w.id))}
+                    onClick={() => run(t("windowDeleted"), () => deleteWindowAction(w.id))}
                   >
-                    Delete
+                    {tRoot("common.delete")}
                   </Button>
                 </div>
               </li>

@@ -12,6 +12,17 @@ export class InvalidRequirementError extends Error {
   override readonly name = "InvalidRequirementError";
 }
 
+/**
+ * BR-1.4 defense in depth: a requirement without any hard qualification is not evaluable (every
+ * available professional would look eligible). The database enforces the same invariant
+ * (migration 20261015130000) for every non-draft requirement.
+ */
+export function assertEvaluableRequirement(requirement: MatchableRequirement): void {
+  if (!requirement.qualifications.some((q) => q.level === "hard")) {
+    throw new InvalidRequirementError("Requirement needs at least one hard qualification");
+  }
+}
+
 export interface CapacityResult {
   required: number;
   internallyEligible: number;
@@ -32,6 +43,7 @@ export function evaluateCapacity(
   if (!Number.isInteger(required) || required < 1) {
     throw new InvalidRequirementError("Requirement headcount must be a positive integer");
   }
+  assertEvaluableRequirement(requirement);
 
   const internalMatches = workforce.map((candidate) => evaluateMatch(requirement, candidate));
   const internallyEligible = internalMatches.filter((m) => m.eligible).length;

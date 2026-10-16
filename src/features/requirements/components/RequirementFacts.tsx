@@ -1,14 +1,20 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { WorkRequirement } from "@/domain/work-requirement";
-import { formatDateTime, SHIFT_LABEL } from "@/lib/format";
+import { formatDateTime } from "@/i18n/format";
 import { QualificationChips, RequirementStatusChip, UrgencyChip } from "./RequirementBadges";
 
-export function RequirementFacts({ requirement }: { requirement: WorkRequirement }) {
+export async function RequirementFacts({ requirement }: { requirement: WorkRequirement }) {
+  const [t, tDomain, locale] = await Promise.all([
+    getTranslations("organization.detail.facts"),
+    getTranslations("domain"),
+    getLocale(),
+  ]);
   const facts: [string, string][] = [
-    ["Location", requirement.location],
-    ["Starts", formatDateTime(requirement.startsAt)],
-    ["Ends", formatDateTime(requirement.endsAt)],
-    ["Shift", SHIFT_LABEL[requirement.shift]],
-    ["Headcount", String(requirement.headcount)],
+    [t("location"), requirement.location],
+    [t("starts"), formatDateTime(locale, requirement.startsAt)],
+    [t("ends"), formatDateTime(locale, requirement.endsAt)],
+    [t("shift"), tDomain(`shift.${requirement.shift}`)],
+    [t("headcount"), String(requirement.headcount)],
   ];
   return (
     <div className="space-y-4">

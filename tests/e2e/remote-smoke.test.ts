@@ -16,6 +16,8 @@
  * Phase 1 (profile + qualifications): 11 passport edit + persistence + isolation · 12 declaration
  *   stays pending, verification cannot be supplied, BR-2.7 · 13 B cannot touch A's declaration ·
  *   14 a withdrawn hard qualification changes matching deterministically (restored afterwards).
+ * Phase 1.5 (i18n): 15 language preference persists per user through `user-preferences`, is isolated
+ *   between users, rejects unknown locales and works for organization accounts too.
  */
 import { createClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync } from "node:fs";
@@ -414,6 +416,56 @@ describe.skipIf(!configured)(
       declaredId = "";
     });
 
+    it("15. language preference: own row only, persisted, isolated, validated", async () => {
+      const before = await call("user-preferences", { token: tokenA });
+      expect(before.status).toBe(200);
+      const original = (before.body.data?.preferences as { locale: string | null }).locale;
+      const bBefore = (await call("user-preferences", { token: tokenB })).body.data?.preferences;
+
+      const set = await call("user-preferences", {
+        method: "PATCH",
+        token: tokenA,
+        body: { locale: "es" },
+      });
+      expect(set.status).toBe(200);
+      expect((set.body.data?.preferences as { locale: string }).locale).toBe("es");
+
+      const fresh = await call("user-preferences", {
+        token: await signIn(env.proA[0]!, env.proA[1]!),
+      });
+      expect((fresh.body.data?.preferences as { locale: string }).locale).toBe("es");
+      expect((await call("user-preferences", { token: tokenB })).body.data?.preferences).toEqual(
+        bBefore,
+      );
+
+      const invalid = await call("user-preferences", {
+        method: "PATCH",
+        token: tokenA,
+        body: { locale: "fr" },
+      });
+      expect(invalid.status).toBe(400);
+      const foreign = await call("user-preferences", {
+        method: "PATCH",
+        token: tokenA,
+        body: { locale: "en", profileId: "00000000-0000-4000-8000-000000000022" },
+      });
+      expect(foreign.status).toBe(400);
+      expect(
+        await call("user-preferences", { method: "DELETE", token: tokenA }).then((r) => r.status),
+      ).toBe(405);
+
+      const restored = await call("user-preferences", {
+        method: "PATCH",
+        token: tokenA,
+        body: { locale: original ?? "en" },
+      });
+      expect(restored.status).toBe(200);
+      if (original === null) {
+        // Seed accounts start without a preference; the API has no "unset" — keep 'en' (the fallback).
+        expect((restored.body.data?.preferences as { locale: string }).locale).toBe("en");
+      }
+    });
+
     it("9b. a professional cannot create work requirements (403)", async () => {
       const { status, body } = await call("work-requirements", {
         method: "POST",
@@ -568,6 +620,22 @@ describe.skipIf(!configured)(
           );
         }
         expect(await evaluate()).toEqual(baseline);
+      });
+
+      it("15b. organization accounts also own a language preference", async () => {
+        const set = await call("user-preferences", {
+          method: "PATCH",
+          token: tokenOrg,
+          body: { locale: "es" },
+        });
+        expect(set.status).toBe(200);
+        const read = await call("user-preferences", { token: tokenOrg });
+        expect((read.body.data?.preferences as { locale: string }).locale).toBe("es");
+        await call("user-preferences", {
+          method: "PATCH",
+          token: tokenOrg,
+          body: { locale: "en" },
+        });
       });
 
       it("10. a professional outside the organization cannot read or evaluate its requirement", async () => {

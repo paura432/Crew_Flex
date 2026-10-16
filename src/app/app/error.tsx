@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/Button";
 import { StateMessage } from "@/components/ui/StateMessage";
 
@@ -11,12 +12,13 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("common");
   return (
     <StateMessage
       tone="danger"
-      title="This page could not be displayed"
-      description={error.digest ? `Reference: ${error.digest}` : "Try again in a moment."}
-      action={<Button onClick={reset}>Try again</Button>}
+      title={t("errorTitle")}
+      description={error.digest ? t("reference", { id: error.digest }) : t("errorHint")}
+      action={<Button onClick={reset}>{t("retry")}</Button>}
     />
   );
 }

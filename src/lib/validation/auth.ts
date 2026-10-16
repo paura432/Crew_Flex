@@ -1,10 +1,11 @@
+// Messages are i18n keys (`v.*`, messages/*.json) resolved by the UI (src/i18n/validation.ts).
 import { z } from "zod";
 
-const email = z.email("Enter a valid email address").max(254);
+const email = z.email("v.email.invalid").max(254, "v.email.invalid");
 
 export const signInInput = z.strictObject({
   email,
-  password: z.string().min(1, "Enter your password").max(72),
+  password: z.string("v.password.required").min(1, "v.password.required").max(72, "v.password.max"),
 });
 export type SignInInput = z.infer<typeof signInInput>;
 
@@ -17,9 +18,9 @@ export const ORGANIZATION_TYPES = [
 ] as const;
 
 const base = {
-  displayName: z.string().trim().min(1, "Enter your name").max(120, "At most 120 characters"),
+  displayName: z.string("v.name.required").trim().min(1, "v.name.required").max(120, "v.name.max"),
   email,
-  password: z.string().min(10, "Use at least 10 characters").max(72, "Use at most 72 characters"),
+  password: z.string("v.password.required").min(10, "v.password.min").max(72, "v.password.max"),
 };
 
 export const signUpInput = z.discriminatedUnion("accountType", [
@@ -28,16 +29,16 @@ export const signUpInput = z.discriminatedUnion("accountType", [
     accountType: z.literal("organization"),
     ...base,
     organizationName: z
-      .string()
+      .string("v.orgName.min")
       .trim()
-      .min(2, "Enter the organization name")
-      .max(160, "At most 160 characters"),
-    organizationType: z.enum(ORGANIZATION_TYPES, "Choose an organization type"),
+      .min(2, "v.orgName.min")
+      .max(160, "v.orgName.max"),
+    organizationType: z.enum(ORGANIZATION_TYPES, "v.orgType.invalid"),
     country: z
-      .string()
+      .string("v.country.invalid")
       .trim()
       .toUpperCase()
-      .regex(/^[A-Z]{2}$/, "Use a 2-letter country code, e.g. ES"),
+      .regex(/^[A-Z]{2}$/, "v.country.invalid"),
   }),
 ]);
 export type SignUpInput = z.infer<typeof signUpInput>;

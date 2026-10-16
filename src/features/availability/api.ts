@@ -10,10 +10,14 @@ import type {
 export const listAvailability = () =>
   invokeEdgeFunction<AvailabilityListResponse>("professional-availability");
 
-export const createAvailabilityWindow = (input: CreateAvailabilityWindowInput) =>
+export const createAvailabilityWindow = (
+  input: CreateAvailabilityWindowInput,
+  idempotencyKey: string,
+) =>
   invokeEdgeFunction<AvailabilityWindowResponse>("professional-availability", {
     method: "POST",
     body: input,
+    headers: { "Idempotency-Key": idempotencyKey },
   });
 
 export const updateAvailabilityWindow = (id: string, input: CreateAvailabilityWindowInput) =>

@@ -10,12 +10,16 @@ export type EdgeFunctionName =
   | "matching-evaluate"
   | "professional-availability"
   | "professional-profile"
-  | "professional-qualifications";
+  | "professional-qualifications"
+  | "user-preferences"
+  | "qualification-reviews";
 
 interface InvokeOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   query?: Record<string, string>;
   body?: unknown;
+  /** Extra request headers (e.g. `Idempotency-Key`); never Authorization. */
+  headers?: Record<string, string>;
 }
 
 const TIMEOUT_MS = 15_000;
@@ -35,7 +39,7 @@ function isEnvelope(value: unknown): value is ApiResponse<unknown> {
  */
 export async function invokeEdgeFunction<T>(
   name: EdgeFunctionName,
-  { method = "GET", query, body }: InvokeOptions = {},
+  { method = "GET", query, body, headers }: InvokeOptions = {},
 ): Promise<ApiResponse<T>> {
   const requestId = crypto.randomUUID();
   const supabase = await createServerSupabase();
@@ -54,6 +58,7 @@ export async function invokeEdgeFunction<T>(
     response = await fetch(url, {
       method,
       headers: {
+        ...headers,
         Authorization: `Bearer ${session.access_token}`,
         apikey: publicEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
         "Content-Type": "application/json",

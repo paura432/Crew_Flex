@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
+import { idempotencyKeySchema } from "@/lib/validation/idempotency";
 import { createWorkRequirementInput } from "@/lib/validation/work-requirement";
 import type { ApiErrorCode } from "@/types/api";
 import { createRequirement } from "./api";
@@ -16,19 +17,29 @@ export type CreateRequirementState =
       requestId?: string;
     };
 
-/** Validates on the server too (never trusts the client), then delegates to the Edge Function. */
-export async function createRequirementAction(input: unknown): Promise<CreateRequirementState> {
+/**
+ * Validates on the server too (never trusts the client), then delegates to the Edge Function.
+ * `idempotencyKey` identifies this logical submission: a retry with the same key returns the
+ * requirement created by the first attempt instead of a duplicate.
+ */
+export async function createRequirementAction(
+  input: unknown,
+  idempotencyKey: unknown,
+): Promise<CreateRequirementState> {
   const parsed = createWorkRequirementInput.safeParse(input);
-  if (!parsed.success) {
+  const key = idempotencyKeySchema.safeParse(idempotencyKey);
+  if (!parsed.success || !key.success) {
     return {
       status: "error",
       code: "VALIDATION_ERROR",
-      message: "Check the highlighted fields.",
-      fieldErrors: toFieldErrors(parsed.error),
+      message: "common.checkFields",
+      fieldErrors: parsed.success
+        ? { form: "v.idempotencyKey.invalid" }
+        : toFieldErrors(parsed.error),
     };
   }
 
-  const result = await createRequirement(parsed.data);
+  const result = await createRequirement(parsed.data, key.data);
   if (!result.ok) {
     return {
       status: "error",

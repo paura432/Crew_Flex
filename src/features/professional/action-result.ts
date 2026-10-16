@@ -17,7 +17,7 @@ export type ProfileActionResult =
 export const invalidResult = (fieldErrors: FieldErrors): ProfileActionResult => ({
   ok: false,
   code: "VALIDATION_ERROR",
-  message: "Check the highlighted fields.",
+  message: "common.checkFields",
   fieldErrors,
 });
 

@@ -11,5 +11,9 @@ export const listRequirements = (organizationId: string) =>
 export const getRequirement = (id: string) =>
   invokeEdgeFunction<WorkRequirementResponse>("work-requirements", { query: { id } });
 
-export const createRequirement = (input: CreateWorkRequirementInput) =>
-  invokeEdgeFunction<WorkRequirementResponse>("work-requirements", { method: "POST", body: input });
+export const createRequirement = (input: CreateWorkRequirementInput, idempotencyKey: string) =>
+  invokeEdgeFunction<WorkRequirementResponse>("work-requirements", {
+    method: "POST",
+    body: input,
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
