@@ -1,79 +1,75 @@
 # 01 · Current state
 
-**As of 2026-10-15, branch `fix/remediation-2026-10-15` at `a7fd5a7` + uncommitted work.**
+**As of 2026-10-16, branch `fix/remediation-2026-10-15`; database and Edge Functions rolled out to
+production, frontend NOT yet published (merge + push to `main` awaiting owner approval).**
 Re-verify with the commands at the bottom before relying on any line; update the date/SHA when it changes.
 
 ## Git
 
-| Ref                               | SHA       | Meaning                                                                                                                     |
-| --------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `origin/main` (GitHub)            | `4f98e67` | What Vercel Production builds (main-only, OD-9)                                                                             |
-| `main` (local)                    | `a7fd5a7` | 2 commits ahead of `origin/main`, **not pushed** (`72fbb64`, `a7fd5a7` = phase 1 passport/qualifications)                   |
-| `fix/remediation-2026-10-15`      | `a7fd5a7` | Current branch; carries phase 1.5 (i18n), phase 0.8 (V1.3 audit), the remediation and the memory bank — **all uncommitted** |
-| `refs/baseline/remediation-start` | `bf3feb1` | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                               |
-| other branches                    | —         | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)           |
+| Ref                               | SHA                    | Meaning                                                                                                                                                                                                                                                 |
+| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin/main` (GitHub)            | `4f98e67`              | What Vercel Production builds (main-only, OD-9). **Unchanged**                                                                                                                                                                                          |
+| `main` (local)                    | `a7fd5a7`              | 2 commits ahead of `origin/main`, not pushed: `72fbb64` (local tooling), `a7fd5a7` (phase 1 passport/qualifications)                                                                                                                                    |
+| `fix/remediation-2026-10-15`      | branch tip (this file) | `main` + `2f68190` feat(db) · `076ef15` feat(app) · `738aac6` chore(scripts) · `92c6fde` docs · the OD-3 server flag fix · this memory-bank update. Fast-forwardable onto `main`; everything built from it except the frontend is already in production |
+| `refs/baseline/remediation-start` | `bf3feb1`              | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                                                                                                                                                           |
+| other branches                    | —                      | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)                                                                                                                                       |
 
-Diff vs `origin/main` (files): **145 added** (25 committed + 120 untracked) · **101 modified** · 0 deleted —
-before the memory-bank work. Full breakdown: `docs/audit/CREWFLEX_DIFF_CURRENT.md`.
+## Production (`sbjkzrkmcekokkqiuvvh` + https://crew-flex.vercel.app) — the single environment (demo, OD-9)
 
-## Production (`sbjkzrkmcekokkqiuvvh` + https://crew-flex.vercel.app)
+| Item                    | State                                                                                                                                                                                                                          | Evidence (2026-10-16)                                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Migrations              | **All 10** applied: `20261009120000`, `20261009120100` + `20261011120000` … `20261015130400` (owner ran `db push`)                                                                                                             | `migration list --linked`: 10/10 remote. Pre-flight data checks 0 rows. Read-only privilege query: `anon` has no EXECUTE on the 14 new/replaced functions, RLS on in every table, 4 new triggers present |
+| OD-3 database gate      | `app_private.feature_flags` exists with **0 rows** → `review_qualification()` refuses (`0A000`). `reviewed_by`/`review_note` not selectable by `authenticated`                                                                 | Same query                                                                                                                                                                                               |
+| Edge Functions          | **8 deployed**: `health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-availability` (redeployed) and `professional-profile`, `professional-qualifications`, `user-preferences` (first deploy) | Probes without token: health GET 200; the other 7 → 401 (405 on methods they do not have). CORS preflight allows `idempotency-key` for `https://crew-flex.vercel.app`                                    |
+| `qualification-reviews` | **Not deployed.** It went out by mistake in a bare `functions deploy` on 2026-10-16 (failing closed: 404 without the secret) and was deleted the same day on owner authorization                                               | `functions delete` → "Deleted Edge Function"; GET/POST/OPTIONS → platform 404 "Requested function was not found"                                                                                         |
+| Secrets                 | `ALLOWED_ORIGINS` + platform-provided ones. `QUALIFICATION_REVIEW_ENABLED` **not set**                                                                                                                                         | `secrets list` (names only)                                                                                                                                                                              |
+| App (frontend)          | Vercel still serves `origin/main` `4f98e67` (old UI on the new DB/functions; compatible: column-limited reads, unchanged RPC signatures, additive responses)                                                                   | `/login` 200 after each stage. **Not published** until Vercel confirms the deploy of the new `main`                                                                                                      |
+| Authenticated flows     | **Never verified in production** (guarded remote E2E not run)                                                                                                                                                                  | —                                                                                                                                                                                                        |
+| Data                    | 1 real user, no organizations (2026-10-10); pre-flight counts 0 on 2026-10-16                                                                                                                                                  | —                                                                                                                                                                                                        |
+| Staging                 | None. The stray `Crew_Flex_staging` project was deleted by the owner on 2026-10-16                                                                                                                                             | Owner statement                                                                                                                                                                                          |
 
-| Item                | State                                                                                                                      | Evidence                                                                                                                                             |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Migrations          | `20261009120000`, `20261009120100` only                                                                                    | CLI `migration list`, 2026-10-10 (`DEPLOYMENT_PLAN.md` §9.1). Not re-checkable on 2026-10-15: the CLI account now gets **403** on the management API |
-| Edge Functions      | `health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-availability` (deployed 2026-10-09) | Unauthenticated probes 2026-10-15: health 200; 401/405 on the others                                                                                 |
-| Not deployed        | `professional-profile`, `professional-qualifications`, `user-preferences`, `qualification-reviews`                         | Probes 2026-10-15: **404**                                                                                                                           |
-| App                 | Vercel serves `origin/main`; `/app/**` → 307 to `/login`                                                                   | Probe 2026-10-15                                                                                                                                     |
-| Authenticated flows | **Never verified in production** (remote E2E package §9.2 not executed)                                                    | `DEPLOYMENT_PLAN.md` §8 step 6, §9.2                                                                                                                 |
-| Data                | 1 real user, no organizations (2026-10-10)                                                                                 | `DEPLOYMENT_PLAN.md` §9.1                                                                                                                            |
+Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and read-only queries above.
 
-Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes above.
+## OD-3 (qualification review) — still OPEN, closed at every layer
+
+1. Next.js server flag `QUALIFICATION_REVIEW_ENABLED` (off unless exactly `true`; not set in Vercel): no nav
+   entry, `/app/admin/verifications` → 404, review action refused (`src/server/feature-flags.ts`).
+2. Edge Function `qualification-reviews` not deployed; its secret is not set.
+3. Database row `app_private.feature_flags('qualification_review')` absent.
 
 ## Local (Docker, ports 563xx — `docs/qa/LOCAL_ENVIRONMENT.md`)
 
-- All 10 migrations applied incrementally (`20261009120000` … `20261015130400`), seed loaded,
-  `app_private.feature_flags('qualification_review')` row inserted **locally only**.
-- Functions served with `supabase functions serve` (start on demand; stopped after each campaign).
-- DB returned to the seed (4 requirements) after each campaign via `scripts/local/cleanup-test-rows.sh`.
+- All 10 migrations applied incrementally, seed loaded, `qualification_review` flag row inserted **locally only**.
+- The browser smoke now also needs `QUALIFICATION_REVIEW_ENABLED=true` in `.env.local` (it refuses otherwise).
 
 ## What works where (summary — matrix: `docs/audit/CREWFLEX_COMPLETENESS_AUDIT.md`)
 
 | Capability                                                                                     | Status                                                                   |
 | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | Auth (sign up/in/out), protected `/app/**`                                                     | VERIFIED_LOCAL; production probes only                                   |
-| Requirements create/list/detail, capacity, explained matching                                  | VERIFIED_LOCAL; functions deployed but no authenticated production check |
-| Availability windows (CRUD)                                                                    | VERIFIED_LOCAL; function deployed, no authenticated production check     |
-| Passport edit (atomic), qualification declare/edit/withdraw                                    | VERIFIED_LOCAL; **not deployed**                                         |
-| ES/EN UI + persisted language                                                                  | VERIFIED_LOCAL; **not deployed**                                         |
-| E-3 / I-1 / I-3 / eligible-first pool                                                          | VERIFIED_LOCAL (PGlite + Docker + E2E + races); **not applied remotely** |
-| Platform-admin qualification review                                                            | VERIFIED_LOCAL; NEEDS_DECISION (OD-3) for production                     |
+| Requirements, capacity, explained matching, availability                                       | VERIFIED_LOCAL; DB + functions deployed; UI not yet published            |
+| Passport edit (atomic), qualification declare/edit/withdraw                                    | VERIFIED_LOCAL; DB + functions deployed; UI not yet published            |
+| ES/EN UI + persisted language                                                                  | VERIFIED_LOCAL; DB + function deployed; UI not yet published             |
+| E-3 / I-1 / I-3 / eligible-first pool                                                          | VERIFIED_LOCAL; applied remotely 2026-10-16                              |
+| Platform-admin qualification review                                                            | VERIFIED_LOCAL; NEEDS_DECISION (OD-3); off in production at all 3 layers |
 | Documents, Candidate Pack, applications, assignments, recruiter, tools, logbook, notifications | PLANNED / OUT_OF_SCOPE                                                   |
 
-## Gates — last run 2026-10-15 on the tree above
+## Gates
 
-| Gate                                             | Result                                                                                      |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `pnpm check`                                     | PASS — Vitest 225 passed / 19 skipped (env-gated E2E; incl. 9 memory-bank checks), Deno 48  |
-| `pnpm build`                                     | PASS                                                                                        |
-| `git diff --check`                               | PASS                                                                                        |
-| Local E2E `tests/e2e` (Docker + functions serve) | PASS 25/25                                                                                  |
-| `scripts/local/db-race-check.sh`                 | PASS 4/4                                                                                    |
-| Browser smoke `scripts/local/ui-smoke.mjs`       | Last PASS 78/78 on 2026-10-15 (remediation run); not re-run for the memory bank (docs only) |
-| Remote E2E                                       | NOT RUN (needs explicit authorization)                                                      |
+Last run 2026-10-16 on the branch tip: see `06-active-context.md`. Remote E2E: NOT RUN.
 
 ## Blockers
 
-1. **Deploy authorization** (owner): migrations `20261011120000`→`20261015130300` + redeploy of changed
-   functions + first deploy of `professional-profile`, `professional-qualifications`, `user-preferences`.
+1. **Owner approval** for the fast-forward of `main` + `git push origin main` (= Vercel deploy).
 2. **OD-3 / D-01 / R-D1**: who verifies qualifications in production. Without it no new professional can
    satisfy a hard requirement → external matching is empty for real users.
-3. CLI management-API access returns 403 for the current account (functions list): remote state can only
-   be probed, not listed.
+3. CLI management-API listing returned 403 on 2026-10-15; on 2026-10-16 `migration list`, `secrets list`,
+   `functions deploy/delete` worked — re-check before relying on either.
 
 ## Re-verify
 
 ```bash
-git status --short | wc -l; git rev-parse --short HEAD origin/main; git rev-list --left-right --count origin/main...HEAD
-U=https://sbjkzrkmcekokkqiuvvh.supabase.co/functions/v1; for f in health user-preferences professional-profile; do curl -s -o /dev/null -w "$f %{http_code}\n" $U/$f; done
-docker ps --format '{{.Names}}' | grep crew-flex
+git status --short | wc -l; git rev-parse --short HEAD main origin/main; git rev-list --left-right --count origin/main...HEAD
+npx supabase migration list --linked
+U=https://sbjkzrkmcekokkqiuvvh.supabase.co/functions/v1; for f in health user-preferences professional-profile qualification-reviews; do curl -s -o /dev/null -w "$f %{http_code}\n" $U/$f; done
 ```
