@@ -54,8 +54,8 @@ Docker stack is available and is the default second check — apply new migratio
 
 ## Not yet automated
 
-- Remote smoke E2E against the deployed Edge Functions: `pnpm e2e:remote` (`tests/e2e/remote-smoke.test.ts`),
-  skipped unless `.env.e2e` provides synthetic confirmed accounts (`docs/audit/DEPLOYMENT_PLAN.md` §6).
+- Remote smoke E2E against the deployed Edge Functions: `pnpm e2e:production` (`tests/e2e/remote-smoke.test.ts`,
+  `.env.e2e.production`, guarded; `docs/architecture/ENVIRONMENTS.md` §3). Never run in production yet.
 - Local E2E against the Docker stack: `node --env-file=.env.e2e node_modules/vitest/vitest.mjs run tests/e2e`
   (19 checks incl. phase 1: passport edit/persistence/isolation, pending-only declarations, BR-2.7,
   B cannot touch A's declaration, withdrawn hard qualification changes matching deterministically; phase 1.5:

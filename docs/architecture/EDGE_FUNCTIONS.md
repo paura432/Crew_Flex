@@ -114,7 +114,7 @@ pnpm exec supabase secrets set ALLOWED_ORIGINS=https://crew-flex.vercel.app
 pnpm exec supabase functions deploy health --debug
 pnpm exec supabase functions deploy professional-availability --debug
 pnpm exec supabase functions deploy work-requirements capacity-evaluate matching-evaluate --debug
-E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:<today> pnpm e2e:remote   # guarded; synthetic accounts in .env.e2e
+E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:<today> pnpm e2e:production   # guarded; synthetic accounts in .env.e2e.production
 ```
 
 Rollback of any step: `pnpm exec supabase functions delete <name>` (restores today's 404 state). No

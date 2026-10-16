@@ -91,7 +91,8 @@ procedure: [`docs/qa/LOCAL_ENVIRONMENT.md`](docs/qa/LOCAL_ENVIRONMENT.md).
 pnpm test          # Vitest watch
 pnpm test:run      # domain, validation, RLS (PGlite), repo hygiene
 pnpm test:edge     # Deno tests for Edge Functions
-pnpm e2e:remote    # remote E2E on the single project; needs .env.e2e + E2E_WRITE_CONFIRM per run (ENVIRONMENTS.md §3)
+pnpm e2e:remote    # E2E against the local Docker stack (.env.e2e → 127.0.0.1; functions served)
+pnpm e2e:production # E2E against production; needs .env.e2e.production + E2E_WRITE_CONFIRM per run (ENVIRONMENTS.md §3)
 ```
 
 ## Quality gates

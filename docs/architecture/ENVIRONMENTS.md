@@ -49,14 +49,19 @@ any migration that rewrites existing rows.
 
 ## 3. Remote E2E on the single project (authorized runs only)
 
+Production uses its own git-ignored file, `.env.e2e.production` (mode 600; production URL, publishable key,
+`E2E_AUTHORIZED_PROJECT_REF`, the 3 synthetic accounts with generated passwords). `.env.e2e` stays on the
+local Docker stack (`pnpm e2e:remote`). Both guards refuse a stored `E2E_WRITE_CONFIRM` in **any**
+`.env.e2e*` file. Each of the three write steps below needs its own owner approval.
+
 ```bash
-cp .env.e2e.example .env.e2e            # production URL + publishable key + the 3 synthetic accounts
-set -a; . ./.env.e2e; set +a
+cp .env.e2e.example .env.e2e.production   # then fill it (never E2E_WRITE_CONFIRM, never a secret key)
+set -a; . ./.env.e2e.production; set +a
 # 1. create the accounts once (secret key from `supabase projects api-keys --project-ref <ref> --reveal`, shell only)
 SUPABASE_SECRET_KEY='<sb_secret_…>' E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) \
   bash scripts/e2e/seed-users.sh
 # 2. run the ten checks (writes one window, deletes it; leaves one requirement in the synthetic org)
-E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) pnpm e2e:remote
+E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) pnpm e2e:production
 # 3. remove the synthetic accounts and their rows when the campaign is over
 E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) bash scripts/e2e/cleanup-synthetic.sh --dry-run
 E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) bash scripts/e2e/cleanup-synthetic.sh

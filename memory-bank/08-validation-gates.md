@@ -24,7 +24,7 @@ There is no staging (OD-9).
 | Local E2E                   | functions served + `node --env-file=.env.e2e node_modules/vitest/vitest.mjs run tests/e2e`   | any EF/DB/flow change              |
 | Concurrency (real Postgres) | `bash scripts/local/db-race-check.sh`                                                        | DB invariants, idempotency, review |
 | Browser smoke               | `next build && next start -p 3002`, then `node scripts/local/ui-smoke.mjs`                   | UI/i18n/responsive changes         |
-| Remote E2E                  | `pnpm e2e:remote` with guard env                                                             | **only when authorized**           |
+| Remote E2E                  | `pnpm e2e:production` (`.env.e2e.production`) with guard env                                 | **only when authorized**           |
 
 ## PASS / FAIL / SKIPPED / BLOCKED
 
