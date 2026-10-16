@@ -13,6 +13,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "e2e:remote": "node --env-file=.env.e2e node_modules/vitest/vitest.mjs run tests/e2e",
+    "e2e:production": "node --env-file=.env.e2e.production node_modules/vitest/vitest.mjs run tests/e2e/remote-smoke.test.ts",
     "test:edge": "deno test --config supabase/functions/deno.json --allow-env supabase/functions",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -10,7 +10,7 @@
 # Runs through `supabase db query --linked` (the linked ref must equal the authorized ref).
 #
 # Usage:
-#   set -a; . ./.env.e2e; set +a
+#   set -a; . ./.env.e2e.production; set +a
 #   E2E_WRITE_CONFIRM=WRITE:<ref>:<today> bash scripts/e2e/cleanup-synthetic.sh [--dry-run]
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/_guard.sh"
@@ -24,7 +24,9 @@ for v in E2E_PRO_A_EMAIL E2E_PRO_B_EMAIL E2E_ORG_ADMIN_EMAIL; do
   printf '%s' "${!v}" | grep -Eq '^[A-Za-z0-9.+_-]+@[A-Za-z0-9.-]+$' || guard_die "$v is not a plain e-mail address"
   case "${!v}" in e2e*@*|*+e2e*@*) ;; *) guard_die "${!v} is not obviously synthetic" ;; esac
 done
-EMAILS="'$E2E_PRO_A_EMAIL','$E2E_PRO_B_EMAIL','$E2E_ORG_ADMIN_EMAIL'"
+# Compared lower-cased on both sides (auth stores e-mails lower-cased; a mixed-case value must not
+# silently leave a synthetic account behind). The regex above already excludes quotes.
+EMAILS="'${E2E_PRO_A_EMAIL,,}','${E2E_PRO_B_EMAIL,,}','${E2E_ORG_ADMIN_EMAIL,,}'"
 
 SQL_REPORT="
 with u as (select id from auth.users where lower(email) in ($EMAILS)),

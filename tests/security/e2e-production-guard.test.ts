@@ -1,7 +1,14 @@
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { evaluateProductionGuard, expectedConfirmation, PRODUCTION_REF } from "../e2e/guard";
+import {
+  evaluateProductionGuard,
+  expectedConfirmation,
+  PRODUCTION_REF,
+  readE2eEnvFiles,
+} from "../e2e/guard";
 
 const root = join(import.meta.dirname, "..", "..");
 const url = `https://${PRODUCTION_REF}.supabase.co`;
@@ -135,5 +142,101 @@ describe("I. the shell scripts enforce the same guard before any network call", 
     });
     expect(r.status).toBe(2);
     expect(r.stderr).toContain("not obviously synthetic");
+  });
+});
+
+describe("I. a stored confirmation is refused in ANY .env.e2e* file (separate production config)", () => {
+  it("readE2eEnvFiles reads .env.e2e and .env.e2e.<name>, never the committed example", () => {
+    const dir = mkdtempSync(join(tmpdir(), "e2e-env-"));
+    try {
+      expect(readE2eEnvFiles(dir)).toBeUndefined();
+      writeFileSync(join(dir, ".env.e2e.example"), "E2E_WRITE_CONFIRM=\n");
+      expect(readE2eEnvFiles(dir)).toBeUndefined();
+      writeFileSync(join(dir, ".env.e2e"), "E2E_SUPABASE_URL=http://127.0.0.1:56321\n");
+      writeFileSync(join(dir, ".env.e2e.production"), `E2E_WRITE_CONFIRM=${confirm}\n`);
+      const content = readE2eEnvFiles(dir);
+      expect(content).toContain("127.0.0.1");
+      const r = evaluateProductionGuard({
+        url,
+        authorizedRef: PRODUCTION_REF,
+        writeConfirm: confirm,
+        today,
+        envFileContent: content,
+      });
+      expect(r).toMatchObject({ ok: false, reason: expect.stringContaining("never stored") });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("the shell guard refuses a confirmation stored in .env.e2e.<name>", () => {
+    const file = join(root, ".env.e2e.guardtest");
+    const today = expectedConfirmation(PRODUCTION_REF);
+    writeFileSync(file, `E2E_WRITE_CONFIRM=${today}\n`);
+    try {
+      const r = spawnSync("bash", ["scripts/e2e/cleanup-synthetic.sh", "--dry-run"], {
+        cwd: root,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          NODE_ENV: process.env.NODE_ENV,
+          SUPABASE_URL: url,
+          E2E_AUTHORIZED_PROJECT_REF: PRODUCTION_REF,
+          E2E_WRITE_CONFIRM: today,
+        } as NodeJS.ProcessEnv,
+        encoding: "utf8",
+      });
+      expect(r.status).toBe(2);
+      expect(r.stderr).toContain("never stored in .env.e2e.guardtest");
+    } finally {
+      rmSync(file, { force: true });
+    }
+  });
+});
+
+describe("I. synthetic-account scripts validate their inputs before any network call", () => {
+  // Both guard conditions hold here, so each refusal below comes from the input validation itself.
+  const authorized = {
+    PATH: process.env.PATH,
+    HOME: process.env.HOME,
+    NODE_ENV: process.env.NODE_ENV,
+    SUPABASE_URL: url,
+    E2E_AUTHORIZED_PROJECT_REF: PRODUCTION_REF,
+    E2E_WRITE_CONFIRM: expectedConfirmation(PRODUCTION_REF),
+    SUPABASE_SECRET_KEY: "sb_secret_dummy",
+  };
+  const accounts = {
+    E2E_PRO_A_EMAIL: "e2e-a@example.com",
+    E2E_PRO_A_PASSWORD: "Aa1Bb2Cc3Dd4Ee5Ff6",
+    E2E_PRO_B_EMAIL: "e2e-b@example.com",
+    E2E_PRO_B_PASSWORD: "Gg7Hh8Ii9Jj0Kk1Ll2",
+    E2E_ORG_ADMIN_EMAIL: "e2e-org@example.com",
+    E2E_ORG_ADMIN_PASSWORD: "Mm3Nn4Oo5Pp6Qq7Rr8",
+  };
+  const run = (script: string, env: Record<string, string>, ...args: string[]) =>
+    spawnSync("bash", [`scripts/e2e/${script}`, ...args], {
+      cwd: root,
+      env: { ...authorized, ...env } as NodeJS.ProcessEnv,
+      encoding: "utf8",
+    });
+
+  it("seed refuses short passwords and passwords that would break the JSON payload", () => {
+    for (const bad of ["short", 'Aa1Bb2Cc3Dd4"Ee5Ff6', "Aa1Bb2Cc3Dd4\\Ee5Ff6"]) {
+      const r = run("seed-users.sh", { ...accounts, E2E_PRO_B_PASSWORD: bad });
+      expect(r.status, bad).toBe(2);
+      expect(r.stderr, bad).toMatch(/E2E_PRO_B_PASSWORD must/);
+    }
+  });
+
+  it("cleanup refuses an e-mail that could inject SQL or is not synthetic", () => {
+    const injected = run("cleanup-synthetic.sh", {
+      ...accounts,
+      E2E_PRO_A_EMAIL: "e2e'),('x@example.com",
+    });
+    expect(injected.status).toBe(2);
+    expect(injected.stderr).toContain("not a plain e-mail address");
+    const real = run("cleanup-synthetic.sh", { ...accounts, E2E_PRO_A_EMAIL: "pau@example.com" });
+    expect(real.status).toBe(2);
+    expect(real.stderr).toContain("not obviously synthetic");
   });
 });

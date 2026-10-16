@@ -5,7 +5,8 @@
  * confirmation typed on the command line).
  *
  * Skipped unless `.env.e2e` provides synthetic, confirmed test accounts (see `.env.e2e.example`).
- * Run with `E2E_WRITE_CONFIRM=WRITE:<ref>:<today> pnpm e2e:remote`. Each run creates and deletes one
+ * Run with `E2E_WRITE_CONFIRM=WRITE:<ref>:<today> pnpm e2e:production` (loads `.env.e2e.production`;
+ * `pnpm e2e:remote` loads `.env.e2e`, kept pointing at the local Docker stack). Each run creates and deletes one
  * availability window; the organization checks create one work requirement (no delete path in V0),
  * left in the synthetic org until `scripts/e2e/cleanup-synthetic.sh` removes it.
  *
@@ -23,7 +24,7 @@ import { createClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { evaluateProductionGuard } from "./guard";
+import { evaluateProductionGuard, readE2eEnvFiles } from "./guard";
 
 const env = {
   url: process.env.E2E_SUPABASE_URL,
@@ -114,7 +115,7 @@ describe.skipIf(!configured)(
         authorizedRef: process.env.E2E_AUTHORIZED_PROJECT_REF,
         linkedRef: readIfExists(join(root, "supabase", ".temp", "project-ref")),
         writeConfirm: process.env.E2E_WRITE_CONFIRM,
-        envFileContent: readIfExists(join(root, ".env.e2e")),
+        envFileContent: readE2eEnvFiles(root),
       });
       if (!guard.ok) throw new Error(`remote E2E blocked: ${guard.reason}`);
       tokenA = await signIn(env.proA[0]!, env.proA[1]!);

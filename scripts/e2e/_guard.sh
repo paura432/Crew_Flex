@@ -3,7 +3,7 @@
 #   1. target identity: the ref inside SUPABASE_URL equals E2E_AUTHORIZED_PROJECT_REF (and the linked
 #      ref in supabase/.temp/project-ref when present);
 #   2. explicit one-off confirmation: E2E_WRITE_CONFIRM=WRITE:<ref>:<today UTC>, typed on the command
-#      line, never stored in .env.e2e.
+#      line, never stored in any .env.e2e* file (the example template excepted).
 # Exit code 2 on refusal. Sourced, not executed. Prints nothing secret.
 set -euo pipefail
 
@@ -21,9 +21,13 @@ guard_require_write_authorization() {
     linked="$(tr -d '[:space:]' < "$repo_root/supabase/.temp/project-ref")"
     [ "$linked" = "$ref" ] || guard_die "the linked Supabase project differs from the authorized ref"
   fi
-  if [ -f "$repo_root/.env.e2e" ] && grep -Eq '^[[:space:]]*E2E_WRITE_CONFIRM[[:space:]]*=' "$repo_root/.env.e2e"; then
-    guard_die "E2E_WRITE_CONFIRM must be typed per run, never stored in .env.e2e"
-  fi
+  local f
+  for f in "$repo_root"/.env.e2e "$repo_root"/.env.e2e.*; do
+    [ -f "$f" ] && [ "${f##*/}" != ".env.e2e.example" ] || continue
+    if grep -Eq '^[[:space:]]*E2E_WRITE_CONFIRM[[:space:]]*=' "$f"; then
+      guard_die "E2E_WRITE_CONFIRM must be typed per run, never stored in ${f##*/}"
+    fi
+  done
   local expected="WRITE:$ref:$(date -u +%F)"
   [ "${E2E_WRITE_CONFIRM:-}" = "$expected" ] || guard_die "E2E_WRITE_CONFIRM=$expected is required for this run (condition 2: explicit operator confirmation)"
   GUARD_REF="$ref"

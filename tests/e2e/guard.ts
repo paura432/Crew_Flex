@@ -12,14 +12,30 @@
  * A LOCAL target (http://127.0.0.1:<port> or http://localhost:<port>, the Docker stack of
  * `supabase start`) is never production: it is accepted without either condition.
  */
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 export const PRODUCTION_REF = "sbjkzrkmcekokkqiuvvh";
+
+/**
+ * Contents of every E2E env file in `dir` (`.env.e2e` and `.env.e2e.<name>`, e.g. the separate
+ * `.env.e2e.production`), except the committed `.env.e2e.example` template. The guard refuses a
+ * stored confirmation in any of them, whichever file the run actually loads.
+ */
+export function readE2eEnvFiles(dir: string): string | undefined {
+  const files = readdirSync(dir).filter(
+    (name) => (name === ".env.e2e" || name.startsWith(".env.e2e.")) && name !== ".env.e2e.example",
+  );
+  if (files.length === 0) return undefined;
+  return files.map((name) => readFileSync(join(dir, name), "utf8")).join("\n");
+}
 
 export interface GuardInput {
   url?: string;
   authorizedRef?: string;
   linkedRef?: string;
   writeConfirm?: string;
-  /** Raw content of `.env.e2e`, when the file exists. */
+  /** Raw content of the E2E env files (`readE2eEnvFiles`), when any exists. */
   envFileContent?: string;
   today?: Date;
 }
@@ -70,7 +86,7 @@ export function evaluateProductionGuard(input: GuardInput): GuardResult {
   if (input.envFileContent && /^\s*E2E_WRITE_CONFIRM\s*=/m.test(input.envFileContent)) {
     return {
       ok: false,
-      reason: "E2E_WRITE_CONFIRM must be typed per run, never stored in .env.e2e",
+      reason: "E2E_WRITE_CONFIRM must be typed per run, never stored in an .env.e2e* file",
     };
   }
   if (input.writeConfirm !== expectedConfirmation(ref, input.today)) {
