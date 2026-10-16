@@ -33,9 +33,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 ## OD-3 (qualification review) — still OPEN, closed at every layer
 
 1. Next.js server flag `QUALIFICATION_REVIEW_ENABLED` (off unless exactly `true`): no nav entry,
-   `/app/admin/verifications` → 404, review action refused (`src/server/feature-flags.ts`). **Its absence in
-   Vercel is NOT verified** (no Vercel access from the CLI; the proxy sends every unauthenticated `/app/**` to
-   `/login`, so an anonymous probe cannot observe it) — owner to confirm in Vercel → Settings → Environment Variables.
+   `/app/admin/verifications` → 404, review action refused (`src/server/feature-flags.ts`). Absent in Vercel (all environments) — confirmed by the owner in the dashboard on 2026-10-16.
 2. Edge Function `qualification-reviews` not deployed; its secret is not set.
 3. Database row `app_private.feature_flags('qualification_review')` absent.
 
@@ -62,7 +60,7 @@ Last run 2026-10-16 on the branch tip: see `06-active-context.md`. Remote E2E: N
 
 ## Blockers
 
-1. Pending owner checks: `QUALIFICATION_REVIEW_ENABLED` absent in Vercel; guarded authenticated E2E
+1. Pending owner check: guarded authenticated E2E
    (`E2E_WRITE_CONFIRM`) — no authenticated flow has been verified in production yet.
 2. **OD-3 / D-01 / R-D1**: who verifies qualifications in production. Without it no new professional can
    satisfy a hard requirement → external matching is empty for real users.

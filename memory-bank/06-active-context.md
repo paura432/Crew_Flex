@@ -26,5 +26,5 @@ Production rollout **done** on 2026-10-16: 10 migrations, 8 functions, frontend 
 
 ## Next step (one)
 
-Owner: confirm `QUALIFICATION_REVIEW_ENABLED` is absent in Vercel, then run the guarded authenticated E2E
+Owner: run the guarded authenticated E2E (Vercel flag absence confirmed 2026-10-16)
 against production. Rollback target if needed: Vercel deployment `6993757331` (`4f98e67`), DB stays (compatible).
