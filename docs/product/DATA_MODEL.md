@@ -1,5 +1,10 @@
 # Data Model V0
 
+> **Local vs production (2026-10-15).** Production has only migrations `20261009120000` and `20261009120100`.
+> Every object, rule enforcement or control below that cites a migration dated `20261011…` or `20261015…`
+> exists **only in the local database** until the authorized rollout (`docs/audit/CREWFLEX_DIFF_CURRENT.md` §5;
+> state in `memory-bank/01-current-state.md`).
+
 Source of truth: `supabase/migrations/`. This document explains intent.
 
 Principle: **source of truth + deterministic calculation**. Matches and capacity are computed on
@@ -23,13 +28,14 @@ audit_events (append-only, written by triggers)
 One row per auth user. **`id` = `auth.users.id`** (no separate `auth_user_id`, no duplicated email
 or password). Created by trigger `on_auth_user_created`.
 
-| Column                      | Type                                         | Notes                                                                     |
-| --------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
-| `id`                        | uuid PK → `auth.users(id)` on delete cascade |                                                                           |
-| `display_name`              | text 1–120                                   | Only column a user can update.                                            |
-| `account_type`              | `professional` · `organization`              | Chosen at sign-up. UX routing only; **grants no permission**.             |
-| `platform_role`             | `user` · `platform_admin`                    | Default `user`. Never read from sign-up metadata, not updatable by users. |
-| `created_at` / `updated_at` | timestamptz                                  |                                                                           |
+| Column                      | Type                                         | Notes                                                                                         |
+| --------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `id`                        | uuid PK → `auth.users(id)` on delete cascade |                                                                                               |
+| `display_name`              | text 1–120                                   | Updatable by the owner (with `preferred_locale`).                                             |
+| `account_type`              | `professional` · `organization`              | Chosen at sign-up. UX routing only; **grants no permission**.                                 |
+| `platform_role`             | `user` · `platform_admin`                    | Default `user`. Never read from sign-up metadata, not updatable by users.                     |
+| `preferred_locale`          | `es` · `en` · null                           | UI language (phase 1.5). Updatable by the owner (column grant). NULL = cookie/browser decide. |
+| `created_at` / `updated_at` | timestamptz                                  |                                                                                               |
 
 ### `technician_profiles`
 
@@ -42,7 +48,7 @@ or password). Created by trigger `on_auth_user_created`.
 | `current_status`   | `employed` · `contractor` · `between_contracts` |
 | `visibility`       | `private` (default) · `anonymous` · `open`      |
 
-Created by trigger for `account_type = professional`.
+Created by trigger for `account_type = professional` only; API roles have no INSERT grant (`20261015120000`).
 
 ### `organizations`
 
@@ -63,22 +69,29 @@ Written only by migrations/seed (no user write grant).
 
 ### `technician_qualifications`
 
-| Column                  | Type                                            | Writable by owner |
-| ----------------------- | ----------------------------------------------- | ----------------- |
-| `id`                    | uuid PK                                         | –                 |
-| `technician_profile_id` | → `technician_profiles`                         | insert only       |
-| `qualification_type_id` | → `qualification_types`, unique per technician  | yes               |
-| `status`                | `active` · `withdrawn`                          | yes               |
-| `issued_at`             | date, nullable                                  | yes               |
-| `expires_at`            | date, nullable, `≥ issued_at`                   | yes               |
-| `verification_status`   | `pending` · `verified` · `rejected` · `expired` | **no**            |
+| Column                  | Type                                            | Writable by owner                                                              |
+| ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| `id`                    | uuid PK                                         | –                                                                              |
+| `technician_profile_id` | → `technician_profiles`                         | insert only                                                                    |
+| `qualification_type_id` | → `qualification_types`, unique per technician  | insert only                                                                    |
+| `status`                | `active` · `withdrawn`                          | yes                                                                            |
+| `issued_at`             | date, nullable                                  | yes                                                                            |
+| `expires_at`            | date, nullable, `≥ issued_at`                   | yes                                                                            |
+| `verification_status`   | `pending` · `verified` · `rejected` · `expired` | **no**                                                                         |
+| `reviewed_by`           | → `profiles`, nullable (platform admin)         | **no**                                                                         |
+| `reviewed_at`           | timestamptz, nullable                           | **no**                                                                         |
+| `review_note`           | text ≤ 500, nullable; required for rejections   | **no** (owner reads it via `own_qualification_reviews()`; not column-readable) |
 
 Trigger `reset_verification_on_change`: if the owner changes type/dates of a non-pending
-qualification, verification returns to `pending` (prevents "verify then extend expiry" tampering).
+qualification, verification returns to `pending` (prevents "verify then extend expiry" tampering) and,
+since `20261015130400`, the review columns are cleared.
+Trigger `enforce_qualification_expiry` (since `20261015120000`): an `active` row whose type has
+`requires_expiry` must carry `expires_at` (BR-2.7, SQLSTATE 23514).
 
 ### `availability_windows`
 
-`id`, `technician_profile_id`, `starts_at`, `ends_at` (`> starts_at`), `status`
+`id`, `technician_profile_id`, `starts_at`, `ends_at` (`> starts_at`, `≤ starts_at + 366 days` since
+`20261015120000`), `status`
 (`available` · `unavailable`), timestamps.
 
 ### `work_requirements`
@@ -86,7 +99,11 @@ qualification, verification returns to `pending` (prevents "verify then extend e
 `id`, `organization_id`, `title`, `location`, `starts_at`, `ends_at`, `shift`, `headcount` (1–50),
 `urgency`, `status`, `created_by` → `profiles`, timestamps. Created through RPC
 `create_work_requirement(...)` (SECURITY INVOKER: RLS applies) which inserts the requirement and its
-qualifications in one transaction.
+qualifications in one transaction (the API uses the idempotent wrapper `create_work_requirement_idempotent`).
+Deferred constraint triggers `work_requirements_qualification_invariant` /
+`work_requirement_qualifications_invariant` (`20261015130000`): at commit, every `open`/`covered` requirement
+has ≥ 1 `hard` and ≤ 20 qualifications (SQLSTATE 23514), whatever the write path; drafts may be
+incomplete and cancelling/closing is always possible.
 
 ### `work_requirement_qualifications`
 
@@ -99,18 +116,34 @@ qualifications in one transaction.
 `metadata jsonb` (never secrets / documents), `created_at`. **Append-only**: no insert/update/delete
 grant for API roles; rows are written by SECURITY DEFINER triggers.
 
-Actions in use: `requirement.created`, `qualification.verified`. Reserved: `qualification.created`,
-`qualification.updated`, `document.shared`, `candidate_pack.shared`, `organization.member_added`.
+Actions in use: `requirement.created`, `qualification.verified`, `qualification.reviewed` (platform
+review decision with previous/new status, `note_provided`, `request_id`; since `20261015130400`), `qualification.created`,
+`qualification.updated` (type, status or dates changed), `qualification.removed` (owner delete only,
+not account-deletion cascades) — the last three since `20261015120000`. Reserved: `document.shared`,
+`candidate_pack.shared`, `organization.member_added`.
 
 ## Database functions
 
-| Function                                                                  | Security        | Purpose                                                                                                                                     |
-| ------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `is_org_member(org)` / `has_org_role(org, roles)` / `is_platform_admin()` | DEFINER, stable | RLS helpers (avoid recursive policies).                                                                                                     |
-| `create_work_requirement(...)`                                            | INVOKER         | Atomic create, RLS enforced.                                                                                                                |
-| `get_requirement_candidate_pool(requirement_id)`                          | DEFINER         | Returns **matchable data only** for internal + external pools after checking the caller is admin/manager of the requirement's organization. |
-| `handle_new_user()`                                                       | DEFINER trigger | Creates profile (+ technician profile or organization + admin membership).                                                                  |
-| `set_updated_at()`                                                        | trigger         | Reusable `updated_at` maintenance.                                                                                                          |
+| Function                                                                                      | Security        | Purpose                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `is_org_member(org)` / `has_org_role(org, roles)` / `is_platform_admin()`                     | DEFINER, stable | RLS helpers (avoid recursive policies).                                                                                                                                                                     |
+| `create_work_requirement(...)`                                                                | INVOKER         | Atomic create, RLS enforced.                                                                                                                                                                                |
+| `get_requirement_candidate_pool(requirement_id)`                                              | DEFINER         | Returns **matchable data only** for internal + external pools after checking the caller is admin/manager of the requirement's organization. External selection: hard-eligible first (`20261015130300`).     |
+| `get_requirement_external_pool_summary(requirement_id)`                                       | DEFINER         | Counts only (`prefiltered`, `hard_eligible`, `cap`), same authorization: tells the UI whether the external evaluation is complete.                                                                          |
+| `update_professional_profile(...)`                                                            | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`).                                                                                                          |
+| `create_work_requirement_idempotent` · `create_availability_window` · `declare_qualification` | INVOKER         | Idempotent creates (`Idempotency-Key`), key claimed in the same transaction (`app_private.idempotency_keys`).                                                                                               |
+| `review_qualification(id, decision, expected_updated_at, note, request_id)`                   | DEFINER         | Requires `app_private.feature_flags('qualification_review')`; platform admin only, never own, `pending` → `verified`/`rejected` for the version the reviewer saw, row lock, audit `qualification.reviewed`. |
+| `own_qualification_reviews()`                                                                 | DEFINER, stable | The caller's own review reasons (the column is not readable otherwise).                                                                                                                                     |
+| `enforce_requirement_qualifications()`                                                        | DEFINER trigger | BR-1.4 at commit (deferred).                                                                                                                                                                                |
+| `handle_new_user()`                                                                           | DEFINER trigger | Creates profile (+ technician profile or organization + admin membership).                                                                                                                                  |
+| `set_updated_at()`                                                                            | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                          |
+
+### `app_private` schema (not exposed by PostgREST)
+
+`feature_flags(name, enabled)` — owner-only switches, no grant (`qualification_review` gates the review RPC).
+`idempotency_keys(actor_id → profiles, operation, key uuid, request_hash, resource_id, created_at)`, PK
+(actor, operation, key), RLS own rows; `ranked_external_pool(requirement_id)` (ordering helper, no grant
+to API roles); `claim_idempotency_key` / `complete_idempotency_key`.
 
 ## Types
 

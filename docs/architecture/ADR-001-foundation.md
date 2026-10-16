@@ -35,6 +35,14 @@ lets the browser query Postgres directly under RLS, or route operations through 
   use explicit `.ts` import extensions.
 - ➖ Without Docker, local function serving requires the remote project; V0 verifies functions with
   `deno check` / `deno test`.
+  _(Historical, 2026-10-09. Since 2026-10-11 functions are served locally against the Docker stack —
+  `docs/qa/LOCAL_ENVIRONMENT.md`; never test functions against production.)_
+
+## Follow-up
+
+ADR-002 (proposed 2026-10-15) keeps this decision and records one exception to point 4: the internal
+workforce list reads other members' data directly under RLS (OD-4) until member management moves it
+behind a function.
 
 ## Alternatives considered
 

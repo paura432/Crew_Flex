@@ -1,5 +1,9 @@
 # Supabase current state — project `sbjkzrkmcekokkqiuvvh`
 
+> **Historical (2026-10-09/10).** Since then: 5 functions deployed (2026-10-09 evening), and 8 more migrations
+> (`20261011120000`, `20261015*`) plus 4 functions exist **locally only** — "local = remote" below is no longer
+> true. Current state: `memory-bank/01-current-state.md`.
+
 Read-only inspection on 2026-10-09 via the linked Supabase CLI (`supabase/.temp/project-ref` present, 3
 projects visible to the token) and public REST/Auth endpoints with the publishable key. The claude.ai
 Supabase MCP connector still returns "You do not have permission" for this project (different account).

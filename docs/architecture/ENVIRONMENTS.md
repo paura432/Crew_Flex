@@ -13,18 +13,18 @@ GitHub paura432/Crew_Flex · main ──▶ Vercel Production https://crew-flex.
                                         └──▶ Supabase PRODUCTION sbjkzrkmcekokkqiuvvh (eu-central-1)
 ```
 
-| Concern            | Value                                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------- |
-| Git                | `main` is the only permanent branch; short-lived local branches are optional, `main` is pushed directly |
-| Vercel             | Production = `main` (auto-deploy on push). No Preview/branch domain is part of the procedure            |
-| Supabase           | `sbjkzrkmcekokkqiuvvh` (`Crew_Flex`), linked locally (`supabase/.temp/project-ref`)                     |
-| Schema             | `supabase/migrations/*` applied with `supabase db push` (linked) after local review                     |
-| Edge Functions     | `supabase functions deploy <name> --project-ref sbjkzrkmcekokkqiuvvh --use-api`                         |
-| Function secrets   | `ALLOWED_ORIGINS=https://crew-flex.vercel.app` (set 2026-10-09); nothing else is custom                 |
-| Vercel env vars    | Production scope: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` of that project    |
-| Auth               | e-mail confirmation ON; E2E accounts are auto-confirmed individually (Admin API), never globally        |
-| Data               | real users **and** clearly synthetic E2E accounts (`e2e…@` / `…+e2e…@`), cleaned after each campaign    |
-| Local `.env.local` | points to the same project (read-only use; authenticated writes only through the app as yourself)       |
+| Concern            | Value                                                                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Git                | `main` is the only permanent branch; short-lived local branches are optional, `main` is pushed directly                                          |
+| Vercel             | Production = `main` (auto-deploy on push). No Preview/branch domain is part of the procedure                                                     |
+| Supabase           | `sbjkzrkmcekokkqiuvvh` (`Crew_Flex`), linked locally (`supabase/.temp/project-ref`)                                                              |
+| Schema             | `supabase/migrations/*` applied with `supabase db push` (linked) after local review                                                              |
+| Edge Functions     | `supabase functions deploy <name> --project-ref sbjkzrkmcekokkqiuvvh --use-api`                                                                  |
+| Function secrets   | `ALLOWED_ORIGINS=https://crew-flex.vercel.app` (set 2026-10-09); nothing else is custom                                                          |
+| Vercel env vars    | Production scope: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` of that project                                             |
+| Auth               | e-mail confirmation ON; E2E accounts are auto-confirmed individually (Admin API), never globally                                                 |
+| Data               | real users **and** clearly synthetic E2E accounts (`e2e…@` / `…+e2e…@`), cleaned after each campaign                                             |
+| Local `.env.local` | points to the **local** Docker stack (`127.0.0.1:56321`) since 2026-10-11; remote values live in `.env.remote.backup` (never `.env.production*`) |
 
 The code is environment-agnostic: the app reads only the two `NEXT_PUBLIC_*` values (`src/lib/env.ts`);
 functions read platform-provided variables plus `ALLOWED_ORIGINS`.
@@ -34,15 +34,15 @@ functions read platform-provided variables plus `ALLOWED_ORIGINS`.
 Every push to `main` is a production deploy and every remote test runs on real infrastructure. Accepted
 on 2026-10-10 because the product has a single real account and no customer data yet. Compensations:
 
-| Control                                                                                                                                             | Where                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Quality gate before every push: `pnpm check`, `pnpm build`, `git diff --check`; Husky pre-commit (lint-staged, typecheck, tests)                    | `package.json`, `.husky/pre-commit`                                        |
-| Migrations: non-destructive only, reviewed, `db push --dry-run` first, never `reset`/`DROP`/`TRUNCATE` remotely                                     | `AGENTS.md`, `README.md`                                                   |
-| Functions: deploy one at a time, smallest first, verify with probes between steps; rollback = `functions delete` or redeploy of the previous commit | `docs/audit/DEPLOYMENT_PLAN.md`                                            |
-| RLS on every table (26 policies) + JWT verified in code; the service role is never read by functions                                                | migrations, `supabase/functions/_shared`, `repo-hygiene` test              |
-| Remote E2E writes need **two** conditions: authorized ref == URL ref == linked ref, and a per-run confirmation typed on the command line            | `tests/e2e/guard.ts`, `scripts/e2e/_guard.sh`, `e2e-production-guard` test |
-| Synthetic data only, obviously named, scoped cleanup script; global Auth settings untouched; no notifications, no mass matching                     | `scripts/e2e/seed-users.sh`, `scripts/e2e/cleanup-synthetic.sh`            |
-| Every remote mutation is logged in `docs/audit/DEPLOYMENT_PLAN.md` with date, command and result                                                    | execution logs §8–§9                                                       |
+| Control                                                                                                                                                 | Where                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Quality gate before every push: `pnpm check`, `pnpm build`, `git diff --check`; Husky pre-commit (lint-staged, typecheck, tests)                        | `package.json`, `.husky/pre-commit`                                        |
+| Migrations: non-destructive only, reviewed, `db push --dry-run` first, never `reset`/`DROP`/`TRUNCATE` remotely                                         | `AGENTS.md`, `README.md`                                                   |
+| Functions: deploy one at a time, smallest first, verify with probes between steps; rollback = `functions delete` or redeploy of the previous commit     | `docs/audit/DEPLOYMENT_PLAN.md`                                            |
+| RLS on every table (26 policies remotely; 29 locally with the unapplied migrations) + JWT verified in code; the service role is never read by functions | migrations, `supabase/functions/_shared`, `repo-hygiene` test              |
+| Remote E2E writes need **two** conditions: authorized ref == URL ref == linked ref, and a per-run confirmation typed on the command line                | `tests/e2e/guard.ts`, `scripts/e2e/_guard.sh`, `e2e-production-guard` test |
+| Synthetic data only, obviously named, scoped cleanup script; global Auth settings untouched; no notifications, no mass matching                         | `scripts/e2e/seed-users.sh`, `scripts/e2e/cleanup-synthetic.sh`            |
+| Every remote mutation is logged in `docs/audit/DEPLOYMENT_PLAN.md` with date, command and result                                                        | execution logs §8–§9                                                       |
 
 Re-evaluate OD-9 (a separate staging project) before the first real organization onboards or before
 any migration that rewrites existing rows.

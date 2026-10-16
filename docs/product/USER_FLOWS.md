@@ -48,3 +48,22 @@ owner; the page re-reads after save, so a reload shows the persisted state.
 
 From a match, the organization requests interest; the professional consents and shares a
 Candidate Pack scoped to that requirement; confirmed assignments cover headcount.
+
+## UF-7 Language (IMPLEMENTED, local)
+
+Any signed-in user opens `/app/settings` → Language / Idioma → picks Español or English. The choice is
+saved on their profile through `user-preferences` and in the locale cookie; the current page re-renders
+in place (no reload, no sign-out, form state kept). It persists after reload and after signing out and
+back in, on any device. Before sign-in the public pages offer the same ES | EN switch (cookie only), and
+the browser language decides when nothing is stored (`docs/product/I18N_STRATEGY.md` §3).
+
+## UF-8 Platform admin: qualification review (IMPLEMENTED, local only — activation needs OD-3)
+
+1. A platform admin (`profiles.platform_role = platform_admin`; the nav entry is shown only to them) opens
+   `/app/admin/verifications`: pending, active qualifications of other people, with the version loaded.
+2. Verify, or reject with a mandatory reason (≤ 500 chars). Never their own qualification.
+3. `qualification-reviews` → `review_qualification` locks the row and re-checks status and version; a stale
+   version or a concurrent decision returns a conflict and nothing is written. Audited `qualification.reviewed`.
+4. The professional sees the new status and, for a rejection, the reason; matching treats a verified hard
+   qualification as valid (BR-3).
+5. Fails closed unless the owner-only DB flag and the function secret are both on (`20261015130400`).

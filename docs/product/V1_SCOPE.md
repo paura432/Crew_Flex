@@ -7,28 +7,40 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 
 ## NOW (Foundation V0)
 
-| Item                                                                                        | Status                                          |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Repo, quality gates (ESLint, Prettier, Husky, lint-staged, Vitest)                          | IMPLEMENTED                                     |
-| Product + architecture documentation                                                        | IMPLEMENTED                                     |
-| Email/password auth (sign in, sign up, sign out, session refresh)                           | IMPLEMENTED                                     |
-| `/app/**` protected (proxy redirect + server-side session check)                            | IMPLEMENTED                                     |
-| Data model V0 + RLS from first migration                                                    | IMPLEMENTED                                     |
-| Edge Functions: `health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`     | IMPLEMENTED                                     |
-| Deterministic matching + capacity (pure TS, tested)                                         | IMPLEMENTED                                     |
-| Organization dashboard with capacity overview                                               | IMPLEMENTED                                     |
-| Requirements list / create / detail / matches                                               | IMPLEMENTED                                     |
-| Organization workforce (read-only list)                                                     | IMPLEMENTED                                     |
-| Professional passport (edit) + qualifications (declare/edit/withdraw/remove) + availability | IMPLEMENTED (local; functions not yet deployed) |
-| Audit foundation (`requirement.created`, `qualification.verified`)                          | IMPLEMENTED                                     |
-| Remote apply of migrations + function deploy                                                | BLOCKED (see final report / `ARCHITECTURE.md`)  |
+| Item                                                                                                                                                                             | Status                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Repo, quality gates (ESLint, Prettier, Husky, lint-staged, Vitest)                                                                                                               | IMPLEMENTED                                                            |
+| Product + architecture documentation                                                                                                                                             | IMPLEMENTED                                                            |
+| Email/password auth (sign in, sign up, sign out, session refresh)                                                                                                                | IMPLEMENTED                                                            |
+| `/app/**` protected (proxy redirect + server-side session check)                                                                                                                 | IMPLEMENTED                                                            |
+| Data model V0 + RLS from first migration                                                                                                                                         | IMPLEMENTED                                                            |
+| Edge Functions: `health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`                                                                                          | IMPLEMENTED                                                            |
+| Deterministic matching + capacity (pure TS, tested)                                                                                                                              | IMPLEMENTED                                                            |
+| Organization dashboard with capacity overview                                                                                                                                    | IMPLEMENTED                                                            |
+| Requirements list / create / detail / matches                                                                                                                                    | IMPLEMENTED                                                            |
+| Organization workforce (read-only list; managers/admins only, members see a notice)                                                                                              | IMPLEMENTED                                                            |
+| Professional passport (edit) + qualifications (declare/edit/withdraw/remove) + availability                                                                                      | IMPLEMENTED (local; functions not yet deployed)                        |
+| Audit foundation (`requirement.created`, `qualification.created/updated/removed/verified`)                                                                                       | IMPLEMENTED (`qualification.*` writes: local)                          |
+| DB backstops for EF-only rules + candidate-pool selection order (phase 0.8, migrations `20261015120000`, `20261015120100`)                                                       | IMPLEMENTED (local Docker DB 2026-10-15 + PGlite; not remote)          |
+| Bilingual UI (ES/EN), Settings page, persisted language preference (`user-preferences`)                                                                                          | IMPLEMENTED (local; function not yet deployed)                         |
+| Remediation 2026-10-15: BR-1.4 in the DB (E-3), atomic passport (I-3), idempotent creates (I-1), eligible-first external pool + completeness summary (`20261015130000`…`130300`) | IMPLEMENTED (local Docker DB + PGlite + local E2E; not remote)         |
+| Platform-admin qualification review (`review_qualification`, `qualification-reviews`, `/app/admin/verifications`, `20261015130400`)                                              | IMPLEMENTED (local only) — **blocked for remote by OD-3 approval**     |
+| Remote apply of migrations + function deploy                                                                                                                                     | PENDING OWNER AUTHORIZATION (`docs/audit/CREWFLEX_DIFF_CURRENT.md` §5) |
 
 ## NEXT
 
-- Deploy `professional-profile` and `professional-qualifications` to production (explicit authorization).
+- Production rollout of everything verified locally (explicit authorization; full order in
+  `docs/audit/CREWFLEX_DIFF_CURRENT.md` §5): migrations `20261011120000` → `20261015120000` → `120100` →
+  `130000` → `130100` → `130200` → `130300` **and `130400`** (its schema is required by
+  `professional-qualifications`; the review stays closed without the owner-only flag row and the function
+  secret — recommended option (a); option (b) patches the function instead, see §5), then the functions `work-requirements`, `capacity-evaluate`, `matching-evaluate`,
+  `professional-availability`, `professional-profile`, `professional-qualifications`, `user-preferences`,
+  then push `main`. A partial set breaks pages (e.g. matches needs `summary.pool`).
+- V1.3 integration plan and pending decisions: `docs/integration/crewflex-v13/` (D-01…D-12).
 - Availability: "AOG only" day state and shift-pattern generator (OD C-8).
 - Organization member management (`organization-workforce` function): invite/add members.
-- Platform-admin verification flow (privileged, audited) for qualifications.
+- Approve OD-3 / D-01, then deploy `qualification-reviews` with `QUALIFICATION_REVIEW_ENABLED=true` and
+  insert the `qualification_review` flag row (the flow itself is implemented locally, 2026-10-15).
 - Private Storage bucket for evidence documents + short-lived signed URLs.
 - Playwright journeys for the vertical slice.
 

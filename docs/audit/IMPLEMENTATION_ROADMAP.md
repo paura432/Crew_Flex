@@ -1,5 +1,10 @@
 # Implementation roadmap
 
+> **Partly historical.** Step 0 ("create staging", "no functions deployed") is DONE/CANCELLED: functions
+> were deployed 2026-10-09 and staging was dropped by OD-9. The verifier flow is implemented locally
+> (OD-3-gated). The authoritative rollout list (incl. `20261015130400`) is
+> `docs/audit/CREWFLEX_DIFF_CURRENT.md` §5; current state in `memory-bank/01-current-state.md`.
+
 Ordered by real dependencies found in the audit. Each phase ends with `pnpm check`, `pnpm build`, tests
 for every new policy/function, and a parity update in `PARITY_MATRIX.md`.
 
@@ -44,7 +49,37 @@ plan §7. Phases 1–7 below are unchanged and remain blocked behind step 0.
   with the guarded remote E2E (`tests/e2e/guard.ts`) and the deployed UI, then unblocks Phases 1–7.
 - Phases 1–7 keep their order; everything connects to the same project.
 
-## Phase 1 — Identity & profile (P0) · value high · risk low · M
+## Phase 1 (DONE locally 2026-10-11) · Phase 1.5 ES/EN (DONE locally 2026-10-11) · Phase 1.6 review
+
+- Phase 1: `professional-profile`, `professional-qualifications`, passport + qualifications UI, BR-2.7/2.8,
+  BR-11 completeness (`docs/audit/PHASE1_PROFILE_QUALIFICATIONS.md`).
+- Phase 1.5: next-intl without routing, catalogs ES/EN, `/app/settings`, `user-preferences` function,
+  migration `20261011120000_preferred_locale`, locale precedence, formats, tests
+  (`docs/product/I18N_STRATEGY.md`, `docs/audit/I18N_COVERAGE.md`).
+- Phase 1.6: full functional review and re-classified matrix (`FULL_FUNCTIONAL_REVIEW.md`, `PARITY_MATRIX.md`).
+- **Not deployed**: the three functions and the migration wait for explicit authorization (step 0b below).
+
+## Step 0b — Deploy phases 1/1.5 to production (needs explicit approval)
+
+`supabase db push` (migration `20261011120000_preferred_locale`, additive) → `supabase functions deploy
+professional-profile professional-qualifications user-preferences` → guarded `pnpm e2e:remote` (19 checks)
+→ `git push` (Vercel). Rollback: `functions delete` per function; the column is nullable and unused by
+the previous build.
+
+## Prioritised next phases (dependencies first, `FULL_FUNCTIONAL_REVIEW.md` §10)
+
+| Order | Phase                                       | Depends on    | Unlocks                                | Size |
+| ----- | ------------------------------------------- | ------------- | -------------------------------------- | ---- |
+| 1     | Step 0b deploy                              | authorization | everything professional-side in prod   | S    |
+| 2     | Verifier flow (privileged, audited EF + UI) | OD-3          | hard eligibility for new professionals | M    |
+| 3     | Wallet documental (CF-D01–D05)              | 2 (linkage)   | evidence behind verification           | L    |
+| 4     | Org settings + invitations (F09/F10)        | —             | real internal workforce                | M    |
+| 5     | Requirement lifecycle + filters (F05/F03)   | —             | operations hygiene                     | S    |
+| 6     | Model decisions C-7/C-8/C-9/C-10/C-14       | founders      | B04/B05/C05/G02 + recovered candidates | —    |
+| 7     | Marketplace (E01–E06, F07, H04, C07)        | 2–6           | the original S1 flow                   | XL   |
+| 8     | Urgent ops, tools, logbook, notifications   | 7             | S1 completeness                        | M    |
+
+## Phase 1 — Identity & profile (P0) · value high · risk low · M (historical plan)
 
 - `professional-profile` EF (GET/PATCH): base location, mobility, years, current status, visibility.
 - Profile edit UI with S1 passport step 1 + 4 layout (identity, rate/mobility where modelled).

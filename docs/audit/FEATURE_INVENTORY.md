@@ -1,5 +1,10 @@
 # Feature inventory
 
+> **Historical statuses.** Superseded by `docs/audit/PARITY_MATRIX.md` (2026-10-11) and
+> `docs/audit/CREWFLEX_COMPLETENESS_AUDIT.md` (2026-10-15). Where this file says "not verified because Edge
+> Functions are not deployed": five were deployed on 2026-10-09; the actual gap is that authenticated
+> production E2E was never run.
+
 Sources: S1 = `CrewFlex_v1.1.html`, S2 = Blueprint, BRIEF = current engineering direction. Routes are the
 current Next.js app. Status vocabulary: `NOT_FOUND` · `SOURCE_ONLY` · `UI_ONLY` · `MOCKED` · `PARTIAL` ·
 `IMPLEMENTED_UNVERIFIED` · `VERIFIED` · `BLOCKED`. "Backend" = Edge Function + tables. "Tests" = existing

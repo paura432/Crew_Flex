@@ -1,7 +1,7 @@
 # Local environment — Supabase in Docker + synthetic data (2026-10-10)
 
-Fully functional local stack: Postgres 17 with the two migrations and the deterministic seed, Auth,
-PostgREST, Studio, Mailpit and the five Edge Functions, all on **127.0.0.1**. Nothing here touches the
+Fully functional local stack: Postgres 17 with all migrations in `supabase/migrations/` (ten on 2026-10-15) and
+the deterministic seed, Auth, PostgREST, Studio, Mailpit and every Edge Function (nine on 2026-10-15), all on **127.0.0.1**. Nothing here touches the
 remote project `sbjkzrkmcekokkqiuvvh`; the remote rules in `docs/architecture/ENVIRONMENTS.md` still apply.
 
 ## 1. Prerequisites (verified on WSL2 Ubuntu 24.04)
@@ -21,7 +21,7 @@ pnpm exec supabase status -o env                                            # AP
 cp .env.local .env.remote.backup      # keep the remote values aside (git-ignored). NEVER name it .env.production*
 printf 'NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:56321\nNEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<PUBLISHABLE_KEY from status>\n' > .env.local
 cp -n supabase/functions/.env.example supabase/functions/.env               # ALLOWED_ORIGINS=localhost origins (local only)
-pnpm exec supabase functions serve --env-file supabase/functions/.env       # the five functions at http://127.0.0.1:56321/functions/v1/<name>
+pnpm exec supabase functions serve --env-file supabase/functions/.env       # every function at http://127.0.0.1:56321/functions/v1/<name>
 pnpm dev                                                                    # http://localhost:3000 (or 3001)
 ```
 
@@ -37,7 +37,8 @@ bash scripts/local/sb-local.sh db reset
 
 - Every CLI call against the database goes through `scripts/local/sb-local.sh`, which refuses `--linked`,
   `--project-ref`, `--project-id`, any non-local `--db-url`, and the subcommands that can reach a remote
-  project (`link`, `projects`, `secrets`, `functions deploy`, `db push`, `migration up/repair`, `branches`).
+  project (`link`, `projects`, `secrets`, `functions deploy`, `db push`, `migration repair`, `branches`); `migration up` is allowed only with the
+  forced `--local` (applies pending migrations without a reset).
   Before running it checks `supabase status` and requires API and DB URLs on 127.0.0.1/localhost.
   Guard behaviour is covered by `tests/security/local-guard.test.ts`.
 - The repo stays linked to production for the remote procedures; that is why bare `supabase db …` commands
@@ -120,7 +121,10 @@ Row counts after `db reset`: 22 users/profiles, 19 technician profiles, 3 organi
 ## 7. Phase 1 — passport and qualifications (2026-10-11, local only)
 
 - Seven functions served locally (`professional-profile`, `professional-qualifications` added);
-  `supabase/config.toml` carries their `verify_jwt = false` blocks. Not deployed.
+  `supabase/config.toml` carries their `verify_jwt = false` blocks. Not deployed. Phase 1.5 adds
+  `user-preferences` (eight functions) and migration `20261011120000_preferred_locale`, applied locally with
+  `bash scripts/local/sb-local.sh migration up` (now allowed, forced `--local`; no reset, data kept) and types
+  regenerated with `bash scripts/local/sb-local.sh gen types typescript --local --schema public`.
 - Verification: `pnpm check` (lint, typecheck, Vitest incl. RLS F-block, Prettier, Deno lint/check,
   32 Deno tests), `pnpm build`, local E2E 17/17, browser smoke with the passport and qualification
   flows at 1440/768/390 (`docs/audit/evidence/local-10…13-*.jpg`). Full report:
@@ -128,3 +132,42 @@ Row counts after `db reset`: 22 users/profiles, 19 technician profiles, 3 organi
 - Seed accounts exercised: `delta` (external, anonymous; edits passport, declares B2/TR-A350, withdraws
   FTS → MAD eligible 3 → 2 → restored), `echo` (professional B, isolation), `admin.mro` (matching),
   `alpha` (organization admin reads but cannot edit a member's qualification).
+
+## 8. Phase 1.5/1.6 — ES/EN and functional review (2026-10-11, local only)
+
+- Language: `/app/settings` for every account; seed accounts start with no preference (`preferred_locale`
+  NULL → browser language, headless Chromium = English). Tests restore the preference they change; after an
+  interrupted smoke run, reset with
+  `docker exec -i supabase_db_crew-flex psql -U postgres -d postgres -c "update public.profiles set preferred_locale = null"`.
+- Browser smoke: 59 checks (English + Spanish flows 6/7, Spanish screenshots `local-14…21-*.jpg`). Chromium
+  builds under `~/.cache/ms-playwright` change between sessions (other projects install/remove revisions):
+  pick an existing one with `ls -d ~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome`.
+- Verification run: `pnpm check` (Vitest 150 incl. i18n/RLS G/resolve, Deno 36), `pnpm build`, local E2E 19/19,
+  smoke, `git diff --check`. Report: `docs/audit/FULL_FUNCTIONAL_REVIEW.md`, `docs/audit/I18N_COVERAGE.md`.
+
+## 9. Remediation run (2026-10-15) — what changed and how to reproduce
+
+- **Docker from WSL works again** (`/var/run/docker.sock` present). Symptom seen: the CLI got
+  `DbConnectError … read ECONNRESET` on 127.0.0.1:56322 while the port was open and the container healthy
+  (the Docker Desktop port proxy was stale; the DB never saw the connection). Fix: `docker restart
+supabase_db_crew-flex` (volume kept), wait for `supabase status`, retry. No reset, no volume removal.
+- Migrations `20261015120000` … `20261015130400` were applied **incrementally** to the local DB with
+  `bash scripts/local/sb-local.sh migration up` (no reset). Fresh creation is covered by the PGlite suite
+  (`tests/db`, all migrations + seed from scratch).
+- The seed now inserts each requirement and its qualifications in **one statement** (BR-1.4 is checked at
+  commit since `20261015130000`).
+- Local review flow needs both switches: `QUALIFICATION_REVIEW_ENABLED=true` in `supabase/functions/.env`
+  (template updated) and, once per local database, `docker exec supabase_db_crew-flex psql -U postgres -c
+"insert into app_private.feature_flags (name, enabled) values ('qualification_review', true)"`. Never set
+  either remotely before OD-3 is approved. (`alter database … set` of a custom parameter is not allowed for
+  the Supabase `postgres` role, hence the table.)
+- Concurrency checks that need two real sessions: `bash scripts/local/db-race-check.sh` (E-3 ×2, I-1, review;
+  local container only, restores the seed).
+- E2E: `pnpm e2e:remote` with `.env.e2e` pointing at `http://127.0.0.1:56321` runs `remote-smoke` (19) and the
+  local-only `local-remediation` suite (6; skipped for any non-local URL). Both suites run in parallel:
+  never use the same synthetic professional for writes in both (`remote-smoke` edits Delta).
+- Browser smoke: prefer a **production build** (`pnpm build && pnpm exec next start -p 3002`, `BASE=http://localhost:3002`).
+  In `next dev`, React's dev-only performance tracks intermittently log `Failed to execute 'measure' on
+'Performance' … negative time stamp` on unrelated pages, which fails check 17; the production build has none.
+- Stop a background `next start` with `pkill -f "[n]ext start -p 3002"` (the bracket keeps `pkill` from
+  matching its own command line).

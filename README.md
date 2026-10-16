@@ -14,17 +14,20 @@ Status: **Foundation + Prototype V0** — see [`docs/product/V1_SCOPE.md`](docs/
 
 ```
 Browser → Next.js (App Router, server-side) → Supabase Edge Functions (Deno) → PostgreSQL + RLS
-                     └─ Supabase Auth (cookies via @supabase/ssr)
+                     ├─ Supabase Auth (cookies via @supabase/ssr)
+                     └─ direct reads under RLS: own context, catalog, internal workforce (no direct writes)
 ```
 
 Details: [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md),
-[`ADR-001`](docs/architecture/ADR-001-foundation.md).
+[`ADR-001`](docs/architecture/ADR-001-foundation.md), [`ADR-002`](docs/architecture/ADR-002-modular-domain-architecture.md).
+Agents and new engineers: start with [`AGENTS.md`](AGENTS.md) and [`memory-bank/`](memory-bank/README.md).
 
 ## Requirements
 
 - Node.js ≥ 24, pnpm 10 (`corepack enable`)
 - Deno 2 (Edge Function lint/check/tests)
-- Optional: Docker (for `supabase start` local stack). The Supabase CLI is a dev dependency
+- Docker (local Supabase stack — the standard way to verify migrations, functions and E2E;
+  `docs/qa/LOCAL_ENVIRONMENT.md`). The Supabase CLI is a dev dependency
   (`pnpm exec supabase`).
 
 ## Install
@@ -103,7 +106,9 @@ Pre-commit runs lint-staged + typecheck + unit tests. See
 
 ## Edge Functions
 
-`health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-availability`. Contract, errors and auth
+`health`, `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-availability`,
+`professional-profile`, `professional-qualifications`, `user-preferences`, `qualification-reviews` (which of them are
+deployed: [`memory-bank/01-current-state.md`](memory-bank/01-current-state.md)). Contract, errors and auth
 flow: [`docs/architecture/EDGE_FUNCTIONS.md`](docs/architecture/EDGE_FUNCTIONS.md).
 
 ## Git workflow (main-only, temporary — OD-9)
@@ -115,22 +120,24 @@ history rewrite. Details and the risk statement: [`docs/architecture/ENVIRONMENT
 ## Migrations
 
 Every structural change is a new file in `supabase/migrations/`. Process: migration → local
-verification (`pnpm test:run` RLS suite, `supabase db reset` when available) → review → remote
+verification (`pnpm test:run` RLS suite, then `bash scripts/local/sb-local.sh migration up` on the Docker stack) → review → remote
 apply. No `DROP`, `TRUNCATE` or remote resets.
 
 ## Project structure
 
 ```
 src/app/            routes (thin)
-src/features/       auth, requirements, capacity, matching, workforce, qualifications, professional
+src/features/       auth, requirements, capacity, matching, workforce, qualifications, professional,
+                    availability, preferences, reviews
 src/domain/         pure business logic (shared with Edge Functions)
 src/lib/            env, Supabase clients, Zod validation, formatting
 src/server/         server-only: session actor, Edge Function invoker
 src/components/     ui primitives + layout
 supabase/           config, migrations, seed, functions
-tests/              PGlite RLS tests, repo hygiene
+tests/              PGlite RLS tests, env-gated E2E, i18n, security guards, memory-bank checks
 fixtures/           synthetic typed fixtures
-docs/               product, architecture, QA
+docs/               product, architecture, QA, audit, V1.3 integration
+memory-bank/        dated operational context (read after AGENTS.md)
 ```
 
 ## Security principles

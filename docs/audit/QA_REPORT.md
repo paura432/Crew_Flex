@@ -1,5 +1,8 @@
 # QA report — parity audit + availability slice (2026-10-09)
 
+> **Historical log (2026-10-09/10).** Test counts and "Edge Functions are not deployed" are dated. Current
+> gates: `memory-bank/01-current-state.md`.
+
 Branch `feat/crewflex-parity-migration` (from `main` @ `52d39f9`). Every result below was executed in
 this session; nothing is inferred.
 

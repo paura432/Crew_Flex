@@ -4,25 +4,32 @@ Authoritative rules for any agent or engineer working in this repo. Short on pur
 
 ## Read first
 
-1. `docs/product/PRODUCT.md`
-2. `docs/product/V1_SCOPE.md`
-3. `docs/product/BUSINESS_RULES.md`
-4. `docs/architecture/ARCHITECTURE.md`
-5. `docs/product/SECURITY_PRIVACY.md`
-6. The domain doc for your task: `DATA_MODEL.md`, `AUTHORIZATION.md`, `EDGE_FUNCTIONS.md`,
-   `DESIGN_SYSTEM.md`, `docs/qa/QUALITY_GATES.md`, `OPEN_DECISIONS.md`.
+1. This file.
+2. `memory-bank/01-current-state.md` — what exists, where (local vs production), dated with a SHA.
+3. `memory-bank/06-active-context.md` — what is in flight, next step, decisions waiting on the owner.
+4. The docs for your task (map in `memory-bank/README.md`): database/RLS → `memory-bank/04-security-invariants.md`,
+   `AUTHORIZATION.md`, `DATA_MODEL.md`, `ENVIRONMENTS.md` · matching → `BUSINESS_RULES.md` + `src/domain` tests ·
+   frontend → `DESIGN_SYSTEM.md`, `I18N_STRATEGY.md`, `node_modules/next/dist/docs/` · deploys → `ENVIRONMENTS.md`
+   - explicit owner authorization.
+5. The real code and its tests. Docs never replace reading the code you change; when they disagree, the code
+   and migrations win and the doc gets fixed.
+
+Product background: `docs/product/PRODUCT.md`, `V1_SCOPE.md`. Architecture: `ARCHITECTURE.md`, ADR-001, ADR-002.
 
 ## Roles
 
-| Role                            | Owns                                                     | Must check                                                                                            |
-| ------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Product guardian**            | Scope, docs truthfulness                                 | Change is in `V1_SCOPE.md` NOW; statuses (IMPLEMENTED/PARTIAL/PLANNED/OPEN DECISION) are true         |
-| **Frontend engineer**           | `src/app`, `src/features/*/components`, `src/components` | Server Components by default; no business logic in JSX; loading/empty/error/success; a11y; responsive |
-| **Backend / Supabase engineer** | `supabase/migrations`, `supabase/functions`              | Versioned, non-destructive migrations; RLS in the same migration; user-context client                 |
-| **Security engineer**           | Auth, RLS, secrets, privacy                              | Threat model in `SECURITY_PRIVACY.md` still holds; tests for every new policy                         |
-| **Matching engineer**           | `src/domain`                                             | Deterministic, pure, tested; `BUSINESS_RULES.md` updated in the same change                           |
-| **QA engineer**                 | Tests, gates                                             | `pnpm check` + `pnpm build` + `git diff --check` actually run and pass                                |
-| **Reviewer**                    | Every change                                             | All of the above; small commits; no unrelated changes                                                 |
+| Role                            | Owns                                                     | Must check                                                                                            | Subagent                     |
+| ------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------- |
+| **Product guardian**            | Scope, docs truthfulness                                 | Change is in `V1_SCOPE.md` NOW; statuses (IMPLEMENTED/PARTIAL/PLANNED/OPEN DECISION) are true         | `product-guardian`           |
+| **Frontend engineer**           | `src/app`, `src/features/*/components`, `src/components` | Server Components by default; no business logic in JSX; loading/empty/error/success; a11y; responsive | `frontend-architect`         |
+| **Backend / Supabase engineer** | `supabase/migrations`, `supabase/functions`              | Versioned, non-destructive migrations; RLS in the same migration; user-context client                 | `backend-supabase-architect` |
+| **Security engineer**           | Auth, RLS, secrets, privacy                              | Threat model in `SECURITY_PRIVACY.md` still holds; tests for every new policy                         | `security-reviewer`          |
+| **Matching engineer**           | `src/domain`                                             | Deterministic, pure, tested; `BUSINESS_RULES.md` updated in the same change                           | `domain-matching-engineer`   |
+| **QA engineer**                 | Tests, gates                                             | `pnpm check` + `pnpm build` + `git diff --check` actually run and pass                                | `qa-release-engineer`        |
+| **Reviewer**                    | Every change                                             | All of the above; small commits; no unrelated changes                                                 | (independent of the author)  |
+
+Subagent briefs live in `.claude/agents/`; handoffs, independent review and evidence rules in
+`memory-bank/05-agent-workflows.md`. Agents never replace the owner on business decisions.
 
 ## Rules
 
@@ -45,6 +52,22 @@ Authoritative rules for any agent or engineer working in this repo. Short on pur
   Production and the single Supabase project; work on `main` (or a short-lived local branch merged
   fast-forward), run the full quality gate before every push, never force-push or rewrite history.
   Remote test writes need the two-condition guard in `docs/architecture/ENVIRONMENTS.md` §3.
+
+## STOP — ask the owner before
+
+- Any remote write: push/merge to `main` (= production deploy), `supabase db push`, `functions deploy`,
+  `secrets set`, Auth/Vercel settings, remote E2E writes, `migration repair`.
+- Implementing anything that depends on an open decision (`memory-bank/07-decisions-index.md`).
+- Overwriting or discarding changes you did not make (the tree often carries uncommitted work).
+- Making a failing test pass by weakening it or widening a grant.
+- Running a write against a target you cannot prove is local.
+
+## Memory bank upkeep
+
+Update `memory-bank/06-active-context.md` at the end of every session that changes, blocks or hands off
+work; `01-current-state.md` whenever a commit, push, deploy or migration changes what runs where (always
+with date + SHA + where verified). Other memory-bank files change only when their subject changes (table in
+`memory-bank/README.md`). `pnpm check` validates links, statuses, decision ids and secret patterns.
 
 ## Commands
 

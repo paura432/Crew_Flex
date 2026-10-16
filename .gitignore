@@ -33,6 +33,8 @@ next-env.d.ts
 
 # local scratch material (prototypes, PDFs, exports) — never committed
 /tmp/
+# reference prototype archives dropped at the repo root (e.g. CrewFlex_v1.3_Unificada.zip)
+/*.zip
 
 # debug
 npm-debug.log*

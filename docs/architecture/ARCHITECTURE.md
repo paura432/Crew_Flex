@@ -9,7 +9,8 @@ Browser
 Next.js (App Router, Server Components by default)
  │  proxy.ts: refresh session, redirect unauthenticated /app/**
  │  server-only: invokeEdgeFunction(name, {method, body, query}) with user access token
- │  direct PostgREST reads under RLS only for own context + reference data
+ │  direct PostgREST reads under RLS: own context + reference data; exception: internal workforce
+ │  (src/features/workforce/api.ts, other members' data under can_view_member / OD-4) — ADR-002 §Decision 3
  ▼
 Supabase Edge Functions (Deno)                       Supabase Auth (email/password, JWT)
  │                                                    Edge Function Secrets (runtime only)
@@ -43,11 +44,12 @@ src/
   components/layout/    app shell, navigation
   features/<domain>/    api.ts (server data access), actions.ts (server actions), components/
   domain/               PURE business logic — no I/O, no framework. Shared with Edge Functions.
-  lib/supabase/         browser / server / proxy clients (separate files)
+  lib/supabase/         server + proxy clients (no browser data client)
   lib/validation/       Zod schemas shared by forms, server actions and Edge Functions
   lib/env.ts            public env parsing
   server/               server-only helpers (session/actor, edge invoke)
-  types/                database row types
+  i18n/                 next-intl config, locale resolution (catalogs in /messages)
+  types/                API contracts (api.ts) + generated database types
 supabase/
   migrations/           versioned SQL (source of truth)
   seed.sql              synthetic local data
@@ -55,7 +57,12 @@ supabase/
   functions/<name>/     one function per domain operation
 tests/
   db/                   PGlite migration + RLS tests
-  security/             repo hygiene tests
+  e2e/                  env-gated E2E (local Docker stack, or guarded remote)
+  i18n/                 catalog parity
+  security/             repo hygiene + local/remote guards
+  docs/                 memory-bank integrity
+scripts/local/          local-only wrapper, race checks, browser smoke, cleanup
+memory-bank/            dated operational context for agents (see memory-bank/README.md)
 fixtures/               typed synthetic fixtures for tests
 ```
 
@@ -70,12 +77,15 @@ There is one matching algorithm and one capacity algorithm.
 `cacheComponents` is **disabled** in V0: all `/app/**` routes depend on the session and are dynamic.
 Revisit when public/marketing pages grow (ADR-001 consequences).
 
-## Environment status
+## Environment status (verified 2026-10-15)
 
-| Capability                              | Status                                                                    |
-| --------------------------------------- | ------------------------------------------------------------------------- |
-| Local Next.js dev/build                 | Works                                                                     |
-| Local Supabase stack (`supabase start`) | Requires Docker — not available on the bootstrap machine                  |
-| Migration + RLS verification            | PGlite (Postgres 17 WASM) in Vitest with `auth` stubs                     |
-| Edge Functions verification             | `deno check` + `deno test`                                                |
-| Remote project link/apply/deploy        | BLOCKED: no credentials for `sbjkzrkmcekokkqiuvvh` on this machine (OD-2) |
+| Capability                   | Status                                                                                                                                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Local Next.js dev/build      | Works                                                                                                                                                                                                        |
+| Local Supabase stack         | Works: Docker Desktop via WSL, ports 563xx, only through `scripts/local/sb-local.sh` (`docs/qa/LOCAL_ENVIRONMENT.md`)                                                                                        |
+| Migration + RLS verification | PGlite in Vitest (every run) **and** the local Docker database (incremental `migration up`, race checks)                                                                                                     |
+| Edge Functions verification  | `deno check` / `deno test` + `supabase functions serve` locally + local E2E                                                                                                                                  |
+| Remote project               | Linked; 5 functions deployed 2026-10-09, 2 migrations applied. Any further apply/deploy needs **explicit owner authorization** (OD-9). Management API returned 403 for the current CLI account on 2026-10-15 |
+
+Current deployed-vs-local state: `memory-bank/01-current-state.md`. (Until 2026-10-11 this table said Docker
+was unavailable and the remote project had no credentials; both are historical.)
