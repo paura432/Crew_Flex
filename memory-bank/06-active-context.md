@@ -4,36 +4,33 @@ _Last updated 2026-10-19 (evening) CEST. Keep under ~60 lines; replace, don't ap
 
 ## Current task
 
-Close production release 1 = commit **`65df3b9`** (availability cycle generator, «AOG only», tools).
-Plan revision 2 (safe order) for owner approval: `docs/qa/ROLLOUT_PLAN_2026-10-19.md`. **Step 0
-(read-only preflight) GO; step 1 executed 2026-10-19 with authorization** (matching-evaluate and
-capacity-evaluate v3 from `65df3b9`); step 2 executed 2026-10-19 (migrations #1–#3, 13 remote). Stopped:
-steps 3–6 not authorized.
+**Release 1 (`65df3b9`) is in production since 2026-10-19 18:57 CEST** — steps 1–5 of
+`docs/qa/ROLLOUT_PLAN_2026-10-19.md` executed with owner authorization, every check PASS. Stopped: step 6
+(production E2E with writes) not authorized.
 
 ## State
 
-| Item          | State                                                                                                                                                      |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Release 1     | `65df3b9`: migrations #1–#3 (from `2216d38`, step 2) and #4–#5 (from `65df3b9`, step 4); matching + capacity (step 1), professional-availability (step 3)  |
-| Production    | preflight 2026-10-19: `origin/main` `ddf5c4b`, 10/10 migrations, 8 functions, 0 flags, 0 buckets, 0 availability windows                                   |
-| Compatibility | `scripts/local/release-compat/run.sh ddf5c4b 65df3b9 20261015130400 2216d38` → 111/111 (safe order); without the 4th arg 67/67; old FE 5/5; release FE 9/9 |
-| Local `main`  | wallet (Supabase flag `document_wallet`, M-3 cleanup) — release 2, NOT in release 1; retention and maintenance not approved                                |
-| Worktrees     | `../cf-r1` (`65df3b9`), `../cf-r1a` (`2216d38`) with copied link metadata (no secrets); CLI always from the main repo with `--workdir`                     |
+| Item         | State                                                                                                                |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Production   | `origin/main` `65df3b9`, Vercel `7179643776` success; 15 migrations; 8 functions (matching/capacity/availability v3) |
+| Data         | unchanged: 3 users, 0 organizations, 0 windows, 0 `aog_only`; no flags, 0 buckets, no wallet object                  |
+| Local `main` | ahead of `65df3b9`, not pushed: wallet (release 2, not approved), designs, rollout docs                              |
+| Worktrees    | `../cf-r1` (`65df3b9`), `../cf-r1a` (`2216d38`) — can be removed when the owner wants                                |
 
 ## Risks
 
-1. Run steps in order; `git push origin 65df3b9:main`, never `git push origin main`.
-2. After step 4 (enum has `aog_only`, Q12 true) never reinstall `ddf5c4b` matching/capacity/availability; forward fix only; never convert `aog_only` rows.
-3. `/app/admin/verifications` with the flag unset renders Not found with HTTP 200 (streaming), same in prod.
+1. Enum has `aog_only` (Q12 true): never reinstall `ddf5c4b` matching/capacity/availability; forward fix only; never convert `aog_only` rows.
+2. Never `git push origin main` while local `main` carries the wallet; publish only reviewed commits explicitly.
+3. Authenticated flows never verified in production (no session, 0 organizations).
 4. `pnpm db:types` targets production — use `pnpm db:types:local`.
 
 ## Blocked on the owner
 
-- Release-1 steps 3–6 (one approval each; step 6 = production E2E, 3 approvals).
+- Step 6: production E2E (3 approvals: seed synthetic users, run, cleanup).
 - D-06 Q2–Q6 and D-07 P1–P4: owner **proposals** recorded 2026-10-19 in the contracts; ratification
   needed before any sensitive implementation (§4.1 of each doc). P3 period needs legal criterion.
 - Wallet release 2: retention periods, legal-hold procedure, maintenance mechanism (not approved).
 
 ## Next step (one)
 
-Owner authorization of step 3 (deploy `professional-availability` only, by name, `--workdir ../cf-r1` = `65df3b9`).
+Owner approval of step 6a (seed synthetic users, `docs/qa/PRODUCTION_E2E_RUNBOOK.md`) to verify authenticated flows.
