@@ -447,7 +447,12 @@
       "rejectedNext": "{count, plural, one {# qualification was rejected by a reviewer. Read the reason and correct it.} other {# qualifications were rejected by a reviewer. Read the reasons and correct them.}}",
       "awaitingNext": "{count, plural, one {# qualification is waiting for a reviewer. Until it is verified it does not count for hard requirements.} other {# qualifications are waiting for a reviewer. Until they are verified they do not count for hard requirements.}}",
       "openQualifications": "Open qualifications",
-      "doIt": "Go"
+      "doIt": "Go",
+      "checklistTitle": "Profile status · {percent}%",
+      "itemDone": "done",
+      "itemPending": "pending",
+      "calendarTitle": "My availability this month",
+      "openAvailability": "Edit availability"
     },
     "hint": {
       "display_name": "Next: add your professional name",
@@ -484,6 +489,15 @@
       "visibilityAria": "Visibility",
       "saved": "Passport updated. Matching uses the new data.",
       "conflict": "Your passport was changed in another window or device. Nothing was saved: reload the page to see the latest version, then apply your changes again."
+    },
+    "item": {
+      "display_name": "Professional name",
+      "base_location": "Base",
+      "years_experience": "Years of experience",
+      "licence_or_rating": "Licence or type rating declared",
+      "verified_qualification": "At least one verified qualification",
+      "availability": "Published available days",
+      "visibility": "Visible to organizations (anonymous or open)"
     }
   },
   "qualifications": {
@@ -628,7 +642,8 @@
     },
     "pastDay": "{date} is in the past and cannot be changed from the calendar.",
     "statusAogOnly": "Available only for AOG",
-    "aogHint": "“AOG only” days count only for needs declared as AOG; every other need sees them as not available. Blocked days override both."
+    "aogHint": "“AOG only” days count only for needs declared as AOG; every other need sees them as not available. Blocked days override both.",
+    "calendarLabel": "Availability by day"
   },
   "organization": {
     "dashboard": {

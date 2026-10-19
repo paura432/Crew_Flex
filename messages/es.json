@@ -447,7 +447,12 @@
       "rejectedNext": "{count, plural, one {# cualificación ha sido rechazada por un revisor. Lee el motivo y corrígela.} other {# cualificaciones han sido rechazadas por un revisor. Lee los motivos y corrígelas.}}",
       "awaitingNext": "{count, plural, one {# cualificación espera a un revisor. Hasta que se verifique no cuenta para los requisitos obligatorios.} other {# cualificaciones esperan a un revisor. Hasta que se verifiquen no cuentan para los requisitos obligatorios.}}",
       "openQualifications": "Abrir cualificaciones",
-      "doIt": "Ir"
+      "doIt": "Ir",
+      "checklistTitle": "Estado del perfil · {percent}%",
+      "itemDone": "hecho",
+      "itemPending": "pendiente",
+      "calendarTitle": "Mi disponibilidad este mes",
+      "openAvailability": "Editar disponibilidad"
     },
     "hint": {
       "display_name": "Siguiente: añade tu nombre profesional",
@@ -484,6 +489,15 @@
       "visibilityAria": "Visibilidad",
       "saved": "Pasaporte actualizado. El matching usa los nuevos datos.",
       "conflict": "Tu pasaporte se modificó en otra ventana o dispositivo. No se ha guardado nada: recarga la página para ver la versión más reciente y vuelve a aplicar tus cambios."
+    },
+    "item": {
+      "display_name": "Nombre profesional",
+      "base_location": "Base",
+      "years_experience": "Años de experiencia",
+      "licence_or_rating": "Licencia o habilitación de tipo declarada",
+      "verified_qualification": "Al menos una cualificación verificada",
+      "availability": "Días disponibles publicados",
+      "visibility": "Visible para organizaciones (anónimo o abierto)"
     }
   },
   "qualifications": {
@@ -628,7 +642,8 @@
     },
     "pastDay": "{date} ya ha pasado y no se puede cambiar desde el calendario.",
     "statusAogOnly": "Disponible solo para AOG",
-    "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos."
+    "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos.",
+    "calendarLabel": "Disponibilidad por día"
   },
   "organization": {
     "dashboard": {

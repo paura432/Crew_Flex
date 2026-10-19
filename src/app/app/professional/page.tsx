@@ -5,7 +5,13 @@ import { Metric } from "@/components/ui/Metric";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
-import { profileCompleteness, type CompletenessItem } from "@/domain/professional";
+import {
+  COMPLETENESS_ITEMS,
+  profileCompleteness,
+  type CompletenessItem,
+} from "@/domain/professional";
+import { parseMonth } from "@/features/availability/calendar";
+import { AvailabilityMonth } from "@/features/availability/components/AvailabilityMonth";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
 import { loadProfessionalContext } from "@/features/professional/load";
 
@@ -25,8 +31,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("professional") };
 }
 
-export default async function ProfessionalOverviewPage() {
-  const [{ actor, overview }, t, tDomain] = await Promise.all([
+export default async function ProfessionalOverviewPage({
+  searchParams,
+}: PageProps<"/app/professional">) {
+  const [{ month: monthParam }, { actor, overview }, t, tDomain] = await Promise.all([
+    searchParams,
     loadProfessionalContext(),
     getTranslations("professional"),
     getTranslations("domain"),
@@ -54,6 +63,14 @@ export default async function ProfessionalOverviewPage() {
     availableWindows: overview.availability.filter((w) => w.status !== "unavailable").length,
   });
   const nextStep = completeness.missing[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const month = parseMonth(monthParam) ?? today.slice(0, 7);
+  const windows = overview.availability.map((w) => ({
+    id: w.id,
+    startsAt: w.starts_at,
+    endsAt: w.ends_at,
+    status: w.status,
+  }));
 
   return (
     <>
@@ -88,7 +105,7 @@ export default async function ProfessionalOverviewPage() {
             detail={tDomain(`visibility.${overview.profile.visibility}.detail`)}
           />
         </dl>
-        {(awaiting > 0 || rejected > 0 || nextStep) && (
+        {(awaiting > 0 || rejected > 0) && (
           <Panel title={t("overview.nextTitle")}>
             <ul className="space-y-3 text-sm">
               {rejected > 0 && (
@@ -104,15 +121,50 @@ export default async function ProfessionalOverviewPage() {
                   <span>{t("overview.awaitingNext", { count: awaiting })}</span>
                 </li>
               )}
-              {nextStep && (
-                <li className="flex flex-wrap items-center justify-between gap-3">
-                  <span>{t(`hint.${nextStep}`)}</span>
-                  <ButtonLink href={NEXT_STEP_HREF[nextStep]}>{t("overview.doIt")}</ButtonLink>
-                </li>
-              )}
             </ul>
           </Panel>
         )}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* V1.8 «Estado de mi perfil»: every BR-11 item with a direct link to complete it. */}
+          <Panel title={t("overview.checklistTitle", { percent: completeness.percent })}>
+            <ul className="divide-y divide-line text-sm">
+              {COMPLETENESS_ITEMS.map((item) => {
+                const done = !completeness.missing.includes(item);
+                return (
+                  <li key={item} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                    <span className="flex items-center gap-2">
+                      <span aria-hidden className={done ? "font-bold text-ok" : "text-muted"}>
+                        {done ? "✓" : "○"}
+                      </span>
+                      <span className={done ? "text-muted" : undefined}>{t(`item.${item}`)}</span>
+                      <span className="sr-only">
+                        {done ? t("overview.itemDone") : t("overview.itemPending")}
+                      </span>
+                    </span>
+                    {!done && (
+                      <ButtonLink href={NEXT_STEP_HREF[item]}>{t("overview.doIt")}</ButtonLink>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Panel>
+          <Panel
+            title={t("overview.calendarTitle")}
+            actions={
+              <ButtonLink href="/app/professional/availability">
+                {t("overview.openAvailability")}
+              </ButtonLink>
+            }
+          >
+            <AvailabilityMonth
+              windows={windows}
+              month={month}
+              today={today}
+              hrefFor={(m) => `/app/professional?month=${m}`}
+            />
+          </Panel>
+        </div>
         <Panel
           title={t("overview.profile")}
           actions={

@@ -25,6 +25,22 @@ export interface CalendarDay {
 
 const DAY_MS = 86_400_000;
 
+/** Monday-first week, the order of the calendar grids (keys of `availability.weekday.*`). */
+export const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
+/** Day cell colours shared by the editable calendar and the overview's read-only month. */
+export const DAY_STYLE: Record<DayState, string> = {
+  available: "border-ok/40 bg-ok-bg text-ok",
+  unavailable: "border-line bg-canvas text-muted",
+  aog_only: "border-danger/40 bg-danger-bg text-danger",
+  mixed: "border-warn/40 bg-warn-bg text-warn",
+  none: "border-line bg-white text-muted",
+};
+
+/** `YYYY-MM` from a URL value, or null. */
+export const parseMonth = (value: unknown) =>
+  typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : null;
+
 export const dayStart = (date: string) => Date.parse(`${date}T00:00:00Z`);
 export const toDate = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 

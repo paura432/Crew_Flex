@@ -26,17 +26,17 @@ import {
 import {
   calendarDays,
   countDays,
+  DAY_STYLE,
   dayWindow,
   monthOffset,
   shiftMonth,
+  WEEKDAYS,
   type DayState,
 } from "../calendar";
 import { planChanges, planCycle, RotationError, type PlannedDay } from "../rotation";
 import { CyclePlanner, type CycleSettings } from "./CyclePlanner";
 
 type Picker = AvailabilityStatus | "clear";
-
-const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 const PICKER_OPTIONS: { value: Picker; cls: string }[] = [
   { value: "available", cls: "border-ok/40 bg-ok-bg text-ok" },
@@ -52,14 +52,6 @@ const STATUS_CHIP = {
 } as const satisfies Record<AvailabilityStatus, { tone: string; label: string }>;
 
 const PLANNED_STATE = (status: PlannedDay["status"]): DayState => status ?? "none";
-
-const DAY_STYLE: Record<DayState, string> = {
-  available: "border-ok/40 bg-ok-bg text-ok",
-  unavailable: "border-line bg-canvas text-muted",
-  aog_only: "border-danger/40 bg-danger-bg text-danger",
-  mixed: "border-warn/40 bg-warn-bg text-warn",
-  none: "border-line bg-white text-muted",
-};
 
 export function AvailabilityManager({
   windows,

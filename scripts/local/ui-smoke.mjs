@@ -196,6 +196,27 @@ ok(
   "",
 );
 await shot("01-technician-overview");
+// Batch 3 (M02, V1.8 TechnicianHome): full status checklist + read-only month calendar.
+const checklist = page.locator("main section", { hasText: /Profile status/ }).locator("li");
+const today = new Date().toISOString().slice(0, 10);
+const todayCell = page.locator(`main li[aria-current=date]`);
+ok(
+  "2b overview: 7-item checklist with links for the missing ones; today marked in the month",
+  (await checklist.count()) === 7 &&
+    (await todayCell.getAttribute("aria-label")) === `${today}: Available`,
+  `${await checklist.count()} items · ${await todayCell.getAttribute("aria-label")}`,
+);
+await page.getByRole("link", { name: "Next month" }).click();
+await page.waitForURL(/month=\d{4}-\d{2}/);
+const nextMonthDay = await page
+  .locator("main ol[aria-label] li[aria-label]")
+  .first()
+  .getAttribute("aria-label");
+ok(
+  "2c month navigation by link (next month: no windows → Rest)",
+  /: Rest$/.test(nextMonthDay ?? ""),
+  nextMonthDay,
+);
 await page.goto(`${BASE}/app/professional/availability`);
 await page.waitForLoadState("networkidle");
 const before = await page.locator("li:has(button:has-text('Delete'))").count();

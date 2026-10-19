@@ -72,6 +72,9 @@ const ITEMS: { item: CompletenessItem; done: (input: CompletenessInput) => boole
   { item: "visibility", done: ({ profile }) => profile.visibility !== "private" },
 ];
 
+/** The BR-11 items in completion order (the overview checklist renders them all). */
+export const COMPLETENESS_ITEMS: readonly CompletenessItem[] = ITEMS.map(({ item }) => item);
+
 /**
  * Passport completeness: the share of the seven items a professional controls that are done,
  * plus the ordered list of what is still missing (so the UI can give a concrete hint, CF-L03).

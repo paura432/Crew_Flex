@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { calendarDays, countDays, dayWindow, monthDays, monthOffset, shiftMonth } from "./calendar";
+import {
+  calendarDays,
+  countDays,
+  dayWindow,
+  monthDays,
+  monthOffset,
+  parseMonth,
+  shiftMonth,
+} from "./calendar";
 
 const w = (id: string, startsAt: string, endsAt: string, status: "available" | "unavailable") => ({
   id,
@@ -83,5 +91,17 @@ describe("aog_only day state (BR-4.8 display precedence)", () => {
     expect(
       stateOf([day("2026-11-10", "available"), day("2026-11-10", "aog_only", "08:00", "12:00")]),
     ).toBe("mixed");
+  });
+});
+
+describe("parseMonth", () => {
+  it.each([
+    ["2026-10", "2026-10"],
+    ["2026-13", null],
+    ["2026-1", null],
+    ["2026-10-01", null],
+    [undefined, null],
+  ])("%s → %s", (input, expected) => {
+    expect(parseMonth(input)).toBe(expected);
   });
 });
