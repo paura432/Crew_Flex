@@ -6,13 +6,13 @@ Re-verify with the commands at the bottom before relying on any line; update the
 
 ## Git
 
-| Ref                               | SHA                                  | Meaning                                                                                                                                                                                                                          |
-| --------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `origin/main` (GitHub)            | `ddf5c4b`                            | `4f98e67..f158308` (8 audited commits) pushed 2026-10-16 ~20:12, then `ddf5c4b` (memory-bank only) ~20:38. What Vercel Production builds (main-only, OD-9)                                                                       |
-| `main` (local)                    | `969adb2` + docs commit (2026-10-19) | Local only, not pushed: E2E prep, V1.8 delta, cycle generator, tools, «AOG only», wallet (gated). Wave-1 release commit `65df3b9`; plan `docs/qa/ROLLOUT_PLAN_2026-10-19.md`. A push = a production deploy, needs owner approval |
-| `fix/remediation-2026-10-15`      | `f158308`                            | Fully merged into `main`; can be deleted when the owner wants                                                                                                                                                                    |
-| `refs/baseline/remediation-start` | `bf3feb1`                            | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                                                                                                                                    |
-| other branches                    | —                                    | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)                                                                                                                |
+| Ref                               | SHA                                  | Meaning                                                                                                                                                                               |
+| --------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin/main` (GitHub)            | `ddf5c4b`                            | `4f98e67..f158308` (8 audited commits) pushed 2026-10-16 ~20:12, then `ddf5c4b` (memory-bank only) ~20:38. What Vercel Production builds (main-only, OD-9)                            |
+| `main` (local)                    | `4170122` + docs commit (2026-10-19) | Local only, not pushed. **Release 1 = `65df3b9`** (plan `docs/qa/ROLLOUT_PLAN_2026-10-19.md`); later commits = wallet (release 2). A push = a production deploy, needs owner approval |
+| `fix/remediation-2026-10-15`      | `f158308`                            | Fully merged into `main`; can be deleted when the owner wants                                                                                                                         |
+| `refs/baseline/remediation-start` | `bf3feb1`                            | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                                                                                         |
+| other branches                    | —                                    | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)                                                                     |
 
 ## Production (`sbjkzrkmcekokkqiuvvh` + https://crew-flex.vercel.app) — the single environment (demo, OD-9)
 
@@ -33,7 +33,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 ## OD-3 (qualification review) — still OPEN, closed at every layer
 
 1. Next.js server flag `QUALIFICATION_REVIEW_ENABLED` (off unless exactly `true`): no nav entry,
-   `/app/admin/verifications` → 404, review action refused (`src/server/feature-flags.ts`). Absent in Vercel (all environments) — confirmed by the owner in the dashboard on 2026-10-16.
+   `/app/admin/verifications` renders Not found (HTTP 200 because the layout streams first; verified 2026-10-19), review action refused (`src/server/feature-flags.ts`). Absent in Vercel (all environments) — confirmed by the owner in the dashboard on 2026-10-16.
 2. Edge Function `qualification-reviews` not deployed; its secret is not set.
 3. Database row `app_private.feature_flags('qualification_review')` absent.
 

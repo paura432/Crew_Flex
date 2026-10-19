@@ -1,6 +1,7 @@
 # Candidate Pack and contact consent (D-07) · DESIGN, not implemented
 
-> Owner direction of 2026-10-19 (D-07): no private document or contact datum is ever shared because a
+> Owner direction of 2026-10-19 (D-07, restated later the same day): identity, contact and documents stay protected; access depends on a concrete purpose, a valid application state and explicit consent.
+> Earlier direction (D-07): no private document or contact datum is ever shared because a
 > match exists. The technician grants **explicit** consent, **scoped to one requirement and one
 > organization**, revocable for future access, audited; short-lived signed URLs where files are
 > involved. **No real sharing is implemented until every privacy control below exists and is
@@ -42,8 +43,9 @@ per-requirement pseudonym (`CF-…`, T-04) and the match explanation only.
 
 ## 4. Open questions for the owner
 
-| #   | Question                                                     | Recommendation                                                                                                  |
-| --- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| P1  | Is `proposed` enough for contact, or only from `accepted`?   | From `accepted` (the technician has accepted terms), unless the owner wants earlier contact                     |
-| P2  | May an organization download (not only view) pack documents? | View via signed URL with `Content-Disposition: inline`; download is the same risk, so allow both but audit each |
-| P3  | Retention of access logs                                     | Keep audit rows indefinitely (append-only), like other `audit_events`                                           |
+| #   | Question                                                                                           | Options                                                                                                      | Recommendation                                                                                                                                                                                               |
+| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| P1  | Is `proposed` enough for contact, or only from `accepted`?                                         | (a) from `proposed` · (b) from `accepted` · (c) only from `confirmed`                                        | (b) From `accepted` (the technician has accepted terms), unless the owner wants earlier contact                                                                                                              |
+| P2  | May an organization download (not only view) pack documents?                                       | (a) view only (inline signed URL) · (b) view and download, each audited · (c) neither until a scanner exists | (b) View via signed URL with `Content-Disposition: inline`; download is the same risk, so allow both but audit each — and, per D-10, neither until an approved scanner marks the file `clean`                |
+| P3  | Retention of access logs                                                                           | (a) indefinitely (append-only) · (b) a fixed period, then deleted · (c) account lifetime + a fixed period    | (b) — **revised 2026-10-19**: a defined period agreed with legal counsel (data minimisation; access logs are personal data), append-only until then. The earlier "indefinitely" recommendation is withdrawn  |
+| P4  | **New 2026-10-19.** Is identity (real name) unlocked together with contact, or by its own consent? | (a) with the contact permission (today's design) · (b) separate identity consent · (c) only from `confirmed` | (a): name and contact serve the same purpose (talking to the person) and one consent is easier to understand; keep the pseudonym until then. Owner to confirm, since the owner now lists identity separately |
