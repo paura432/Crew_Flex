@@ -1,8 +1,14 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { signInInput, signUpInput } from "@/lib/validation/auth";
+import {
+  forgotPasswordInput,
+  resetPasswordInput,
+  signInInput,
+  signUpInput,
+} from "@/lib/validation/auth";
 import { toFieldErrors } from "@/lib/validation/errors";
 import { safeNextPath, type AuthErrorCode, type AuthFormState } from "./state";
 
@@ -17,6 +23,7 @@ function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode } {
   if (error.name === "AuthRetryableFetchError" || error.status === 0) {
     return { code: "NETWORK_ERROR" };
   }
+  if (error.name === "AuthSessionMissingError") return { code: "RECOVERY_EXPIRED" };
   switch (error.code) {
     case "invalid_credentials":
       return { code: "INVALID_CREDENTIALS" };
@@ -27,6 +34,8 @@ function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode } {
       return { code: "USER_EXISTS" };
     case "weak_password":
       return { code: "WEAK_PASSWORD" };
+    case "same_password":
+      return { code: "SAME_PASSWORD" };
     default:
       return { code: "UNKNOWN" };
   }
@@ -116,6 +125,54 @@ export async function signUpAction(
   }
   if (!data.session) return { status: "check_email", email: input.email };
 
+  redirect("/app");
+}
+
+/**
+ * Sends the recovery e-mail. The answer is the same whether or not the account exists (no account
+ * enumeration); only validation and network failures are reported. Supabase rate-limits the sends.
+ */
+export async function requestPasswordResetAction(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = forgotPasswordInput.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      code: "VALIDATION_ERROR",
+      fieldErrors: toFieldErrors(parsed.error),
+      values: echoValues(formData, ["email"]),
+    };
+  }
+  // Server Actions are same-origin (Next.js checks Origin against Host), so this is our own URL.
+  const origin = (await headers()).get("origin");
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${origin}/auth/confirm?next=/reset-password`,
+  });
+  if (error && mapAuthError(error).code === "NETWORK_ERROR") {
+    return { status: "error", code: "NETWORK_ERROR", values: echoValues(formData, ["email"]) };
+  }
+  return { status: "check_email", email: parsed.data.email };
+}
+
+/** Sets the new password in the recovery session, then ends every other session of the user. */
+export async function updatePasswordAction(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = resetPasswordInput.safeParse({
+    password: formData.get("password"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success) {
+    return { status: "error", code: "VALIDATION_ERROR", fieldErrors: toFieldErrors(parsed.error) };
+  }
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) return { status: "error", ...mapAuthError(error) };
+  await supabase.auth.signOut({ scope: "others" });
   redirect("/app");
 }
 

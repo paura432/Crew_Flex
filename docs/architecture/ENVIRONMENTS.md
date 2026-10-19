@@ -29,6 +29,14 @@ GitHub paura432/Crew_Flex · main ──▶ Vercel Production https://crew-flex.
 The code is environment-agnostic: the app reads only the two `NEXT_PUBLIC_*` values (`src/lib/env.ts`);
 functions read platform-provided variables plus `ALLOWED_ORIGINS`.
 
+### Auth e-mail links (password recovery, 2026-10-19)
+
+`requestPasswordResetAction` sends `redirectTo = <origin>/auth/confirm?next=/reset-password`. Supabase only
+honours it when the URL is allow-listed: locally `supabase/config.toml` `additional_redirect_urls` includes
+`http://localhost:3001/**`; **production needs `https://crew-flex.vercel.app/auth/confirm` added to Auth → URL
+Configuration → Redirect URLs** (owner action, Auth setting) before the recovery flow is published — otherwise
+the link falls back to the Site URL and the reset page reports «needs a valid reset link».
+
 ## 2. Risk assumed and compensating controls
 
 Every push to `main` is a production deploy and every remote test runs on real infrastructure. Accepted

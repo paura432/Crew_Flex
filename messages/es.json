@@ -43,7 +43,8 @@
     "settings": "Configuración",
     "verifications": "Revisión de cualificaciones",
     "tools": "Herramientas",
-    "documents": "Wallet documental"
+    "documents": "Wallet documental",
+    "recovery": "Restablecer contraseña"
   },
   "nav": {
     "organization": "Organización",
@@ -92,7 +93,8 @@
       "submit": "Iniciar sesión",
       "submitting": "Iniciando sesión…",
       "email": "Correo electrónico",
-      "password": "Contraseña"
+      "password": "Contraseña",
+      "forgot": "¿Has olvidado tu contraseña?"
     },
     "register": {
       "title": "Crear cuenta",
@@ -124,7 +126,9 @@
       "USER_EXISTS": "Ya existe una cuenta con este correo.",
       "WEAK_PASSWORD": "Elige una contraseña más segura.",
       "NETWORK_ERROR": "No se ha podido contactar con el servicio de autenticación. Reintenta.",
-      "UNKNOWN": "La autenticación ha fallado. Inténtalo de nuevo."
+      "UNKNOWN": "La autenticación ha fallado. Inténtalo de nuevo.",
+      "SAME_PASSWORD": "Elige una contraseña distinta de la actual.",
+      "RECOVERY_EXPIRED": "La sesión de restablecimiento ha caducado. Solicita un enlace nuevo."
     },
     "orgType": {
       "mro": "MRO",
@@ -132,6 +136,26 @@
       "operator": "Operador",
       "staffing_agency": "Agencia de personal",
       "other": "Otra"
+    },
+    "recovery": {
+      "title": "Restablece tu contraseña",
+      "lead": "Indica el correo de tu cuenta. Si existe, te enviaremos un enlace para elegir una contraseña nueva.",
+      "email": "Correo electrónico",
+      "send": "Enviar enlace",
+      "sending": "Enviando…",
+      "sentTitle": "Revisa tu correo",
+      "sentText": "Si existe una cuenta con {email}, recibirás un enlace para elegir una contraseña nueva. Caduca en una hora.",
+      "expired": "Ese enlace ha caducado o ya se ha usado. Solicita uno nuevo.",
+      "backToSignIn": "Volver a iniciar sesión",
+      "resetTitle": "Elige una contraseña nueva",
+      "resetLead": "Se cerrarán tus demás sesiones.",
+      "newPassword": "Contraseña nueva",
+      "confirmPassword": "Repite la contraseña nueva",
+      "passwordHint": "Al menos 10 caracteres.",
+      "save": "Guardar contraseña",
+      "saving": "Guardando…",
+      "noSession": "Esta página necesita un enlace de restablecimiento válido.",
+      "requestAgain": "Solicitar un enlace nuevo"
     }
   },
   "api": {
@@ -190,7 +214,8 @@
     "password": {
       "required": "Introduce tu contraseña",
       "min": "Usa al menos 10 caracteres",
-      "max": "Usa como máximo 72 caracteres"
+      "max": "Usa como máximo 72 caracteres",
+      "mismatch": "Las contraseñas no coinciden."
     },
     "name": {
       "required": "Introduce tu nombre",

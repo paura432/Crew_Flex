@@ -59,6 +59,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 | ES/EN UI + persisted language                                                                  | VERIFIED_LOCAL; DB + function deployed; UI not yet published                                      |
 | E-3 / I-1 / I-3 / eligible-first pool                                                          | VERIFIED_LOCAL; applied remotely 2026-10-16                                                       |
 | Availability cycle generator, «AOG only», tools (release 1)                                    | VERIFIED_LOCAL; deployed to production 2026-10-19; authenticated flows not verified in production |
+| Password recovery (forgot → e-mail → `/auth/confirm` → reset)                                  | VERIFIED_LOCAL 2026-10-19; not deployed (needs prod Auth redirect URL)                            |
 | Platform-admin qualification review                                                            | VERIFIED_LOCAL; NEEDS_DECISION (OD-3); off in production at all 3 layers                          |
 | Documents, Candidate Pack, applications, assignments, recruiter, tools, logbook, notifications | PLANNED / OUT_OF_SCOPE                                                                            |
 

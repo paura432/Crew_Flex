@@ -4,9 +4,10 @@ _Last updated 2026-10-19 (evening) CEST. Keep under ~60 lines; replace, don't ap
 
 ## Current task
 
-**Release 1 (`65df3b9`) is in production since 2026-10-19 18:57 CEST** — steps 1–5 of
-`docs/qa/ROLLOUT_PLAN_2026-10-19.md` executed with owner authorization, every check PASS. Stopped: step 6
-(production E2E with writes) not authorized.
+V1.8 → Next.js functional migration, LOCAL only (owner brief 2026-10-19). Master audit and matrix:
+`docs/integration/crewflex-v13/10-master-matrix.md` (modules M00–M17, dependency graph, batches).
+Batch 1 (M01 password recovery) VERIFIED_LOCAL. Next: batch 2 (M06 matches list: filter, search, sort,
+pagination, compare). Release 1 (`65df3b9`) stays the production state; nothing remote in this phase.
 
 ## State
 
@@ -37,6 +38,17 @@ _Last updated 2026-10-19 (evening) CEST. Keep under ~60 lines; replace, don't ap
 `scripts/e2e/ui-release1.mjs` (24). Local: 41/41 API (+10 remediation), 24/24 browser. Production guard: 31
 blocked, 0 requests without `E2E_WRITE_CONFIRM`. Runbook: `docs/qa/PRODUCTION_E2E_RUNBOOK.md`.
 
+## Incident (open)
+
+2026-10-19: the owner ran `scripts/e2e/seed-users.sh` (runbook step 1) in their terminal and got **HTTP 401**
+from the Auth Admin API (most likely the pasted secret key was empty/invalid). No account was created
+(`created` lines absent). Owner decision: no new remote write; seeding and production E2E paused until the
+V1.8 functional migration (local) is complete. Re-verify with the read-only preflight before any retry.
+Read-only check afterwards: users 3, synthetic 0, organizations 0. Observed: existing user #1 (oldest)
+has `auth.users.updated_at` = 2026-10-19 17:36 UTC with no new sign-in (last 2026-10-09); `auth.audit_log_entries`
+has no rows since 16:00 UTC, so the cause is unknown (no Claude write: every query was read-only). Owner to
+confirm whether it was a dashboard action.
+
 ## Next step (one)
 
-Owner approval of step 6a only: create the three synthetic accounts (runbook step 1).
+V1.8 → Next.js functional migration, LOCAL only: master audit/matrix first, then module batches (owner brief 2026-10-19). No accounts, no remote writes.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signUpInput } from "./auth.ts";
+import { forgotPasswordInput, resetPasswordInput, signUpInput } from "./auth.ts";
 
 describe("signUpInput", () => {
   it("requires organization details for organization accounts", () => {
@@ -34,5 +34,31 @@ describe("signUpInput", () => {
       country: "es",
     });
     expect(result.accountType === "organization" && result.country).toBe("ES");
+  });
+});
+
+describe("password recovery inputs", () => {
+  it("forgot: a valid e-mail only", () => {
+    expect(forgotPasswordInput.safeParse({ email: "a@b.co" }).success).toBe(true);
+    expect(forgotPasswordInput.safeParse({ email: "nope" }).success).toBe(false);
+    expect(forgotPasswordInput.safeParse({ email: "a@b.co", role: "admin" }).success).toBe(false);
+  });
+
+  it("reset: same rules as sign-up and both entries must match", () => {
+    expect(
+      resetPasswordInput.safeParse({ password: "0123456789", confirm: "0123456789" }).success,
+    ).toBe(true);
+    const short = resetPasswordInput.safeParse({ password: "short", confirm: "short" });
+    expect(short.error?.issues[0]?.message).toBe("v.password.min");
+    const mismatch = resetPasswordInput.safeParse({
+      password: "0123456789",
+      confirm: "0123456780",
+    });
+    expect(mismatch.error?.issues.map((i) => [i.path.join("."), i.message])).toEqual([
+      ["confirm", "v.password.mismatch"],
+    ]);
+    expect(
+      resetPasswordInput.safeParse({ password: "x".repeat(73), confirm: "x".repeat(73) }).success,
+    ).toBe(false);
   });
 });

@@ -15,6 +15,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <h1 className="mb-1 text-2xl font-bold tracking-tight">{t("title")}</h1>
       <p className="mb-6 text-muted">{t("lead")}</p>
       <LoginForm next={typeof next === "string" ? next : undefined} />
+      <p className="mt-4 text-sm">
+        <Link href="/forgot-password" className="font-semibold text-blue hover:underline">
+          {t("forgot")}
+        </Link>
+      </p>
       <p className="mt-6 text-sm text-muted">
         {t("noAccount")}{" "}
         <Link href="/register" className="font-semibold text-blue hover:underline">

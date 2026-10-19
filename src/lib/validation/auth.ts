@@ -17,10 +17,15 @@ export const ORGANIZATION_TYPES = [
   "other",
 ] as const;
 
+const newPassword = z
+  .string("v.password.required")
+  .min(10, "v.password.min")
+  .max(72, "v.password.max");
+
 const base = {
   displayName: z.string("v.name.required").trim().min(1, "v.name.required").max(120, "v.name.max"),
   email,
-  password: z.string("v.password.required").min(10, "v.password.min").max(72, "v.password.max"),
+  password: newPassword,
 };
 
 export const signUpInput = z.discriminatedUnion("accountType", [
@@ -42,3 +47,9 @@ export const signUpInput = z.discriminatedUnion("accountType", [
   }),
 ]);
 export type SignUpInput = z.infer<typeof signUpInput>;
+
+export const forgotPasswordInput = z.strictObject({ email });
+
+export const resetPasswordInput = z
+  .strictObject({ password: newPassword, confirm: z.string() })
+  .refine((v) => v.password === v.confirm, { path: ["confirm"], message: "v.password.mismatch" });

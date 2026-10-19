@@ -6,6 +6,8 @@ export type AuthErrorCode =
   | "EMAIL_NOT_CONFIRMED"
   | "USER_EXISTS"
   | "WEAK_PASSWORD"
+  | "SAME_PASSWORD"
+  | "RECOVERY_EXPIRED"
   | "NETWORK_ERROR"
   | "UNKNOWN";
 
@@ -29,4 +31,9 @@ export function safeNextPath(next: unknown): string {
   if (typeof next !== "string") return "/app";
   if (!next.startsWith("/app") || next.startsWith("//") || next.includes("\\")) return "/app";
   return next;
+}
+
+/** Where an e-mail link may land after `/auth/confirm`: the reset page or a safe `/app` path. */
+export function safeConfirmNext(next: unknown): string {
+  return next === "/reset-password" ? next : safeNextPath(next);
 }
