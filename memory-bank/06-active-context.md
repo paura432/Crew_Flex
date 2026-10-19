@@ -31,6 +31,12 @@ _Last updated 2026-10-19 (evening) CEST. Keep under ~60 lines; replace, don't ap
   needed before any sensitive implementation (§4.1 of each doc). P3 period needs legal criterion.
 - Wallet release 2: retention periods, legal-hold procedure, maintenance mechanism (not approved).
 
+## E2E certification (prepared 2026-10-19, local only)
+
+`remote-smoke` 31 checks (19 + release-1 R1a–R1f cycle save, R2a–R2f «AOG only») and read-only browser checks
+`scripts/e2e/ui-release1.mjs` (24). Local: 41/41 API (+10 remediation), 24/24 browser. Production guard: 31
+blocked, 0 requests without `E2E_WRITE_CONFIRM`. Runbook: `docs/qa/PRODUCTION_E2E_RUNBOOK.md`.
+
 ## Next step (one)
 
-Owner approval of step 6a (seed synthetic users, `docs/qa/PRODUCTION_E2E_RUNBOOK.md`) to verify authenticated flows.
+Owner approval of step 6a only: create the three synthetic accounts (runbook step 1).

@@ -19,8 +19,12 @@
  *   14 a withdrawn hard qualification changes matching deterministically (restored afterwards).
  * Phase 1.5 (i18n): 15 language preference persists per user through `user-preferences`, is isolated
  *   between users, rejects unknown locales and works for organization accounts too.
+ * Release 1 (65df3b9): R1 cycle save (`PUT`: whole days, saved pattern, replace/split, idempotency,
+ *   concurrency, validation, isolation) · R2 «AOG only» (persistence, ownership, matching per declared
+ *   urgency, BR-4.8 precedence). All on 2031 days of the synthetic accounts, cleared in `afterAll`.
  */
 import { createClient } from "@supabase/supabase-js";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -82,7 +86,13 @@ async function signIn(email: string, password: string): Promise<string> {
 
 async function call(
   fn: string,
-  init: { method?: string; token?: string; query?: Record<string, string>; body?: unknown } = {},
+  init: {
+    method?: string;
+    token?: string;
+    query?: Record<string, string>;
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<{ status: number; body: Envelope }> {
   const url = new URL(`/functions/v1/${fn}`, env.url);
   for (const [k, v] of Object.entries(init.query ?? {})) url.searchParams.set(k, v);
@@ -92,6 +102,7 @@ async function call(
       ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}),
       apikey: env.key!,
       "Content-Type": "application/json",
+      ...init.headers,
     },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
@@ -99,6 +110,46 @@ async function call(
 }
 
 const windowsOf = (body: Envelope) => (body.data?.windows ?? []) as Window[];
+
+type MatchRow = {
+  candidate: { id: string };
+  match: { eligible: boolean; blockers: { code: string }[]; reasons: { code: string }[] };
+};
+
+/** `n` consecutive ISO dates from `first` (UTC). */
+const dayRange = (first: string, n: number) =>
+  Array.from({ length: n }, (_, i) =>
+    new Date(Date.parse(`${first}T00:00:00Z`) + i * 86_400_000).toISOString().slice(0, 10),
+  );
+
+/** Status covering the whole UTC day, or null; fails if two windows cover it. */
+function statusOn(windows: Window[], day: string): string | null {
+  const start = `${day}T00:00:00.000Z`;
+  const end = new Date(Date.parse(start) + 86_400_000).toISOString();
+  const covering = windows.filter((w) => w.startsAt <= start && w.endsAt >= end);
+  expect(covering.length, `windows covering ${day}`).toBeLessThanOrEqual(1);
+  return covering[0]?.status ?? null;
+}
+
+function expectNoOverlap(windows: Window[]) {
+  const sorted = [...windows].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  for (let i = 1; i < sorted.length; i++) {
+    expect(sorted[i]!.startsAt >= sorted[i - 1]!.endsAt, "overlapping windows").toBe(true);
+  }
+}
+
+/** The JWT subject (= the caller's profile id). Read only, never trusted by the server. */
+const subOf = (token: string) =>
+  String(JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString()).sub);
+
+const pick = (p: Profile) => ({
+  displayName: p.displayName,
+  baseLocation: p.baseLocation,
+  mobility: p.mobility,
+  yearsExperience: p.yearsExperience,
+  currentStatus: p.currentStatus,
+  visibility: p.visibility,
+});
 
 describe.skipIf(!configured)(
   "remote E2E: deployed Edge Functions + RLS (production, guarded)",
@@ -658,6 +709,408 @@ describe.skipIf(!configured)(
           .eq("id", requirementId);
         expect(direct.error).toBeNull();
         expect(direct.data).toEqual([]);
+      });
+    });
+
+    describe("release 1: cycle save (PUT) and «AOG only»", () => {
+      // 2031 days only: never collide with real data or with the window checks above.
+      const R1_DAYS = dayRange("2031-05-01", 10);
+      const AOG_DAYS = dayRange("2031-06-01", 3);
+      const avail = (token: string) => call("professional-availability", { token });
+      const put = (token: string, body: unknown, key: string = randomUUID()) =>
+        call("professional-availability", {
+          method: "PUT",
+          token,
+          body,
+          headers: { "Idempotency-Key": key },
+        });
+      // The saved pattern is a private preference: each account gets back exactly what it had.
+      const rotationBefore = new Map<string, unknown>();
+      let aogWindowId = "";
+
+      beforeAll(async () => {
+        for (const token of [tokenA, tokenB]) {
+          rotationBefore.set(token, (await avail(token)).body.data?.rotation ?? null);
+        }
+      });
+
+      afterAll(async () => {
+        const clear = [...R1_DAYS, ...AOG_DAYS].map((date) => ({ date, status: null }));
+        if (aogWindowId) {
+          await call("professional-availability", {
+            method: "DELETE",
+            token: tokenA,
+            query: { id: aogWindowId },
+          });
+        }
+        for (const [token, rotation] of rotationBefore) {
+          await put(token, { days: clear });
+          if (rotation) await put(token, { days: [], rotation });
+          else
+            await userClient(token)
+              .from("availability_rotations")
+              .delete()
+              .eq("technician_profile_id", subOf(token));
+        }
+      });
+
+      it("R1a. a cycle is saved by whole days with its pattern and persists in a fresh session", async () => {
+        const days = R1_DAYS.slice(0, 7).map((date, i) => ({
+          date,
+          status: i < 4 ? "unavailable" : "available",
+        }));
+        const rotation = { pattern: "7x3", anchor: R1_DAYS[0], customCycle: [] };
+        const saved = await put(tokenA, { days, rotation });
+        expect(saved.status).toBe(200);
+        expect(saved.body.data?.replayed).toBe(false);
+
+        const fresh = await avail(await signIn(env.proA[0]!, env.proA[1]!));
+        expect(fresh.status).toBe(200);
+        expect(fresh.body.data?.rotation).toEqual(rotation);
+        const windows = windowsOf(fresh.body);
+        expectNoOverlap(windows);
+        for (const d of days) expect(statusOn(windows, d.date)).toBe(d.status);
+      });
+
+      it("R1b. replacing days splits longer windows and clears days, never leaving overlaps", async () => {
+        const replaced = await put(tokenA, {
+          days: [
+            { date: R1_DAYS[1]!, status: "available" },
+            { date: R1_DAYS[5]!, status: null },
+          ],
+        });
+        expect(replaced.status).toBe(200);
+        const windows = windowsOf((await avail(tokenA)).body);
+        expectNoOverlap(windows);
+        expect(R1_DAYS.slice(0, 7).map((d) => statusOn(windows, d))).toEqual([
+          "unavailable",
+          "available",
+          "unavailable",
+          "unavailable",
+          "available",
+          null,
+          "available",
+        ]);
+      });
+
+      it("R1c. Idempotency-Key: a replay returns the same change, a reused key with other days is 409", async () => {
+        const key = randomUUID();
+        const body = { days: [{ date: R1_DAYS[7]!, status: "unavailable" }] };
+        const first = await put(tokenA, body, key);
+        expect(first.status).toBe(200);
+        const replay = await put(tokenA, body, key);
+        expect(replay.status).toBe(200);
+        expect(replay.body.data?.replayed).toBe(true);
+        expect(replay.body.data?.changeId).toBe(first.body.data?.changeId);
+        const reused = await put(
+          tokenA,
+          { days: [{ date: R1_DAYS[8]!, status: "unavailable" }] },
+          key,
+        );
+        expect(reused.status).toBe(409);
+        expect(statusOn(windowsOf((await avail(tokenA)).body), R1_DAYS[8]!)).toBeNull();
+      });
+
+      it("R1d. two concurrent saves of the same days are serialized: one complete result, no mix", async () => {
+        const target = R1_DAYS.slice(7, 10);
+        const [one, two] = await Promise.all(
+          (["available", "unavailable"] as const).map((status) =>
+            put(tokenA, { days: target.map((date) => ({ date, status })) }),
+          ),
+        );
+        expect([one?.status, two?.status]).toEqual([200, 200]);
+        const windows = windowsOf((await avail(tokenA)).body);
+        expectNoOverlap(windows);
+        const states = new Set(target.map((d) => statusOn(windows, d)));
+        expect(states.size).toBe(1);
+        expect(["available", "unavailable"]).toContain([...states][0]);
+      });
+
+      it("R1e. invalid saves are rejected and write nothing", async () => {
+        const before = windowsOf((await avail(tokenA)).body);
+        const today = new Date().toISOString().slice(0, 10);
+        const pastDay = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
+        expect(today > pastDay).toBe(true);
+        for (const body of [
+          { days: [{ date: pastDay, status: "available" }] }, // past days are frozen
+          { days: [{ date: R1_DAYS[0], status: "maybe" }] },
+          {
+            days: [
+              { date: R1_DAYS[0], status: "available" },
+              { date: R1_DAYS[0], status: null },
+            ],
+          },
+          { days: [{ date: R1_DAYS[0], status: "available" }], technicianProfileId: subOf(tokenB) },
+          { days: [], rotation: { pattern: "9x9", anchor: R1_DAYS[0], customCycle: [] } },
+          { days: [] },
+        ]) {
+          const refused = await put(tokenA, body);
+          expect(refused.status, JSON.stringify(body)).toBe(400);
+        }
+        const badKey = await put(
+          tokenA,
+          { days: [{ date: R1_DAYS[0], status: null }] },
+          "not-a-uuid",
+        );
+        expect(badKey.status).toBe(400);
+        const anonymous = await call("professional-availability", {
+          method: "PUT",
+          body: { days: [{ date: R1_DAYS[0], status: null }] },
+        });
+        expect(anonymous.status).toBe(401);
+        expect(windowsOf((await avail(tokenA)).body)).toEqual(before);
+      });
+
+      it("R1f. B never sees or changes A's days or pattern (function and direct RLS)", async () => {
+        const aBefore = (await avail(tokenA)).body.data;
+        const bList = windowsOf((await avail(tokenB)).body);
+        for (const d of R1_DAYS) expect(statusOn(bList, d)).toBeNull();
+
+        const bSaves = await put(tokenB, {
+          days: R1_DAYS.slice(0, 3).map((date) => ({ date, status: "available" })),
+          rotation: { pattern: "5x2", anchor: R1_DAYS[0], customCycle: [] },
+        });
+        expect(bSaves.status).toBe(200);
+        expect((await avail(tokenA)).body.data).toEqual(aBefore);
+
+        const aId = subOf(tokenA);
+        const read = await userClient(tokenB)
+          .from("availability_rotations")
+          .select("technician_profile_id")
+          .eq("technician_profile_id", aId);
+        expect(read.error).toBeNull();
+        expect(read.data).toEqual([]);
+        const forged = await userClient(tokenB).from("availability_rotations").insert({
+          technician_profile_id: aId,
+          pattern: "4x4",
+          anchor: R1_DAYS[0],
+          custom_cycle: [],
+        });
+        expect(forged.error).not.toBeNull();
+        const rpc = await userClient(tokenB).rpc("replace_availability_days", {
+          p_idempotency_key: randomUUID(),
+          p_days: [{ date: R1_DAYS[0], status: "unavailable" }],
+          p_rotation: null,
+        });
+        expect(rpc.error).toBeNull(); // the RPC only ever writes the caller's own days
+        expect((await avail(tokenA)).body.data).toEqual(aBefore);
+      });
+
+      it("R2a. «AOG only» is stored by day and by window and persists in a fresh session", async () => {
+        const saved = await put(tokenA, {
+          days: AOG_DAYS.map((date) => ({ date, status: "aog_only" })),
+        });
+        expect(saved.status).toBe(200);
+        const created = await call("professional-availability", {
+          method: "POST",
+          token: tokenA,
+          headers: { "Idempotency-Key": randomUUID() },
+          body: {
+            startsAt: "2031-06-10T00:00:00.000Z",
+            endsAt: "2031-06-11T00:00:00.000Z",
+            status: "aog_only",
+          },
+        });
+        expect(created.status).toBe(201);
+        aogWindowId = String((created.body.data?.window as Window).id);
+
+        const windows = windowsOf((await avail(await signIn(env.proA[0]!, env.proA[1]!))).body);
+        for (const d of AOG_DAYS) expect(statusOn(windows, d)).toBe("aog_only");
+        expect(windows.find((w) => w.id === aogWindowId)?.status).toBe("aog_only");
+      });
+
+      it("R2b. B cannot edit or delete A's «AOG only» window", async () => {
+        for (const method of ["PATCH", "DELETE"]) {
+          const res = await call("professional-availability", {
+            method,
+            token: tokenB,
+            query: { id: aogWindowId },
+            ...(method === "PATCH"
+              ? {
+                  body: {
+                    startsAt: "2031-06-10T00:00:00.000Z",
+                    endsAt: "2031-06-11T00:00:00.000Z",
+                    status: "available",
+                  },
+                }
+              : {}),
+          });
+          expect(res.status).toBe(404);
+        }
+        const mine = windowsOf((await avail(tokenA)).body);
+        expect(mine.find((w) => w.id === aogWindowId)?.status).toBe("aog_only");
+      });
+
+      describe.skipIf(!orgConfigured)("«AOG only» in matching (declared urgency, BR-4.8)", () => {
+        let tokenOrg = "";
+        let organizationId = "";
+        let qualificationTypeId = "";
+        let verified = false;
+        let declared = "";
+        let visibilityBefore = "";
+        const requirementIds: Record<string, string> = {};
+
+        beforeAll(async () => {
+          tokenOrg = await signIn(env.org[0]!, env.org[1]!);
+          organizationId = String(
+            (
+              await userClient(tokenOrg)
+                .from("organization_members")
+                .select("organization_id")
+                .limit(1)
+                .maybeSingle()
+            ).data?.organization_id ?? "",
+          );
+          // A must be in the external pool: visible and holding an active qualification of the
+          // required type. A verified one (local seed) also proves eligibility; in production nobody
+          // can verify (OD-3), so only the availability part of the explanation is asserted there.
+          const profile = (await call("professional-profile", { token: tokenA })).body.data
+            ?.profile as Profile;
+          visibilityBefore = profile.visibility;
+          if (profile.visibility === "private") {
+            const patched = await call("professional-profile", {
+              method: "PATCH",
+              token: tokenA,
+              body: { ...pick(profile), visibility: "anonymous" },
+            });
+            expect(patched.status).toBe(200);
+          }
+          const mine = (await call("professional-qualifications", { token: tokenA })).body.data
+            ?.qualifications as Qualification[];
+          const good = mine.find(
+            (q) =>
+              q.status === "active" &&
+              q.verificationStatus === "verified" &&
+              (q.expiresAt === null || q.expiresAt >= "2031-06-03"),
+          );
+          if (good) {
+            qualificationTypeId = good.type.id;
+            verified = true;
+          } else {
+            const catalog = await userClient(tokenA)
+              .from("qualification_types")
+              .select("id")
+              .eq("requires_expiry", false)
+              .not("id", "in", `(${mine.map((q) => q.type.id).join(",") || randomUUID()})`)
+              .limit(1)
+              .single();
+            expect(catalog.error).toBeNull();
+            qualificationTypeId = String(catalog.data!.id);
+            const created = await call("professional-qualifications", {
+              method: "POST",
+              token: tokenA,
+              body: { qualificationTypeId },
+            });
+            expect(created.status).toBe(201);
+            declared = (created.body.data?.qualification as Qualification).id;
+          }
+          for (const urgency of ["planned", "urgent", "aog"]) {
+            const created = await call("work-requirements", {
+              method: "POST",
+              token: tokenOrg,
+              body: {
+                organizationId,
+                title: `E2E R2 ${urgency} ${new Date().toISOString()}`,
+                location: "Madrid (MAD)",
+                startsAt: `${AOG_DAYS[0]}T00:00:00.000Z`,
+                endsAt: "2031-06-04T00:00:00.000Z",
+                shift: "day",
+                headcount: 1,
+                urgency,
+                qualifications: [{ qualificationTypeId, level: "hard" }],
+              },
+            });
+            expect(created.status).toBe(201);
+            requirementIds[urgency] = String((created.body.data?.requirement as { id: string }).id);
+          }
+        });
+
+        afterAll(async () => {
+          if (declared) {
+            await call("professional-qualifications", {
+              method: "DELETE",
+              token: tokenA,
+              query: { id: declared },
+            });
+          }
+          if (visibilityBefore === "private") {
+            const profile = (await call("professional-profile", { token: tokenA })).body.data
+              ?.profile as Profile;
+            await call("professional-profile", {
+              method: "PATCH",
+              token: tokenA,
+              body: { ...pick(profile), visibility: "private" },
+            });
+          }
+        });
+
+        const matchOfA = async (urgency: string) => {
+          const id = requirementIds[urgency]!;
+          const res = await call("matching-evaluate", {
+            method: "POST",
+            token: tokenOrg,
+            body: { requirementId: id },
+          });
+          expect(res.status).toBe(200);
+          const ref =
+            "CF-" +
+            createHash("sha256")
+              .update(`${id}:${subOf(tokenA)}`)
+              .digest("hex")
+              .slice(0, 10)
+              .toUpperCase();
+          const found = (res.body.data?.candidates as MatchRow[]).find(
+            (c) => c.candidate.id === ref,
+          );
+          expect(found, `A in the pool of the ${urgency} requirement`).toBeDefined();
+          return found!.match;
+        };
+        const availabilityCodes = (m: MatchRow["match"]) =>
+          [...m.blockers, ...m.reasons]
+            .map((x) => x.code)
+            .filter((c) => /AVAILAB/.test(c))
+            .sort();
+
+        it("R2c. «AOG only» days count for the AOG requirement and never for planned or urgent", async () => {
+          const aog = await matchOfA("aog");
+          expect(availabilityCodes(aog)).toEqual(["AVAILABILITY_COVERS_REQUIREMENT"]);
+          expect(aog.eligible).toBe(verified);
+          for (const urgency of ["planned", "urgent"]) {
+            const other = await matchOfA(urgency);
+            expect(availabilityCodes(other), urgency).toEqual(["NOT_AVAILABLE"]);
+            expect(other.eligible).toBe(false);
+          }
+        });
+
+        it("R2d. an unavailable day overrides «AOG only» (BR-4.8 precedence)", async () => {
+          const blocked = await put(tokenA, {
+            days: [{ date: AOG_DAYS[1]!, status: "unavailable" }],
+          });
+          expect(blocked.status).toBe(200);
+          const aog = await matchOfA("aog");
+          expect(availabilityCodes(aog)).toEqual(["PARTIAL_AVAILABILITY"]);
+          expect(aog.eligible).toBe(false);
+        });
+
+        it("R2e. capacity answers for every urgency (no 500 with «AOG only» rows)", async () => {
+          for (const id of Object.values(requirementIds)) {
+            const c = await call("capacity-evaluate", {
+              method: "POST",
+              token: tokenOrg,
+              body: { requirementId: id },
+            });
+            expect(c.status).toBe(200);
+          }
+        });
+
+        it("R2f. a professional cannot evaluate the organization's AOG requirement", async () => {
+          const res = await call("matching-evaluate", {
+            method: "POST",
+            token: tokenB,
+            body: { requirementId: requirementIds.aog },
+          });
+          expect([403, 404]).toContain(res.status);
+        });
       });
     });
   },

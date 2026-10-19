@@ -6,7 +6,7 @@
 #   1. work_requirements created by the synthetic org admin (cascade: requirement qualifications);
 #   2. organizations where the ONLY members are synthetic profiles (cascade: memberships);
 #   3. auth.users of the synthetic e-mails (cascade: profiles → technician_profiles → availability
-#      windows / qualifications). audit_events keep NULL actor/org (on delete set null).
+#      windows, saved patterns (availability_rotations) / qualifications). audit_events keep NULL actor/org (on delete set null).
 # Runs through `supabase db query --linked` (the linked ref must equal the authorized ref).
 #
 # Usage:
@@ -37,7 +37,8 @@ with u as (select id from auth.users where lower(email) in ($EMAILS)),
 select (select count(*) from u) as users,
        (select count(*) from o) as organizations,
        (select count(*) from public.work_requirements where created_by in (select id from u)) as requirements,
-       (select count(*) from public.availability_windows where technician_profile_id in (select id from u)) as windows"
+       (select count(*) from public.availability_windows where technician_profile_id in (select id from u)) as windows,
+       (select count(*) from public.availability_rotations where technician_profile_id in (select id from u)) as rotations"
 
 SQL_DELETE="
 begin;

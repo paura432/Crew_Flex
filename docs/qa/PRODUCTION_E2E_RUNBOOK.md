@@ -1,6 +1,6 @@
 # Production E2E runbook (synthetic accounts)
 
-Status: **PREPARED, NOT EXECUTED** (2026-10-16). Production = the single Supabase project
+Status: **PREPARED, NOT EXECUTED** (2026-10-16; release-1 coverage added 2026-10-19 for `65df3b9`). Production = the single Supabase project
 `sbjkzrkmcekokkqiuvvh` (OD-9). Three steps write to production and each needs its own owner approval:
 **(1) create the synthetic users, (2) run the E2E, (3) clean up.** Background: `docs/architecture/ENVIRONMENTS.md` §3.
 
@@ -8,7 +8,7 @@ Status: **PREPARED, NOT EXECUTED** (2026-10-16). Production = the single Supabas
 
 | File                  | Target                   | Used by                                    |
 | --------------------- | ------------------------ | ------------------------------------------ |
-| `.env.e2e`            | local Docker `127.0.0.1` | `pnpm e2e:remote` (local suite, 25 checks) |
+| `.env.e2e`            | local Docker `127.0.0.1` | `pnpm e2e:remote` (local suite, 41 checks) |
 | `.env.e2e.production` | `sbjkzrkmcekokkqiuvvh`   | `pnpm e2e:production`, `scripts/e2e/*.sh`  |
 
 `.env.e2e.production`: git-ignored (`.gitignore` `.env.*`), mode 600, three synthetic identities
@@ -32,7 +32,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://sbjkzrkmcekokkqiuvvh.supabase.c
 # Scope report (read-only SELECT; the script still requires the typed confirmation):
 set -a; . ./.env.e2e.production; set +a
 E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) bash scripts/e2e/cleanup-synthetic.sh --dry-run
-# expected before step 1: users 0, organizations 0, requirements 0, windows 0 — anything else: STOP
+# expected before step 1: users 0, organizations 0, requirements 0, windows 0, rotations 0 — anything else: STOP
 ```
 
 ## Step 1 — create the synthetic users (approval 1)
@@ -45,7 +45,13 @@ unset SUPABASE_SECRET_KEY
 ```
 
 Prints only `created <uuid>` ×3. The key and payload reach `curl` through file descriptors (not visible in
-`ps`). Post-check: dry-run → users 3, organizations 1, requirements 0, windows 0.
+`ps`). Post-check: dry-run → users 3, organizations 1, requirements 0, windows 0, rotations 0.
+
+Accounts (no platform admin by design — the review flow stays off, OD-3): **professional A**
+`e2e-pro-a@crewflex.test`, **professional B** `e2e-pro-b@crewflex.test`, **organization admin**
+`e2e-org-admin@crewflex.test` (creates the synthetic organization `E2E Org`). Passwords only in
+`.env.e2e.production` (mode 600, git-ignored), never printed. Read-only proof on 2026-10-19: production has 3
+users, **0** match these e-mails or the `e2e`/`+e2e` pattern — the cleanup scope cannot reach them.
 
 ## Step 2 — run the E2E (approval 2)
 
@@ -53,15 +59,30 @@ Prints only `created <uuid>` ×3. The key and payload reach `curl` through file 
 E2E_WRITE_CONFIRM=WRITE:sbjkzrkmcekokkqiuvvh:$(date -u +%F) pnpm e2e:production
 ```
 
-Expected: `remote-smoke` 19 passed, 0 skipped, 0 failed. Honest reading:
+Expected: `remote-smoke` **31** passed, 0 skipped, 0 failed (19 earlier + 12 release-1: R1a–R1f, R2a–R2f).
+Then the read-only browser checks (same approval; they sign in as A, never save):
+
+```bash
+BASE=https://crew-flex.vercel.app PLAYWRIGHT_CORE=<dir with playwright-core> CHROME=<chromium> \
+  node --env-file=.env.e2e.production scripts/e2e/ui-release1.mjs   # expected 24/24
+```
+
+Honest reading:
 
 - Check 14 (withdraw a verified hard qualification) returns early when the synthetic professional has no
   verified FTS, which is always the case while OD-3 is open (nobody can verify in production): it passes
   **without asserting**. Report it as not exercised.
-- Writes, all on synthetic rows: one availability window (deleted by the test), passport edit (restored),
-  one declaration (deleted), language preferences, **one work requirement left in `E2E Org`** (no delete path).
+- R2c in production: nobody can verify a qualification (OD-3), so A is **never eligible**; the test asserts
+  only the availability part of the explanation (`AVAILABILITY_COVERS_REQUIREMENT` for `aog`, `NOT_AVAILABLE`
+  for `planned`/`urgent`) and `eligible = false`. Full eligibility for AOG is proven locally (seed A verified).
+- SQL ↔ TypeScript parity of BR-4.8 is not an E2E concern: `tests/db/rls.test.ts` suite P (local) and the
+  release harness (111/111).
+- Writes, all on synthetic rows (2031 dates): availability windows and days (cleared by the tests), A's and
+  B's saved pattern (restored or deleted), A's passport (restored; visibility set to `anonymous` and back),
+  one or two declarations (deleted), language preferences, **four work requirements left in `E2E Org`** per
+  run (one planned + R2's planned/urgent/aog; no delete path).
 
-Post-check: dry-run → users 3, organizations 1, requirements = number of runs, windows 0.
+Post-check: dry-run → users 3, organizations 1, requirements = 4 × runs, windows 0, rotations 0.
 
 ## Step 3 — clean up (approval 3)
 
@@ -77,11 +98,12 @@ Scope proof (`scripts/e2e/cleanup-synthetic.sh`):
   injection; tested) and obviously synthetic (`e2e…@` or `…+e2e…@`; tested), compared lower-cased.
 - Deletes, in one transaction (an error commits nothing): requirements **created by** those users;
   organizations whose **every** member is one of those users (an org with any real member is kept); the
-  three `auth.users` rows → cascade to profiles, technician rows, availability windows, qualifications,
-  memberships, idempotency keys. `audit_events` rows stay with NULL actor/org (`on delete set null`).
+  three `auth.users` rows → cascade to profiles, technician rows, availability windows, saved patterns
+  (`availability_rotations`, FK `on delete cascade` — verified in production 2026-10-19), qualifications,
+  memberships, idempotency keys (cascade, verified). `audit_events` rows stay with NULL actor/org (`on delete set null`).
 - No other table, user or organization is reachable from these predicates.
 
-Post-check: dry-run → all four counts 0.
+Post-check: dry-run → all five counts 0.
 
 ## Recovery
 

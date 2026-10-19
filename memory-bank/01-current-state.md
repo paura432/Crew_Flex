@@ -65,6 +65,9 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 ## Gates
 
 2026-10-19 on the release checkout `65df3b9`: `pnpm check` (Vitest 290, Deno 50), `pnpm build`, `git diff --check` PASS; compat harness 111/111. Production E2E: NOT RUN.
+Release-1 E2E prepared 2026-10-19 (local commits after `65df3b9`, not deployed — tests and scripts only):
+local API 41/41, browser `scripts/e2e/ui-release1.mjs` 24/24; production suite refuses without the
+per-run confirmation (0 requests).
 
 ## Blockers
 
