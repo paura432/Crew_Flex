@@ -6,7 +6,8 @@ _Last updated 2026-10-19 (evening) CEST. Keep under ~60 lines; replace, don't ap
 
 Close production release 1 = commit **`65df3b9`** (availability cycle generator, «AOG only», tools).
 Plan revision 2 (safe order) for owner approval: `docs/qa/ROLLOUT_PLAN_2026-10-19.md`. **Step 0
-(read-only preflight) executed 2026-10-19 with authorization: GO** (§0). No remote write done.
+(read-only preflight) GO; step 1 executed 2026-10-19 with authorization** (matching-evaluate and
+capacity-evaluate v3 from `65df3b9`). Stopped: steps 2–6 not authorized.
 
 ## State
 
@@ -27,11 +28,11 @@ Plan revision 2 (safe order) for owner approval: `docs/qa/ROLLOUT_PLAN_2026-10-1
 
 ## Blocked on the owner
 
-- Release-1 steps 1–6 (one approval each; step 6 = production E2E, 3 approvals).
+- Release-1 steps 2–6 (one approval each; step 6 = production E2E, 3 approvals).
 - D-06 Q2–Q6 and D-07 P1–P4: owner **proposals** recorded 2026-10-19 in the contracts; ratification
   needed before any sensitive implementation (§4.1 of each doc). P3 period needs legal criterion.
 - Wallet release 2: retention periods, legal-hold procedure, maintenance mechanism (not approved).
 
 ## Next step (one)
 
-Owner authorization of step 1 (deploy `matching-evaluate`, `capacity-evaluate` by name from `../cf-r1`).
+Owner authorization of step 2 (`db push --dry-run`, then `db push`, `--workdir ../cf-r1a` = migrations #1–#3).

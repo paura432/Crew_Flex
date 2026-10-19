@@ -1,7 +1,10 @@
 # Production rollout plan — release 1 (`65df3b9`) · FOR OWNER APPROVAL
 
-> **Only step 0 (read-only preflight) has been executed**, with the owner's authorization of
-> 2026-10-19; its result is §0. Every other step (`functions deploy`, `db push`, `git push`,
+> **Executed with the owner's authorization:** step 0 (read-only preflight, §0) and **step 1 on
+> 2026-10-19** — `matching-evaluate` and `capacity-evaluate` deployed from `../cf-r1` (`65df3b9`),
+> each v2 → v3, `verify_jwt` unchanged (false; JWT checked in code), probes 401 / 405 / CORS 204 for
+> the Vercel origin only, downloaded sources identical to `65df3b9`, the other six functions and the
+> 10 remote migrations unchanged, Q2 still empty / 0. **Stopped after step 1.** Every other step (`functions deploy`, `db push`, `git push`,
 > production E2E) is run by the owner after its **own** approval (AGENTS.md "STOP"; OD-9 main-only:
 > a push to `main` is a production deploy). Revision 2 (2026-10-19) replaces the original order with
 > the **safe order** of §4, which removes window W instead of monitoring it (differences: §13).

@@ -2,6 +2,9 @@
 
 **As of 2026-10-16 ~21:30 CEST: production serves `origin/main` = `ddf5c4b` (code = `f158308` + memory-bank
 docs), on top of the 10 migrations and 8 Edge Functions rolled out the same day. Authenticated E2E: NOT RUN.**
+**Update 2026-10-19 (release 1, step 1, owner-authorized):** `matching-evaluate` and `capacity-evaluate` are v3
+built from `65df3b9` (sources verified by download; `verify_jwt` false as before, JWT checked in code); the other
+six functions, the 10 migrations and the frontend are unchanged (`docs/qa/ROLLOUT_PLAN_2026-10-19.md`).
 Re-verify with the commands at the bottom before relying on any line; update the date/SHA when it changes.
 
 ## Git
