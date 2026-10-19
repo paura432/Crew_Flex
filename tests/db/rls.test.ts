@@ -2052,3 +2052,137 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     });
   });
 });
+
+describe("O. per-day availability replace (shift-cycle generator, migration 20261019120000)", () => {
+  const KEY = "3a9d5e1c-0b2f-4c7a-8e6d-5f4a3b2c1d0e";
+  const replace = "select * from public.replace_availability_days($1, $2::jsonb)";
+  const own = async (tx: Transaction, owner: string, from: string, to: string) =>
+    (
+      await tx.query<{ starts_at: Date; ends_at: Date; status: string }>(
+        `select starts_at, ends_at, status from public.availability_windows
+         where technician_profile_id = $1 and starts_at < $3 and ends_at > $2 order by starts_at`,
+        [owner, from, to],
+      )
+    ).rows.map((r) => [r.starts_at.toISOString(), r.ends_at.toISOString(), r.status]);
+  const days = (...entries: [string, string | null][]) =>
+    JSON.stringify(entries.map(([date, status]) => ({ date, status })));
+
+  it("runs of consecutive days become one window each; a replay writes nothing more", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const payload = days(
+        ["2028-03-01", "unavailable"],
+        ["2028-03-02", "unavailable"],
+        ["2028-03-03", "available"],
+        ["2028-03-04", "available"],
+        ["2028-03-05", null],
+        ["2028-03-06", "available"],
+      );
+      const first = await tx.query<{ id: string; replayed: boolean; windows_created: number }>(
+        replace,
+        [KEY, payload],
+      );
+      expect(first.rows[0]).toMatchObject({ replayed: false, windows_created: 3 });
+      const expected = [
+        ["2028-03-01T00:00:00.000Z", "2028-03-03T00:00:00.000Z", "unavailable"],
+        ["2028-03-03T00:00:00.000Z", "2028-03-05T00:00:00.000Z", "available"],
+        ["2028-03-06T00:00:00.000Z", "2028-03-07T00:00:00.000Z", "available"],
+      ];
+      expect(await own(tx, SEED.delta, "2028-03-01", "2028-04-01")).toEqual(expected);
+
+      const replay = await tx.query<{ id: string; replayed: boolean }>(replace, [KEY, payload]);
+      expect(replay.rows[0]).toEqual({
+        id: first.rows[0]!.id,
+        replayed: true,
+        windows_created: null,
+      });
+      expect(await own(tx, SEED.delta, "2028-03-01", "2028-04-01")).toEqual(expected);
+      // Same key, other days → conflict, nothing written.
+      expect(await queryError(tx, replace, [KEY, days(["2028-03-09", "available"])])).toMatch(
+        /different request/,
+      );
+    });
+  });
+
+  it("listed days are cut out of longer windows; hours outside them are preserved", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      await tx.query(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+         values ($1, '2028-05-01 08:00Z', '2028-05-10 18:00Z', 'available')`,
+        [SEED.delta],
+      );
+      await tx.query(replace, [
+        "4b0e6f2d-1c3a-4d8b-9f7e-6a5b4c3d2e1f",
+        days(["2028-05-01", "unavailable"], ["2028-05-04", null], ["2028-05-10", null]),
+      ]);
+      expect(await own(tx, SEED.delta, "2028-05-01", "2028-05-11")).toEqual([
+        ["2028-05-01T00:00:00.000Z", "2028-05-02T00:00:00.000Z", "unavailable"],
+        ["2028-05-02T00:00:00.000Z", "2028-05-04T00:00:00.000Z", "available"],
+        ["2028-05-05T00:00:00.000Z", "2028-05-10T00:00:00.000Z", "available"],
+      ]);
+    });
+  });
+
+  it("rejects invalid payloads and past days without writing anything", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const before = await own(tx, SEED.delta, "2020-01-01", "2030-01-01");
+      const bad = [
+        "[]",
+        days(["2028-02-30", "available"]),
+        days(["2028-06-01", "maybe"]),
+        days(["2028-06-01", "available"], ["2028-06-01", null]),
+        JSON.stringify([
+          { date: "2028-06-01", status: "available", technician_profile_id: SEED.echo },
+        ]),
+        JSON.stringify(
+          Array.from({ length: 63 }, (_, i) => ({
+            date: `2029-01-01`,
+            status: i ? null : "available",
+          })),
+        ),
+        days(["2020-01-01", "available"]),
+        '{"date":"2028-06-01"}',
+      ];
+      for (const [i, payload] of bad.entries()) {
+        const key = `5c1f7a3e-2d4b-4e9c-8a0f-${String(i).padStart(12, "0")}`;
+        expect(await queryError(tx, replace, [key, payload])).toBeTruthy();
+      }
+      expect(await own(tx, SEED.delta, "2020-01-01", "2030-01-01")).toEqual(before);
+    });
+  });
+
+  it("only ever touches the caller's own windows; anon cannot call it", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      // Echo's seed window spans October 2026; Delta replacing those days leaves it intact.
+      const echoBefore = await own(tx, SEED.echo, "2026-10-01", "2026-11-01");
+      await tx.query(replace, [
+        "6d2a8b4f-3e5c-4fa1-8b2c-7d6e5f4a3b2c",
+        days(["2028-07-01", "unavailable"]),
+      ]);
+      expect(await own(tx, SEED.echo, "2026-10-01", "2026-11-01")).toEqual(echoBefore);
+    });
+    const { rows } = await db.query<{ n: number }>(
+      "select count(*)::int as n from public.availability_windows where technician_profile_id = $1",
+      [SEED.echo],
+    );
+    expect(rows[0]!.n).toBeGreaterThan(0);
+    await asUser(db, null, async (tx) => {
+      expect(
+        await queryError(tx, replace, [
+          "7e3b9c5a-4f6d-4ab2-9c3d-8e7f6a5b4c3d",
+          days(["2028-07-01", "available"]),
+        ]),
+      ).toMatch(/permission denied/);
+    });
+  });
+
+  it("an organization account (no technician profile) cannot write windows through it", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      expect(
+        await queryError(tx, replace, [
+          "8f4c0d6b-5a7e-4bc3-8d4e-9f8a7b6c5d4e",
+          days(["2028-07-01", "available"]),
+        ]),
+      ).toMatch(/foreign key|row-level security/);
+    });
+  });
+});

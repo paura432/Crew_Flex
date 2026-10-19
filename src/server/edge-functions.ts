@@ -15,7 +15,7 @@ export type EdgeFunctionName =
   | "qualification-reviews";
 
 interface InvokeOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   query?: Record<string, string>;
   body?: unknown;
   /** Extra request headers (e.g. `Idempotency-Key`); never Authorization. */

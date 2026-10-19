@@ -39,7 +39,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 
 ## Local (Docker, ports 563xx — `docs/qa/LOCAL_ENVIRONMENT.md`)
 
-- All 10 migrations applied incrementally, seed loaded, `qualification_review` flag row inserted **locally only**.
+- All 10 migrations applied incrementally (+ `20261019120000` on 2026-10-19, **local only**), seed loaded, `qualification_review` flag row inserted **locally only**.
 - The browser smoke now also needs `QUALIFICATION_REVIEW_ENABLED=true` in `.env.local` (it refuses otherwise).
 - 2026-10-16 ~20:52: the owner's `pnpm e2e:remote` failed 24/25 with **503** — a LOCAL problem: `.env.e2e`
   targets `127.0.0.1:56321` and `supabase functions serve` was not running (Kong answers 503 for every
@@ -56,6 +56,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 | Passport edit (atomic), qualification declare/edit/withdraw                                    | VERIFIED_LOCAL; DB + functions deployed; UI not yet published            |
 | ES/EN UI + persisted language                                                                  | VERIFIED_LOCAL; DB + function deployed; UI not yet published             |
 | E-3 / I-1 / I-3 / eligible-first pool                                                          | VERIFIED_LOCAL; applied remotely 2026-10-16                              |
+| Availability cycle generator (V1.8 parity, `PUT` + `20261019120000`)                           | VERIFIED_LOCAL (2026-10-19); not committed remotely, not deployed        |
 | Platform-admin qualification review                                                            | VERIFIED_LOCAL; NEEDS_DECISION (OD-3); off in production at all 3 layers |
 | Documents, Candidate Pack, applications, assignments, recruiter, tools, logbook, notifications | PLANNED / OUT_OF_SCOPE                                                   |
 

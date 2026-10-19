@@ -416,4 +416,55 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
     ).toBe("pending");
     expect(await golfEligible()).toBe(false);
   });
+
+  it("availability PUT: whole days in one transaction, replayed by key, refused for past days and organizations", async () => {
+    const days = [
+      { date: "2031-02-01", status: "unavailable" },
+      { date: "2031-02-02", status: "unavailable" },
+      { date: "2031-02-03", status: "available" },
+    ];
+    const idem = randomUUID();
+    const put = (token: string, body: unknown, k = idem) =>
+      call("professional-availability", {
+        method: "PUT",
+        token,
+        body,
+        headers: { "Idempotency-Key": k },
+      });
+    const first = await put(foxtrot, { days });
+    expect(first.status).toBe(200);
+    expect(first.body.data?.replayed).toBe(false);
+    const replay = await put(foxtrot, { days });
+    expect(replay.body.data).toEqual({ changeId: first.body.data?.changeId, replayed: true });
+    const db = client(foxtrot);
+    const inFebruary = async () =>
+      (
+        await db
+          .from("availability_windows")
+          .select("starts_at, ends_at, status")
+          .gte("starts_at", "2031-02-01")
+          .lt("starts_at", "2031-03-01")
+          .order("starts_at")
+      ).data ?? [];
+    expect((await inFebruary()).map((w) => w.status)).toEqual(["unavailable", "available"]);
+
+    expect(
+      (await put(foxtrot, { days: [{ date: "2020-01-01", status: "available" }] }, randomUUID()))
+        .status,
+    ).toBe(400);
+    expect((await put(foxtrot, { days: [] }, randomUUID())).status).toBe(400);
+    // An organization admin without a technician profile cannot write availability.
+    expect(
+      (await put(await signIn("admin.mro@crewflex.test"), { days }, randomUUID())).status,
+    ).toBe(403);
+
+    // Restore: clearing the same days removes what this check created.
+    const cleared = await put(
+      foxtrot,
+      { days: days.map((d) => ({ date: d.date, status: null })) },
+      randomUUID(),
+    );
+    expect(cleared.status).toBe(200);
+    expect(await inFebruary()).toEqual([]);
+  });
 });

@@ -48,7 +48,7 @@ function json(body: unknown, status: number, headers: Record<string, string>): R
  * Wraps per-method handlers with: request id, CORS, method check, error normalization,
  * the standard response envelope and a structured log line.
  */
-export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 export function createHandler(fn: string, handlers: Partial<Record<HttpMethod, Handler>>) {
   const methods = Object.keys(handlers);

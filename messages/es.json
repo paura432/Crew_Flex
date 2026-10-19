@@ -296,6 +296,14 @@
     "review": {
       "reasonRequired": "Indica un motivo para rechazar (el profesional lo leerá).",
       "noteMax": "Usa como máximo 500 caracteres"
+    },
+    "day": {
+      "invalid": "Elige un día válido"
+    },
+    "days": {
+      "required": "Elige al menos un día",
+      "tooMany": "Como máximo 62 días a la vez",
+      "duplicate": "Cada día solo puede aparecer una vez"
     }
   },
   "domain": {
@@ -515,7 +523,55 @@
     "statusAvailable": "Disponible",
     "statusUnavailable": "No disponible",
     "savedWindows": "Ventanas guardadas ({count})",
-    "emptyHint": "Aún no hay ventanas de disponibilidad. Marca días en el calendario o añade una ventana arriba; solo entras en el matching cuando estás disponible durante todo el periodo de la necesidad."
+    "emptyHint": "Aún no hay ventanas de disponibilidad. Marca días en el calendario o añade una ventana arriba; solo entras en el matching cuando estás disponible durante todo el periodo de la necesidad.",
+    "cycle": {
+      "title": "Planifica tu ciclo",
+      "pattern": "Patrón de trabajo y descanso",
+      "anchor": "Día 1 del ciclo (UTC)",
+      "anchorHint": "El primer día de trabajo de tu rotación.",
+      "customLength": "Días del ciclo",
+      "customDays": "Días del ciclo personalizado (pulsa para alternar trabajo / descanso)",
+      "customDay": "Día {n}: {state}",
+      "publishRest": "Publicar descansos generados como disponibles",
+      "replace": "Reemplazar también los días que ya he guardado en este mes",
+      "preview": "Previsualizar ciclo en el mes",
+      "hint": "7–3 / 7–4 alterna 7 de trabajo, 3 libres, 7 de trabajo y 4 libres. Se generan días completos UTC: revisa las horas si tu jornada usa otra zona. Los días de trabajo se guardan como bloqueados; los descansos son privados salvo que los publiques. Los intervalos parciales de los días que no reemplazas se conservan.",
+      "rotation": {
+        "7x3": "7–3",
+        "7x4": "7–4",
+        "5x2": "5–2",
+        "7x3_7x4": "7–3 / 7–4 alterno",
+        "6x4": "6–4",
+        "5x5": "5–5",
+        "4x4": "4–4",
+        "10x10": "10–10",
+        "15x15": "15–15",
+        "custom": "Otro · ciclo personalizado",
+        "2D2N4OFF": "2 días, 2 noches, 4 libres",
+        "night": "Noches (5 de trabajo, 2 libres)",
+        "split": "Turno partido (5 de trabajo, 2 libres)",
+        "flexible": "Flexible (solo descanso)"
+      },
+      "state": {
+        "working": "trabajo",
+        "off": "descanso"
+      },
+      "stateShort": {
+        "working": "Trab.",
+        "off": "Desc."
+      },
+      "error": {
+        "customLength": "Elige entre 1 y 31 días.",
+        "cycleTooLong": "El ciclo debe caber en 31 días.",
+        "invalidDate": "Elige un día 1 válido."
+      },
+      "unsaved": "sin guardar",
+      "pending": "{count, plural, one {# día modificado} other {# días modificados}} sin guardar. Revisa el calendario y guarda o descarta para cambiar de mes.",
+      "save": "Guardar calendario",
+      "discard": "Descartar cambios",
+      "saved": "{count, plural, one {# día guardado} other {# días guardados}}",
+      "nothingToSave": "Nada que guardar: la vista previa solo tenía descansos en días vacíos."
+    }
   },
   "organization": {
     "dashboard": {

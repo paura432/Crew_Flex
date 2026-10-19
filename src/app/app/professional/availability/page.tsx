@@ -27,13 +27,17 @@ export default async function ProfessionalAvailabilityPage() {
     );
   }
   const result = await listAvailability();
-  const initialMonth = new Date().toISOString().slice(0, 7);
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
       <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
       {result.ok ? (
-        <AvailabilityManager windows={result.data.windows} initialMonth={initialMonth} />
+        <AvailabilityManager
+          windows={result.data.windows}
+          initialMonth={today.slice(0, 7)}
+          today={today}
+        />
       ) : (
         <ApiErrorState error={result.error} requestId={result.requestId} />
       )}

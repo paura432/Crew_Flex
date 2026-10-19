@@ -296,6 +296,14 @@
     "review": {
       "reasonRequired": "Give a reason to reject (the professional will read it).",
       "noteMax": "Use at most 500 characters"
+    },
+    "day": {
+      "invalid": "Choose a valid day"
+    },
+    "days": {
+      "required": "Choose at least one day",
+      "tooMany": "At most 62 days at once",
+      "duplicate": "Each day can appear only once"
     }
   },
   "domain": {
@@ -515,7 +523,55 @@
     "statusAvailable": "Available",
     "statusUnavailable": "Unavailable",
     "savedWindows": "Saved windows ({count})",
-    "emptyHint": "No availability windows yet. Mark days in the calendar or add a window above — you only enter matching when you are available for the whole requirement period."
+    "emptyHint": "No availability windows yet. Mark days in the calendar or add a window above — you only enter matching when you are available for the whole requirement period.",
+    "cycle": {
+      "title": "Plan your work cycle",
+      "pattern": "Work and rest pattern",
+      "anchor": "Day 1 of the cycle (UTC)",
+      "anchorHint": "The first working day of your rotation.",
+      "customLength": "Days in the cycle",
+      "customDays": "Days of the custom cycle (press to switch work / rest)",
+      "customDay": "Day {n}: {state}",
+      "publishRest": "Publish generated rest days as available",
+      "replace": "Also replace days I already saved this month",
+      "preview": "Preview the cycle in this month",
+      "hint": "7–3 / 7–4 alternates 7 working days, 3 off, 7 working and 4 off. Whole UTC days are generated: check the hours if your shifts follow another time zone. Working days are saved as blocked; rest days stay private unless you publish them. Partial windows on days you do not replace are kept.",
+      "rotation": {
+        "7x3": "7–3",
+        "7x4": "7–4",
+        "5x2": "5–2",
+        "7x3_7x4": "7–3 / 7–4 alternating",
+        "6x4": "6–4",
+        "5x5": "5–5",
+        "4x4": "4–4",
+        "10x10": "10–10",
+        "15x15": "15–15",
+        "custom": "Other · custom cycle",
+        "2D2N4OFF": "2 days, 2 nights, 4 off",
+        "night": "Nights (5 on, 2 off)",
+        "split": "Split shift (5 on, 2 off)",
+        "flexible": "Flexible (rest only)"
+      },
+      "state": {
+        "working": "working",
+        "off": "rest"
+      },
+      "stateShort": {
+        "working": "Work",
+        "off": "Rest"
+      },
+      "error": {
+        "customLength": "Choose between 1 and 31 days.",
+        "cycleTooLong": "The cycle must fit in 31 days.",
+        "invalidDate": "Choose a valid day 1."
+      },
+      "unsaved": "not saved",
+      "pending": "{count, plural, one {# day changed} other {# days changed}} and not saved yet. Review the calendar, then save or discard to change month.",
+      "save": "Save calendar",
+      "discard": "Discard changes",
+      "saved": "{count, plural, one {# day saved} other {# days saved}}",
+      "nothingToSave": "Nothing to save: the preview only had rest days on empty days."
+    }
   },
   "organization": {
     "dashboard": {

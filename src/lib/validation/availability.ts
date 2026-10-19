@@ -36,6 +36,27 @@ export type CreateAvailabilityWindowInput = z.infer<typeof createAvailabilityWin
 export const updateAvailabilityWindowInput = createAvailabilityWindowInput;
 export type UpdateAvailabilityWindowInput = CreateAvailabilityWindowInput;
 
+export const MAX_REPLACE_DAYS = 62;
+
+/**
+ * Whole UTC days set at once (shift-cycle generator): `status: null` clears the day. Applied in one
+ * transaction by `replace_availability_days` (migration 20261019120000), which re-validates.
+ */
+export const replaceAvailabilityDaysInput = z.strictObject({
+  days: z
+    .array(
+      z.strictObject({
+        date: z.iso.date("v.day.invalid"),
+        status: z.enum(AVAILABILITY_STATUSES, "v.window.status").nullable(),
+      }),
+      "v.days.required",
+    )
+    .min(1, "v.days.required")
+    .max(MAX_REPLACE_DAYS, "v.days.tooMany")
+    .refine((days) => new Set(days.map((d) => d.date)).size === days.length, "v.days.duplicate"),
+});
+export type ReplaceAvailabilityDaysInput = z.infer<typeof replaceAvailabilityDaysInput>;
+
 export const availabilityWindowIdQuery = z.strictObject({
   id: z.uuid("v.window.id"),
 });

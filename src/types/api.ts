@@ -100,6 +100,12 @@ export interface AvailabilityWindowResponse {
   window: AvailabilityWindow;
 }
 
+export interface AvailabilityDaysResponse {
+  /** Id of the applied change set (the same on an idempotent replay). */
+  changeId: string;
+  replayed: boolean;
+}
+
 export interface AvailabilityDeleteResponse {
   deleted: true;
   id: string;

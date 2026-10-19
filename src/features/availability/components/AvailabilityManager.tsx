@@ -19,6 +19,7 @@ import type { AvailabilityWindow } from "@/types/api";
 import {
   createWindowAction,
   deleteWindowAction,
+  replaceDaysAction,
   updateWindowAction,
   type AvailabilityActionResult,
 } from "../actions";
@@ -30,6 +31,8 @@ import {
   shiftMonth,
   type DayState,
 } from "../calendar";
+import { planChanges, planCycle, RotationError, type PlannedDay } from "../rotation";
+import { CyclePlanner, type CycleSettings } from "./CyclePlanner";
 
 type Picker = AvailabilityStatus | "clear";
 
@@ -41,6 +44,8 @@ const PICKER_OPTIONS: { value: Picker; cls: string }[] = [
   { value: "clear", cls: "border-line bg-white text-muted" },
 ];
 
+const PLANNED_STATE = (status: PlannedDay["status"]): DayState => status ?? "none";
+
 const DAY_STYLE: Record<DayState, string> = {
   available: "border-ok/40 bg-ok-bg text-ok",
   unavailable: "border-line bg-canvas text-muted",
@@ -51,9 +56,12 @@ const DAY_STYLE: Record<DayState, string> = {
 export function AvailabilityManager({
   windows,
   initialMonth,
+  today,
 }: {
   windows: AvailabilityWindow[];
   initialMonth: string;
+  /** `YYYY-MM-DD` (UTC), from the server render. */
+  today: string;
 }) {
   const t = useTranslations("availability");
   const tRoot = useTranslations();
@@ -65,6 +73,10 @@ export function AvailabilityManager({
   const errors = resolveFieldErrors(tRoot, rawErrors);
   const dayLabel = (state: DayState) => t(`day.${state}`);
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  // Unsaved days (generated cycle and/or painted by hand); saved together in one transaction.
+  const [plan, setPlan] = useState<Record<string, PlannedDay>>({});
+  const [cycleError, setCycleError] = useState<string | null>(null);
+  const planned = Object.keys(plan).length;
   const [pending, startTransition] = useTransition();
   const idempotency = useIdempotencyKey();
 
@@ -78,12 +90,13 @@ export function AvailabilityManager({
   const availableDays = countDays(windows, "available", monthStart, monthEnd);
   const blockedDays = countDays(windows, "unavailable", monthStart, monthEnd);
 
-  function run(label: string, task: () => Promise<AvailabilityActionResult>) {
+  function run(label: string, task: () => Promise<AvailabilityActionResult>, onOk?: () => void) {
     setNotice(null);
     startTransition(async () => {
       const result = await task();
       if (result.ok) {
         idempotency.release();
+        onOk?.();
         setNotice({ tone: "ok", text: label });
         setEditing(null);
         setErrors({});
@@ -94,11 +107,55 @@ export function AvailabilityManager({
     });
   }
 
+  function replaceDays(label: string, changes: { date: string; status: PlannedDay["status"] }[]) {
+    run(
+      label,
+      () => replaceDaysAction({ days: changes }, idempotency.keyFor(changes)),
+      () => setPlan({}),
+    );
+  }
+
+  function onPreview(settings: CycleSettings) {
+    try {
+      const generated = planCycle(days, settings.pattern, { ...settings, today });
+      setPlan((old) => ({ ...old, ...generated }));
+      setCycleError(null);
+      setNotice(null);
+    } catch (error) {
+      if (!(error instanceof RotationError)) throw error;
+      setCycleError(t(`cycle.error.${error.code}`));
+    }
+  }
+
+  function onSavePlan() {
+    const changes = planChanges(days, plan);
+    if (changes.length === 0) {
+      setPlan({});
+      setNotice({ tone: "ok", text: t("cycle.nothingToSave") });
+      return;
+    }
+    replaceDays(t("cycle.saved", { count: changes.length }), changes);
+  }
+
   function onDayClick(date: string) {
     const day = days.find((d) => d.date === date);
     if (!day) return;
+    const status = picker === "clear" ? null : picker;
+    if (planned > 0) {
+      if (date >= today) setPlan((old) => ({ ...old, [date]: { status } }));
+      return;
+    }
     if (day.windows.length > 0 && !day.singleDayWindow) {
-      setNotice({ tone: "danger", text: t("coveredByLonger", { date }) });
+      // Longer or partial windows are cut out of this day on the server, in one transaction.
+      if (date < today) {
+        setNotice({ tone: "danger", text: t("coveredByLonger", { date }) });
+        return;
+      }
+      const label =
+        status === null
+          ? t("dayCleared", { date })
+          : t("daySet", { date, state: dayLabel(status).toLowerCase() });
+      replaceDays(label, [{ date, status }]);
       return;
     }
     const existing = day.singleDayWindow;
@@ -173,14 +230,24 @@ export function AvailabilityManager({
         />
       </dl>
 
+      <CyclePlanner today={today} disabled={pending} error={cycleError} onPreview={onPreview} />
+
       <Panel
         title={formatMonth(locale, `${monthStart}T00:00:00Z`)}
         actions={
           <div className="flex gap-2">
-            <Button aria-label={t("prevMonth")} onClick={() => setMonth(shiftMonth(month, -1))}>
+            <Button
+              aria-label={t("prevMonth")}
+              disabled={planned > 0}
+              onClick={() => setMonth(shiftMonth(month, -1))}
+            >
               ←
             </Button>
-            <Button aria-label={t("nextMonth")} onClick={() => setMonth(shiftMonth(month, 1))}>
+            <Button
+              aria-label={t("nextMonth")}
+              disabled={planned > 0}
+              onClick={() => setMonth(shiftMonth(month, 1))}
+            >
               →
             </Button>
           </div>
@@ -209,28 +276,50 @@ export function AvailabilityManager({
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1" aria-busy={pending}>
-          {cells.map(({ key, day }) =>
-            day === null ? (
-              <div key={key} aria-hidden />
-            ) : (
+          {cells.map(({ key, day }) => {
+            if (day === null) return <div key={key} aria-hidden />;
+            const draft = plan[day.date];
+            const state = draft ? PLANNED_STATE(draft.status) : day.state;
+            const label = draft?.cycle
+              ? `${dayLabel(state)} · ${t(`cycle.state.${draft.cycle}`)}`
+              : dayLabel(state);
+            return (
               <button
                 key={key}
                 type="button"
-                disabled={pending}
+                disabled={pending || (planned > 0 && day.date < today)}
                 onClick={() => onDayClick(day.date)}
-                aria-label={`${day.date}: ${dayLabel(day.state)}`}
-                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors hover:ring-2 hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[day.state]}`}
+                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}`}
+                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors hover:ring-2 hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
               >
                 <span className="text-base font-bold tabular-nums">
                   {Number(day.date.slice(-2))}
                 </span>
-                <span className="hidden text-[11px] leading-none sm:block">
-                  {dayLabel(day.state)}
-                </span>
+                <span className="hidden text-[11px] leading-none sm:block">{dayLabel(state)}</span>
               </button>
-            ),
-          )}
+            );
+          })}
         </div>
+
+        {planned > 0 && (
+          <div className="mt-4 space-y-3 rounded-lg border border-warn/40 bg-warn-bg p-3 text-sm text-warn">
+            <p role="status">{t("cycle.pending", { count: planned })}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" disabled={pending} aria-busy={pending} onClick={onSavePlan}>
+                {pending ? tRoot("common.saving") : t("cycle.save")}
+              </Button>
+              <Button
+                disabled={pending}
+                onClick={() => {
+                  setPlan({});
+                  setCycleError(null);
+                }}
+              >
+                {t("cycle.discard")}
+              </Button>
+            </div>
+          </div>
+        )}
       </Panel>
 
       <Panel title={editing ? t("editWindow") : t("addWindow")}>

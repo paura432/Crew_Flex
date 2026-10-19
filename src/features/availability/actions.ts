@@ -5,12 +5,14 @@ import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import {
   availabilityWindowIdQuery,
   createAvailabilityWindowInput,
+  replaceAvailabilityDaysInput,
 } from "@/lib/validation/availability";
 import { idempotencyKeySchema } from "@/lib/validation/idempotency";
 import type { ApiErrorBody, ApiResponse } from "@/types/api";
 import {
   createAvailabilityWindow,
   deleteAvailabilityWindow,
+  replaceAvailabilityDays,
   updateAvailabilityWindow,
 } from "./api";
 
@@ -80,4 +82,16 @@ export async function deleteWindowAction(id: unknown): Promise<AvailabilityActio
   const idParsed = availabilityWindowIdQuery.safeParse({ id });
   if (!idParsed.success) return invalid({ form: "Invalid window." });
   return fromResponse(await deleteAvailabilityWindow(idParsed.data.id));
+}
+
+/** Sets whole days at once (generated cycle or painted days): all or nothing, idempotent. */
+export async function replaceDaysAction(
+  input: unknown,
+  idempotencyKey: unknown,
+): Promise<AvailabilityActionResult> {
+  const parsed = replaceAvailabilityDaysInput.safeParse(input);
+  if (!parsed.success) return invalid(toFieldErrors(parsed.error));
+  const key = idempotencyKeySchema.safeParse(idempotencyKey);
+  if (!key.success) return invalid({ form: "v.idempotencyKey.invalid" });
+  return fromResponse(await replaceAvailabilityDays(parsed.data, key.data));
 }

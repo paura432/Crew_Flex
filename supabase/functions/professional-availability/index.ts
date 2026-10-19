@@ -3,6 +3,8 @@
 //   POST   /professional-availability { startsAt, endsAt, status }   (Idempotency-Key: 201 · 200 replay)
 //   PATCH  /professional-availability?id=<uuid> { startsAt, endsAt, status }
 //   DELETE /professional-availability?id=<uuid>
+//   PUT    /professional-availability { days: [{ date, status|null }] }  (Idempotency-Key)
+//          → sets whole UTC days atomically (shift-cycle generator), RPC replace_availability_days
 // The technician id is ALWAYS the JWT subject: the body never carries ownership. RLS enforces
 // `technician_profile_id = auth.uid()` as a second layer.
 import { z } from "zod";
@@ -15,9 +17,11 @@ import {
   availabilityWindowIdQuery,
   createAvailabilityWindowInput,
   listAvailabilityQuery,
+  replaceAvailabilityDaysInput,
   updateAvailabilityWindowInput,
 } from "../../../src/lib/validation/availability.ts";
 import type {
+  AvailabilityDaysResponse,
   AvailabilityDeleteResponse,
   AvailabilityListResponse,
   AvailabilityWindow,
@@ -110,6 +114,19 @@ export const handler = createHandler("professional-availability", {
     if (error) throw fromDatabaseError(error);
     if (!data) throw new ApiError("NOT_FOUND"); // missing or not owned look the same
     return { data: { window: toWindow(data) } satisfies AvailabilityWindowResponse };
+  },
+
+  PUT: async (ctx) => {
+    const actor = await requireActor(ctx);
+    const input = await parseJsonBody(ctx.req, replaceAvailabilityDaysInput);
+    await requireTechnician(actor);
+    const applied = await actor.client.rpc("replace_availability_days", {
+      p_idempotency_key: idempotencyKey(ctx.req),
+      p_days: input.days,
+    });
+    if (applied.error) throw fromDatabaseError(applied.error);
+    const { id, replayed } = createdRow(applied.data);
+    return { data: { changeId: id, replayed } satisfies AvailabilityDaysResponse };
   },
 
   DELETE: async (ctx) => {

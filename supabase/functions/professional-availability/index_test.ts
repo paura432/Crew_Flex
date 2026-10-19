@@ -8,7 +8,7 @@ const silence = () => {
   return () => Object.assign(console, { log, error });
 };
 
-for (const method of ["GET", "POST", "PATCH", "DELETE"] as const) {
+for (const method of ["GET", "POST", "PATCH", "PUT", "DELETE"] as const) {
   Deno.test(`professional-availability ${method} rejects unauthenticated requests`, async () => {
     const restore = silence();
     const res = await handler(
@@ -23,7 +23,7 @@ for (const method of ["GET", "POST", "PATCH", "DELETE"] as const) {
   });
 }
 
-Deno.test("professional-availability exposes the four methods in CORS preflight", async () => {
+Deno.test("professional-availability exposes the five methods in CORS preflight", async () => {
   const restore = silence();
   const previousOrigins = Deno.env.get("ALLOWED_ORIGINS");
   Deno.env.set("ALLOWED_ORIGINS", "http://localhost:3000");
@@ -39,7 +39,7 @@ Deno.test("professional-availability exposes the four methods in CORS preflight"
   assertEquals(res.status, 204);
   assertEquals(
     res.headers.get("Access-Control-Allow-Methods"),
-    "GET, POST, PATCH, DELETE, OPTIONS",
+    "GET, POST, PATCH, PUT, DELETE, OPTIONS",
   );
 });
 

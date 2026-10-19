@@ -25,6 +25,7 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 | Bilingual UI (ES/EN), Settings page, persisted language preference (`user-preferences`)                                                                                          | IMPLEMENTED (local; function not yet deployed)                         |
 | Remediation 2026-10-15: BR-1.4 in the DB (E-3), atomic passport (I-3), idempotent creates (I-1), eligible-first external pool + completeness summary (`20261015130000`…`130300`) | IMPLEMENTED (local Docker DB + PGlite + local E2E; not remote)         |
 | Platform-admin qualification review (`review_qualification`, `qualification-reviews`, `/app/admin/verifications`, `20261015130400`)                                              | IMPLEMENTED (local only) — **blocked for remote by OD-3 approval**     |
+| Availability work/rest cycle generator (V1.8 parity: preview, save/discard, atomic `PUT`, migration `20261019120000`)                                                            | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
 | Remote apply of migrations + function deploy                                                                                                                                     | PENDING OWNER AUTHORIZATION (`docs/audit/CREWFLEX_DIFF_CURRENT.md` §5) |
 
 ## NEXT
@@ -37,7 +38,7 @@ Current phase: **Foundation + Prototype V0**. Milestone:
   `professional-availability`, `professional-profile`, `professional-qualifications`, `user-preferences`,
   then push `main`. A partial set breaks pages (e.g. matches needs `summary.pool`).
 - V1.3 integration plan and pending decisions: `docs/integration/crewflex-v13/` (D-01…D-12).
-- Availability: "AOG only" day state and shift-pattern generator (OD C-8).
+- Availability: "AOG only" day state (OD C-8). The shift-pattern generator is implemented locally (NOW).
 - Organization member management (`organization-workforce` function): invite/add members.
 - Approve OD-3 / D-01, then deploy `qualification-reviews` with `QUALIFICATION_REVIEW_ENABLED=true` and
   insert the `qualification_review` flag row (the flow itself is implemented locally, 2026-10-15).
