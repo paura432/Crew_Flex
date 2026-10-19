@@ -2,6 +2,9 @@
 // Release compatibility harness (LOCAL Docker stack only). Reproduces every intermediate state of
 // the wave-1 rollout: functions served from the production commit (ddf5c4b) or the release commit
 // (65df3b9) against the local DB at the production schema (10 migrations) or the release schema (15).
+// With MID_SHA (a commit holding the release migrations that come before the enum value, e.g.
+// 2216d38 = #1–#3) it proves the safe order instead: schema 13 → new professional-availability →
+// enum + filter (14, 15), so no old reader ever meets an `aog_only` row.
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -11,7 +14,8 @@ const S = process.env.WT_DIR,
 if (!S)
   throw new Error("WT_DIR (directory holding wt-<prod> and wt-<release> worktrees) is required");
 const P = process.env.PROD_SHA,
-  R = process.env.RELEASE_SHA;
+  R = process.env.RELEASE_SHA,
+  MID = process.env.MID_SHA;
 if (!P || !R) throw new Error("PROD_SHA and RELEASE_SHA are required");
 const HERE = new URL(".", import.meta.url).pathname;
 const env = Object.fromEntries(
@@ -239,37 +243,147 @@ rec(
   JSON.stringify(s0.cMad.json?.data?.capacity) === JSON.stringify(s1.cMad.json?.data?.capacity),
   true,
 );
-// Step 2: migrations #1–#5 from the release checkout only.
-execFileSync("bash", ["scripts/local/sb-local.sh", "migration", "up", "--local"], {
-  cwd: `${S}/wt-${R}`,
-  stdio: "ignore",
-});
-rec(
-  "step2",
-  "local migrations applied (count)",
-  psql("select count(*) from supabase_migrations.schema_migrations"),
-  15,
-);
-rec(
-  "step2",
-  "wallet bucket/table absent",
+const migrationCount = () => psql("select count(*) from supabase_migrations.schema_migrations");
+const windowCount = () => psql("select count(*) from public.availability_windows");
+const keyCount = () => psql("select count(*) from app_private.idempotency_keys");
+const insertAogRows = () =>
+  psql(
+    `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status) values ('${DELTA}', '2026-10-19 00:00Z', '2026-10-20 00:00Z', 'aog_only'), ('${ALPHA}', '2026-10-19 00:00Z', '2026-10-20 00:00Z', 'aog_only')`,
+  );
+const wallet = () =>
   psql("select count(*) from pg_tables where tablename = 'professional_documents'") +
-    "/" +
-    psql("select count(*) from storage.buckets"),
-  "0/0",
-);
-await snapshot("S2 step2 (DB15, no aog rows yet)", {
-  aogRows: false,
-  newAvailability: false,
-});
-// A professional writes aog_only windows directly (possible as soon as the enum exists).
-psql(
-  `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status) values ('${DELTA}', '2026-10-19 00:00Z', '2026-10-20 00:00Z', 'aog_only'), ('${ALPHA}', '2026-10-19 00:00Z', '2026-10-20 00:00Z', 'aog_only')`,
-);
-await snapshot("S2 step2 (DB15 + aog_only rows)", { aogRows: true, newAvailability: false });
-// Step 3: new professional-availability.
-await start({ "matching-evaluate": R, "capacity-evaluate": R, "professional-availability": R });
-await snapshot("S3 step3 (DB15, all new)", { aogRows: true, newAvailability: true });
+  "/" +
+  psql("select count(*) from storage.buckets");
+
+async function originalOrder() {
+  // Step 2: migrations #1–#5 from the release checkout only.
+  execFileSync("bash", ["scripts/local/sb-local.sh", "migration", "up", "--local"], {
+    cwd: `${S}/wt-${R}`,
+    stdio: "ignore",
+  });
+  rec(
+    "step2",
+    "local migrations applied (count)",
+    psql("select count(*) from supabase_migrations.schema_migrations"),
+    15,
+  );
+  rec(
+    "step2",
+    "wallet bucket/table absent",
+    psql("select count(*) from pg_tables where tablename = 'professional_documents'") +
+      "/" +
+      psql("select count(*) from storage.buckets"),
+    "0/0",
+  );
+  await snapshot("S2 step2 (DB15, no aog rows yet)", {
+    aogRows: false,
+    newAvailability: false,
+  });
+  // A professional writes aog_only windows directly (possible as soon as the enum exists).
+  psql(
+    `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status) values ('${DELTA}', '2026-10-19 00:00Z', '2026-10-20 00:00Z', 'aog_only'), ('${ALPHA}', '2026-10-19 00:00Z', '2026-10-20 00:00Z', 'aog_only')`,
+  );
+  await snapshot("S2 step2 (DB15 + aog_only rows)", { aogRows: true, newAvailability: false });
+  // Step 3: new professional-availability.
+  await start({ "matching-evaluate": R, "capacity-evaluate": R, "professional-availability": R });
+  await snapshot("S3 step3 (DB15, all new)", { aogRows: true, newAvailability: true });
+}
+
+async function safeOrder() {
+  const fox = await token("foxtrot@crewflex.test");
+  // Step 2a: release migrations #1–#3 only (from the MID checkout; same bytes as in the release).
+  execFileSync("bash", ["scripts/local/sb-local.sh", "migration", "up", "--local"], {
+    cwd: `${S}/wt-${MID}`,
+    stdio: "ignore",
+  });
+  rec("2a", "local migrations applied (count)", migrationCount(), 13);
+  rec(
+    "2a",
+    "enum has no aog_only yet",
+    psql("select enum_range(null::public.availability_status)"),
+    "{available,unavailable}",
+  );
+  rec("2a", "wallet table/bucket absent", wallet(), "0/0");
+  let refused = "accepted";
+  try {
+    insertAogRows();
+  } catch {
+    refused = "refused";
+  }
+  rec("2a", "direct aog_only insert (no row can exist)", refused, "refused");
+  await snapshot("SA step2a (DB13, old availability)", { aogRows: false, newAvailability: false });
+  // Rollback before the enum exists: every function back to production is safe.
+  await start({ "matching-evaluate": P, "capacity-evaluate": P, "professional-availability": P });
+  await snapshot("RA rollback fns at DB13", { aogRows: false, newAvailability: false });
+  // Step 3 (moved before the enum): the release professional-availability on schema 13.
+  await start({ "matching-evaluate": R, "capacity-evaluate": R, "professional-availability": R });
+  await snapshot("SB new availability (DB13)", { aogRows: false, newAvailability: true });
+  const g = await call("professional-availability", fox);
+  rec("SB", "GET returns the rotation field", "rotation" in (g.json?.data ?? {}), true);
+  const before = `${windowCount()}/${keyCount()}`;
+  const postAog = await call("professional-availability", fox, {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: { startsAt: "2032-02-10T00:00:00Z", endsAt: "2032-02-11T00:00:00Z", status: "aog_only" },
+  });
+  rec("SB", "POST aog_only before the enum → clean 4xx", postAog.status, 400);
+  const putAog = await call("professional-availability", fox, {
+    method: "PUT",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: { days: [{ date: "2032-02-12", status: "aog_only" }] },
+  });
+  rec("SB", "PUT aog_only day before the enum → clean 4xx", putAog.status, 400);
+  rec(
+    "SB",
+    "nothing written by refused requests (windows/keys)",
+    `${windowCount()}/${keyCount()}`,
+    before,
+  );
+  // Step 4: enum value (#4) alone, then the filter (#5) — the gap inside one `db push`.
+  execFileSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      "supabase_db_crew-flex",
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-q",
+    ],
+    {
+      input: readFileSync(`${S}/wt-${R}/supabase/migrations/20261019150000_aog_only_status.sql`),
+      stdio: ["pipe", "ignore", "inherit"],
+    },
+  );
+  psql(
+    "insert into supabase_migrations.schema_migrations (version, name) values ('20261019150000', 'aog_only_status')",
+  );
+  insertAogRows();
+  await snapshot("SC enum only (DB14 + aog rows, new fns)", {
+    aogRows: true,
+    newAvailability: true,
+  });
+  psql(
+    `delete from public.availability_windows where status = 'aog_only' and technician_profile_id in ('${DELTA}','${ALPHA}')`,
+  );
+  execFileSync("bash", ["scripts/local/sb-local.sh", "migration", "up", "--local"], {
+    cwd: `${S}/wt-${R}`,
+    stdio: "ignore",
+  });
+  rec("4", "local migrations applied (count)", migrationCount(), 15);
+  rec("4", "wallet table/bucket absent", wallet(), "0/0");
+  await snapshot("SD step4 (DB15, no aog rows)", { aogRows: false, newAvailability: true });
+  insertAogRows();
+  await snapshot("SD step4 (DB15 + aog_only rows)", { aogRows: true, newAvailability: true });
+}
+
+if (MID) await safeOrder();
+else await originalOrder();
 // Rollback hazard: functions rolled back below step 1 while aog_only rows exist.
 await start({ "matching-evaluate": P, "capacity-evaluate": P, "professional-availability": P });
 {
