@@ -32,6 +32,18 @@ describe("F. frontend contains no privileged credentials", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("Edge Functions: only documents-maintenance may read the service role (written justification)", () => {
+    const offenders = filesUnder(join(root, "supabase", "functions")).filter(
+      (file) =>
+        /SERVICE_ROLE|service_role|sb_secret_/.test(readFileSync(file, "utf8")) &&
+        !file.endsWith(join("documents-maintenance", "index.ts")),
+    );
+    expect(offenders).toEqual([]);
+    expect(readFileSync(join(root, "docs", "architecture", "EDGE_FUNCTIONS.md"), "utf8")).toMatch(
+      /Service role — `documents-maintenance`/,
+    );
+  });
+
   it("no tracked file defines a NEXT_PUBLIC_ service role variable", () => {
     const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" })
       .split("\n")

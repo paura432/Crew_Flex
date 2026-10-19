@@ -49,3 +49,12 @@ export const documentUrlQuery = z.strictObject({
   id: z.uuid("v.document.id"),
   url: z.literal("1", "v.invalid"),
 });
+
+/**
+ * `POST /documents-maintenance?apply=1&limit=` (platform admin). Dry-run unless `apply=1`; at most
+ * 100 objects per call.
+ */
+export const documentsMaintenanceQuery = z.strictObject({
+  apply: z.literal("1", "v.invalid").optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});

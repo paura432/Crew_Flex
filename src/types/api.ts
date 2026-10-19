@@ -227,3 +227,20 @@ export interface ReviewQueueResponse {
 export interface ReviewDecisionResponse {
   qualification: { id: string; verificationStatus: VerificationStatus; reviewedAt: string };
 }
+
+/**
+ * `documents-maintenance` (platform admin, LOCAL ONLY, not deployed): orphan reconciliation and
+ * purge of tombstoned objects. Ids and counts only — never titles; paths never leave the function.
+ */
+export interface DocumentsMaintenanceResponse {
+  mode: "dry-run" | "apply";
+  /** Objects with no row and no tombstone, older than the orphan grace. */
+  orphans: number;
+  /** Tombstones due for purge (dry-run) or processed (apply). */
+  due: { tombstoneId: string; reason: string }[];
+  /** Apply only. */
+  purged: number;
+  absent: number;
+  skipped: { tombstoneId: string; why: string }[];
+  failed: number;
+}

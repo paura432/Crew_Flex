@@ -2524,6 +2524,16 @@ describe("Q. document wallet (migration 20261019160000)", () => {
   const pathFor = (uid: string, key: string, hash: string) => `${uid}/${key}-${hash.slice(0, 16)}`;
   const create = `select * from public.create_professional_document($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
 
+  // The wallet is gated by the owner-only flag (20261019160200); these tests run with it ON.
+  beforeAll(async () => {
+    await db.query(
+      "insert into app_private.feature_flags (name, enabled) values ('document_wallet', true) on conflict (name) do update set enabled = true",
+    );
+  });
+  afterAll(async () => {
+    await db.query("delete from app_private.feature_flags where name = 'document_wallet'");
+  });
+
   /** What Storage does on upload: inserts the object row as the signed-in user (RLS applies). */
   async function upload(tx: Transaction, uid: string, key: string, content: string) {
     const hash = sha(content);
@@ -3060,6 +3070,349 @@ describe("Q. document wallet (migration 20261019160000)", () => {
           name,
         ).toMatch(/row-level security/);
       }
+    });
+  });
+  describe("R. activation gate, tombstones, retention and reconciliation (migration 20261019160200)", () => {
+    const flagOff = async (tx: Transaction, uid: string) => {
+      await tx.exec("reset role");
+      await tx.query("delete from app_private.feature_flags where name = 'document_wallet'");
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: uid, role: "authenticated" }),
+      ]);
+      await tx.exec("set local role authenticated");
+    };
+    const asSuper = async <T>(tx: Transaction, uid: string, fn: () => Promise<T>) => {
+      await tx.exec("reset role");
+      const out = await fn();
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: uid, role: "authenticated" }),
+      ]);
+      await tx.exec("set local role authenticated");
+      return out;
+    };
+    const tombstones = (tx: Transaction, path: string) =>
+      tx.query<{
+        id: string;
+        reason: string;
+        due_now: boolean;
+        grace_days: number;
+        legal_hold: boolean;
+      }>(
+        `select id, reason, purge_after <= now() as due_now,
+                round(extract(epoch from purge_after - deleted_at) / 86400)::int as grace_days, legal_hold
+         from app_private.document_object_tombstones where storage_path = $1`,
+        [path],
+      );
+
+    it("flag off: no new document by RPC, direct insert or direct upload; existing ones stay readable, editable, deletable", async () => {
+      await asUser(db, SEED.delta, async (tx) => {
+        const doc = await createDoc(tx, SEED.delta);
+        await flagOff(tx, SEED.delta);
+        expect(
+          (await tx.query("select public.is_feature_enabled('document_wallet') as on")).rows,
+        ).toEqual([{ on: false }]);
+        const key2 = "9c5e7d3a-1b8f-4e4a-8d7c-8f9a0b1c2d34";
+        expect(
+          await queryError(
+            tx,
+            "insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4)",
+            [BUCKET, pathFor(SEED.delta, key2, sha("off")), SEED.delta, '{"size":3}'],
+          ),
+        ).toMatch(/row-level security/);
+        const path2 = pathFor(SEED.delta, key2, sha("off"));
+        await asSuper(tx, SEED.delta, () =>
+          tx.query(
+            "insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4)",
+            [BUCKET, path2, SEED.delta, '{"size":3}'],
+          ),
+        );
+        expect(
+          await queryError(tx, create, [
+            key2,
+            "other",
+            "x",
+            path2,
+            "application/pdf",
+            3,
+            sha("off"),
+            null,
+            null,
+          ]),
+        ).toMatch(/document wallet is not enabled/);
+        expect(
+          await queryError(
+            tx,
+            `insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256)
+             values ($1, 'other', 'x', $2, 'application/pdf', 3, $3)`,
+            [SEED.delta, path2, sha("off")],
+          ),
+        ).toMatch(/row-level security/);
+        expect(
+          await rowCount(tx, "select 1 from public.professional_documents where id = $1", [doc.id]),
+        ).toBe(1);
+        expect(
+          (await tx.query("select 1 from storage.objects where name = $1", [doc.path])).rows,
+        ).toHaveLength(1);
+        expect(
+          (
+            await tx.query(
+              "update public.professional_documents set title = 'Still mine' where id = $1",
+              [doc.id],
+            )
+          ).affectedRows,
+        ).toBe(1);
+        expect(
+          (await tx.query("delete from public.professional_documents where id = $1", [doc.id]))
+            .affectedRows,
+        ).toBe(1);
+        expect(
+          (await tx.query("delete from storage.objects where name = $1", [doc.path])).affectedRows,
+        ).toBe(1);
+      });
+    });
+
+    it("is_feature_enabled answers only whitelisted names and only to signed-in users", async () => {
+      await asUser(db, SEED.delta, async (tx) => {
+        await asSuper(tx, SEED.delta, () =>
+          tx.query(
+            "insert into app_private.feature_flags (name, enabled) values ('qualification_review', true) on conflict (name) do update set enabled = true",
+          ),
+        );
+        const { rows } = await tx.query(
+          "select public.is_feature_enabled('document_wallet') a, public.is_feature_enabled('qualification_review') b, public.is_feature_enabled('x') c",
+        );
+        expect(rows).toEqual([{ a: true, b: false, c: false }]);
+        expect(await queryError(tx, "select * from app_private.feature_flags")).toMatch(
+          /permission denied/,
+        );
+      });
+      await asUser(db, null, async (tx) => {
+        expect(await queryError(tx, "select public.is_feature_enabled('document_wallet')")).toMatch(
+          /permission denied/,
+        );
+      });
+    });
+
+    it("tombstones: owner delete is due now; account deletion and operator deletes wait for the configurable grace", async () => {
+      await asUser(db, SEED.delta, async (tx) => {
+        const own = await createDoc(
+          tx,
+          SEED.delta,
+          "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+          "%PDF-own",
+        );
+        await tx.query("delete from public.professional_documents where id = $1", [own.id]);
+        expect((await asSuper(tx, SEED.delta, () => tombstones(tx, own.path))).rows).toMatchObject([
+          { reason: "owner_delete", due_now: true, legal_hold: false },
+        ]);
+
+        const op = await createDoc(
+          tx,
+          SEED.delta,
+          "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+          "%PDF-op",
+        );
+        const casc = await createDoc(
+          tx,
+          SEED.delta,
+          "3c4d5e6f-7a8b-4c9d-8e1f-2a3b4c5d6e7f",
+          "%PDF-casc",
+        );
+        await tx.exec("reset role");
+        await tx.query("select set_config('request.jwt.claims', '', true)");
+        await tx.query("delete from public.professional_documents where id = $1", [op.id]);
+        expect((await tombstones(tx, op.path)).rows).toMatchObject([
+          { reason: "operator_delete", due_now: false, grace_days: 30 },
+        ]);
+        // Settings drive the grace (proposal: 30 days), not the code.
+        await tx.query(
+          "update app_private.document_retention_settings set account_deletion_grace = interval '7 days'",
+        );
+        await tx.query("delete from public.technician_profiles where profile_id = $1", [
+          SEED.delta,
+        ]);
+        expect((await tombstones(tx, casc.path)).rows).toMatchObject([
+          { reason: "account_deleted", due_now: false, grace_days: 7 },
+        ]);
+        expect(
+          await queryError(
+            tx,
+            "update app_private.document_retention_settings set account_deletion_grace = interval '-1 day'",
+          ),
+        ).toMatch(/check/);
+      });
+      await asUser(db, SEED.delta, async (tx) => {
+        expect(
+          await queryError(tx, "select * from app_private.document_object_tombstones"),
+        ).toMatch(/permission denied/);
+        expect(
+          await queryError(tx, "select * from app_private.document_retention_settings"),
+        ).toMatch(/permission denied/);
+      });
+    });
+
+    it("maintenance RPCs: platform admin only; reconciliation never marks a referenced or young object; legal hold is never due", async () => {
+      await asUser(db, SEED.delta, async (tx) => {
+        const kept = await createDoc(
+          tx,
+          SEED.delta,
+          "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f80",
+          "%PDF-kept",
+        );
+        const orphanOld = await upload(
+          tx,
+          SEED.delta,
+          "5e6f7a8b-9c0d-4e1f-8a2b-4c5d6e7f8091",
+          "%PDF-old",
+        );
+        const orphanYoung = await upload(
+          tx,
+          SEED.delta,
+          "6f7a8b9c-0d1e-4f2a-9b3c-5d6e7f8091a2",
+          "%PDF-young",
+        );
+        const held = await createDoc(
+          tx,
+          SEED.delta,
+          "7a8b9c0d-1e2f-4a3b-8c4d-6e7f8091a2b3",
+          "%PDF-held",
+        );
+        await tx.query("delete from public.professional_documents where id = $1", [held.id]);
+        for (const [name, args] of [
+          ["document_maintenance_batch", "(true, 10)"],
+          ["document_purge_recheck", "(gen_random_uuid())"],
+          ["document_purge_record", "(gen_random_uuid(), 'purged', null)"],
+        ]) {
+          expect(await queryError(tx, `select * from public.${name}${args}`), name).toMatch(
+            /not authorized/,
+          );
+        }
+        await tx.exec("reset role");
+        await tx.query(
+          "update storage.objects set created_at = now() - interval '2 days' where name = any($1)",
+          [[kept.path, orphanOld.path, held.path]],
+        );
+        await tx.query(
+          "update app_private.document_object_tombstones set legal_hold = true where storage_path = $1",
+          [held.path],
+        );
+        await tx.query("select set_config('request.jwt.claims', $1, true)", [
+          JSON.stringify({ sub: SEED.platformAdmin, role: "authenticated" }),
+        ]);
+        await tx.exec("set local role authenticated");
+
+        const dry = await tx.query<{
+          tombstone_id: string | null;
+          storage_path: string;
+          action: string;
+        }>("select * from public.document_maintenance_batch(false, 50)");
+        expect(
+          dry.rows.filter((r) => r.action === "would_tombstone").map((r) => r.storage_path),
+        ).toEqual([orphanOld.path]);
+        const paths = dry.rows.map((r) => r.storage_path);
+        expect(paths).not.toContain(kept.path);
+        expect(paths).not.toContain(orphanYoung.path);
+        expect(paths).not.toContain(held.path);
+        const countOpen = async () =>
+          asSuper(
+            tx,
+            SEED.platformAdmin,
+            async () =>
+              (
+                await tx.query<{ n: number }>(
+                  "select count(*)::int n from app_private.document_object_tombstones where purged_at is null",
+                )
+              ).rows[0]!.n,
+          );
+        const before = await countOpen();
+        const applied = await tx.query<{
+          tombstone_id: string;
+          storage_path: string;
+          reason: string;
+          action: string;
+        }>("select * from public.document_maintenance_batch(true, 50)");
+        expect(await countOpen()).toBe(before + 1);
+        const orphan = applied.rows.find((r) => r.storage_path === orphanOld.path)!;
+        expect(orphan).toMatchObject({ reason: "orphan_upload", action: "purge" });
+        expect(applied.rows.map((r) => r.storage_path)).not.toContain(held.path);
+        await tx.query("select * from public.document_maintenance_batch(true, 50)");
+        expect(await countOpen()).toBe(before + 1); // idempotent
+
+        const heldId = (await asSuper(tx, SEED.platformAdmin, () => tombstones(tx, held.path)))
+          .rows[0]!.id;
+        expect(
+          (await tx.query("select allowed, why from public.document_purge_recheck($1)", [heldId]))
+            .rows,
+        ).toEqual([{ allowed: false, why: "legal_hold" }]);
+        expect(
+          (
+            await tx.query("select allowed, why from public.document_purge_recheck($1)", [
+              orphan.tombstone_id,
+            ])
+          ).rows,
+        ).toEqual([{ allowed: true, why: "ok" }]);
+        // A row appearing for the path between plan and delete blocks the purge.
+        await asSuper(tx, SEED.platformAdmin, () =>
+          tx.query(
+            `insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256)
+             values ($1, 'other', 'late', $2, 'application/pdf', $3, $4)`,
+            [SEED.delta, orphanOld.path, orphanOld.size, orphanOld.hash],
+          ),
+        );
+        expect(
+          (
+            await tx.query("select allowed, why from public.document_purge_recheck($1)", [
+              orphan.tombstone_id,
+            ])
+          ).rows,
+        ).toEqual([{ allowed: false, why: "referenced" }]);
+        await asSuper(tx, SEED.platformAdmin, () =>
+          tx.query("delete from public.professional_documents where storage_path = $1", [
+            orphanOld.path,
+          ]),
+        );
+
+        await tx.query("select public.document_purge_record($1, 'failed', 'storage_500')", [
+          orphan.tombstone_id,
+        ]);
+        await tx.query("select public.document_purge_record($1, 'purged', null)", [
+          orphan.tombstone_id,
+        ]);
+        await tx.query("select public.document_purge_record($1, 'purged', null)", [
+          orphan.tombstone_id,
+        ]);
+        expect(
+          (
+            await tx.query("select allowed, why from public.document_purge_recheck($1)", [
+              orphan.tombstone_id,
+            ])
+          ).rows,
+        ).toEqual([{ allowed: false, why: "already_purged" }]);
+        const audit = await tx.query<{ metadata: Record<string, unknown> }>(
+          "select metadata from public.audit_events where action = 'document.purged' and entity_id = $1",
+          [orphan.tombstone_id],
+        );
+        expect(audit.rows).toEqual([
+          {
+            metadata: {
+              technician_profile_id: SEED.delta,
+              reason: "orphan_upload",
+              object_found: true,
+            },
+          },
+        ]);
+        expect(JSON.stringify(audit.rows)).not.toContain(orphanOld.path);
+        expect(
+          await queryError(tx, "select public.document_purge_record($1, 'nuke', null)", [
+            orphan.tombstone_id,
+          ]),
+        ).toMatch(/invalid outcome/);
+      });
+      await asUser(db, null, async (tx) => {
+        expect(
+          await queryError(tx, "select * from public.document_maintenance_batch(false, 1)"),
+        ).toMatch(/permission denied/);
+      });
     });
   });
 });

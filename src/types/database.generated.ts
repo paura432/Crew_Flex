@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261019160100. Do not edit by hand.
+// migrations up to 20261019160200. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -605,6 +605,27 @@ export type Database = {
           replayed: boolean;
         }[];
       };
+      document_maintenance_batch: {
+        Args: { p_apply: boolean; p_limit: number };
+        Returns: {
+          action: string;
+          reason: string;
+          storage_path: string;
+          tombstone_id: string;
+        }[];
+      };
+      document_purge_recheck: {
+        Args: { p_tombstone_id: string };
+        Returns: {
+          allowed: boolean;
+          storage_path: string;
+          why: string;
+        }[];
+      };
+      document_purge_record: {
+        Args: { p_error: string; p_outcome: string; p_tombstone_id: string };
+        Returns: undefined;
+      };
       get_requirement_candidate_pool: {
         Args: { p_requirement_id: string };
         Returns: {
@@ -632,6 +653,7 @@ export type Database = {
         };
         Returns: boolean;
       };
+      is_feature_enabled: { Args: { p_name: string }; Returns: boolean };
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       own_qualification_reviews: {

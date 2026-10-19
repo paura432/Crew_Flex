@@ -9,6 +9,13 @@ const notFound = vi.fn(() => {
 vi.mock("next/navigation", () => ({ notFound }));
 const requireSessionActor = vi.fn();
 vi.mock("@/server/session", () => ({ requireSessionActor }));
+const rpc = vi.fn();
+const createServerSupabase = vi.fn(async () => ({ rpc }));
+vi.mock("@/lib/supabase/server", () => ({ createServerSupabase }));
+const listDocuments = vi.fn();
+vi.mock("@/features/documents/api", () => ({ listDocuments }));
+vi.mock("@/features/qualifications/api", () => ({ listQualifications: vi.fn() }));
+vi.mock("@/features/documents/components/DocumentWallet", () => ({ DocumentWallet: () => null }));
 const getReviewQueue = vi.fn();
 const submitReview = vi.fn();
 vi.mock("@/features/reviews/api", () => ({ getReviewQueue, submitReview }));
@@ -94,16 +101,39 @@ describe("reviewQualificationAction", () => {
   });
 });
 
-describe("document wallet flag (D-10 rollout gate)", () => {
-  it.each([undefined, "", "false", "1", "TRUE"])("is off for %j", async (value) => {
-    vi.stubEnv("DOCUMENT_WALLET_ENABLED", value);
+describe("document wallet gate (D-10, read from Supabase)", () => {
+  it.each([
+    ["true", { data: true, error: null }, true],
+    ["false", { data: false, error: null }, false],
+    ["an RPC error", { data: null, error: { code: "42501" } }, false],
+    ["a non-boolean answer", { data: "true", error: null }, false],
+  ])("%s → %s", async (_name, answer, expected) => {
+    rpc.mockResolvedValueOnce(answer);
     const { isDocumentWalletEnabled } = await import("./feature-flags");
-    expect(isDocumentWalletEnabled()).toBe(false);
+    expect(await isDocumentWalletEnabled()).toBe(expected);
+    expect(rpc).toHaveBeenCalledWith("is_feature_enabled", { p_name: "document_wallet" });
   });
 
-  it('is on only for exactly "true"', async () => {
-    vi.stubEnv("DOCUMENT_WALLET_ENABLED", "true");
+  it("fails closed when the client cannot be created (no session / no env)", async () => {
+    createServerSupabase.mockRejectedValueOnce(new Error("cookies unavailable"));
     const { isDocumentWalletEnabled } = await import("./feature-flags");
-    expect(isDocumentWalletEnabled()).toBe(true);
+    expect(await isDocumentWalletEnabled()).toBe(false);
+  });
+
+  it("ignores the retired DOCUMENT_WALLET_ENABLED variable", async () => {
+    vi.stubEnv("DOCUMENT_WALLET_ENABLED", "true");
+    rpc.mockResolvedValueOnce({ data: false, error: null });
+    const { isDocumentWalletEnabled } = await import("./feature-flags");
+    expect(await isDocumentWalletEnabled()).toBe(false);
+  });
+});
+
+describe("/app/professional/documents", () => {
+  it("off: 404 before reading the session or calling the Edge Function", async () => {
+    rpc.mockResolvedValueOnce({ data: false, error: null });
+    const { default: DocumentsPage } = await import("@/app/app/professional/documents/page");
+    await expect(DocumentsPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(requireSessionActor).not.toHaveBeenCalled();
+    expect(listDocuments).not.toHaveBeenCalled();
   });
 });

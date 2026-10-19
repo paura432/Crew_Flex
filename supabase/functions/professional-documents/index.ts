@@ -1,7 +1,8 @@
 // Professional document wallet (owner decision D-10) — own documents only. LOCAL ONLY.
 //   GET    /professional-documents                  → list own documents (RLS)
 //   GET    /professional-documents?id=<uuid>&url=1  → { url, expiresInSeconds: 60 } signed URL (owner)
-//   POST   /professional-documents  multipart/form-data: file, kind, title?, expiresAt?, qualificationId?
+//   POST   (only while app_private.feature_flags('document_wallet') is on, else 404)
+//          /professional-documents  multipart/form-data: file, kind, title?, expiresAt?, qualificationId?
 //          Idempotency-Key REQUIRED → 201 created · 200 replay · 409 same key, other request
 //   PATCH  /professional-documents?id=<uuid> { kind, title, expiresAt, qualificationId }
 //   DELETE /professional-documents?id=<uuid>  → row first, then the object
@@ -14,7 +15,7 @@
 // file-scanning mechanism (`canShareWithThirdParties`).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { requireActor, requireTechnician } from "../_shared/auth.ts";
+import { requireActor, requireFeature, requireTechnician } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler, type RequestContext } from "../_shared/http.ts";
 import { logEvent } from "../_shared/logger.ts";
@@ -294,6 +295,10 @@ export const handler = createHandler(FN, {
 
   POST: async (ctx) => {
     const actor = await requireActor(ctx);
+    // Owner-only activation flag (migration 20261019160200): 404 before the body is read. The RPC
+    // and the Storage insert policy enforce the same flag. Reads and deletes stay open on purpose:
+    // turning the feature off never locks a professional out of their own files.
+    await requireFeature(actor, "document_wallet");
     const key = idempotencyKey(ctx.req, { required: true });
     await requireTechnician(actor, "Only professional accounts keep documents.");
     const upload = await parseUpload(ctx.req);

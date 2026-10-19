@@ -1,7 +1,7 @@
 # Document wallet (D-10)
 
-**Status: IMPLEMENTED — LOCAL ONLY (2026-10-19).** Backend only: migrations `20261019160000_document_wallet.sql` and `20261019160100_document_wallet_hardening.sql`
-(security review fixes),
+**Status: IMPLEMENTED — LOCAL ONLY (2026-10-19).** Backend: migrations `20261019160000_document_wallet.sql`, `20261019160100_document_wallet_hardening.sql`
+(security review fixes) and `20261019160200_document_wallet_gate_and_cleanup.sql` (activation gate, M-3 cleanup),
 Edge Function `professional-documents`, contract in `src/types/api.ts` / `src/lib/validation/documents.ts` /
 `src/domain/documents.ts`. Not applied or deployed to the remote project; the UI is built separately on this
 contract. Third-party sharing does **not** exist and must not be added before an approved file-scanning
@@ -81,27 +81,77 @@ rewrites the signed URL's origin to `STORAGE_PUBLIC_URL` when that variable is a
 `supabase/functions/.env`, template `.env.example`). It is not a secret and must stay **unset** remotely, where
 `SUPABASE_URL` is already the public URL.
 
-## 6. Orphan objects
+## 6. Deletion, retention and orphan cleanup (review M-3 — RESOLVED LOCALLY, `20261019160200`)
 
 The row is the source of truth. Delete removes the row first (the Storage policy refuses to remove an object a
 row still points at), then the object; if that removal fails the user still gets 200 and the function logs a
-`warn` event `orphan_object` with the server-derived path only. Orphans also arise when an upload succeeds and
-the function dies before the RPC (a retry with the same key adopts the object), when compensation fails or is skipped (after a timeout or unknown RPC error the object is kept, because a
-concurrent retry with the same key may still commit a row on it — review L-1), and when an account is deleted
-(rows cascade; objects in `<uid>/` do not). Cleanup is an operations task, not yet
-automated: list objects of the bucket without a row (`storage_path`) older than one hour and remove them with
-an audited, owner-approved procedure.
+`warn` event `orphan_object` (server-derived path only).
+
+**Tombstones.** Every deleted row, whatever the cause, leaves a tombstone in
+`app_private.document_object_tombstones` (AFTER DELETE trigger, DEFINER): `owner_delete` (the owner deleted it;
+purge-eligible at once), `account_deleted` (the technician profile is gone — account-deletion cascade; purge
+after the grace period), `operator_delete` (anyone else, e.g. SQL by an operator; same grace), and
+`orphan_upload` (created by reconciliation, below). So the licence scans of a deleted account no longer stay in
+the bucket forever: they become due after the grace period.
+
+**Reconciliation.** `document_maintenance_batch` lists objects of the bucket that **no row and no open
+tombstone** reference and that are older than the orphan grace (24 h — a POST may still be committing its row,
+review L-1). Dry-run lists them; apply records `orphan_upload` tombstones. An object that a row references is
+never listed (tested).
+
+**Purge.** `documents-maintenance` (platform admin, not deployed, not scheduled; `docs/architecture/EDGE_FUNCTIONS.md`)
+takes at most 100 due tombstones, re-checks each right before deleting (`document_purge_recheck`, row lock: no
+row references the path, no legal hold, due, not purged), deletes that one object through the Storage API, and
+records `purged` / `absent` / `failed` (`document_purge_record`, audit `document.purged`: tombstone id, owner id,
+reason — no title, no path). Re-runs are idempotent; failures count `attempts` and stop after 10.
+
+**Proposals for the owner (defaults in `app_private.document_retention_settings`, changed in SQL only):**
+
+| Setting / rule               | Proposed                                                           | Why                                                                         |
+| ---------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Grace after account deletion | 30 days (`account_deletion_grace`, 0–3650 days)                    | Time to undo a mistaken deletion or answer a dispute; erasure still happens |
+| Orphan grace                 | 24 h (`orphan_upload_grace`, 1 h–30 days)                          | Never delete bytes a concurrent request may still register                  |
+| Owner delete                 | immediate                                                          | The person asked for it                                                     |
+| Legal hold                   | set/released **only by the database owner in SQL**, no API surface | Rare, high-impact; avoids another DEFINER endpoint. Held = never purged     |
+
+```sql
+update app_private.document_retention_settings set account_deletion_grace = interval '30 days';
+update app_private.document_object_tombstones set legal_hold = true  where owner_id = '<uuid>' and purged_at is null;
+update app_private.document_object_tombstones set legal_hold = false where owner_id = '<uuid>' and purged_at is null;
+```
+
+Still open: the purge is manual (not scheduled — scheduling is an owner decision), and holds apply to
+tombstones, i.e. after deletion (a hold on live documents is not needed while only the owner can delete).
 
 ## 7. Before any remote apply (owner approval required, nothing done)
 
-Ordered rollout: (1) migrations `20261019160000` and `20261019160100` (`db push`, creates the bucket and policies — check the hosted
-project has no pre-existing `professional-documents` bucket; the migration fails closed if one exists with other
-settings); (2) deploy `professional-documents` with `verify_jwt = false` (`supabase/config.toml`); (3) leave
-`STORAGE_PUBLIC_URL` unset; (4) the UI, whose server action must accept 5 MiB bodies (Next.js server actions
-default to 1 MB: `serverActions.bodySizeLimit`); (5) remote smoke with synthetic files only. Open items: a
-per-owner quota (none today), the orphan sweeper (§6), **erasure of `<uid>/` objects when an account is deleted
-(review M-3: today the licence scans of a deleted account stay in the bucket — must be solved before any remote
-apply)**, the audit `sha256` question (§3, L-4), and the scanner decision (§4).
+Ordered rollout: (1) migrations `20261019160000`, `20261019160100`, `20261019160200` (`db push`, creates the bucket and
+policies — check the hosted project has no pre-existing `professional-documents` bucket; the migration fails
+closed if one exists with other settings). Without the flag row the wallet stays OFF (§8); (2) deploy
+`professional-documents` (`verify_jwt = false`, `supabase/config.toml`); (3) leave `STORAGE_PUBLIC_URL` unset;
+(4) only when purging is approved: deploy `documents-maintenance` and set `DOCUMENTS_MAINTENANCE_ENABLED=true`
+(it uses the service role for Storage deletes only); (5) the owner inserts the flag row; (6) remote smoke with
+synthetic files only. Open items: a per-owner quota (none today), scheduling the purge, the retention proposals
+(§6), the audit `sha256` question (§3, L-4), and the scanner decision (§4).
+
+## 8. Activation gate (owner decision 2026-10-19: Supabase, not Vercel)
+
+`app_private.feature_flags('document_wallet', true)` — no row = OFF; only the database owner can write it:
+
+```sql
+insert into app_private.feature_flags (name, enabled) values ('document_wallet', true);   -- on
+delete from app_private.feature_flags where name = 'document_wallet';                     -- off
+```
+
+While OFF, every **new** document is refused in the database: `create_professional_document` → `0A000` (404
+"service not available"), the table INSERT policy and the bucket's Storage INSERT policy both require the flag
+(direct PostgREST inserts and direct Storage uploads are closed too), and the Edge Function answers 404 before
+reading the upload. **Reads, metadata edits and deletes stay open** when the flag is switched off later:
+turning a feature off must never take a person's own data hostage (they can still list, open and delete it).
+The Next.js server reads the flag through `public.is_feature_enabled('document_wallet')` (DEFINER, whitelist,
+signed-in users only; fails closed) to hide the nav entry and 404 the page — a convenience, not the barrier.
+Known UI consequence: while OFF, the page is hidden, so a professional who already stored files deletes them
+only through the API; if the flag is ever switched off with data in it, a read-only page should be added.
 
 ## UI and rollout (added with the wallet UI, 2026-10-19)
 
@@ -112,9 +162,9 @@ apply)**, the audit `sha256` question (§3, L-4), and the scanner decision (§4)
   user JWT + publishable key, no secret). Routing the bytes through a Next.js Server Action would hit
   Vercel's 4.5 MB request-body limit, below the 5 MiB document limit, and would make Next.js carry
   backend traffic. List, URL, edit and delete use the usual server-side `invokeEdgeFunction`.
-- **Rollout gate:** server flag `DOCUMENT_WALLET_ENABLED` (exactly `true`; unset = off): hides the
-  nav entry and 404s the page. Production keeps it unset until the wallet wave is approved
-  (`docs/qa/ROLLOUT_PLAN_2026-10-19.md` §6). Access control never depends on it.
+- **Rollout gate:** the Supabase flag of §8 (no Vercel variable): hides the nav entry and 404s the page
+  while off. Production keeps it off until the wallet wave is approved (`docs/qa/ROLLOUT_PLAN_2026-10-19.md`).
+  Access control never depends on the UI: the database and the Edge Function enforce the same flag.
 - Deliberate difference from V1.8: the owner may open their own unscanned file (V1.8 allowed downloads
   only after a clean scan, even for the owner). The bytes are the owner's own upload; third parties
   still have no path to them.

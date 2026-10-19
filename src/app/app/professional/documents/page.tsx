@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ProfessionalDocumentsPage() {
-  if (!isDocumentWalletEnabled()) notFound();
+  if (!(await isDocumentWalletEnabled())) notFound();
   const [actor, t, tProfessional] = await Promise.all([
     requireSessionActor(),
     getTranslations("documents"),

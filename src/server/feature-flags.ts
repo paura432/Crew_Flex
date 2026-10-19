@@ -1,4 +1,5 @@
 import "server-only";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
  * OD-3 approval checkpoint (qualification review by a platform admin). Server-side only and OFF
@@ -18,13 +19,19 @@ export function canOpenQualificationReview(profile: { platform_role: string }): 
 }
 
 /**
- * Document wallet (D-10) rollout gate. Server-side only and OFF unless the Next.js server sets
- * `DOCUMENT_WALLET_ENABLED=true`: hides the navigation entry and turns
- * `/app/professional/documents` into a 404. Production keeps it off (nothing to set in Vercel)
- * until the wallet's own wave is approved — its blocker is file cleanup on account deletion
- * (docs/product/DOCUMENT_WALLET.md, review M-3). Authorization never depends on this flag: the
- * Edge Function, RLS and Storage policies decide access on their own.
+ * Document wallet (D-10) activation, decided in Supabase — not in a Vercel variable (owner,
+ * 2026-10-19). Reads `public.is_feature_enabled('document_wallet')`, backed by the owner-only row
+ * `app_private.feature_flags('document_wallet', true)` (migration 20261019160200). Fails closed:
+ * no session, an RPC error or anything but `true` means off. It only hides the navigation entry and
+ * turns `/app/professional/documents` into a 404; the real barrier is the database (RPC, table and
+ * Storage insert policies) and the Edge Function, which check the same flag on their own.
  */
-export function isDocumentWalletEnabled(): boolean {
-  return process.env.DOCUMENT_WALLET_ENABLED === "true";
+export async function isDocumentWalletEnabled(): Promise<boolean> {
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.rpc("is_feature_enabled", { p_name: "document_wallet" });
+    return !error && data === true;
+  } catch {
+    return false;
+  }
 }

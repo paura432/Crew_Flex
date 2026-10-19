@@ -67,3 +67,17 @@ describe("document queries", () => {
     ).toBe(false);
   });
 });
+
+describe("documentsMaintenanceQuery", () => {
+  it("is a dry-run by default and bounded", async () => {
+    const { documentsMaintenanceQuery } = await import("./documents.ts");
+    expect(documentsMaintenanceQuery.parse({})).toEqual({ limit: 25 });
+    expect(documentsMaintenanceQuery.parse({ apply: "1", limit: "100" })).toEqual({
+      apply: "1",
+      limit: 100,
+    });
+    for (const bad of [{ apply: "true" }, { limit: "101" }, { limit: "0" }, { dryRun: "0" }]) {
+      expect(documentsMaintenanceQuery.safeParse(bad).success).toBe(false);
+    }
+  });
+});

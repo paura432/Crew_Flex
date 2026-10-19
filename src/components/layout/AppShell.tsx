@@ -7,7 +7,11 @@ import type { SessionActor } from "@/server/session";
 import { NavLinks, type NavItem } from "./NavLinks";
 
 export async function AppShell({ actor, children }: { actor: SessionActor; children: ReactNode }) {
-  const [t, tNav] = await Promise.all([getTranslations("common"), getTranslations("nav")]);
+  const [t, tNav, walletEnabled] = await Promise.all([
+    getTranslations("common"),
+    getTranslations("nav"),
+    actor.profile.account_type === "professional" ? isDocumentWalletEnabled() : false,
+  ]);
   const organization = actor.memberships[0]?.organization;
   const isProfessional = actor.profile.account_type === "professional";
 
@@ -21,9 +25,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/profile", label: tNav("profile") },
     { href: "/app/professional/qualifications", label: tNav("qualifications") },
     { href: "/app/professional/availability", label: tNav("availability") },
-    ...(isDocumentWalletEnabled()
-      ? [{ href: "/app/professional/documents", label: tNav("documents") }]
-      : []),
+    ...(walletEnabled ? [{ href: "/app/professional/documents", label: tNav("documents") }] : []),
   ];
   const accountNav: NavItem[] = [
     { href: "/app/tools", label: tNav("tools") },

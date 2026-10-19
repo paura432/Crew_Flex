@@ -11,6 +11,7 @@
  * Run: `pnpm e2e:remote` with `.env.e2e` pointing at the local stack.
  */
 import { createClient } from "@supabase/supabase-js";
+import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { isLocalUrl } from "./guard";
@@ -684,6 +685,173 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
       for (const id of created) {
         await call(FN, { method: "DELETE", token: foxtrot, query: { id } });
       }
+    }
+  });
+  /** Owner-side SQL on the LOCAL container only (scripts/local/db-owner-sql.sh re-checks the target). */
+  const ownerSql = (sql: string) =>
+    execFileSync("bash", ["scripts/local/db-owner-sql.sh"], {
+      input: sql,
+      encoding: "utf8",
+    }).trim();
+  const flagOn = () =>
+    ownerSql(
+      "insert into app_private.feature_flags (name, enabled) values ('document_wallet', true) on conflict (name) do update set enabled = true;",
+    );
+  const objectExists = (path: string) =>
+    ownerSql(
+      `select count(*) from storage.objects where bucket_id = '${BUCKET}' and name = '${path.replace(/[^0-9a-f/-]/g, "")}';`,
+    ) === "1";
+  const pathOf = (doc: { sha256: string }, key: string) =>
+    `${foxtrotId}/${key}-${doc.sha256.slice(0, 16)}`;
+
+  it("flag OFF (20261019160200): no new upload by function or Storage; list, open and delete keep working", async () => {
+    const created: string[] = [];
+    try {
+      const first = await upload(foxtrot, {
+        bytes: PDF,
+        name: "flag.pdf",
+        fields: { kind: "other", title: "E2E flag off" },
+      });
+      expect(first.status).toBe(201);
+      const doc = first.body.data!.document as { id: string };
+      created.push(doc.id);
+
+      ownerSql("delete from app_private.feature_flags where name = 'document_wallet';");
+      expect((await upload(foxtrot, { bytes: PDF, name: "again.pdf" })).status).toBe(404);
+      const direct = await client(foxtrot)
+        .storage.from(BUCKET)
+        .upload(`${foxtrotId}/${randomUUID()}-0123456789abcdef`, PDF, {
+          contentType: "application/pdf",
+        });
+      expect(direct.error).toBeTruthy();
+      const rpc = await client(foxtrot).rpc("is_feature_enabled", { p_name: "document_wallet" });
+      expect(rpc.data).toBe(false);
+
+      const list = await call(FN, { token: foxtrot });
+      expect((list.body.data!.documents as { id: string }[]).map((d) => d.id)).toContain(doc.id);
+      const signed = await call(FN, { token: foxtrot, query: { id: doc.id, url: "1" } });
+      expect(signed.status).toBe(200);
+      expect(
+        new Uint8Array(await (await fetch(signed.body.data!.url as string)).arrayBuffer()),
+      ).toEqual(PDF);
+      const deleted = await call(FN, { method: "DELETE", token: foxtrot, query: { id: doc.id } });
+      expect(deleted.status).toBe(200);
+      created.pop();
+    } finally {
+      flagOn();
+      for (const id of created) await call(FN, { method: "DELETE", token: foxtrot, query: { id } });
+    }
+  });
+
+  it("maintenance against real Storage: platform admin only; dry-run reports, apply purges tombstoned objects only", async () => {
+    const platformAdmin = await signIn("platform.admin@crewflex.test");
+    const maintenance = (token: string, query: Record<string, string> = {}) =>
+      call("documents-maintenance", { method: "POST", token, query: { limit: "100", ...query } });
+    const liveIds: string[] = [];
+    let youngPath = "";
+    try {
+      // A: owner deletes the ROW directly (PostgREST) → tombstone owner_delete, object still there.
+      const keyA = randomUUID();
+      const a = await upload(
+        foxtrot,
+        {
+          bytes: PDF,
+          name: "a.pdf",
+          fields: { kind: "other", title: "E2E purge A" },
+        },
+        keyA,
+      );
+      expect(a.status).toBe(201);
+      const docA = a.body.data!.document as { id: string; sha256: string };
+      const pathA = pathOf(docA, keyA);
+      const removedRow = await client(foxtrot)
+        .from("professional_documents")
+        .delete()
+        .eq("id", docA.id);
+      expect(removedRow.error).toBeNull();
+      expect(objectExists(pathA)).toBe(true);
+      const tombA = ownerSql(
+        `select id || '|' || reason from app_private.document_object_tombstones where storage_path = '${pathA}' and purged_at is null;`,
+      );
+      const [tombstoneA, reasonA] = tombA.split("|");
+      expect(reasonA).toBe("owner_delete");
+
+      // B: a live document — must never be purged.
+      const keyB = randomUUID();
+      const b = await upload(
+        foxtrot,
+        {
+          bytes: new TextEncoder().encode("%PDF-1.4\n% live\n%%EOF\n"),
+          name: "b.pdf",
+          fields: { kind: "other", title: "E2E purge B" },
+        },
+        keyB,
+      );
+      expect(b.status).toBe(201);
+      const docB = b.body.data!.document as { id: string; sha256: string };
+      liveIds.push(docB.id);
+      const pathB = pathOf(docB, keyB);
+
+      // C: a fresh orphan (Storage upload, no row) — younger than the 24 h grace.
+      youngPath = `${foxtrotId}/${randomUUID()}-0123456789abcdef`;
+      const young = await client(foxtrot)
+        .storage.from(BUCKET)
+        .upload(youngPath, PDF, { contentType: "application/pdf" });
+      expect(young.error).toBeNull();
+
+      // Not a platform admin → 403 (professional and organization accounts).
+      expect((await maintenance(foxtrot)).status).toBe(403);
+      expect((await maintenance(orgAdmin, { apply: "1" })).status).toBe(403);
+
+      const dry = await maintenance(platformAdmin);
+      expect(dry.status, JSON.stringify(dry.body)).toBe(200);
+      expect(dry.body.data!.mode).toBe("dry-run");
+      expect((dry.body.data!.due as { tombstoneId: string }[]).map((d) => d.tombstoneId)).toContain(
+        tombstoneA,
+      );
+      expect(JSON.stringify(dry.body)).not.toContain(foxtrotId); // ids and counts only, no paths
+      expect(objectExists(pathA)).toBe(true); // dry-run wrote and deleted nothing
+
+      const applied = await maintenance(platformAdmin, { apply: "1" });
+      expect(applied.status, JSON.stringify(applied.body)).toBe(200);
+      expect(applied.body.data!.purged as number).toBeGreaterThanOrEqual(1);
+      expect(objectExists(pathA)).toBe(false);
+      expect(
+        ownerSql(
+          `select purged_at is not null from app_private.document_object_tombstones where id = '${tombstoneA}';`,
+        ),
+      ).toBe("t");
+      const { data: audit } = await client(platformAdmin)
+        .from("audit_events")
+        .select("metadata")
+        .eq("action", "document.purged")
+        .eq("entity_id", tombstoneA!);
+      expect(audit).toEqual([
+        {
+          metadata: {
+            technician_profile_id: foxtrotId,
+            reason: "owner_delete",
+            object_found: true,
+          },
+        },
+      ]);
+      expect(JSON.stringify(audit)).not.toContain(pathA);
+      // The live document and the young orphan are untouched and unmarked.
+      expect(objectExists(pathB)).toBe(true);
+      expect(objectExists(youngPath)).toBe(true);
+      expect(
+        ownerSql(
+          `select count(*) from app_private.document_object_tombstones where storage_path in ('${pathB}', '${youngPath}');`,
+        ),
+      ).toBe("0");
+      // Idempotent: a second apply does not purge A again.
+      const again = await maintenance(platformAdmin, { apply: "1" });
+      expect(
+        (again.body.data!.due as { tombstoneId: string }[]).map((d) => d.tombstoneId),
+      ).not.toContain(tombstoneA);
+    } finally {
+      for (const id of liveIds) await call(FN, { method: "DELETE", token: foxtrot, query: { id } });
+      if (youngPath) await client(foxtrot).storage.from(BUCKET).remove([youngPath]);
     }
   });
 });

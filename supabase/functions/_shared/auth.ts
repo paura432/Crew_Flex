@@ -42,6 +42,15 @@ export async function requireTechnician(actor: Actor, message?: string): Promise
   if (!data) throw new ApiError("FORBIDDEN", message);
 }
 
+/**
+ * Owner-controlled feature gate read from the database (`public.is_feature_enabled`, backed by
+ * `app_private.feature_flags`). Off, unknown or unreadable → 404 "not available" (fails closed).
+ */
+export async function requireFeature(actor: Actor, name: "document_wallet"): Promise<void> {
+  const { data, error } = await actor.client.rpc("is_feature_enabled", { p_name: name });
+  if (error || data !== true) throw new ApiError("NOT_FOUND", "This service is not available.");
+}
+
 /** Authorization from the database (never from the client): actor's role in an organization. */
 export async function requireOrganizationRole(
   actor: Actor,

@@ -457,3 +457,8 @@ import_map = "./functions/deno.json"
 [functions.professional-documents]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+# Local only, not deployed: document purge (platform admin; 404 unless DOCUMENTS_MAINTENANCE_ENABLED=true).
+[functions.documents-maintenance]
+verify_jwt = false
+import_map = "./functions/deno.json"

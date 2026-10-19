@@ -141,8 +141,17 @@ incomplete and cancelling/closing is always possible.
 | `created_at` / `updated_at` | timestamptz (`set_updated_at`)                                                 | –                        |
 
 RLS: own rows only (select/insert/update/delete); **no organization, manager or platform-admin policy**.
-Inserts go through `create_professional_document` (the insert trigger also requires the Storage object to
-exist with the declared size, so direct PostgREST inserts cannot create rows without bytes).
+Inserts go through `create_professional_document` and require the owner-only flag
+`app_private.feature_flags('document_wallet')` (`20261019160200`; reads, edits and deletes do not). The insert trigger also requires the Storage object to
+exist with the declared size, so direct PostgREST inserts cannot create rows without bytes.
+
+### `app_private.document_object_tombstones` · `app_private.document_retention_settings` (`20261019160200`, LOCAL ONLY)
+
+Tombstones (`id`, `storage_path`, `owner_id` (no FK), `reason` `owner_delete` · `account_deleted` · `operator_delete` ·
+`orphan_upload`, `deleted_at`, `purge_after`, `legal_hold` default false, `purged_at`, `attempts`, `last_error` ≤ 200;
+one open tombstone per path) are written by the AFTER DELETE trigger on `professional_documents` and by
+reconciliation. Settings: one row (`account_deletion_grace` default 30 days, `orphan_upload_grace` default 24 h).
+Both: RLS on, no policy, no grant — DEFINER functions only. Retention rules: `DOCUMENT_WALLET.md` §6.
 
 ### `audit_events`
 
@@ -155,7 +164,8 @@ review decision with previous/new status, `note_provided`, `request_id`; since `
 `qualification.updated` (type, status or dates changed), `qualification.removed` (owner delete only,
 not account-deletion cascades) — the last three since `20261015120000`; `document.uploaded`,
 `document.updated` (with the changed field names) and `document.deleted` (owner delete only) since
-`20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path). Reserved: `document.shared`,
+`20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path); `document.purged`
+(tombstone id, owner id, reason, `object_found`) since `20261019160200`. Reserved: `document.shared`,
 `candidate_pack.shared`, `organization.member_added`.
 
 ## Database functions
@@ -169,6 +179,8 @@ not account-deletion cascades) — the last three since `20261015120000`; `docum
 | `update_professional_profile(...)`                                                                                                                                                       | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`).                                                                                                          |
 | `create_work_requirement_idempotent` · `create_availability_window` · `declare_qualification` · `replace_availability_days` (`20261019120000`, 3-arg since `20261019140000`, local only) | INVOKER         | Idempotent creates (`Idempotency-Key`), key claimed in the same transaction (`app_private.idempotency_keys`).                                                                                               |
 | `create_professional_document(key, kind, title, storage_path, mime_type, size_bytes, sha256, expires_at, qualification_id)` (`20261019160000`, local only)                               | INVOKER         | Idempotent document create (`document.create`); path must be `<uid>/<key>-<sha256[0:16]>` (`22023` otherwise); `CF409` same key, other request.                                                             |
+| `is_feature_enabled(name)` (`20261019160200`, local only)                                                                                                                                | DEFINER, stable | Whitelisted owner flags (`document_wallet`) for the Next.js server; signed-in users only.                                                                                                                   |
+| `document_maintenance_batch(apply, limit)` · `document_purge_recheck(tombstone)` · `document_purge_record(tombstone, outcome, error)` (`20261019160200`, local only)                     | DEFINER         | Platform admin only (re-checked in the body): orphan reconciliation + due tombstones (≤ 100), per-object re-check under row lock, outcome + audit `document.purged`. Never delete objects themselves.       |
 | `review_qualification(id, decision, expected_updated_at, note, request_id)`                                                                                                              | DEFINER         | Requires `app_private.feature_flags('qualification_review')`; platform admin only, never own, `pending` → `verified`/`rejected` for the version the reviewer saw, row lock, audit `qualification.reviewed`. |
 | `own_qualification_reviews()`                                                                                                                                                            | DEFINER, stable | The caller's own review reasons (the column is not readable otherwise).                                                                                                                                     |
 | `enforce_requirement_qualifications()`                                                                                                                                                   | DEFINER trigger | BR-1.4 at commit (deferred).                                                                                                                                                                                |
