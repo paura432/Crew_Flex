@@ -6,13 +6,13 @@ Re-verify with the commands at the bottom before relying on any line; update the
 
 ## Git
 
-| Ref                               | SHA                       | Meaning                                                                                                                                                    |
-| --------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `origin/main` (GitHub)            | `ddf5c4b`                 | `4f98e67..f158308` (8 audited commits) pushed 2026-10-16 ~20:12, then `ddf5c4b` (memory-bank only) ~20:38. What Vercel Production builds (main-only, OD-9) |
-| `main` (local)                    | `ddf5c4b` + local commits | Later commits (Vercel flag confirmation, E2E preparation) are **local only**; a push = a production deploy, needs owner approval                           |
-| `fix/remediation-2026-10-15`      | `f158308`                 | Fully merged into `main`; can be deleted when the owner wants                                                                                              |
-| `refs/baseline/remediation-start` | `bf3feb1`                 | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                                                              |
-| other branches                    | —                         | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)                                          |
+| Ref                               | SHA                                  | Meaning                                                                                                                                                                                                                          |
+| --------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin/main` (GitHub)            | `ddf5c4b`                            | `4f98e67..f158308` (8 audited commits) pushed 2026-10-16 ~20:12, then `ddf5c4b` (memory-bank only) ~20:38. What Vercel Production builds (main-only, OD-9)                                                                       |
+| `main` (local)                    | `969adb2` + docs commit (2026-10-19) | Local only, not pushed: E2E prep, V1.8 delta, cycle generator, tools, «AOG only», wallet (gated). Wave-1 release commit `65df3b9`; plan `docs/qa/ROLLOUT_PLAN_2026-10-19.md`. A push = a production deploy, needs owner approval |
+| `fix/remediation-2026-10-15`      | `f158308`                            | Fully merged into `main`; can be deleted when the owner wants                                                                                                                                                                    |
+| `refs/baseline/remediation-start` | `bf3feb1`                            | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                                                                                                                                    |
+| other branches                    | —                                    | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)                                                                                                                |
 
 ## Production (`sbjkzrkmcekokkqiuvvh` + https://crew-flex.vercel.app) — the single environment (demo, OD-9)
 
@@ -39,7 +39,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 
 ## Local (Docker, ports 563xx — `docs/qa/LOCAL_ENVIRONMENT.md`)
 
-- All 10 migrations applied incrementally (+ `20261019120000` on 2026-10-19, **local only**), seed loaded, `qualification_review` flag row inserted **locally only**.
+- All 10 migrations applied incrementally (+ `20261019120000`…`20261019160100` on 2026-10-19, **local only**), seed loaded, `qualification_review` flag row inserted **locally only**.
 - The browser smoke now also needs `QUALIFICATION_REVIEW_ENABLED=true` in `.env.local` (it refuses otherwise).
 - 2026-10-16 ~20:52: the owner's `pnpm e2e:remote` failed 24/25 with **503** — a LOCAL problem: `.env.e2e`
   targets `127.0.0.1:56321` and `supabase functions serve` was not running (Kong answers 503 for every
