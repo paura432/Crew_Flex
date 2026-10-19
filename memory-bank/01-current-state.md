@@ -5,6 +5,8 @@ docs), on top of the 10 migrations and 8 Edge Functions rolled out the same day.
 **Update 2026-10-19 (release 1, step 1, owner-authorized):** `matching-evaluate` and `capacity-evaluate` are v3
 built from `65df3b9` (sources verified by download; `verify_jwt` false as before, JWT checked in code); the other
 six functions, the 10 migrations and the frontend are unchanged (`docs/qa/ROLLOUT_PLAN_2026-10-19.md`).
+**Step 2 (same day, owner-authorized):** migrations `20261019120000`, `130000`, `140000` applied → **13 remote
+migrations**; enum still without `aog_only`; no wallet object; functions and frontend unchanged.
 Re-verify with the commands at the bottom before relying on any line; update the date/SHA when it changes.
 
 ## Git

@@ -4,7 +4,18 @@
 > 2026-10-19** — `matching-evaluate` and `capacity-evaluate` deployed from `../cf-r1` (`65df3b9`),
 > each v2 → v3, `verify_jwt` unchanged (false; JWT checked in code), probes 401 / 405 / CORS 204 for
 > the Vercel origin only, downloaded sources identical to `65df3b9`, the other six functions and the
-> 10 remote migrations unchanged, Q2 still empty / 0. **Stopped after step 1.** Every other step (`functions deploy`, `db push`, `git push`,
+> 10 remote migrations unchanged, Q2 still empty / 0. **Step 2 on 2026-10-19:** dry run from `../cf-r1a` (`2216d38`) listed exactly
+> `20261019120000`, `130000`, `140000` (no seeds, no roles); `db push` applied the three without error.
+> Read-only verification: 13 remote migrations; enum `{available,unavailable}`; 0 `aog_only` rows; pool
+> filter unchanged (Q11 false); no flags, 0 buckets, no wallet object; `availability_rotations` RLS on with
+> 4 `*_own` policies for `authenticated` (table grants SELECT/DELETE + column INSERT/UPDATE), 0 rows;
+> `replace_availability_days(uuid,jsonb,jsonb)` SECURITY INVOKER, `search_path=""`, anon false /
+> authenticated true; 2-arg RPC absent; `lock_availability_owner()` INVOKER, not executable by
+> `authenticated`; trigger `availability_windows_lock_owner` enabled; CHECK includes
+> `availability_days.replace`; counts unchanged (users 3, organizations 0, windows 0, idempotency keys 0);
+> all 8 functions unchanged (matching/capacity v3, others as before); unauthenticated probes 401/405,
+> health 200, Vercel `/` `/login` `/register` 200, `/app` 307. Not verifiable from here: authenticated
+> reads (no authorized production account) and Postgres logs (no log access). **Stopped after step 2.** Every other step (`functions deploy`, `db push`, `git push`,
 > production E2E) is run by the owner after its **own** approval (AGENTS.md "STOP"; OD-9 main-only:
 > a push to `main` is a production deploy). Revision 2 (2026-10-19) replaces the original order with
 > the **safe order** of §4, which removes window W instead of monitoring it (differences: §13).
