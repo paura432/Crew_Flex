@@ -709,6 +709,33 @@
         "complete": "Se ha evaluado a todos los profesionales de la red con al menos una de las cualificaciones requeridas ({prefiltered}).",
         "nearMissesTrimmed": "{prefiltered} profesionales tienen al menos una cualificación requerida; se han evaluado {evaluated}. Los {hardEligible} que cumplen todos los requisitos obligatorios y están disponibles se han evaluado primero; el resto son los casos más próximos.",
         "eligibleTruncated": "Resultado parcial: {hardEligible} profesionales cumplen todos los requisitos obligatorios y están disponibles, pero se evalúan como máximo {cap} por consulta. Esta lista no es toda la red: acota la necesidad (periodo, cualificaciones) para ver el resto."
+      },
+      "list": {
+        "search": "Buscar",
+        "searchPlaceholder": "Referencia, nombre o base",
+        "sort": "Ordenar por",
+        "sortBy": {
+          "relevance": "Relevancia (elegibles primero)",
+          "years": "Experiencia (mayor primero)"
+        },
+        "eligibleOnly": "Solo elegibles",
+        "apply": "Aplicar",
+        "clear": "Limpiar",
+        "compareThis": "Comparar",
+        "compareSubmit": "Comparar seleccionados (máx. {max})",
+        "compareTitle": "Comparando {count, plural, one {# profesional} other {# profesionales}}",
+        "compareClear": "Quitar comparación",
+        "compareTruncated": "Solo se comparan los {max} primeros profesionales seleccionados.",
+        "compareCriterion": "Criterio",
+        "verdict": "Resultado",
+        "base": "Base",
+        "experience": "Experiencia",
+        "pagination": "Páginas de resultados",
+        "pageInfo": "{total, plural, one {# resultado} other {# resultados}} · página {page} de {pages}",
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "noResults": "Ningún profesional cumple estos filtros",
+        "noResultsHint": "Limpia la búsqueda o incluye a los no elegibles para ver todo el grupo evaluado."
       }
     },
     "workforce": {

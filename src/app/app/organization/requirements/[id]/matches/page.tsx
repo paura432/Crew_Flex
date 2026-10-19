@@ -7,6 +7,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { evaluateRequirementMatches } from "@/features/matching/api";
 import { MatchCard } from "@/features/matching/components/MatchCard";
+import {
+  CompareForm,
+  CompareTable,
+  CompareToggle,
+  MatchListControls,
+  matchListHref,
+  MatchPager,
+} from "@/features/matching/components/MatchList";
+import { listMatches, parseMatchListQuery } from "@/features/matching/list";
 import { PoolCoverageNote } from "@/features/matching/components/PoolCoverageNote";
 import { getRequirement } from "@/features/requirements/api";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
@@ -20,9 +29,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RequirementMatchesPage({
   params,
+  searchParams,
 }: PageProps<"/app/organization/requirements/[id]/matches">) {
-  const [{ id }, , t, locale] = await Promise.all([
+  const [{ id }, search, , t, locale] = await Promise.all([
     params,
+    searchParams,
     requireOrganizationContext(),
     getTranslations("organization.matches"),
     getLocale(),
@@ -42,6 +53,10 @@ export default async function RequirementMatchesPage({
     );
   }
   const { requirement } = requirementResult.data;
+  const base = `/app/organization/requirements/${requirement.id}/matches`;
+  const query = parseMatchListQuery(search);
+  const list = matchesResult.ok ? listMatches(matchesResult.data.candidates, query) : null;
+  const selected = new Set(query.compare);
   const back = (
     <ButtonLink href={`/app/organization/requirements/${requirement.id}`}>{t("back")}</ButtonLink>
   );
@@ -65,24 +80,59 @@ export default async function RequirementMatchesPage({
       ) : matchesResult.data.candidates.length === 0 ? (
         <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />
       ) : (
-        <>
-          <p className="mb-2 text-sm text-muted" role="status">
-            {t.rich("summary", {
-              eligible: matchesResult.data.summary.eligible,
-              evaluated: matchesResult.data.summary.evaluated,
-              b: (chunks) => <strong className="text-ink">{chunks}</strong>,
-            })}
-          </p>
-          <PoolCoverageNote
-            evaluated={matchesResult.data.summary.evaluated}
-            pool={matchesResult.data.summary.pool}
-          />
-          <div className="grid gap-4 md:grid-cols-2">
-            {matchesResult.data.candidates.map((item) => (
-              <MatchCard key={item.candidate.id} item={item} />
-            ))}
-          </div>
-        </>
+        list && (
+          <>
+            <p className="mb-2 text-sm text-muted" role="status">
+              {t.rich("summary", {
+                eligible: matchesResult.data.summary.eligible,
+                evaluated: matchesResult.data.summary.evaluated,
+                b: (chunks) => <strong className="text-ink">{chunks}</strong>,
+              })}
+            </p>
+            <PoolCoverageNote
+              evaluated={matchesResult.data.summary.evaluated}
+              pool={matchesResult.data.summary.pool}
+            />
+            <MatchListControls query={query} base={base} />
+            {list.compared.length > 0 && (
+              <CompareTable
+                items={list.compared}
+                truncated={list.compareTruncated}
+                clearHref={matchListHref(base, query, { compare: [] })}
+              />
+            )}
+            {list.total === 0 ? (
+              <StateMessage title={t("list.noResults")} description={t("list.noResultsHint")} />
+            ) : (
+              <>
+                <div className="mb-4">
+                  <CompareForm query={query} />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {list.items.map((item) => (
+                    <MatchCard
+                      key={item.candidate.id}
+                      item={item}
+                      footer={
+                        <CompareToggle
+                          id={item.candidate.id}
+                          checked={selected.has(item.candidate.id)}
+                        />
+                      }
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            <MatchPager
+              base={base}
+              query={query}
+              page={list.page}
+              pages={list.pages}
+              total={list.total}
+            />
+          </>
+        )
       )}
     </>
   );

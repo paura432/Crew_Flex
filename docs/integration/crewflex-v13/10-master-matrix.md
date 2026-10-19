@@ -20,26 +20,26 @@ and the **connected app** (`server/app.mjs`, 287 lines, Node + SQLite, invite-on
 
 ## 1. Module summary
 
-| Module                            | Prio | State                    | Present / partial / missing | Blocking                                                            |
-| --------------------------------- | ---- | ------------------------ | --------------------------- | ------------------------------------------------------------------- |
-| M00 Foundation, nav, shell        | P0   | AUDITED                  | 3 / 3 / 2                   | C-12 (dock/visual direction)                                        |
-| M01 Auth and account              | P0   | VERIFIED_LOCAL (batch 1) | 5 / 3 / 2                   | OD-8 (invite-only), retention P3/M-3 (account close)                |
-| M02 Technician dashboard          | P1   | AUDITED                  | 1 / 4 / 6                   | D-06 (applications), opportunities                                  |
-| M03 Professional passport         | P1   | AUDITED                  | 6 / 6 / 9                   | C-10/D-02/D-03, OD-6/D-04, OD-7, D-07/D-10 (avatar)                 |
-| M04 Availability and calendar     | P0   | VERIFIED (prod)          | 9 / 4 / 3                   | D-06 (assigned days), NEXT: AOG opt-in                              |
-| M05 Organization and requirements | P0   | AUDITED                  | 2 / 9 / 12                  | R-D4 (drafts), C-9/D-08, OD-4/D-09, OD-5, OD-7, SCOPE LATER (rates) |
-| M06 Directory and matching        | P1   | AUDITED                  | 3 / 6 / 6                   | D-07 (free directory), OD-7 (rate filter)                           |
-| M07 Opportunities (technician)    | P1   | NOT_STARTED              | 0 / 0 / 6                   | D-06, D-07, D-12 (marketplace visibility)                           |
-| M08 Applications and hiring       | P0*  | SPECCED                  | 0 / 0 / 14                  | **D-06 Q2–Q6 ratification**                                         |
-| M09 Candidate Pack                | P1   | SPECCED                  | 0 / 0 / 7                   | **D-07 P1–P4**, D-10 scanner, SCOPE LATER                           |
-| M10 Document wallet               | P1   | VERIFIED_LOCAL           | 6 / 4 / 1                   | Release 2 approval (retention 30 d/24 h, legal hold, maintenance)   |
-| M11 Recruiter                     | P2   | SPECCED                  | 0 / 1 / 7                   | D-12, SCOPE LATER                                                   |
-| M12 Messaging, notifications      | P2   | NOT_STARTED              | 0 / 0 / 7                   | SCOPE OUT (chat), C-11 (channels), D-06                             |
-| M13 Administration                | P2   | AUDITED                  | 1 / 3 / 9                   | OD-3, SCOPE OUT (full back office), OD-7                            |
-| M14 Logbook                       | P2   | NOT_STARTED              | 0 / 0 / 3                   | SCOPE LATER                                                         |
-| M15 Tools                         | P1   | VERIFIED (prod)          | 5 / 1 / 5                   | D-11 (fuel: technical review), SCOPE LATER (glossary, translator)   |
-| M16 Complementary (learning…)     | P2   | NOT_STARTED              | 0 / 0 / 4                   | SCOPE LATER                                                         |
-| M17 Visual parity                 | P1   | AUDITED                  | see §5                      | C-12                                                                |
+| Module                            | Prio | State                    | Present / partial / missing | Blocking                                                                    |
+| --------------------------------- | ---- | ------------------------ | --------------------------- | --------------------------------------------------------------------------- |
+| M00 Foundation, nav, shell        | P0   | AUDITED                  | 3 / 3 / 2                   | C-12 (dock/visual direction)                                                |
+| M01 Auth and account              | P0   | VERIFIED_LOCAL (batch 1) | 5 / 3 / 2                   | OD-8 (invite-only), retention P3/M-3 (account close)                        |
+| M02 Technician dashboard          | P1   | AUDITED                  | 1 / 4 / 6                   | D-06 (applications), opportunities                                          |
+| M03 Professional passport         | P1   | AUDITED                  | 6 / 6 / 9                   | C-10/D-02/D-03, OD-6/D-04, OD-7, D-07/D-10 (avatar)                         |
+| M04 Availability and calendar     | P0   | VERIFIED (prod)          | 9 / 4 / 3                   | D-06 (assigned days), NEXT: AOG opt-in                                      |
+| M05 Organization and requirements | P0   | AUDITED                  | 2 / 9 / 12                  | R-D4 (drafts), C-9/D-08, OD-4/D-09, OD-5, OD-7, SCOPE LATER (rates)         |
+| M06 Directory and matching        | P1   | VERIFIED_LOCAL (batch 2) | 7 / 4 / 4                   | D-07 (free directory), OD-7 (rate filter), C-10 (category/aircraft filters) |
+| M07 Opportunities (technician)    | P1   | NOT_STARTED              | 0 / 0 / 6                   | D-06, D-07, D-12 (marketplace visibility)                                   |
+| M08 Applications and hiring       | P0*  | SPECCED                  | 0 / 0 / 14                  | **D-06 Q2–Q6 ratification**                                                 |
+| M09 Candidate Pack                | P1   | SPECCED                  | 0 / 0 / 7                   | **D-07 P1–P4**, D-10 scanner, SCOPE LATER                                   |
+| M10 Document wallet               | P1   | VERIFIED_LOCAL           | 6 / 4 / 1                   | Release 2 approval (retention 30 d/24 h, legal hold, maintenance)           |
+| M11 Recruiter                     | P2   | SPECCED                  | 0 / 1 / 7                   | D-12, SCOPE LATER                                                           |
+| M12 Messaging, notifications      | P2   | NOT_STARTED              | 0 / 0 / 7                   | SCOPE OUT (chat), C-11 (channels), D-06                                     |
+| M13 Administration                | P2   | AUDITED                  | 1 / 3 / 9                   | OD-3, SCOPE OUT (full back office), OD-7                                    |
+| M14 Logbook                       | P2   | NOT_STARTED              | 0 / 0 / 3                   | SCOPE LATER                                                                 |
+| M15 Tools                         | P1   | VERIFIED (prod)          | 5 / 1 / 5                   | D-11 (fuel: technical review), SCOPE LATER (glossary, translator)           |
+| M16 Complementary (learning…)     | P2   | NOT_STARTED              | 0 / 0 / 4                   | SCOPE LATER                                                                 |
+| M17 Visual parity                 | P1   | AUDITED                  | see §5                      | C-12                                                                        |
 
 \* P0 for a complete hiring journey, but blocked until the owner ratifies the D-06 contract.
 
@@ -179,20 +179,20 @@ Source refs: `C:` = `server/<file>:<line>`, `D:` = `src/<path>` (v1.8). Target r
 
 ### M06 Directory and matching
 
-| ID               | Src | Behaviour                                                                              | Target                        | Status                                                                                                |
-| ---------------- | --- | -------------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------- |
-| CO-38/39 / CX-26 | D/C | Eligibility explanation; verified evidence                                             | `domain/matching.ts`, explain | PRESENT (stricter)                                                                                    |
-| CO-43            | —   | Internal vs external pools                                                             | capacity vs matching          | PRESENT (target-only)                                                                                 |
-| CO-30            | D   | Job context selector                                                                   | per-requirement matches       | PARTIAL                                                                                               |
-| CO-31/32 / CX-28 | D/C | Search; filters (category, aircraft, base, English, rate, dates, eligible-only), clear | —                             | MISSING → **batch 2** (eligible-only, search by base/name, blocker filter over the existing response) |
-| CO-33            | D   | Sort relevance / rate / years                                                          | fixed order                   | PARTIAL → **batch 2** (relevance, years)                                                              |
-| CO-34            | D   | 20 per page                                                                            | 100-cap + note                | PARTIAL → **batch 2**                                                                                 |
-| CO-35            | D   | Compact/expanded view (persisted)                                                      | —                             | MISSING → batch 2 candidate                                                                           |
-| CO-36            | D/C | Compare up to 3                                                                        | —                             | MISSING → **batch 2**                                                                                 |
-| CO-37            | D   | Profile detail modal                                                                   | MatchCard                     | PARTIAL                                                                                               |
-| CO-41 / CX-27/34 | D/C | Anonymity tiers, contact unlock                                                        | pseudonym ref, name if open   | PARTIAL · D-07, OD-5                                                                                  |
-| CO-42 / CX-45    | D/C | Employer blocking                                                                      | —                             | MISSING · D-07                                                                                        |
-| CO-44            | D   | Medals                                                                                 | —                             | MISSING · OD-3                                                                                        |
+| ID               | Src | Behaviour                                                                              | Target                                                                                                    | Status                                                                                                  |
+| ---------------- | --- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| CO-38/39 / CX-26 | D/C | Eligibility explanation; verified evidence                                             | `domain/matching.ts`, explain                                                                             | PRESENT (stricter)                                                                                      |
+| CO-43            | —   | Internal vs external pools                                                             | capacity vs matching                                                                                      | PRESENT (target-only)                                                                                   |
+| CO-30            | D   | Job context selector                                                                   | per-requirement matches                                                                                   | PARTIAL                                                                                                 |
+| CO-31/32 / CX-28 | D/C | Search; filters (category, aircraft, base, English, rate, dates, eligible-only), clear | search (ref, visible name, base; accent-insensitive) + eligible-only + clear, `features/matching/list.ts` | VERIFIED_LOCAL (batch 2) for the fields the pool has; category/aircraft/English/rate/dates · C-10, OD-7 |
+| CO-33            | D   | Sort relevance / rate / years                                                          | relevance (engine order) and experience                                                                   | VERIFIED_LOCAL (batch 2); rate · OD-7                                                                   |
+| CO-34            | D   | 20 per page                                                                            | 20 per page over the evaluated pool (100 cap + note kept)                                                 | VERIFIED_LOCAL (batch 2)                                                                                |
+| CO-35            | D   | Compact/expanded view (persisted)                                                      | —                                                                                                         | MISSING (skipped: cards already compact; add on request)                                                |
+| CO-36            | D/C | Compare up to 3                                                                        | `CompareTable` (verdict, base, years, each required qualification, availability, soft score)              | VERIFIED_LOCAL (batch 2)                                                                                |
+| CO-37            | D   | Profile detail modal                                                                   | MatchCard                                                                                                 | PARTIAL                                                                                                 |
+| CO-41 / CX-27/34 | D/C | Anonymity tiers, contact unlock                                                        | pseudonym ref, name if open                                                                               | PARTIAL · D-07, OD-5                                                                                    |
+| CO-42 / CX-45    | D/C | Employer blocking                                                                      | —                                                                                                         | MISSING · D-07                                                                                          |
+| CO-44            | D   | Medals                                                                                 | —                                                                                                         | MISSING · OD-3                                                                                          |
 
 ### M07 Opportunities (technician)
 
@@ -286,10 +286,10 @@ document review, work permit/current employer — all now rows above.
 
 ## 7. Batches
 
-| Batch   | Module                | Content                                                                                                                                           | Decision needed                                                  |
-| ------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **1 ✓** | M01                   | Password recovery (request + reset) and the email-link confirm route — VERIFIED_LOCAL 2026-10-19 (`scripts/local/password-reset-check.mjs` 18/18) | none; production Auth redirect URL is an owner action at publish |
-| 2       | M06                   | Matches list: eligible-only filter, search, sort, 20-per-page, compare up to 3                                                                    | none                                                             |
-| 3       | M02                   | Status checklist with deep links; read-only month calendar of own availability                                                                    | none                                                             |
-| 4       | M10/M04/M15           | Document expiry states; «use 7–3/7–4 as base»; tools offline badge                                                                                | none                                                             |
-| —       | M07–M09, M11–M14, M16 | see blocking column                                                                                                                               | D-06, D-07, D-10, D-12, OD-3/5/7, scope                          |
+| Batch   | Module                | Content                                                                                                                                                                            | Decision needed                                                  |
+| ------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **1 ✓** | M01                   | Password recovery (request + reset) and the email-link confirm route — VERIFIED_LOCAL 2026-10-19 (`scripts/local/password-reset-check.mjs` 18/18)                                  | none; production Auth redirect URL is an owner action at publish |
+| **2 ✓** | M06                   | Matches list: eligible-only filter, search, sort, 20-per-page, compare up to 3 — VERIFIED_LOCAL 2026-10-19 (`list.test.ts` 7, `ui-smoke.mjs` 11h–11k, 82/82 on a production build) | none                                                             |
+| 3       | M02                   | Status checklist with deep links; read-only month calendar of own availability                                                                                                     | none                                                             |
+| 4       | M10/M04/M15           | Document expiry states; «use 7–3/7–4 as base»; tools offline badge                                                                                                                 | none                                                             |
+| —       | M07–M09, M11–M14, M16 | see blocking column                                                                                                                                                                | D-06, D-07, D-10, D-12, OD-3/5/7, scope                          |

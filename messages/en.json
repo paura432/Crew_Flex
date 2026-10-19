@@ -709,6 +709,33 @@
         "complete": "Every professional in the network who holds at least one required qualification was evaluated ({prefiltered}).",
         "nearMissesTrimmed": "{prefiltered} professionals hold at least one required qualification; {evaluated} were evaluated. All {hardEligible} who meet every hard requirement and are available were evaluated first; the others are the closest near misses.",
         "eligibleTruncated": "Partial result: {hardEligible} professionals meet every hard requirement and are available, but at most {cap} are evaluated per request. This list is not the whole network — narrow the requirement (period, qualifications) to see the rest."
+      },
+      "list": {
+        "search": "Search",
+        "searchPlaceholder": "Reference, name or base",
+        "sort": "Sort by",
+        "sortBy": {
+          "relevance": "Relevance (eligible first)",
+          "years": "Experience (most first)"
+        },
+        "eligibleOnly": "Eligible only",
+        "apply": "Apply",
+        "clear": "Clear",
+        "compareThis": "Compare",
+        "compareSubmit": "Compare selected (up to {max})",
+        "compareTitle": "Comparing {count, plural, one {# professional} other {# professionals}}",
+        "compareClear": "Clear comparison",
+        "compareTruncated": "Only the first {max} selected professionals are compared.",
+        "compareCriterion": "Criterion",
+        "verdict": "Verdict",
+        "base": "Base",
+        "experience": "Experience",
+        "pagination": "Result pages",
+        "pageInfo": "{total, plural, one {# result} other {# results}} · page {page} of {pages}",
+        "previous": "Previous",
+        "next": "Next",
+        "noResults": "No professional matches these filters",
+        "noResultsHint": "Clear the search or include ineligible professionals to see the whole evaluated pool."
       }
     },
     "workforce": {

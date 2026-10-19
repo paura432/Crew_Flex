@@ -6,8 +6,10 @@ _Last updated 2026-10-19 (evening) CEST. Keep under ~60 lines; replace, don't ap
 
 V1.8 → Next.js functional migration, LOCAL only (owner brief 2026-10-19). Master audit and matrix:
 `docs/integration/crewflex-v13/10-master-matrix.md` (modules M00–M17, dependency graph, batches).
-Batch 1 (M01 password recovery) VERIFIED_LOCAL. Next: batch 2 (M06 matches list: filter, search, sort,
-pagination, compare). Release 1 (`65df3b9`) stays the production state; nothing remote in this phase.
+Batch 1 (M01 password recovery) and batch 2 (M06 matches list: search, eligible-only, sort, 20/page,
+compare ≤3) VERIFIED_LOCAL. Next: batch 3 (M02 status checklist + read-only month calendar).
+Local gotchas: `rm tsconfig.tsbuildinfo` when new i18n keys «don't exist» for tsc; Next dev logs a
+`performance.measure` negative-timestamp page error (dev only — the production build is clean).
 
 ## State
 

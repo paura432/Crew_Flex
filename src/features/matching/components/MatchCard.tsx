@@ -1,4 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import type { ReactNode } from "react";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/i18n/format";
@@ -32,7 +33,13 @@ function render(t: Translate, tDomain: TranslateDomain, locale: Locale, text: Ex
 }
 
 /** Explainable result: verdict → per-qualification checklist → availability → blockers. */
-export async function MatchCard({ item }: { item: EvaluatedCandidate }) {
+export async function MatchCard({
+  item,
+  footer,
+}: {
+  item: EvaluatedCandidate;
+  footer?: ReactNode;
+}) {
   const [t, tDomain, locale] = await Promise.all([
     getTranslations("matching"),
     getTranslations("domain"),
@@ -97,6 +104,7 @@ export async function MatchCard({ item }: { item: EvaluatedCandidate }) {
           </li>
         ))}
       </ul>
+      {footer}
     </article>
   );
 }

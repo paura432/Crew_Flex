@@ -439,6 +439,58 @@ ok(
     .map((m) => m[1])
     .join("; "),
 );
+// Batch 2 (M06, V1.8 CandidateDirectory): eligible-only, sort, search, compare — native GET forms.
+const cards = () => page.locator("main article");
+// The list streams in after `load` (Suspense, loading.tsx): wait for the first card.
+const listed = () => page.locator("main article").first().waitFor({ timeout: 15_000 });
+await page.locator('input[name="eligible"]').check();
+await Promise.all([
+  page.waitForURL(/eligible=1/),
+  page.getByRole("button", { name: "Apply" }).click(),
+]);
+await listed();
+ok(
+  "11h eligible-only keeps the 3 eligible",
+  (await cards().count()) === 3,
+  `${await cards().count()} cards`,
+);
+await page.goto(`${madUrl}/matches`);
+await page.selectOption('select[name="sort"]', "years");
+await Promise.all([
+  page.waitForURL(/sort=years/),
+  page.getByRole("button", { name: "Apply" }).click(),
+]);
+await listed();
+const years = (await cards().allInnerTexts()).map((t) => Number(/(\d+) years?/.exec(t)?.[1] ?? -1));
+ok(
+  "11i sort by experience: non-increasing",
+  years.length === 10 && years.every((y, i) => i === 0 || y <= years[i - 1]),
+  years.join(","),
+);
+const firstRef = /CF-[0-9A-F]{10}/.exec(await cards().first().innerText())?.[0];
+await page.goto(`${madUrl}/matches?q=${firstRef?.toLowerCase()}`);
+await listed();
+ok(
+  "11j search by pseudonym (case-insensitive) finds exactly it",
+  (await cards().count()) === 1,
+  firstRef,
+);
+await page.goto(`${madUrl}/matches`);
+await listed();
+await cards().nth(0).getByLabel("Compare").check();
+await cards().nth(1).getByLabel("Compare").check();
+await Promise.all([
+  page.waitForURL(/compare=.*compare=/),
+  page.getByRole("button", { name: /Compare selected/ }).click(),
+]);
+const compare = page.locator("section[aria-labelledby=compare-title]");
+await compare.waitFor({ timeout: 15_000 });
+ok(
+  "11k compare: side-by-side table of the 2 selected, cleared by its link",
+  (await compare.locator("thead th").count()) === 3 && /Verdict/.test(await compare.innerText()),
+);
+await compare.getByRole("link", { name: "Clear comparison" }).click();
+await page.waitForURL((u) => !u.search.includes("compare"));
 await shot("07-matching-results");
 // Organization admin in Spanish (flow 6 for the organization role) → dashboard, matches, form
 await page.goto(`${BASE}/app/settings`);

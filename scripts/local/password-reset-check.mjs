@@ -129,7 +129,7 @@ try {
   const p2 = await fresh.newPage();
   await p2.goto(link);
   await p2.waitForURL(/forgot-password\?expired=1/, { timeout: 15_000 });
-  ok("4 a used link is refused and explained", await p2.locator('[role="alert"]').isVisible());
+  ok("4 a used link is refused and explained", await p2.locator('main [role="alert"]').isVisible());
   await p2.goto(`${BASE}/reset-password`);
   ok(
     "4 /reset-password without a session asks for a new link",
@@ -152,6 +152,9 @@ try {
   ok("5 seed password restored", Boolean((await signIn(SEED_PW)).data.session));
 } catch (e) {
   ok("unexpected error", false, String(e));
+  console.log(
+    `hotel's password may now be ${NEW_PW}: reset it locally before re-running (docs/qa/LOCAL_ENVIRONMENT.md).`,
+  );
 }
 ok("6 no client errors", errors.length === 0, errors.join(" | "));
 await browser.close();
