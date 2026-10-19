@@ -67,6 +67,7 @@ export function fromDatabaseError(error: PostgrestLikeError): ApiError {
       return new ApiError("VALIDATION_ERROR");
     case "23505": // unique_violation
     case "40001": // serialization_failure (PostgREST normally retries these itself)
+    case "40P01": // deadlock_detected: two concurrent writes of the same technician (review LOW-1); retryable
     case "CF412": // optimistic concurrency: changed since the client loaded it (20261015130100)
       return new ApiError("CONFLICT");
     case "55000": // object_not_in_prerequisite_state (e.g. qualification no longer awaiting review)

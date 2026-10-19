@@ -2445,7 +2445,7 @@ describe("P. `aog_only` availability: AOG requirements only, SQL and TypeScript 
         [madRequirementId],
       );
 
-      for (const urgency of ["urgent", "aog"] as const) {
+      for (const urgency of ["planned", "urgent", "aog"] as const) {
         await tx.query("update public.work_requirements set urgency = $2 where id = $1", [
           madRequirementId,
           urgency,

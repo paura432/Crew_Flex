@@ -50,7 +50,8 @@ export default async function ProfessionalOverviewPage() {
       verificationStatus: q.verification_status,
       status: q.status,
     })),
-    availableWindows: overview.availability.filter((w) => w.status === "available").length,
+    // BR-11: «AOG only» is published availability too (BR-4.8).
+    availableWindows: overview.availability.filter((w) => w.status !== "unavailable").length,
   });
   const nextStep = completeness.missing[0];
 

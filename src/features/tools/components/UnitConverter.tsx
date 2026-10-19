@@ -257,7 +257,7 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
         <ResultCard caption={caption} value={formatted} unit={unitLabel(to)}>
           {result.value !== null && (
             <CopyResult
-              text={`${value} ${unitLabel(from)} = ${formatted} ${unitLabel(to)} · CrewFlex ${ENGINE_VERSION}`}
+              text={`${value} ${unitLabel(from)} = ${formatted} ${unitLabel(to)} · CrewFlex ${ENGINE_VERSION}${torque ? ` · ${t("converter.copyTorqueNote")}` : ""}`}
             />
           )}
         </ResultCard>

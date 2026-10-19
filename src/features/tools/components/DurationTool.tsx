@@ -4,11 +4,9 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { clockToHours, formatNumber, hoursToClock } from "../engine";
-import { ClockIcon } from "./icons";
 import {
   Footnote,
   ResultCard,
-  SectionHead,
   ToolErrorText,
   ToolField,
   ToolPanel,
@@ -32,10 +30,13 @@ export function DurationTool() {
           mode === "clock" ? formatNumber(locale, clockToHours(text), 6) : hoursToClock(text),
         );
 
+  // One panel with the result inside, as the prototype's TimeTool (no side column).
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,1fr)] lg:gap-6">
+    <div className="max-w-2xl space-y-4">
       <ToolPanel>
-        <SectionHead kicker={t("kicker")} title={t("title")} icon={<ClockIcon size={25} />} />
+        <h2 className="text-[23px] leading-tight font-bold tracking-tight text-[#122e43]">
+          {t("title")}
+        </h2>
         <p className="mt-3 mb-5 text-sm text-[#587083]">{t("description")}</p>
         <div className="space-y-4">
           <ToolField id="duration-mode" label={t("mode")}>
@@ -68,16 +69,14 @@ export function DurationTool() {
             />
           </ToolField>
           <ToolErrorText error={result?.error ?? null} />
+          <ResultCard
+            caption={t("result")}
+            value={result?.value ?? "—"}
+            unit={result?.value != null && mode === "clock" ? t("hours") : undefined}
+          />
         </div>
       </ToolPanel>
-      <aside className="min-w-0 space-y-5">
-        <ResultCard
-          caption={t("result")}
-          value={result?.value ?? "—"}
-          unit={result?.value != null && mode === "clock" ? t("hours") : undefined}
-        />
-        <Footnote>{t("formula")}</Footnote>
-      </aside>
+      <Footnote>{t("formula")}</Footnote>
     </div>
   );
 }

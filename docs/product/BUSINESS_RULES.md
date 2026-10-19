@@ -123,7 +123,7 @@ convention; deterministic between server and browser). IMPLEMENTED.
 Seven items the professional controls, equally weighted, rounded percent, plus the ordered list of
 missing items so the UI shows one concrete next step (CF-L03): professional name · base · years of
 experience > 0 · an active licence or type rating · an active **verified** qualification · at least one
-`available` window · visibility other than `private`. Deterministic, never looks at "today". IMPLEMENTED.
+`available` or `aog_only` window (BR-4.8: «AOG only» is published availability, for AOG needs) · visibility other than `private`. Deterministic, never looks at "today". IMPLEMENTED.
 Shown as **"Profile completeness"**, next to "Verified N of M" and the count awaiting review: 100 % means
 the seven profile items are done, **not** that the professional or all of their qualifications are verified
 (remediation 2026-10-15, UX 8.2).

@@ -2,11 +2,24 @@
 // Functions (Deno) and the database tests (Node). Rows are parsed, not cast, so schema drift fails
 // loudly instead of corrupting eligibility. Deno-compatible imports (relative, `.ts`, bare "zod").
 import { z } from "zod";
-import { AVAILABILITY_STATUSES } from "../domain/availability.ts";
+import { AVAILABILITY_STATUSES, type AvailabilityStatus } from "../domain/availability.ts";
 import type { Candidate } from "../domain/matching.ts";
 import { QUALIFICATION_STATUSES, VERIFICATION_STATUSES } from "../domain/qualification.ts";
 
 const toIso = (value: string) => new Date(value).toISOString();
+
+/**
+ * Deliberate exception to "fail loudly": an availability status this code does not know yet (e.g. a
+ * value added by a migration applied before the functions were redeployed) is read as
+ * `unavailable`. It can only ever remove availability, never grant eligibility, and one
+ * professional's window can no longer make every pool containing them fail (review HIGH-1,
+ * 2026-10-19).
+ */
+export function availabilityStatus(value: string): AvailabilityStatus {
+  return (AVAILABILITY_STATUSES as readonly string[]).includes(value)
+    ? (value as AvailabilityStatus)
+    : "unavailable";
+}
 
 const poolRow = z.object({
   candidate_ref: z.string(),
@@ -24,7 +37,11 @@ const poolRow = z.object({
     }),
   ),
   candidate_availability: z.array(
-    z.object({ startsAt: z.string(), endsAt: z.string(), status: z.enum(AVAILABILITY_STATUSES) }),
+    z.object({
+      startsAt: z.string(),
+      endsAt: z.string(),
+      status: z.string().transform(availabilityStatus),
+    }),
   ),
 });
 

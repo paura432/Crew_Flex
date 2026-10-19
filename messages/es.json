@@ -834,11 +834,11 @@
       "formula": "Resultado = valor × factor de origen / factor de destino. Temperaturas absolutas incluyen el desplazamiento de escala. Los rangos se convierten por sus extremos.",
       "formulaTorque": "120 lbf·in = 10 lbf·ft ≈ 13,5581794833 N·m. No calcula precarga, selección de par ni corrección de adaptadores.",
       "torqueNoticeTitle": "Conversión matemática, no una especificación de apriete",
-      "torqueNotice": "Este resultado solo convierte unidades. El valor de par, su tolerancia, la secuencia y cualquier corrección por adaptador o extensión proceden de los datos de mantenimiento aprobados para la tarea (AMM, SRM, CMM u otra documentación autorizada). No sustituye esa documentación ni la verificación con herramienta calibrada."
+      "torqueNotice": "Este resultado solo convierte unidades. El valor de par, su tolerancia, la secuencia y cualquier corrección por adaptador o extensión proceden de los datos de mantenimiento aprobados para la tarea (AMM, SRM, CMM u otra documentación autorizada). No sustituye esa documentación ni la verificación con herramienta calibrada.",
+      "copyTorqueNote": "solo conversión de unidades; el valor de par procede de los datos de mantenimiento aprobados"
     },
     "duration": {
       "title": "Duración de jornada",
-      "kicker": "TIEMPO",
       "description": "Convierte duración entre HH:MM y horas decimales. 1:30 equivale a 1,5 h.",
       "mode": "Conversión de duración",
       "clock": "HH:MM → horas decimales",

@@ -105,8 +105,7 @@ DELETE, `lock_availability_owner()`) takes `pg_advisory_xact_lock` keyed by the 
 The cycle generator's saved pattern, one row per technician: `pattern` (14 values, BR-4.7), `anchor`
 date (day 1, UTC), `custom_cycle text[]` (≤ 31 × `working`/`off`; 1–31 when `pattern = custom`).
 **Private:** RLS select/insert/update/delete own only — no organization, manager or platform-admin
-policy (work/rest days are private in the prototype). Written only inside `replace_availability_days`
-(third argument `p_rotation`), read by `GET /professional-availability`.
+policy (work/rest days are private in the prototype). Written by the app through `replace_availability_days` (third argument `p_rotation`); the owner's own grants also allow direct writes, harmless under owner-only RLS and the CHECKs. Read by `GET /professional-availability`. Note: the pattern itself is private, but the working days it generates are stored as `unavailable` windows, which organizations can see like any other window — the rota can be inferred from them (review LOW-2).
 
 ### `work_requirements`
 

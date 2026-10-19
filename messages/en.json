@@ -834,11 +834,11 @@
       "formula": "Result = value × source factor / target factor. Absolute temperatures include the scale offset. Ranges are converted at both ends.",
       "formulaTorque": "120 lbf·in = 10 lbf·ft ≈ 13.5581794833 N·m. It does not compute preload, select a torque or correct for adapters.",
       "torqueNoticeTitle": "A mathematical conversion, not a torque specification",
-      "torqueNotice": "This result only converts units. The torque value, its tolerance, the sequence and any adapter or extension correction come from the approved maintenance data for the task (AMM, SRM, CMM or other authorised documentation). It does not replace that documentation or the check with a calibrated tool."
+      "torqueNotice": "This result only converts units. The torque value, its tolerance, the sequence and any adapter or extension correction come from the approved maintenance data for the task (AMM, SRM, CMM or other authorised documentation). It does not replace that documentation or the check with a calibrated tool.",
+      "copyTorqueNote": "unit conversion only; the torque value comes from the approved maintenance data"
     },
     "duration": {
       "title": "Shift duration",
-      "kicker": "TIME",
       "description": "Converts a duration between HH:MM and decimal hours. 1:30 equals 1.5 h.",
       "mode": "Duration conversion",
       "clock": "HH:MM → decimal hours",
