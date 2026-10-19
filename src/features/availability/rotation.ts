@@ -3,29 +3,15 @@
 // result is only a preview until it is saved through `replace_availability_days` (one transaction).
 // Mapping onto the windows model (BR-4): a working day becomes `unavailable`, a rest day is left
 // empty unless the technician chooses to publish rest days as `available`.
-import type { AvailabilityStatus } from "@/domain/availability";
+import {
+  MAX_CYCLE_DAYS,
+  type AvailabilityStatus,
+  type CycleDay,
+  type Rotation,
+} from "@/domain/availability";
 import type { CalendarDay } from "./calendar";
 
-export const ROTATIONS = [
-  "7x3",
-  "7x4",
-  "5x2",
-  "7x3/7x4",
-  "6x4",
-  "5x5",
-  "4x4",
-  "10x10",
-  "15x15",
-  "custom",
-  "2D2N4OFF",
-  "night",
-  "split",
-  "flexible",
-] as const;
-export type Rotation = (typeof ROTATIONS)[number];
-
-export type CycleDay = "working" | "off";
-export const MAX_CYCLE_DAYS = 31;
+export { MAX_CYCLE_DAYS, ROTATIONS, type CycleDay, type Rotation } from "@/domain/availability";
 
 export type RotationErrorCode = "customLength" | "cycleTooLong" | "invalidDate";
 

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, Field } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
+import type { AvailabilityRotation } from "@/types/api";
 import { MAX_CYCLE_DAYS, ROTATIONS, type CycleDay, type Rotation } from "../rotation";
 
 export interface CycleSettings {
@@ -18,20 +19,26 @@ export interface CycleSettings {
 /** Work/rest cycle form (V1.8 "Planifica el ciclo"). Only builds a preview; saving is separate. */
 export function CyclePlanner({
   today,
+  saved,
   disabled,
   error,
   onPreview,
 }: {
   today: string;
+  /** The pattern saved with the last calendar save (V1.8 `profile.rotation`); null = defaults. */
+  saved: AvailabilityRotation | null;
   disabled: boolean;
   error: string | null;
   onPreview: (settings: CycleSettings) => void;
 }) {
   const t = useTranslations("availability.cycle");
-  const [pattern, setPattern] = useState<Rotation>("7x3");
-  const [anchor, setAnchor] = useState(today);
-  const [length, setLength] = useState("14");
-  const [custom, setCustom] = useState<CycleDay[]>(() => Array<CycleDay>(14).fill("off"));
+  const savedCustom = saved?.customCycle.length ? saved.customCycle : null;
+  const [pattern, setPattern] = useState<Rotation>(saved?.pattern ?? "7x3");
+  const [anchor, setAnchor] = useState(saved?.anchor ?? today);
+  const [length, setLength] = useState(String(savedCustom?.length ?? 14));
+  const [custom, setCustom] = useState<CycleDay[]>(
+    () => savedCustom ?? Array<CycleDay>(14).fill("off"),
+  );
   const [publishRest, setPublishRest] = useState(false);
   const [replace, setReplace] = useState(false);
 

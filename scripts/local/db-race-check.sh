@@ -3,7 +3,7 @@
 # LOCAL Docker stack only: talks to the container `supabase_db_crew-flex` with `docker exec psql`
 # (never a URL), after the same local-target check as scripts/local/sb-local.sh. Every scenario
 # restores the rows it changed, so the deterministic seed stays as it was.
-# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|all]   (default: all)
+# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|all]   (default: all)
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
 CONTAINER=supabase_db_crew-flex
@@ -142,11 +142,51 @@ review() {
   echo "update public.technician_qualifications set verification_status = 'pending', reviewed_by = null, reviewed_at = null, review_note = null where id = $q;" | psql_owner >/dev/null
 }
 
+availability() {
+  echo "== Availability: concurrent day edits of one technician are serialised (migration 20261019130000)"
+  local foxtrot=00000000-0000-4000-8000-000000000023
+  local scope="technician_profile_id = '$foxtrot' and starts_at < '2031-07-01' and ends_at > '2031-06-01'"
+  local on_day="select count(*) from public.availability_windows where technician_profile_id = '$foxtrot' and starts_at < '2031-06-11' and ends_at > '2031-06-10';"
+  local first
+  for first in replace insert; do
+    echo "delete from public.availability_windows where $scope;" | psql_owner >/dev/null
+    # A writes the day (via the RPC, or a direct insert spanning it) and holds its transaction;
+    # B clears the same day with another key while A is open. B must see A's rows: 0 left.
+    if [ "$first" = replace ]; then
+      psql_as "$foxtrot" >"$OUT_A" <<SQL &
+begin;
+select windows_created from public.replace_availability_days(gen_random_uuid(), '[{"date":"2031-06-10","status":"available"}]');
+select pg_sleep(1.5);
+commit;
+SQL
+    else
+      psql_as "$foxtrot" >"$OUT_A" <<SQL &
+begin;
+insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+values ('$foxtrot', '2031-06-09 12:00Z', '2031-06-11 12:00Z', 'available');
+select pg_sleep(1.5);
+commit;
+SQL
+    fi
+    local a=$!
+    sleep 0.5
+    psql_as "$foxtrot" >"$OUT_B" <<SQL || true
+select windows_created from public.replace_availability_days(gen_random_uuid(), '[{"date":"2031-06-10","status":null}]');
+SQL
+    wait "$a" || true
+    local left; left="$(echo "$on_day" | psql_owner)"
+    if [ "$left" = 0 ]; then pass "$first then clear: the clear waited and saw the first write (0 windows on the day)"
+    else fail "$first then clear: $left window(s) left on the cleared day"; cat "$OUT_A" "$OUT_B"; fi
+  done
+  echo "delete from public.availability_windows where $scope;" | psql_owner >/dev/null
+}
+
 case "${1:-all}" in
   e3) e3; e3_simultaneous ;;
   idempotency) idempotency ;;
   review) review ;;
-  all) e3; e3_simultaneous; idempotency; review ;;
+  availability) availability ;;
+  all) e3; e3_simultaneous; idempotency; review; availability ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"

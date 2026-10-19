@@ -304,6 +304,10 @@
       "required": "Choose at least one day",
       "tooMany": "At most 62 days at once",
       "duplicate": "Each day can appear only once"
+    },
+    "rotation": {
+      "pattern": "Choose a valid pattern",
+      "cycle": "The cycle needs 1–31 days, each work or rest"
     }
   },
   "domain": {
@@ -509,7 +513,6 @@
     },
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
-    "coveredByLonger": "{date} is covered by a longer window. Edit or delete that window in the list below.",
     "dayCleared": "{date} cleared",
     "daySet": "{date} set to {state}",
     "windowUpdated": "Window updated",
@@ -570,8 +573,12 @@
       "save": "Save calendar",
       "discard": "Discard changes",
       "saved": "{count, plural, one {# day saved} other {# days saved}}",
-      "nothingToSave": "Nothing to save: the preview only had rest days on empty days."
-    }
+      "nothingToSave": "Nothing to save: the preview only had rest days on empty days.",
+      "splitWarning": "{count, plural, one {# day is} other {# days are}} inside a longer or partial-hour window. Saving cuts only the marked days out of it and keeps the hours of every other day.",
+      "undo": "Undo last change",
+      "patternSaved": "Pattern saved; no day needed changing."
+    },
+    "pastDay": "{date} is in the past and cannot be changed from the calendar."
   },
   "organization": {
     "dashboard": {

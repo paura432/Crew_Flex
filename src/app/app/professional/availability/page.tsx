@@ -35,6 +35,7 @@ export default async function ProfessionalAvailabilityPage() {
       {result.ok ? (
         <AvailabilityManager
           windows={result.data.windows}
+          rotation={result.data.rotation}
           initialMonth={today.slice(0, 7)}
           today={today}
         />

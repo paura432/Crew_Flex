@@ -1,6 +1,28 @@
 export const AVAILABILITY_STATUSES = ["available", "unavailable"] as const;
 export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 
+/** Work/rest rotation patterns of the cycle generator (BR-4.7; V1.8 `planning.js` ROTATIONS). */
+export const ROTATIONS = [
+  "7x3",
+  "7x4",
+  "5x2",
+  "7x3/7x4",
+  "6x4",
+  "5x5",
+  "4x4",
+  "10x10",
+  "15x15",
+  "custom",
+  "2D2N4OFF",
+  "night",
+  "split",
+  "flexible",
+] as const;
+export type Rotation = (typeof ROTATIONS)[number];
+export const CYCLE_DAYS = ["working", "off"] as const;
+export type CycleDay = (typeof CYCLE_DAYS)[number];
+export const MAX_CYCLE_DAYS = 31;
+
 export interface AvailabilityWindow {
   startsAt: string;
   endsAt: string;

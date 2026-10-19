@@ -15,7 +15,7 @@ import { useIdempotencyKey } from "@/lib/idempotency";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { toLocalInput, toUtcIso as toIso } from "@/lib/format";
 import { createAvailabilityWindowInput } from "@/lib/validation/availability";
-import type { AvailabilityWindow } from "@/types/api";
+import type { AvailabilityRotation, AvailabilityWindow } from "@/types/api";
 import {
   createWindowAction,
   deleteWindowAction,
@@ -57,8 +57,11 @@ export function AvailabilityManager({
   windows,
   initialMonth,
   today,
+  rotation,
 }: {
   windows: AvailabilityWindow[];
+  /** Saved generator pattern (private), or null. */
+  rotation: AvailabilityRotation | null;
   initialMonth: string;
   /** `YYYY-MM-DD` (UTC), from the server render. */
   today: string;
@@ -76,11 +79,19 @@ export function AvailabilityManager({
   // Unsaved days (generated cycle and/or painted by hand); saved together in one transaction.
   const [plan, setPlan] = useState<Record<string, PlannedDay>>({});
   const [cycleError, setCycleError] = useState<string | null>(null);
+  // Undo steps of the draft (V1.8 demo planner); cleared on save and discard.
+  const [history, setHistory] = useState<Record<string, PlannedDay>[]>([]);
+  // The pattern of the last preview; saved with the days so it is offered again next time.
+  const [generatedWith, setGeneratedWith] = useState<AvailabilityRotation | null>(null);
   const planned = Object.keys(plan).length;
   const [pending, startTransition] = useTransition();
   const idempotency = useIdempotencyKey();
 
   const days = calendarDays(windows, month);
+  // Draft days that saving would cut out of a longer or partial-hour window.
+  const splitDays = days.filter(
+    (d) => d.date in plan && d.windows.length > 0 && !d.singleDayWindow,
+  ).length;
   const cells = [
     ...Array.from({ length: monthOffset(month) }, (_, i) => ({ key: `pad-${i}`, day: null })),
     ...days.map((day) => ({ key: day.date, day })),
@@ -107,18 +118,54 @@ export function AvailabilityManager({
     });
   }
 
-  function replaceDays(label: string, changes: { date: string; status: PlannedDay["status"] }[]) {
+  // Setting days is idempotent by nature (applying the same set twice gives the same windows), so
+  // each save gets a fresh key: re-using a key per payload could replay an old "set" that a later
+  // save has since overwritten and report it as applied (review finding MEDIUM-2, 2026-10-19).
+  function replaceDays(
+    label: string,
+    changes: { date: string; status: PlannedDay["status"] }[],
+    savedRotation?: AvailabilityRotation,
+  ) {
     run(
       label,
-      () => replaceDaysAction({ days: changes }, idempotency.keyFor(changes)),
-      () => setPlan({}),
+      () =>
+        replaceDaysAction(
+          { days: changes, ...(savedRotation ? { rotation: savedRotation } : {}) },
+          crypto.randomUUID(),
+        ),
+      clearDraft,
     );
+  }
+
+  function clearDraft() {
+    setPlan({});
+    setHistory([]);
+    setGeneratedWith(null);
+    setCycleError(null);
+  }
+
+  /** Every draft change goes through here so it can be undone. */
+  function changePlan(next: (old: Record<string, PlannedDay>) => Record<string, PlannedDay>) {
+    setHistory((h) => [...h, plan]);
+    setPlan(next);
+  }
+
+  function undo() {
+    const previous = history.at(-1);
+    if (previous === undefined) return;
+    setHistory((h) => h.slice(0, -1));
+    setPlan(previous);
   }
 
   function onPreview(settings: CycleSettings) {
     try {
       const generated = planCycle(days, settings.pattern, { ...settings, today });
-      setPlan((old) => ({ ...old, ...generated }));
+      changePlan((old) => ({ ...old, ...generated }));
+      setGeneratedWith({
+        pattern: settings.pattern,
+        anchor: settings.anchor,
+        customCycle: settings.pattern === "custom" ? settings.custom : [],
+      });
       setCycleError(null);
       setNotice(null);
     } catch (error) {
@@ -129,12 +176,14 @@ export function AvailabilityManager({
 
   function onSavePlan() {
     const changes = planChanges(days, plan);
-    if (changes.length === 0) {
-      setPlan({});
+    if (changes.length === 0 && !generatedWith) {
+      clearDraft();
       setNotice({ tone: "ok", text: t("cycle.nothingToSave") });
       return;
     }
-    replaceDays(t("cycle.saved", { count: changes.length }), changes);
+    const label =
+      changes.length === 0 ? t("cycle.patternSaved") : t("cycle.saved", { count: changes.length });
+    replaceDays(label, changes, generatedWith ?? undefined);
   }
 
   function onDayClick(date: string) {
@@ -142,20 +191,18 @@ export function AvailabilityManager({
     if (!day) return;
     const status = picker === "clear" ? null : picker;
     if (planned > 0) {
-      if (date >= today) setPlan((old) => ({ ...old, [date]: { status } }));
+      if (date >= today) changePlan((old) => ({ ...old, [date]: { status } }));
       return;
     }
     if (day.windows.length > 0 && !day.singleDayWindow) {
-      // Longer or partial windows are cut out of this day on the server, in one transaction.
+      // Never split silently (BR-4.6): the day goes to the draft, the warning below names what saving
+      // will cut, and nothing changes until the professional saves.
       if (date < today) {
-        setNotice({ tone: "danger", text: t("coveredByLonger", { date }) });
+        setNotice({ tone: "danger", text: t("pastDay", { date }) });
         return;
       }
-      const label =
-        status === null
-          ? t("dayCleared", { date })
-          : t("daySet", { date, state: dayLabel(status).toLowerCase() });
-      replaceDays(label, [{ date, status }]);
+      changePlan(() => ({ [date]: { status } }));
+      setNotice(null);
       return;
     }
     const existing = day.singleDayWindow;
@@ -230,7 +277,13 @@ export function AvailabilityManager({
         />
       </dl>
 
-      <CyclePlanner today={today} disabled={pending} error={cycleError} onPreview={onPreview} />
+      <CyclePlanner
+        today={today}
+        saved={rotation}
+        disabled={pending}
+        error={cycleError}
+        onPreview={onPreview}
+      />
 
       <Panel
         title={formatMonth(locale, `${monthStart}T00:00:00Z`)}
@@ -304,17 +357,15 @@ export function AvailabilityManager({
         {planned > 0 && (
           <div className="mt-4 space-y-3 rounded-lg border border-warn/40 bg-warn-bg p-3 text-sm text-warn">
             <p role="status">{t("cycle.pending", { count: planned })}</p>
+            {splitDays > 0 && <p>{t("cycle.splitWarning", { count: splitDays })}</p>}
             <div className="flex flex-wrap gap-2">
               <Button variant="primary" disabled={pending} aria-busy={pending} onClick={onSavePlan}>
                 {pending ? tRoot("common.saving") : t("cycle.save")}
               </Button>
-              <Button
-                disabled={pending}
-                onClick={() => {
-                  setPlan({});
-                  setCycleError(null);
-                }}
-              >
+              <Button disabled={pending || history.length === 0} onClick={undo}>
+                {t("cycle.undo")}
+              </Button>
+              <Button disabled={pending} onClick={clearDraft}>
                 {t("cycle.discard")}
               </Button>
             </div>

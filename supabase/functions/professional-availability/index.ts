@@ -3,7 +3,7 @@
 //   POST   /professional-availability { startsAt, endsAt, status }   (Idempotency-Key: 201 · 200 replay)
 //   PATCH  /professional-availability?id=<uuid> { startsAt, endsAt, status }
 //   DELETE /professional-availability?id=<uuid>
-//   PUT    /professional-availability { days: [{ date, status|null }] }  (Idempotency-Key)
+//   PUT    /professional-availability { days: [{ date, status|null }], rotation? }  (Idempotency-Key)
 //          → sets whole UTC days atomically (shift-cycle generator), RPC replace_availability_days
 // The technician id is ALWAYS the JWT subject: the body never carries ownership. RLS enforces
 // `technician_profile_id = auth.uid()` as a second layer.
@@ -12,7 +12,7 @@ import { requireActor, type Actor } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_shared/validation.ts";
-import { AVAILABILITY_STATUSES } from "../../../src/domain/availability.ts";
+import { AVAILABILITY_STATUSES, CYCLE_DAYS, ROTATIONS } from "../../../src/domain/availability.ts";
 import {
   availabilityWindowIdQuery,
   createAvailabilityWindowInput,
@@ -22,6 +22,7 @@ import {
 } from "../../../src/lib/validation/availability.ts";
 import type {
   AvailabilityDaysResponse,
+  AvailabilityRotation,
   AvailabilityDeleteResponse,
   AvailabilityListResponse,
   AvailabilityWindow,
@@ -37,6 +38,17 @@ const row = z.object({
   status: z.enum(AVAILABILITY_STATUSES),
   updated_at: z.string(),
 });
+
+const rotationRow = z.object({
+  pattern: z.enum(ROTATIONS),
+  anchor: z.string(),
+  custom_cycle: z.array(z.enum(CYCLE_DAYS)),
+});
+
+export function toRotation(raw: unknown): AvailabilityRotation {
+  const r = rotationRow.parse(raw);
+  return { pattern: r.pattern, anchor: r.anchor.slice(0, 10), customCycle: r.custom_cycle };
+}
 
 export function toWindow(raw: unknown): AvailabilityWindow {
   const r = row.parse(raw);
@@ -64,14 +76,27 @@ export const handler = createHandler("professional-availability", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
     const { limit } = parseQuery(ctx.url, listAvailabilityQuery);
-    const { data, error } = await actor.client
-      .from("availability_windows")
-      .select(SELECT)
-      .eq("technician_profile_id", actor.id)
-      .order("starts_at", { ascending: true })
-      .limit(limit);
-    if (error) throw fromDatabaseError(error);
-    return { data: { windows: (data ?? []).map(toWindow) } satisfies AvailabilityListResponse };
+    const [windows, rotation] = await Promise.all([
+      actor.client
+        .from("availability_windows")
+        .select(SELECT)
+        .eq("technician_profile_id", actor.id)
+        .order("starts_at", { ascending: true })
+        .limit(limit),
+      actor.client
+        .from("availability_rotations")
+        .select("pattern, anchor, custom_cycle")
+        .eq("technician_profile_id", actor.id)
+        .maybeSingle(),
+    ]);
+    if (windows.error) throw fromDatabaseError(windows.error);
+    if (rotation.error) throw fromDatabaseError(rotation.error);
+    return {
+      data: {
+        windows: (windows.data ?? []).map(toWindow),
+        rotation: rotation.data ? toRotation(rotation.data) : null,
+      } satisfies AvailabilityListResponse,
+    };
   },
 
   POST: async (ctx) => {
@@ -123,6 +148,7 @@ export const handler = createHandler("professional-availability", {
     const applied = await actor.client.rpc("replace_availability_days", {
       p_idempotency_key: idempotencyKey(ctx.req),
       p_days: input.days,
+      p_rotation: input.rotation ?? null,
     });
     if (applied.error) throw fromDatabaseError(applied.error);
     const { id, replayed } = createdRow(applied.data);

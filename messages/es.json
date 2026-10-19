@@ -304,6 +304,10 @@
       "required": "Elige al menos un día",
       "tooMany": "Como máximo 62 días a la vez",
       "duplicate": "Cada día solo puede aparecer una vez"
+    },
+    "rotation": {
+      "pattern": "Elige un patrón válido",
+      "cycle": "El ciclo necesita de 1 a 31 días, cada uno de trabajo o descanso"
     }
   },
   "domain": {
@@ -509,7 +513,6 @@
     },
     "prevMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "coveredByLonger": "El {date} está cubierto por una ventana más larga. Edita o elimina esa ventana en la lista de abajo.",
     "dayCleared": "{date} limpiado",
     "daySet": "{date} marcado como {state}",
     "windowUpdated": "Ventana actualizada",
@@ -570,8 +573,12 @@
       "save": "Guardar calendario",
       "discard": "Descartar cambios",
       "saved": "{count, plural, one {# día guardado} other {# días guardados}}",
-      "nothingToSave": "Nada que guardar: la vista previa solo tenía descansos en días vacíos."
-    }
+      "nothingToSave": "Nada que guardar: la vista previa solo tenía descansos en días vacíos.",
+      "splitWarning": "{count, plural, one {# día está} other {# días están}} dentro de un intervalo más largo o de horas parciales. Al guardar solo se recortan los días marcados y se conservan las horas del resto.",
+      "undo": "Deshacer último cambio",
+      "patternSaved": "Patrón guardado; ningún día necesitaba cambios."
+    },
+    "pastDay": "{date} ya ha pasado y no se puede cambiar desde el calendario."
   },
   "organization": {
     "dashboard": {

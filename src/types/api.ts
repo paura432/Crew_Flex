@@ -1,6 +1,6 @@
 // Edge Function response contracts. Type-only module shared by Next.js and the Deno functions.
 // Envelope: docs/architecture/EDGE_FUNCTIONS.md
-import type { AvailabilityStatus } from "../domain/availability.ts";
+import type { AvailabilityStatus, CycleDay, Rotation } from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
@@ -92,8 +92,17 @@ export interface AvailabilityWindow {
   updatedAt: string;
 }
 
+export interface AvailabilityRotation {
+  pattern: Rotation;
+  /** `YYYY-MM-DD` (UTC), day 1 of the cycle. */
+  anchor: string;
+  customCycle: CycleDay[];
+}
+
 export interface AvailabilityListResponse {
   windows: AvailabilityWindow[];
+  /** The generator's saved pattern; private to the owner. `null` until one is saved. */
+  rotation: AvailabilityRotation | null;
 }
 
 export interface AvailabilityWindowResponse {

@@ -2175,6 +2175,174 @@ describe("O. per-day availability replace (shift-cycle generator, migration 2026
     });
   });
 
+  it("overlapping windows of mixed status, mid-day edges and a non-UTC session time zone", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      await tx.query("set local timezone = 'Pacific/Kiritimati'"); // UTC+14: must change nothing
+      await tx.query(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status) values
+          ($1, '2028-03-20 06:00Z', '2028-04-05 18:00Z', 'available'),
+          ($1, '2028-03-25 10:00Z', '2028-03-25 14:00Z', 'unavailable'),
+          ($1, '2028-03-24 20:00Z', '2028-03-26 04:00Z', 'unavailable'),
+          ($1, '2028-03-26 22:00Z', '2028-03-27 02:00Z', 'available')`,
+        [SEED.delta],
+      );
+      await tx.query(replace, [
+        "9a5d1e7c-6b8f-4cd4-8e5f-0a9b8c7d6e5f",
+        days(["2028-03-25", "available"], ["2028-03-27", null]),
+      ]);
+      const rows = (
+        await tx.query<{ s: Date; e: Date; st: string }>(
+          `select starts_at s, ends_at e, status st from public.availability_windows
+           where technician_profile_id = $1 and starts_at >= '2028-03-01' and starts_at < '2028-05-01'
+           order by starts_at, status`, // enum order: available < unavailable
+          [SEED.delta],
+        )
+      ).rows.map((r) => `${r.s.toISOString()} ${r.e.toISOString()} ${r.st}`);
+      expect(rows).toEqual([
+        "2028-03-20T06:00:00.000Z 2028-03-25T00:00:00.000Z available",
+        "2028-03-24T20:00:00.000Z 2028-03-25T00:00:00.000Z unavailable",
+        "2028-03-25T00:00:00.000Z 2028-03-26T00:00:00.000Z available", // the edited day
+        "2028-03-26T00:00:00.000Z 2028-03-27T00:00:00.000Z available",
+        "2028-03-26T00:00:00.000Z 2028-03-26T04:00:00.000Z unavailable",
+        "2028-03-26T22:00:00.000Z 2028-03-27T00:00:00.000Z available",
+        "2028-03-28T00:00:00.000Z 2028-04-05T18:00:00.000Z available",
+      ]);
+    });
+  });
+
+  it("rejects scalars, a null key and 63 distinct days", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      for (const [i, payload] of ["5", "null", '"x"', "[1]", "[null]"].entries()) {
+        const key = `6d2e8f4a-5b7c-4d9e-8f0a-${String(i).padStart(12, "0")}`;
+        expect(await queryError(tx, replace, [key, payload])).toBeTruthy();
+      }
+      expect(await queryError(tx, replace, [null, days(["2028-09-01", "available"])])).toMatch(
+        /idempotency key is required/,
+      );
+      const many = JSON.stringify(
+        Array.from({ length: 63 }, (_, i) => ({
+          date: new Date(Date.UTC(2029, 0, 1 + i)).toISOString().slice(0, 10),
+          status: "available",
+        })),
+      );
+      expect(await queryError(tx, replace, ["7e3f9a5b-6c8d-4eaf-9a1b-2c3d4e5f6a7b", many])).toMatch(
+        /between 1 and 62/,
+      );
+    });
+  });
+
+  it("every write to a technician's windows takes the per-technician lock (migration 20261019130000)", async () => {
+    const { rows } = await db.query<{ tgname: string }>(
+      "select tgname from pg_trigger where tgrelid = 'public.availability_windows'::regclass and not tgisinternal",
+    );
+    expect(rows.map((r) => r.tgname)).toContain("availability_windows_lock_owner");
+    await asUser(db, SEED.delta, async (tx) => {
+      // Insert, update and delete still work with the trigger in place.
+      const { rows: created } = await tx.query<{ id: string }>(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+         values ($1, '2028-08-01 00:00Z', '2028-08-02 00:00Z', 'available') returning id`,
+        [SEED.delta],
+      );
+      const id = created[0]!.id;
+      expect(
+        (
+          await tx.query(
+            "update public.availability_windows set status = 'unavailable' where id = $1",
+            [id],
+          )
+        ).affectedRows,
+      ).toBe(1);
+      expect(
+        (await tx.query("delete from public.availability_windows where id = $1", [id]))
+          .affectedRows,
+      ).toBe(1);
+    });
+  });
+
+  it("saves the chosen rotation with the days, privately (migration 20261019140000)", async () => {
+    const withRotation = "select * from public.replace_availability_days($1, $2::jsonb, $3::jsonb)";
+    const rotation = JSON.stringify({ pattern: "7x3/7x4", anchor: "2028-09-01", customCycle: [] });
+    await asUser(db, SEED.alpha, async (tx) => {
+      // Alpha is a member of Demo MRO Madrid: its admin can read its windows, never its rotation.
+      await tx.query(withRotation, [
+        "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e",
+        days(["2028-09-01", "unavailable"]),
+        rotation,
+      ]);
+      const { rows } = await tx.query<{ pattern: string; anchor: Date; custom_cycle: string[] }>(
+        "select pattern, anchor, custom_cycle from public.availability_rotations",
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.pattern).toBe("7x3/7x4");
+      // Pattern only (no day changes) is allowed and replaces the preference.
+      await tx.query(withRotation, [
+        "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+        "[]",
+        JSON.stringify({
+          pattern: "custom",
+          anchor: "2028-09-02",
+          customCycle: ["working", "off"],
+        }),
+      ]);
+      const after = await tx.query<{ pattern: string; custom_cycle: string[] }>(
+        "select pattern, custom_cycle from public.availability_rotations",
+      );
+      expect(after.rows[0]).toEqual({ pattern: "custom", custom_cycle: ["working", "off"] });
+      // Invalid rotations write nothing (neither the rotation nor the days).
+      for (const [i, bad] of [
+        { pattern: "9x9", anchor: "2028-09-01", customCycle: [] },
+        { pattern: "custom", anchor: "2028-09-01", customCycle: [] },
+        { pattern: "7x3", anchor: "2028-02-30", customCycle: [] },
+        { pattern: "7x3", anchor: "2028-09-01", customCycle: ["working", "maybe"] },
+        { pattern: "7x3", anchor: "2028-09-01", customCycle: Array(32).fill("off") },
+        { pattern: "7x3", anchor: "2028-09-01" },
+        {
+          pattern: "7x3",
+          anchor: "2028-09-01",
+          customCycle: [],
+          technician_profile_id: SEED.bravo,
+        },
+      ].entries()) {
+        const key = `3d4e5f6a-7b8c-4d9e-8f0a-${String(i).padStart(12, "0")}`;
+        expect(
+          await queryError(tx, withRotation, [
+            key,
+            days(["2028-09-20", "available"]),
+            JSON.stringify(bad),
+          ]),
+        ).toBeTruthy();
+      }
+      expect(
+        await rowCount(
+          tx,
+          "select * from public.availability_windows where technician_profile_id = $1 and starts_at = '2028-09-20T00:00Z'",
+          [SEED.alpha],
+        ),
+      ).toBe(0);
+      // No rotation and no days is still refused.
+      expect(await queryError(tx, replace, ["4e5f6a7b-8c9d-4eaf-8b1c-2d3e4f5a6b7c", "[]"])).toMatch(
+        /between 1 and 62/,
+      );
+    });
+    // Seen by nobody else: the organization admin, a platform admin, another professional.
+    await asUser(db, SEED.alpha, async (tx) => {
+      await tx.query(withRotation, ["5f6a7b8c-9d0e-4f1a-9b2c-3d4e5f6a7b8c", "[]", rotation]);
+      for (const other of [SEED.adminMro, SEED.platformAdmin, SEED.delta]) {
+        await tx.query("select set_config('request.jwt.claims', $1, true)", [
+          JSON.stringify({ sub: other, role: "authenticated" }),
+        ]);
+        expect(await rowCount(tx, "select * from public.availability_rotations")).toBe(0);
+        const upd = await tx.query("update public.availability_rotations set pattern = '4x4'");
+        expect(upd.affectedRows).toBe(0);
+      }
+    });
+    await asUser(db, null, async (tx) => {
+      expect(await queryError(tx, "select * from public.availability_rotations")).toMatch(
+        /permission denied/,
+      );
+    });
+  });
+
   it("an organization account (no technician profile) cannot write windows through it", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       expect(

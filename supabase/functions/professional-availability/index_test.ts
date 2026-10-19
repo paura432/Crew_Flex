@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { handler, toWindow } from "./index.ts";
+import { handler, toRotation, toWindow } from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -58,4 +58,15 @@ Deno.test("rows map to the API contract with ISO UTC timestamps", () => {
     status: "available",
     updatedAt: "2026-10-09T10:00:00.000Z",
   });
+});
+
+Deno.test("rotation rows map to the API contract (date only, cycle kept in order)", () => {
+  assertEquals(
+    toRotation({
+      pattern: "custom",
+      anchor: "2026-11-01",
+      custom_cycle: ["working", "off", "off"],
+    }),
+    { pattern: "custom", anchor: "2026-11-01", customCycle: ["working", "off", "off"] },
+  );
 });
