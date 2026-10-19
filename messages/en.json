@@ -638,7 +638,8 @@
       "nothingToSave": "Nothing to save: the preview only had rest days on empty days.",
       "splitWarning": "{count, plural, one {# day is} other {# days are}} inside a longer or partial-hour window. Saving cuts only the marked days out of it and keeps the hours of every other day.",
       "undo": "Undo last change",
-      "patternSaved": "Pattern saved; no day needed changing."
+      "patternSaved": "Pattern saved; no day needed changing.",
+      "useAlternatingBase": "Use 7–3 / 7–4 as base"
     },
     "pastDay": "{date} is in the past and cannot be changed from the calendar.",
     "statusAogOnly": "Available only for AOG",
@@ -1072,7 +1073,6 @@
       "clean": "Scanned",
       "infected": "Blocked"
     },
-    "expired": "Expired",
     "expiresOn": "expires {date}",
     "linkedTo": "linked to {qualification}",
     "mime": {
@@ -1081,6 +1081,11 @@
       "jpeg": "JPEG image"
     },
     "open": "Open",
-    "confirmDelete": "Confirm delete"
+    "confirmDelete": "Confirm delete",
+    "expiry": {
+      "valid": "Valid",
+      "soon": "Expires soon",
+      "expired": "Expired"
+    }
   }
 }

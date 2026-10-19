@@ -638,7 +638,8 @@
       "nothingToSave": "Nada que guardar: la vista previa solo tenía descansos en días vacíos.",
       "splitWarning": "{count, plural, one {# día está} other {# días están}} dentro de un intervalo más largo o de horas parciales. Al guardar solo se recortan los días marcados y se conservan las horas del resto.",
       "undo": "Deshacer último cambio",
-      "patternSaved": "Patrón guardado; ningún día necesitaba cambios."
+      "patternSaved": "Patrón guardado; ningún día necesitaba cambios.",
+      "useAlternatingBase": "Usar 7–3 / 7–4 como base"
     },
     "pastDay": "{date} ya ha pasado y no se puede cambiar desde el calendario.",
     "statusAogOnly": "Disponible solo para AOG",
@@ -1072,7 +1073,6 @@
       "clean": "Analizado",
       "infected": "Bloqueado"
     },
-    "expired": "Caducado",
     "expiresOn": "caduca el {date}",
     "linkedTo": "vinculado a {qualification}",
     "mime": {
@@ -1081,6 +1081,11 @@
       "jpeg": "Imagen JPEG"
     },
     "open": "Abrir",
-    "confirmDelete": "Confirmar eliminación"
+    "confirmDelete": "Confirmar eliminación",
+    "expiry": {
+      "valid": "Vigente",
+      "soon": "Caduca pronto",
+      "expired": "Caducado"
+    }
   }
 }

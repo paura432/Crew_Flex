@@ -247,6 +247,52 @@ ok(
   persisted.replace(/\s+/g, " ").slice(0, 100),
 );
 await shot("03-availability-edited-after-reload");
+// Batch 4 (M04, V1.8 planner): the custom cycle can start from the alternating 7–3 / 7–4 rotation.
+await page.selectOption("#cycle-pattern", "custom");
+await page.getByRole("button", { name: "Use 7–3 / 7–4 as base" }).click();
+ok(
+  "3b custom cycle from 7–3 / 7–4: 21 days, 14 working",
+  (await page.inputValue("#cycle-length")) === "21" &&
+    (await page
+      .locator('[role=group][aria-label^="Days of the custom cycle"] button[aria-pressed="true"]')
+      .count()) === 14,
+  `${await page.inputValue("#cycle-length")} days`,
+);
+// Batch 4 (M10, V1.8 documentStatus): expiry chips — expires soon ≤45 days, valid after. Nothing kept.
+const inDays = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+await page.goto(`${BASE}/app/professional/documents`);
+await page.waitForLoadState("networkidle");
+await page.setInputFiles("#file", {
+  name: "smoke.pdf",
+  mimeType: "application/pdf",
+  buffer: Buffer.from("%PDF-1.4\n%smoke\n"),
+});
+await page.fill("#title", "Smoke expiry check");
+await page.fill("#expiresAt", inDays(10));
+await page.getByRole("button", { name: "Upload document" }).click();
+const docRow = page.locator("main li", { hasText: "Smoke expiry check" });
+await docRow.waitFor({ timeout: 15_000 });
+const soonChip = await docRow.innerText();
+await docRow.getByRole("button", { name: "Edit" }).click();
+// In edit mode the title moves into an input, so target the row's edit form.
+const editForm = page.locator("main li form");
+await editForm.locator('input[name="expiresAt"]').fill(inDays(100));
+await editForm.getByRole("button", { name: "Save" }).click();
+await page
+  .locator("main li", { hasText: "Smoke expiry check" })
+  .getByText("Valid")
+  .waitFor({ timeout: 15_000 });
+ok(
+  "3c document expiry: «Expires soon» at +10 d, «Valid» at +100 d",
+  /Expires soon/i.test(soonChip),
+  "",
+);
+const row2 = page.locator("main li", { hasText: "Smoke expiry check" });
+await row2.getByRole("button", { name: "Delete" }).click();
+await row2.getByRole("button", { name: "Confirm delete" }).click();
+await row2.waitFor({ state: "detached", timeout: 15_000 });
+await page.goto(`${BASE}/app/professional/availability`); // back to where the next step continues
+await page.waitForLoadState("networkidle");
 await page
   .locator("li:has(button:has-text('Delete'))")
   .filter({ hasText: "2031" })

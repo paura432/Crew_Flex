@@ -7,8 +7,10 @@ _Last updated 2026-10-19 (evening) CEST. Keep under ~60 lines; replace, don't ap
 V1.8 → Next.js functional migration, LOCAL only (owner brief 2026-10-19). Master audit and matrix:
 `docs/integration/crewflex-v13/10-master-matrix.md` (modules M00–M17, dependency graph, batches).
 Batch 1 (M01 password recovery) and batch 2 (M06 matches list: search, eligible-only, sort, 20/page,
-compare ≤3) and batch 3 (M02 profile-status checklist + read-only month calendar) VERIFIED_LOCAL.
-Next: batch 4 (M10 document expiry states, M04 «use 7–3/7–4 as base», M15 offline badge).
+compare ≤3), batch 3 (M02 profile-status checklist + read-only month calendar) and batch 4 (M10
+document expiry chips, M04 «use 7–3/7–4 as base») VERIFIED_LOCAL. The decision-free queue of the matrix
+(§7) is now empty: further modules (M05 lifecycle, M07–M09, M11–M14, M16) need owner decisions or a
+scope change — listed in 10-master-matrix.md §1.
 Local gotchas: `rm tsconfig.tsbuildinfo` when new i18n keys «don't exist» for tsc; Next dev logs a
 `performance.measure` negative-timestamp page error (dev only — the production build is clean).
 

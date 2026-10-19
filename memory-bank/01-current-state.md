@@ -62,6 +62,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 | Password recovery (forgot → e-mail → `/auth/confirm` → reset)                                  | VERIFIED_LOCAL 2026-10-19; not deployed (needs prod Auth redirect URL)                            |
 | Matches list: search, eligible-only, sort by experience, 20/page, compare ≤3 (V1.8 directory)  | VERIFIED_LOCAL 2026-10-19; not deployed                                                           |
 | Technician overview: 7-item profile-status checklist with links + read-only month calendar     | VERIFIED_LOCAL 2026-10-19; not deployed                                                           |
+| Wallet expiry chips (valid / expires soon ≤45 d / expired); custom cycle «use 7–3/7–4 as base» | VERIFIED_LOCAL 2026-10-19; not deployed (wallet = release 2)                                      |
 | Platform-admin qualification review                                                            | VERIFIED_LOCAL; NEEDS_DECISION (OD-3); off in production at all 3 layers                          |
 | Documents, Candidate Pack, applications, assignments, recruiter, tools, logbook, notifications | PLANNED / OUT_OF_SCOPE                                                                            |
 

@@ -145,17 +145,17 @@ Source refs: `C:` = `server/<file>:<line>`, `D:` = `src/<path>` (v1.8). Target r
 
 ### M04 Availability and calendar (release 1 in production)
 
-| ID               | Src                                 | Behaviour                                                                | Target                                                  | Status                                    |
-| ---------------- | ----------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- | ----------------------------------------- |
-| CX-19 / TD-55    | C/D                                 | Month calendar, day states, splits/merges, version check                 | PUT per day, `replace_availability_days`, lock          | PRESENT (prod)                            |
-| TD-58/60/61/63   | D: planning, Planner                | 14 rotations, custom ≤31, publish rest, preview + replace, saved pattern | `rotation.ts`, `CyclePlanner`, `availability_rotations` | PRESENT (prod)                            |
-| TD-59            | D: custom editor                    | «Use 7–3 / 7–4 as base»                                                  | length + toggles                                        | PARTIAL → **batch 4** candidate           |
-| TD-62            | D: «Deshacer generación» after save | Undo after save                                                          | undo of unsaved draft + discard                         | PARTIAL (by design: atomic save; propose) |
-| TD-65            | D: availableOn                      | AOG day counts only for AOG jobs **and** opt-in                          | `effectiveStatus` (no opt-in)                           | PARTIAL · NEXT (AOG opt-in)               |
-| TD-56/64 / CX-18 | D/C                                 | Assigned days protected; restore on cancel                               | —                                                       | MISSING · D-06                            |
-| TD-57            | —                                   | Hourly windows (not in demo; connected `partial`)                        | datetime windows, BR-4.6                                | PRESENT                                   |
-| TD-66 / CX-24    | D/C                                 | AOG outreach audience, deadlines, internal notices                       | —                                                       | MISSING · NEXT/C-11                       |
-| V18-19           | D: CSS                              | Hatched partial-day style                                                | `mixed` state, plain style                              | PARTIAL (visual)                          |
+| ID               | Src                                 | Behaviour                                                                | Target                                                   | Status                                    |
+| ---------------- | ----------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------- | ----------------------------------------- |
+| CX-19 / TD-55    | C/D                                 | Month calendar, day states, splits/merges, version check                 | PUT per day, `replace_availability_days`, lock           | PRESENT (prod)                            |
+| TD-58/60/61/63   | D: planning, Planner                | 14 rotations, custom ≤31, publish rest, preview + replace, saved pattern | `rotation.ts`, `CyclePlanner`, `availability_rotations`  | PRESENT (prod)                            |
+| TD-59            | D: custom editor                    | «Use 7–3 / 7–4 as base»                                                  | `CyclePlanner` button fills the 21-day alternating cycle | VERIFIED_LOCAL (batch 4)                  |
+| TD-62            | D: «Deshacer generación» after save | Undo after save                                                          | undo of unsaved draft + discard                          | PARTIAL (by design: atomic save; propose) |
+| TD-65            | D: availableOn                      | AOG day counts only for AOG jobs **and** opt-in                          | `effectiveStatus` (no opt-in)                            | PARTIAL · NEXT (AOG opt-in)               |
+| TD-56/64 / CX-18 | D/C                                 | Assigned days protected; restore on cancel                               | —                                                        | MISSING · D-06                            |
+| TD-57            | —                                   | Hourly windows (not in demo; connected `partial`)                        | datetime windows, BR-4.6                                 | PRESENT                                   |
+| TD-66 / CX-24    | D/C                                 | AOG outreach audience, deadlines, internal notices                       | —                                                        | MISSING · NEXT/C-11                       |
+| V18-19           | D: CSS                              | Hatched partial-day style                                                | `mixed` state, plain style                               | PARTIAL (visual)                          |
 
 ### M05 Organization and requirements
 
@@ -217,17 +217,17 @@ DO-NOT-COPY: pack copied into the application row and kept after withdrawal (C: 
 
 ### M10 Document wallet (local, release 2)
 
-| ID            | Src               | Behaviour                                          | Target                                        | Status                           |
-| ------------- | ----------------- | -------------------------------------------------- | --------------------------------------------- | -------------------------------- |
-| CX-38 / TD-48 | C/D               | Upload ≤5 MB (demo 2 MB), magic bytes, sha256      | `professional-documents` POST, private bucket | PRESENT (better; no WebP)        |
-| CX-41 / TD-50 | C/D               | List without file id; edit title/expiry            | API select, inline edit                       | PRESENT                          |
-| CX-40         | C                 | Delete (blocked if shared)                         | delete + tombstones + maintenance             | PRESENT (no sharing)             |
-| TD-47         | D                 | 4 blocks as tabs (licences, CV, courses, permits)  | kinds license/course/other                    | PARTIAL                          |
-| TD-49 / TD-44 | D: documentStatus | Valid / expires soon (≤45 d) / expired / no expiry | «expired» chip                                | PARTIAL → **batch 4**            |
-| TD-51         | D                 | Trash and restore                                  | hard delete                                   | PARTIAL · retention not approved |
-| TD-52         | D                 | In-app preview                                     | open via 60 s signed URL                      | PARTIAL                          |
-| CX-14         | C: scanner.mjs    | ClamAV scan by admin                               | `scan_status` only                            | MISSING · D-10 scanner           |
-| CX-39         | C                 | Third-party download with consents                 | owner only                                    | BLOCKED D-07/D-10                |
+| ID            | Src               | Behaviour                                          | Target                                                | Status                                                                  |
+| ------------- | ----------------- | -------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
+| CX-38 / TD-48 | C/D               | Upload ≤5 MB (demo 2 MB), magic bytes, sha256      | `professional-documents` POST, private bucket         | PRESENT (better; no WebP)                                               |
+| CX-41 / TD-50 | C/D               | List without file id; edit title/expiry            | API select, inline edit                               | PRESENT                                                                 |
+| CX-40         | C                 | Delete (blocked if shared)                         | delete + tombstones + maintenance                     | PRESENT (no sharing)                                                    |
+| TD-47         | D                 | 4 blocks as tabs (licences, CV, courses, permits)  | kinds license/course/other                            | PARTIAL                                                                 |
+| TD-49 / TD-44 | D: documentStatus | Valid / expires soon (≤45 d) / expired / no expiry | `documentExpiryState` (domain, tested) + wallet chips | VERIFIED_LOCAL (batch 4); passport «due within 60 d» summary not ported |
+| TD-51         | D                 | Trash and restore                                  | hard delete                                           | PARTIAL · retention not approved                                        |
+| TD-52         | D                 | In-app preview                                     | open via 60 s signed URL                              | PARTIAL                                                                 |
+| CX-14         | C: scanner.mjs    | ClamAV scan by admin                               | `scan_status` only                                    | MISSING · D-10 scanner                                                  |
+| CX-39         | C                 | Third-party download with consents                 | owner only                                            | BLOCKED D-07/D-10                                                       |
 
 ### M11 Recruiter · M12 Messaging/notifications · M13 Admin · M14 Logbook · M16 Complementary
 
@@ -248,12 +248,12 @@ DO-NOT-COPY: pack copied into the application row and kept after withdrawal (C: 
 
 ### M15 Tools (release 1 in production)
 
-| ID          | Behaviour                                                                                            | Target                                       | Status                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------ |
-| TD-78       | Home, favourites, offline badge, 7 tiles                                                             | `ToolsHome` 3 tiles, favourites              | PARTIAL: offline badge → batch 4 candidate |
-| TD-79/80/81 | Converter (22 quantities, fractions, gauge/absolute, tolerance, equivalents, copy), torque, duration | `engine.ts`, `UnitConverter`, `DurationTool` | PRESENT (prod)                             |
-| TD-82/83    | Fuel sheet and fuel tools                                                                            | —                                            | BLOCKED D-11 (technical review)            |
-| TD-84/85    | Glossary/ATA/flashcards; translator                                                                  | —                                            | SCOPE LATER                                |
+| ID          | Behaviour                                                                                            | Target                                       | Status                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| TD-78       | Home, favourites, offline badge, 7 tiles                                                             | `ToolsHome` 3 tiles, favourites              | PARTIAL: offline badge deliberately not ported (no service worker → it would be misleading); 4 tiles · D-11/LATER |
+| TD-79/80/81 | Converter (22 quantities, fractions, gauge/absolute, tolerance, equivalents, copy), torque, duration | `engine.ts`, `UnitConverter`, `DurationTool` | PRESENT (prod)                                                                                                    |
+| TD-82/83    | Fuel sheet and fuel tools                                                                            | —                                            | BLOCKED D-11 (technical review)                                                                                   |
+| TD-84/85    | Glossary/ATA/flashcards; translator                                                                  | —                                            | SCOPE LATER                                                                                                       |
 
 ## 4. Demo fixtures (for future local QA; never production)
 
@@ -286,10 +286,10 @@ document review, work permit/current employer — all now rows above.
 
 ## 7. Batches
 
-| Batch   | Module                | Content                                                                                                                                                                            | Decision needed                                                  |
-| ------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **1 ✓** | M01                   | Password recovery (request + reset) and the email-link confirm route — VERIFIED_LOCAL 2026-10-19 (`scripts/local/password-reset-check.mjs` 18/18)                                  | none; production Auth redirect URL is an owner action at publish |
-| **2 ✓** | M06                   | Matches list: eligible-only filter, search, sort, 20-per-page, compare up to 3 — VERIFIED_LOCAL 2026-10-19 (`list.test.ts` 7, `ui-smoke.mjs` 11h–11k, 82/82 on a production build) | none                                                             |
-| **3 ✓** | M02                   | Status checklist with deep links; read-only month calendar of own availability — VERIFIED_LOCAL 2026-10-19 (`ui-smoke.mjs` 2b–2c, 84/84 on a production build)                     | none                                                             |
-| 4       | M10/M04/M15           | Document expiry states; «use 7–3/7–4 as base»; tools offline badge                                                                                                                 | none                                                             |
-| —       | M07–M09, M11–M14, M16 | see blocking column                                                                                                                                                                | D-06, D-07, D-10, D-12, OD-3/5/7, scope                          |
+| Batch   | Module                | Content                                                                                                                                                                                         | Decision needed                                                  |
+| ------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **1 ✓** | M01                   | Password recovery (request + reset) and the email-link confirm route — VERIFIED_LOCAL 2026-10-19 (`scripts/local/password-reset-check.mjs` 18/18)                                               | none; production Auth redirect URL is an owner action at publish |
+| **2 ✓** | M06                   | Matches list: eligible-only filter, search, sort, 20-per-page, compare up to 3 — VERIFIED_LOCAL 2026-10-19 (`list.test.ts` 7, `ui-smoke.mjs` 11h–11k, 82/82 on a production build)              | none                                                             |
+| **3 ✓** | M02                   | Status checklist with deep links; read-only month calendar of own availability — VERIFIED_LOCAL 2026-10-19 (`ui-smoke.mjs` 2b–2c, 84/84 on a production build)                                  | none                                                             |
+| **4 ✓** | M10/M04               | Document expiry states; «use 7–3/7–4 as base» — VERIFIED_LOCAL 2026-10-19 (`ui-smoke.mjs` 3b–3c, 86/86 on a production build). Offline badge (M15) skipped: misleading without a service worker | none                                                             |
+| —       | M07–M09, M11–M14, M16 | see blocking column                                                                                                                                                                             | D-06, D-07, D-10, D-12, OD-3/5/7, scope                          |

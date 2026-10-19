@@ -12,7 +12,13 @@ import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
-import { DOCUMENT_KINDS, MAX_DOCUMENT_BYTES, type DocumentKind } from "@/domain/documents";
+import {
+  DOCUMENT_KINDS,
+  documentExpiryState,
+  MAX_DOCUMENT_BYTES,
+  type DocumentKind,
+  type ExpiryState,
+} from "@/domain/documents";
 import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/i18n/format";
 import { resolveFieldErrors } from "@/i18n/validation";
@@ -27,6 +33,12 @@ import {
   updateDocumentAction,
 } from "../actions";
 import { uploadDocument } from "../upload";
+
+const EXPIRY_TONE: Record<Exclude<ExpiryState, "none">, "ok" | "warn" | "danger"> = {
+  valid: "ok",
+  soon: "warn",
+  expired: "danger",
+};
 
 export interface QualificationOption {
   id: string;
@@ -283,7 +295,7 @@ export function DocumentWallet({
         ) : (
           <ul className="divide-y divide-line">
             {documents.map((d) => {
-              const expired = d.expiresAt !== null && d.expiresAt < today;
+              const expiry = documentExpiryState(d.expiresAt, today);
               return (
                 <li key={d.id} className="py-4">
                   {editing === d.id ? (
@@ -360,7 +372,11 @@ export function DocumentWallet({
                         <div className="flex flex-wrap gap-1.5">
                           <StatusChip tone="info">{t(`kind.${d.kind as DocumentKind}`)}</StatusChip>
                           <StatusChip tone="neutral">{t(`scan.${d.scanStatus}`)}</StatusChip>
-                          {expired && <StatusChip tone="danger">{t("expired")}</StatusChip>}
+                          {expiry !== "none" && (
+                            <StatusChip tone={EXPIRY_TONE[expiry]}>
+                              {t(`expiry.${expiry}`)}
+                            </StatusChip>
+                          )}
                         </div>
                         <p className="text-xs text-muted">
                           {t(

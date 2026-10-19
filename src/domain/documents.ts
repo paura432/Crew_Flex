@@ -77,3 +77,16 @@ export function sanitizeDocumentTitle(name: string): string {
 export function canShareWithThirdParties(doc: { scanStatus: DocumentScanStatus }): boolean {
   return doc.scanStatus === "clean";
 }
+
+/** V1.8 `documentStatus`: a document «expires soon» within this many days (inclusive). */
+export const EXPIRY_SOON_DAYS = 45;
+export type ExpiryState = "none" | "valid" | "soon" | "expired";
+
+/** Expiry of a document on `today` (both `YYYY-MM-DD`, UTC). Expired = the date has passed. */
+export function documentExpiryState(expiresAt: string | null, today: string): ExpiryState {
+  if (expiresAt === null) return "none";
+  if (expiresAt < today) return "expired";
+  const days =
+    (Date.parse(`${expiresAt}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000;
+  return days <= EXPIRY_SOON_DAYS ? "soon" : "valid";
+}

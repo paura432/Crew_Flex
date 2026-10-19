@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  documentExpiryState,
   canShareWithThirdParties,
   DOCUMENT_SCAN_STATUSES,
   DOCUMENT_TITLE_MAX,
@@ -88,4 +89,17 @@ describe("canShareWithThirdParties", () => {
 
 it("the size limit is 5 MiB (bucket file_size_limit and size_bytes CHECK)", () => {
   expect(MAX_DOCUMENT_BYTES).toBe(5_242_880);
+});
+
+describe("documentExpiryState (V1.8 documentStatus)", () => {
+  const today = "2026-10-19";
+  it.each([
+    [null, "none"],
+    ["2026-10-18", "expired"],
+    ["2026-10-19", "soon"],
+    ["2026-12-03", "soon"], // 45 days
+    ["2026-12-04", "valid"], // 46 days
+  ] as const)("%s → %s", (expiresAt, state) => {
+    expect(documentExpiryState(expiresAt, today)).toBe(state);
+  });
 });

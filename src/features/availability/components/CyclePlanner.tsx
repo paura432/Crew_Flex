@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { controlClass, Field } from "@/components/ui/Field";
 import { Panel } from "@/components/ui/Panel";
 import type { AvailabilityRotation } from "@/types/api";
-import { MAX_CYCLE_DAYS, ROTATIONS, type CycleDay, type Rotation } from "../rotation";
+import { cycleStates, MAX_CYCLE_DAYS, ROTATIONS, type CycleDay, type Rotation } from "../rotation";
 
 export interface CycleSettings {
   pattern: Rotation;
@@ -103,6 +103,17 @@ export function CyclePlanner({
               onChange={(e) => onLength(e.target.value)}
             />
           </Field>
+          {/* V1.8 planner: start the custom cycle from the alternating 7–3 / 7–4 rotation. */}
+          <Button
+            disabled={disabled}
+            onClick={() => {
+              const base = cycleStates("7x3/7x4");
+              setCustom(base);
+              setLength(String(base.length));
+            }}
+          >
+            {t("useAlternatingBase")}
+          </Button>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("customDays")}>
             {custom.map((state, i) => (
               <button
