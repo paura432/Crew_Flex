@@ -453,3 +453,7 @@ import_map = "./functions/deno.json"
 [functions.qualification-reviews]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+[functions.professional-documents]
+verify_jwt = false
+import_map = "./functions/deno.json"

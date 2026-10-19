@@ -2,6 +2,7 @@
 // Envelope: docs/architecture/EDGE_FUNCTIONS.md
 import type { AvailabilityStatus, CycleDay, Rotation } from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
+import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/documents.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { Locale } from "../i18n/config.ts";
@@ -116,6 +117,47 @@ export interface AvailabilityDaysResponse {
 }
 
 export interface AvailabilityDeleteResponse {
+  deleted: true;
+  id: string;
+}
+
+/**
+ * Document wallet (`professional-documents`, D-10, LOCAL ONLY). Owner-only: no organization,
+ * manager or platform-admin access. Never carries the storage path or a persistent URL.
+ */
+export interface ProfessionalDocument {
+  id: string;
+  kind: DocumentKind;
+  title: string;
+  /** Sniffed from the uploaded bytes, never the client-declared type. */
+  mimeType: DocumentMime;
+  sizeBytes: number;
+  /** Lower-case hex SHA-256 of the stored bytes. */
+  sha256: string;
+  /** YYYY-MM-DD. */
+  expiresAt: string | null;
+  /** One of the owner's own qualifications. */
+  qualificationId: string | null;
+  scanStatus: DocumentScanStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentListResponse {
+  documents: ProfessionalDocument[];
+}
+
+export interface DocumentResponse {
+  document: ProfessionalDocument;
+}
+
+/** Short-lived signed URL (60 s). Never store it; ask again for each view. */
+export interface DocumentUrlResponse {
+  url: string;
+  expiresInSeconds: number;
+}
+
+export interface DocumentDeleteResponse {
   deleted: true;
   id: string;
 }

@@ -12,11 +12,13 @@ export type EdgeFunctionName =
   | "professional-profile"
   | "professional-qualifications"
   | "user-preferences"
-  | "qualification-reviews";
+  | "qualification-reviews"
+  | "professional-documents";
 
 interface InvokeOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   query?: Record<string, string>;
+  /** JSON-serialised, except `FormData` (multipart uploads), which is sent as is. */
   body?: unknown;
   /** Extra request headers (e.g. `Idempotency-Key`); never Authorization. */
   headers?: Record<string, string>;
@@ -53,6 +55,8 @@ export async function invokeEdgeFunction<T>(
   const url = new URL(`/functions/v1/${name}`, publicEnv.NEXT_PUBLIC_SUPABASE_URL);
   for (const [key, value] of Object.entries(query ?? {})) url.searchParams.set(key, value);
 
+  // Multipart: fetch sets `Content-Type` with the boundary itself, so it must not be set here.
+  const multipart = body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(url, {
@@ -61,10 +65,10 @@ export async function invokeEdgeFunction<T>(
         ...headers,
         Authorization: `Bearer ${session.access_token}`,
         apikey: publicEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
+        ...(multipart ? {} : { "Content-Type": "application/json" }),
         "x-request-id": requestId,
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });

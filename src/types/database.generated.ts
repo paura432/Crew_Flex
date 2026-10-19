@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261019150100. Do not edit by hand.
+// migrations up to 20261019160100. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -191,6 +191,70 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      professional_documents: {
+        Row: {
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          kind: Database["public"]["Enums"]["document_kind"];
+          mime_type: string;
+          owner_id: string;
+          qualification_id: string | null;
+          scan_status: Database["public"]["Enums"]["document_scan_status"];
+          sha256: string;
+          size_bytes: number;
+          storage_path: string;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["document_kind"];
+          mime_type: string;
+          owner_id: string;
+          qualification_id?: string | null;
+          scan_status?: Database["public"]["Enums"]["document_scan_status"];
+          sha256: string;
+          size_bytes: number;
+          storage_path: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["document_kind"];
+          mime_type?: string;
+          owner_id?: string;
+          qualification_id?: string | null;
+          scan_status?: Database["public"]["Enums"]["document_scan_status"];
+          sha256?: string;
+          size_bytes?: number;
+          storage_path?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "professional_documents_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
+          },
+          {
+            foreignKeyName: "professional_documents_qualification_id_fkey";
+            columns: ["qualification_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_qualifications";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -480,6 +544,23 @@ export type Database = {
           replayed: boolean;
         }[];
       };
+      create_professional_document: {
+        Args: {
+          p_expires_at: string;
+          p_idempotency_key: string;
+          p_kind: Database["public"]["Enums"]["document_kind"];
+          p_mime_type: string;
+          p_qualification_id: string;
+          p_sha256: string;
+          p_size_bytes: number;
+          p_storage_path: string;
+          p_title: string;
+        };
+        Returns: {
+          id: string;
+          replayed: boolean;
+        }[];
+      };
       create_work_requirement: {
         Args: {
           p_ends_at: string;
@@ -599,6 +680,8 @@ export type Database = {
     Enums: {
       account_type: "professional" | "organization";
       availability_status: "available" | "unavailable" | "aog_only";
+      document_kind: "license" | "course" | "other";
+      document_scan_status: "not_scanned" | "clean" | "infected";
       mobility: "local" | "national" | "international";
       organization_role: "member" | "manager" | "admin";
       organization_type: "mro" | "airline" | "operator" | "staffing_agency" | "other";
@@ -725,6 +808,8 @@ export const Constants = {
     Enums: {
       account_type: ["professional", "organization"],
       availability_status: ["available", "unavailable", "aog_only"],
+      document_kind: ["license", "course", "other"],
+      document_scan_status: ["not_scanned", "clean", "infected"],
       mobility: ["local", "national", "international"],
       organization_role: ["member", "manager", "admin"],
       organization_type: ["mro", "airline", "operator", "staffing_agency", "other"],

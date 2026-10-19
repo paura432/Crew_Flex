@@ -42,9 +42,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * A malformed key is a 400. A missing key falls back to a fresh one (no deduplication) so callers
  * that predate the header keep working; the web app always sends it.
  */
-export function idempotencyKey(req: Request): string {
+export function idempotencyKey(req: Request, { required = false } = {}): string {
   const header = req.headers.get("idempotency-key");
-  if (header === null) return crypto.randomUUID();
+  if (header === null && !required) return crypto.randomUUID();
+  if (header === null) {
+    throw new ApiError("VALIDATION_ERROR", undefined, [
+      { path: "Idempotency-Key", message: "v.idempotencyKey.invalid" },
+    ]);
+  }
   if (!UUID.test(header.trim())) {
     throw new ApiError("VALIDATION_ERROR", undefined, [
       { path: "Idempotency-Key", message: "v.idempotencyKey.invalid" },
@@ -65,6 +70,13 @@ export function createdRow(data: unknown): { id: string; replayed: boolean } {
     throw new ApiError("INTERNAL_ERROR");
   }
   return row as { id: string; replayed: boolean };
+}
+
+/** Validates an already-decoded value (e.g. multipart form fields) with the same error shape. */
+export function parseValue<S extends z.ZodType>(raw: unknown, schema: S): z.infer<S> {
+  const result = schema.safeParse(raw);
+  if (!result.success) throw toApiError(result.error);
+  return result.data;
 }
 
 export function parseQuery<S extends z.ZodType>(url: URL, schema: S): z.infer<S> {

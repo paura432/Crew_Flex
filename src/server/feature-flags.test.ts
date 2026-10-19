@@ -93,3 +93,17 @@ describe("reviewQualificationAction", () => {
     expect(result).toMatchObject({ ok: false, code: "FORBIDDEN" });
   });
 });
+
+describe("document wallet flag (D-10 rollout gate)", () => {
+  it.each([undefined, "", "false", "1", "TRUE"])("is off for %j", async (value) => {
+    vi.stubEnv("DOCUMENT_WALLET_ENABLED", value);
+    const { isDocumentWalletEnabled } = await import("./feature-flags");
+    expect(isDocumentWalletEnabled()).toBe(false);
+  });
+
+  it('is on only for exactly "true"', async () => {
+    vi.stubEnv("DOCUMENT_WALLET_ENABLED", "true");
+    const { isDocumentWalletEnabled } = await import("./feature-flags");
+    expect(isDocumentWalletEnabled()).toBe(true);
+  });
+});

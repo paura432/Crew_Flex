@@ -2516,3 +2516,550 @@ describe("P. `aog_only` availability: AOG requirements only, SQL and TypeScript 
     });
   });
 });
+
+describe("Q. document wallet (migration 20261019160000)", () => {
+  const BUCKET = "professional-documents";
+  const KEY = "3c9e1d7a-5b2f-4e8a-9c1d-2f3a4b5c6d7e";
+  const sha = (text: string) => createHash("sha256").update(text).digest("hex");
+  const pathFor = (uid: string, key: string, hash: string) => `${uid}/${key}-${hash.slice(0, 16)}`;
+  const create = `select * from public.create_professional_document($1, $2, $3, $4, $5, $6, $7, $8, $9)`;
+
+  /** What Storage does on upload: inserts the object row as the signed-in user (RLS applies). */
+  async function upload(tx: Transaction, uid: string, key: string, content: string) {
+    const hash = sha(content);
+    const path = pathFor(uid, key, hash);
+    const size = Buffer.byteLength(content);
+    await tx.query(
+      "insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4)",
+      [BUCKET, path, uid, JSON.stringify({ size, mimetype: "application/pdf" })],
+    );
+    return { path, hash, size };
+  }
+
+  async function createDoc(
+    tx: Transaction,
+    uid: string,
+    key = KEY,
+    content = "%PDF-1.4 licence",
+    overrides: { title?: string; qualificationId?: string | null } = {},
+  ) {
+    const object = await upload(tx, uid, key, content);
+    const { rows } = await tx.query<{ id: string; replayed: boolean }>(create, [
+      key,
+      "license",
+      overrides.title ?? "B1 licence",
+      object.path,
+      "application/pdf",
+      object.size,
+      object.hash,
+      "2030-01-31",
+      overrides.qualificationId ?? null,
+    ]);
+    return { ...object, id: rows[0]!.id, replayed: rows[0]!.replayed };
+  }
+
+  it("the bucket is private, 5 MiB, pdf/png/jpeg only", async () => {
+    const { rows } = await db.query(
+      "select public, file_size_limit, allowed_mime_types from storage.buckets where id = $1",
+      [BUCKET],
+    );
+    expect(rows).toEqual([
+      {
+        public: false,
+        file_size_limit: 5242880,
+        allowed_mime_types: ["application/pdf", "image/png", "image/jpeg"],
+      },
+    ]);
+  });
+
+  it("owner: create via RPC, read, update the editable fields, delete; every step audited", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const doc = await createDoc(tx, SEED.delta);
+      expect(doc.replayed).toBe(false);
+      const { rows } = await tx.query(
+        "select owner_id, kind, title, scan_status, mime_type, size_bytes from public.professional_documents where id = $1",
+        [doc.id],
+      );
+      expect(rows).toEqual([
+        {
+          owner_id: SEED.delta,
+          kind: "license",
+          title: "B1 licence",
+          scan_status: "not_scanned",
+          mime_type: "application/pdf",
+          size_bytes: doc.size,
+        },
+      ]);
+      const updated = await tx.query(
+        `update public.professional_documents set title = 'Renamed', kind = 'course', expires_at = null
+         where id = $1`,
+        [doc.id],
+      );
+      expect(updated.affectedRows).toBe(1);
+      // The object of an existing row cannot be deleted (a row never loses its bytes)…
+      expect(
+        (await tx.query("delete from storage.objects where name = $1", [doc.path])).affectedRows,
+      ).toBe(0);
+      expect(
+        (await tx.query("delete from public.professional_documents where id = $1", [doc.id]))
+          .affectedRows,
+      ).toBe(1);
+      // …and can once the row is gone (the function's delete order).
+      expect(
+        (await tx.query("delete from storage.objects where name = $1", [doc.path])).affectedRows,
+      ).toBe(1);
+
+      await tx.exec("reset role");
+      const audit = await tx.query<{ action: string; metadata: Record<string, unknown> }>(
+        "select action, metadata from public.audit_events where entity_id = $1 order by created_at, action",
+        [doc.id],
+      );
+      expect(audit.rows.map((r) => r.action).sort()).toEqual([
+        "document.deleted",
+        "document.updated",
+        "document.uploaded",
+      ]);
+      for (const { metadata } of audit.rows) {
+        expect(metadata).toMatchObject({
+          technician_profile_id: SEED.delta,
+          mime_type: "application/pdf",
+          sha256: doc.hash,
+        });
+        const text = JSON.stringify(metadata);
+        expect(text).not.toContain("licence");
+        expect(text).not.toContain("Renamed");
+        expect(text).not.toContain(doc.path);
+      }
+      expect(audit.rows.find((r) => r.action === "document.updated")?.metadata.changed).toEqual([
+        "kind",
+        "title",
+        "expires_at",
+      ]);
+    });
+  });
+
+  it("idempotent: same key + same request replays; same key + other request is CF409", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const first = await createDoc(tx, SEED.delta);
+      const replay = await tx.query<{ id: string; replayed: boolean }>(create, [
+        KEY,
+        "license",
+        "B1 licence",
+        first.path,
+        "application/pdf",
+        first.size,
+        first.hash,
+        "2030-01-31",
+        null,
+      ]);
+      expect(replay.rows[0]).toEqual({ id: first.id, replayed: true });
+      // Same file and key, other title.
+      expect(
+        await queryError(tx, create, [
+          KEY,
+          "license",
+          "Another title",
+          first.path,
+          "application/pdf",
+          first.size,
+          first.hash,
+          "2030-01-31",
+          null,
+        ]),
+      ).toMatch(/reused with a different request/);
+      // Another file under the same key: its own path, then the conflict.
+      const other = await upload(tx, SEED.delta, KEY, "%PDF-1.4 another file");
+      expect(
+        await queryError(tx, create, [
+          KEY,
+          "license",
+          "B1 licence",
+          other.path,
+          "application/pdf",
+          other.size,
+          other.hash,
+          "2030-01-31",
+          null,
+        ]),
+      ).toMatch(/reused with a different request/);
+      expect(
+        await rowCount(tx, "select 1 from public.professional_documents where owner_id = $1", [
+          SEED.delta,
+        ]),
+      ).toBe(1);
+    });
+  });
+
+  it("the path must be derived from (owner, key, hash) and the object must exist with that size", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const object = await upload(tx, SEED.delta, KEY, "%PDF-1.4 x");
+      const args = (path: string, size = object.size, hash = object.hash, key = KEY) => [
+        key,
+        "other",
+        "Doc",
+        path,
+        "application/pdf",
+        size,
+        hash,
+        null,
+        null,
+      ];
+      expect(await queryError(tx, create, args(`${SEED.delta}/../${SEED.echo}/x`))).toMatch(
+        /storage path does not match/,
+      );
+      expect(await queryError(tx, create, args(pathFor(SEED.echo, KEY, object.hash)))).toMatch(
+        /storage path does not match/,
+      );
+      // Derived path, but nothing uploaded there.
+      const otherKey = "4d0f2e8b-6c3a-4f9b-8d2e-3a4b5c6d7e8f";
+      expect(
+        await queryError(
+          tx,
+          create,
+          args(pathFor(SEED.delta, otherKey, object.hash), object.size, object.hash, otherKey),
+        ),
+      ).toMatch(/document object not found/);
+      // Object there, but another size than Storage recorded.
+      expect(await queryError(tx, create, args(object.path, object.size + 1))).toMatch(
+        /document object not found/,
+      );
+      // Direct PostgREST insert for another owner / into another owner's folder.
+      expect(
+        await queryError(
+          tx,
+          `insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256)
+           values ($1, 'other', 'x', $2, 'application/pdf', 1, $3)`,
+          [SEED.echo, pathFor(SEED.echo, KEY, object.hash), object.hash],
+        ),
+      ).toMatch(/row-level security|document object not found/);
+      expect(
+        await queryError(
+          tx,
+          `insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256)
+           values ($1, 'other', 'x', $2, 'application/pdf', $3, $4)`,
+          [SEED.delta, pathFor(SEED.echo, KEY, object.hash), object.size, object.hash],
+        ),
+      ).toMatch(/professional_documents_storage_path_check|document object not found/);
+    });
+  });
+
+  it("CHECKs: size 1..5 MiB, three mime types, lower-case sha256, title 1..180, strict path", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      await tx.exec("reset role"); // superuser: CHECKs only, no RLS or grants in the way
+      // …and no object/size backstop (tested above): only the CHECKs decide here.
+      await tx.exec(
+        "alter table public.professional_documents disable trigger professional_documents_enforce",
+      );
+      const hash = sha("check");
+      const path = pathFor(SEED.delta, KEY, hash);
+      await tx.query(
+        "insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, '{}')",
+        [BUCKET, path, SEED.delta],
+      );
+      const insert = (overrides: Record<string, unknown>) => {
+        const v = {
+          storage_path: path,
+          mime_type: "application/pdf",
+          size_bytes: 10,
+          sha256: hash,
+          title: "ok",
+          ...overrides,
+        };
+        return queryError(
+          tx,
+          `insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256)
+           values ($1, 'other', $2, $3, $4, $5, $6)`,
+          [SEED.delta, v.title, v.storage_path, v.mime_type, v.size_bytes, v.sha256],
+        );
+      };
+      expect(await insert({ size_bytes: 0 })).toMatch(/size_bytes_check/);
+      expect(await insert({ size_bytes: 5242881 })).toMatch(/size_bytes_check/);
+      expect(await insert({ mime_type: "text/html" })).toMatch(/mime_type_check/);
+      expect(await insert({ mime_type: "image/svg+xml" })).toMatch(/mime_type_check/);
+      expect(await insert({ sha256: hash.toUpperCase() })).toMatch(/sha256_check/);
+      expect(await insert({ title: "" })).toMatch(/title_check/);
+      expect(await insert({ title: "x".repeat(181) })).toMatch(/title_check/);
+      for (const bad of [
+        `${SEED.delta}/../${SEED.echo}/x`,
+        `${SEED.delta}/evil.exe`,
+        `${SEED.delta}/${KEY}-${hash.slice(0, 16)}/extra`,
+        `${SEED.echo}/${KEY}-${hash.slice(0, 16)}`,
+      ]) {
+        await tx.query(
+          "insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, '{}')",
+          [BUCKET, bad, SEED.delta],
+        );
+        expect(await insert({ storage_path: bad }), bad).toMatch(/storage_path_check/);
+      }
+    });
+  });
+
+  it("scan_status, storage_path, owner, mime, size and hash are not writable by users", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const doc = await createDoc(tx, SEED.delta);
+      for (const set of [
+        "scan_status = 'clean'",
+        "storage_path = storage_path",
+        `owner_id = '${SEED.echo}'`,
+        "mime_type = 'image/png'",
+        "size_bytes = 1",
+        "sha256 = sha256",
+      ]) {
+        expect(
+          await queryError(tx, `update public.professional_documents set ${set} where id = $1`, [
+            doc.id,
+          ]),
+          set,
+        ).toMatch(/permission denied/);
+      }
+      const object = await upload(tx, SEED.delta, "5e1a3f9c-7d4b-4a0c-9e3f-4b5c6d7e8f90", "%PDF-x");
+      expect(
+        await queryError(
+          tx,
+          `insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256, scan_status)
+           values ($1, 'other', 'x', $2, 'application/pdf', $3, $4, 'clean')`,
+          [SEED.delta, object.path, object.size, object.hash],
+        ),
+      ).toMatch(/permission denied/);
+    });
+  });
+
+  it("a document links only to its owner's own qualification", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      await tx.exec("reset role");
+      const own = await tx.query<{ id: string }>(
+        "select id from public.technician_qualifications where technician_profile_id = $1 limit 1",
+        [SEED.delta],
+      );
+      const foreign = await tx.query<{ id: string }>(
+        "select id from public.technician_qualifications where technician_profile_id = $1 limit 1",
+        [SEED.echo],
+      );
+      expect(own.rows[0] && foreign.rows[0]).toBeTruthy();
+      await tx.exec("set local role authenticated");
+      expect(
+        await queryError(
+          tx,
+          create,
+          await (async () => {
+            const o = await upload(tx, SEED.delta, KEY, "%PDF-q");
+            return [
+              KEY,
+              "license",
+              "x",
+              o.path,
+              "application/pdf",
+              o.size,
+              o.hash,
+              null,
+              foreign.rows[0]!.id,
+            ];
+          })(),
+        ),
+      ).toMatch(/qualification must belong to the document owner/);
+      const doc = await createDoc(
+        tx,
+        SEED.delta,
+        "6f2b4a0d-8e5c-4b1d-af4a-5c6d7e8f9a01",
+        "%PDF-q2",
+        {
+          qualificationId: own.rows[0]!.id,
+        },
+      );
+      expect(
+        await queryError(
+          tx,
+          "update public.professional_documents set qualification_id = $2 where id = $1",
+          [doc.id, foreign.rows[0]!.id],
+        ),
+      ).toMatch(/qualification must belong to the document owner/);
+      // Removing the qualification keeps the document and clears the link.
+      await tx.query("delete from public.technician_qualifications where id = $1", [
+        own.rows[0]!.id,
+      ]);
+      const { rows } = await tx.query(
+        "select qualification_id from public.professional_documents where id = $1",
+        [doc.id],
+      );
+      expect(rows).toEqual([{ qualification_id: null }]);
+    });
+  });
+
+  it("another professional, org admin, manager and platform admin see and change nothing — rows or objects", async () => {
+    let doc = { id: "", path: "", hash: "", size: 0 };
+    // Persist one document for these checks, removed at the end.
+    await db.transaction(async (tx) => {
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: SEED.delta, role: "authenticated" }),
+      ]);
+      await tx.exec("set local role authenticated");
+      const created = await createDoc(tx, SEED.delta, "7a3c5b1e-9f6d-4c2e-8b5a-6d7e8f9a0b12");
+      doc = created;
+    });
+    try {
+      for (const user of [SEED.echo, SEED.adminMro, SEED.managerMro, SEED.platformAdmin]) {
+        await asUser(db, user, async (tx) => {
+          expect(
+            await rowCount(tx, "select * from public.professional_documents where owner_id = $1", [
+              SEED.delta,
+            ]),
+            user,
+          ).toBe(0);
+          expect(
+            await rowCount(tx, "select * from storage.objects where bucket_id = $1", [BUCKET]),
+            user,
+          ).toBe(0);
+          expect(
+            (
+              await tx.query(
+                "update public.professional_documents set title = 'pwned' where id = $1",
+                [doc.id],
+              )
+            ).affectedRows,
+            user,
+          ).toBe(0);
+          expect(
+            (await tx.query("delete from public.professional_documents where id = $1", [doc.id]))
+              .affectedRows,
+            user,
+          ).toBe(0);
+          expect(
+            (await tx.query("delete from storage.objects where name = $1", [doc.path]))
+              .affectedRows,
+            user,
+          ).toBe(0);
+          expect(
+            (
+              await tx.query("update storage.objects set owner = $2 where name = $1", [
+                doc.path,
+                user,
+              ])
+            ).affectedRows,
+            user,
+          ).toBe(0);
+          // Cannot plant an object in the owner's folder…
+          expect(
+            await queryError(
+              tx,
+              "insert into storage.objects (bucket_id, name, owner) values ($1, $2, $3)",
+              [BUCKET, pathFor(SEED.delta, "8b4d6c2f-0a7e-4d3f-9c6b-7e8f9a0b1c23", doc.hash), user],
+            ),
+            user,
+          ).toMatch(/row-level security/);
+          // …nor create a row pointing at the owner's object.
+          expect(
+            await queryError(tx, create, [
+              "7a3c5b1e-9f6d-4c2e-8b5a-6d7e8f9a0b12",
+              "license",
+              "B1 licence",
+              doc.path,
+              "application/pdf",
+              doc.size,
+              doc.hash,
+              "2030-01-31",
+              null,
+            ]),
+            user,
+          ).toMatch(/storage path does not match|row-level security|permission denied/);
+          // Document audit rows carry no organization: only platform admins read them.
+          const audit = await rowCount(
+            tx,
+            "select * from public.audit_events where entity_id = $1",
+            [doc.id],
+          );
+          expect(audit, user).toBe(user === SEED.platformAdmin ? 1 : 0);
+        });
+      }
+      await asUser(db, null, async (tx) => {
+        expect(await queryError(tx, "select * from public.professional_documents")).toMatch(
+          /permission denied/,
+        );
+        expect(await rowCount(tx, "select * from storage.objects")).toBe(0);
+        expect(
+          await queryError(tx, create, [
+            KEY,
+            "license",
+            "x",
+            doc.path,
+            "application/pdf",
+            1,
+            doc.hash,
+            null,
+            null,
+          ]),
+        ).toMatch(/permission denied/);
+      });
+      // The owner still has it, untouched.
+      await asUser(db, SEED.delta, async (tx) => {
+        const { rows } = await tx.query(
+          "select title from public.professional_documents where id = $1",
+          [doc.id],
+        );
+        expect(rows).toEqual([{ title: "B1 licence" }]);
+      });
+    } finally {
+      await db.query("delete from public.professional_documents where id = $1", [doc.id]);
+      await db.query("delete from storage.objects where name = $1", [doc.path]);
+      await db.query("delete from public.audit_events where entity_id = $1", [doc.id]);
+    }
+  });
+
+  it("organization accounts (no technician profile) cannot upload into the bucket (review M-2)", async () => {
+    for (const user of [SEED.adminMro, SEED.adminOther, SEED.adminAirline]) {
+      await asUser(db, user, async (tx) => {
+        expect(
+          await queryError(
+            tx,
+            "insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, $4)",
+            [BUCKET, pathFor(user, KEY, sha("x")), user, '{"size":1}'],
+          ),
+          user,
+        ).toMatch(/row-level security/);
+      });
+    }
+  });
+
+  it("an object without a recorded size cannot back a document (fails closed, review L-2)", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const hash = sha("%PDF-nosize");
+      const path = pathFor(SEED.delta, KEY, hash);
+      await tx.query(
+        "insert into storage.objects (bucket_id, name, owner, metadata) values ($1, $2, $3, '{}')",
+        [BUCKET, path, SEED.delta],
+      );
+      expect(
+        await queryError(tx, create, [
+          KEY,
+          "other",
+          "x",
+          path,
+          "application/pdf",
+          11,
+          hash,
+          null,
+          null,
+        ]),
+      ).toMatch(/document object not found/);
+    });
+  });
+
+  it("an object name that is not the server-derived shape is refused by Storage RLS", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      for (const name of [
+        `${SEED.delta}/licence.pdf`,
+        `${SEED.delta}/../${SEED.echo}/${KEY}-0123456789abcdef`,
+        `${SEED.delta}/sub/${KEY}-0123456789abcdef`,
+        `${KEY}-0123456789abcdef`,
+      ]) {
+        expect(
+          await queryError(
+            tx,
+            "insert into storage.objects (bucket_id, name, owner) values ($1, $2, $3)",
+            [BUCKET, name, SEED.delta],
+          ),
+          name,
+        ).toMatch(/row-level security/);
+      }
+    });
+  });
+});

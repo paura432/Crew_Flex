@@ -42,7 +42,8 @@
     "workforce": "Plantilla",
     "settings": "Configuración",
     "verifications": "Revisión de cualificaciones",
-    "tools": "Herramientas"
+    "tools": "Herramientas",
+    "documents": "Wallet documental"
   },
   "nav": {
     "organization": "Organización",
@@ -58,7 +59,8 @@
     "settings": "Configuración",
     "platform": "Plataforma",
     "verifications": "Verificaciones",
-    "tools": "Herramientas"
+    "tools": "Herramientas",
+    "documents": "Documentos"
   },
   "landing": {
     "eyebrow": "Personal de mantenimiento aeronáutico",
@@ -310,6 +312,21 @@
     "rotation": {
       "pattern": "Elige un patrón válido",
       "cycle": "El ciclo necesita de 1 a 31 días, cada uno de trabajo o descanso"
+    },
+    "document": {
+      "kind": "Elige licencia, curso u otro",
+      "title": {
+        "required": "Ponle un título al documento"
+      },
+      "expiresAt": "Introduce una fecha de caducidad válida",
+      "qualificationId": "Elige una de tus cualificaciones",
+      "id": "Se necesita un identificador de documento válido",
+      "file": {
+        "required": "Elige un archivo para subir",
+        "type": "Solo se aceptan archivos PDF, PNG o JPEG",
+        "tooLarge": "El archivo supera los 5 MB",
+        "form": "No se pudo leer la subida. Inténtalo de nuevo."
+      }
     }
   },
   "domain": {
@@ -954,5 +971,49 @@
       "hp": "hp mecánico",
       "PS": "CV / PS métrico"
     }
+  },
+  "documents": {
+    "eyebrow": "MI EXPEDIENTE",
+    "title": "Wallet documental",
+    "description": "Tus licencias, cursos y otros documentos, guardados de forma privada. Solo tú puedes verlos.",
+    "noProfileDescription": "El wallet documental pertenece a las cuentas profesionales.",
+    "uploadTitle": "Subir un documento",
+    "uploadIntro": "PDF, PNG o JPEG, hasta 5 MB. Subir un documento no acredita una licencia ni una habilitación: la verificación es un proceso aparte.",
+    "file": "Archivo",
+    "fileHint": "El tipo se comprueba por el contenido del archivo, no por su nombre.",
+    "kindLabel": "Tipo",
+    "kind": {
+      "license": "Licencia",
+      "course": "Curso",
+      "other": "Otro"
+    },
+    "titleLabel": "Título",
+    "titleHint": "Si lo dejas vacío se usa el nombre del archivo.",
+    "expiresLabel": "Caducidad (opcional)",
+    "qualificationLabel": "Vincular a una cualificación (opcional)",
+    "qualificationHint": "Solo tus propias cualificaciones declaradas.",
+    "noQualification": "— Sin vincular —",
+    "upload": "Subir documento",
+    "uploaded": "Documento guardado en tu wallet privado.",
+    "updated": "Documento actualizado.",
+    "deleted": "Documento eliminado.",
+    "listTitle": "Tus documentos ({count})",
+    "sharingNote": "Ninguna empresa puede ver estos documentos. Compartirlos con terceros no está disponible hasta que exista un análisis de seguridad de archivos aprobado; cuando llegue, siempre será con tu consentimiento expreso para una necesidad concreta.",
+    "empty": "Todavía no has subido documentos.",
+    "scan": {
+      "not_scanned": "Sin analizar · no compartible",
+      "clean": "Analizado",
+      "infected": "Bloqueado"
+    },
+    "expired": "Caducado",
+    "expiresOn": "caduca el {date}",
+    "linkedTo": "vinculado a {qualification}",
+    "mime": {
+      "pdf": "PDF",
+      "png": "Imagen PNG",
+      "jpeg": "Imagen JPEG"
+    },
+    "open": "Abrir",
+    "confirmDelete": "Confirmar eliminación"
   }
 }

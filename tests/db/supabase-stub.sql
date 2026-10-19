@@ -51,3 +51,47 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 -- pgcrypto stand-ins (password hashing is irrelevant for RLS tests).
 create function extensions.gen_salt(text) returns text language sql as $$ select 'salt' $$;
 create function extensions.crypt(text, text) returns text language sql as $$ select md5($1 || $2) $$;
+
+-- Storage (document wallet, migration 20261019160000): the subset of Supabase's `storage` schema
+-- the migration touches. Like the platform, RLS is on and the API roles hold table privileges, so
+-- only the migration's policies decide. TEST-ONLY: the real stack ships its own schema.
+create schema storage;
+grant usage on schema storage to anon, authenticated, service_role;
+
+create table storage.buckets (
+  id text primary key,
+  name text not null unique,
+  owner uuid,
+  public boolean default false,
+  file_size_limit bigint,
+  allowed_mime_types text[],
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(),
+  bucket_id text references storage.buckets (id),
+  name text,
+  owner uuid,
+  owner_id text,
+  metadata jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (bucket_id, name)
+);
+
+alter table storage.buckets enable row level security;
+alter table storage.objects enable row level security;
+grant all on storage.buckets, storage.objects to anon, authenticated, service_role;
+
+-- Same definition as the platform's storage.foldername.
+create function storage.foldername(name text) returns text[] language plpgsql immutable as $$
+declare
+  _parts text[];
+begin
+  select string_to_array(name, '/') into _parts;
+  return _parts[1 : array_length(_parts, 1) - 1];
+end
+$$;
+grant execute on function storage.foldername(text) to anon, authenticated, service_role;

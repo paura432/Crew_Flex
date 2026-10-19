@@ -123,6 +123,27 @@ incomplete and cancelling/closing is always possible.
 `id`, `work_requirement_id`, `qualification_type_id` (unique per requirement), `requirement_level`
 (`hard` · `soft`).
 
+### `professional_documents` (`20261019160000`, LOCAL ONLY — D-10, `DOCUMENT_WALLET.md`)
+
+| Column                      | Type                                                                           | Writable by owner        |
+| --------------------------- | ------------------------------------------------------------------------------ | ------------------------ |
+| `id`                        | uuid PK                                                                        | –                        |
+| `owner_id`                  | → `technician_profiles(profile_id)` on delete cascade                          | insert only (= JWT sub)  |
+| `kind`                      | `document_kind`: `license` · `course` · `other`                                | yes                      |
+| `title`                     | text 1–180 (sanitised by `sanitizeDocumentTitle`)                              | yes                      |
+| `storage_path`              | text UNIQUE, CHECK `<owner_id>/<uuid>-<16 hex>` (no other separator, no `..`)  | insert only              |
+| `mime_type`                 | `application/pdf` · `image/png` · `image/jpeg` (from magic bytes)              | insert only              |
+| `size_bytes`                | int 1–5242880                                                                  | insert only              |
+| `sha256`                    | text `^[0-9a-f]{64}$`                                                          | insert only              |
+| `expires_at`                | date, nullable                                                                 | yes                      |
+| `qualification_id`          | → `technician_qualifications` on delete set null; trigger: must be the owner's | yes                      |
+| `scan_status`               | `document_scan_status`: `not_scanned` (default) · `clean` · `infected`         | **no** (no column grant) |
+| `created_at` / `updated_at` | timestamptz (`set_updated_at`)                                                 | –                        |
+
+RLS: own rows only (select/insert/update/delete); **no organization, manager or platform-admin policy**.
+Inserts go through `create_professional_document` (the insert trigger also requires the Storage object to
+exist with the declared size, so direct PostgREST inserts cannot create rows without bytes).
+
 ### `audit_events`
 
 `id`, `actor_profile_id`, `organization_id` nullable, `action`, `entity_type`, `entity_id`,
@@ -132,7 +153,9 @@ grant for API roles; rows are written by SECURITY DEFINER triggers.
 Actions in use: `requirement.created`, `qualification.verified`, `qualification.reviewed` (platform
 review decision with previous/new status, `note_provided`, `request_id`; since `20261015130400`), `qualification.created`,
 `qualification.updated` (type, status or dates changed), `qualification.removed` (owner delete only,
-not account-deletion cascades) — the last three since `20261015120000`. Reserved: `document.shared`,
+not account-deletion cascades) — the last three since `20261015120000`; `document.uploaded`,
+`document.updated` (with the changed field names) and `document.deleted` (owner delete only) since
+`20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path). Reserved: `document.shared`,
 `candidate_pack.shared`, `organization.member_added`.
 
 ## Database functions
@@ -145,6 +168,7 @@ not account-deletion cascades) — the last three since `20261015120000`. Reserv
 | `get_requirement_external_pool_summary(requirement_id)`                                                                                                                                  | DEFINER         | Counts only (`prefiltered`, `hard_eligible`, `cap`), same authorization: tells the UI whether the external evaluation is complete.                                                                          |
 | `update_professional_profile(...)`                                                                                                                                                       | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`).                                                                                                          |
 | `create_work_requirement_idempotent` · `create_availability_window` · `declare_qualification` · `replace_availability_days` (`20261019120000`, 3-arg since `20261019140000`, local only) | INVOKER         | Idempotent creates (`Idempotency-Key`), key claimed in the same transaction (`app_private.idempotency_keys`).                                                                                               |
+| `create_professional_document(key, kind, title, storage_path, mime_type, size_bytes, sha256, expires_at, qualification_id)` (`20261019160000`, local only)                               | INVOKER         | Idempotent document create (`document.create`); path must be `<uid>/<key>-<sha256[0:16]>` (`22023` otherwise); `CF409` same key, other request.                                                             |
 | `review_qualification(id, decision, expected_updated_at, note, request_id)`                                                                                                              | DEFINER         | Requires `app_private.feature_flags('qualification_review')`; platform admin only, never own, `pending` → `verified`/`rejected` for the version the reviewer saw, row lock, audit `qualification.reviewed`. |
 | `own_qualification_reviews()`                                                                                                                                                            | DEFINER, stable | The caller's own review reasons (the column is not readable otherwise).                                                                                                                                     |
 | `enforce_requirement_qualifications()`                                                                                                                                                   | DEFINER trigger | BR-1.4 at commit (deferred).                                                                                                                                                                                |
@@ -165,7 +189,14 @@ to API roles); `claim_idempotency_key` / `complete_idempotency_key`.
 - **Domain types:** `src/domain/*`. A row is not a domain object; edge functions map rows →
   domain explicitly.
 
-## Storage (PLANNED)
+## Storage
 
-Private bucket `evidence`. DB stores `object_path` only; access via authorization check + signed URL
-(≤ 60 s). Never a public bucket for CVs, licences, certificates or IDs. Never persist signed URLs.
+**Bucket `professional-documents` (`20261019160000`, LOCAL ONLY).** Private (`public = false`),
+`file_size_limit = 5242880`, `allowed_mime_types` pdf/png/jpeg. `storage.objects` policies for
+`authenticated`: select / insert / delete only in the caller's folder (`(storage.foldername(name))[1] =
+auth.uid()`); insert only for the server-derived name shape and only by accounts with a technician profile
+(`20261019160100`); delete refused while a document row points at
+the object; no update policy (immutable objects). The DB stores the path only; access is a signed URL valid
+60 s issued per request with the owner's JWT. Never a public bucket for CVs, licences, certificates or IDs.
+Never persist signed URLs. The earlier plan of a generic `evidence` bucket is superseded by this one
+(D-10, `DOCUMENT_WALLET.md`).

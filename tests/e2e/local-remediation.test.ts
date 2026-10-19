@@ -468,3 +468,222 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
     expect(await inFebruary()).toEqual([]);
   });
 });
+
+/**
+ * Document wallet (D-10, migration 20261019160000, `professional-documents`). LOCAL ONLY, same guard
+ * as above. Foxtrot uploads synthetic bytes built here (no real document); every document this
+ * block creates is deleted again (row + object) in `finally`.
+ */
+describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", () => {
+  const FN = "professional-documents";
+  const BUCKET = "professional-documents";
+  // Smallest well-formed PDF: header, one empty catalog, trailer.
+  const PDF = new TextEncoder().encode(
+    "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
+  );
+  let foxtrot = "";
+  let golf = "";
+  let orgAdmin = "";
+  let foxtrotId = "";
+
+  const subOf = (jwt: string) =>
+    JSON.parse(Buffer.from(jwt.split(".")[1]!, "base64url").toString("utf8")).sub as string;
+
+  async function upload(
+    token: string,
+    parts: {
+      bytes: Uint8Array<ArrayBuffer>;
+      name: string;
+      type?: string;
+      fields?: Record<string, string>;
+    },
+    idempotencyKey: string | null = randomUUID(),
+  ): Promise<{ status: number; body: Envelope }> {
+    const form = new FormData();
+    form.append(
+      "file",
+      new Blob([parts.bytes], { type: parts.type ?? "application/pdf" }),
+      parts.name,
+    );
+    for (const [k, v] of Object.entries(parts.fields ?? { kind: "license" })) form.append(k, v);
+    const res = await fetch(new URL(`/functions/v1/${FN}`, url), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: key!,
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+      },
+      body: form,
+    });
+    return { status: res.status, body: (await res.json()) as Envelope };
+  }
+
+  beforeAll(async () => {
+    [foxtrot, golf, orgAdmin] = await Promise.all([
+      signIn("foxtrot@crewflex.test"),
+      signIn("golf@crewflex.test"),
+      signIn("admin.mro@crewflex.test"),
+    ]);
+    foxtrotId = subOf(foxtrot);
+  });
+
+  it("upload → list → signed URL (same bytes) → owner-only → replay → rejections → delete", async () => {
+    const created: string[] = [];
+    try {
+      const idempotencyKey = randomUUID();
+      const fields = {
+        kind: "license",
+        title: "  E2E wallet\r\n../licence  ",
+        expiresAt: "2031-12-31",
+      };
+      const first = await upload(
+        foxtrot,
+        { bytes: PDF, name: "licence.pdf", fields },
+        idempotencyKey,
+      );
+      expect(first.status, JSON.stringify(first.body)).toBe(201);
+      const doc = first.body.data!.document as Record<string, unknown>;
+      created.push(doc.id as string);
+      const sha256 = createHash("sha256").update(PDF).digest("hex");
+      expect(doc).toMatchObject({
+        kind: "license",
+        title: "E2E wallet .. licence",
+        mimeType: "application/pdf",
+        sizeBytes: PDF.byteLength,
+        sha256,
+        expiresAt: "2031-12-31",
+        qualificationId: null,
+        scanStatus: "not_scanned",
+      });
+      expect(doc).not.toHaveProperty("storagePath");
+      const path = `${foxtrotId}/${idempotencyKey}-${sha256.slice(0, 16)}`;
+
+      // Replay (same key, same file and fields) → 200, same document; other title → 409.
+      const replay = await upload(
+        foxtrot,
+        { bytes: PDF, name: "licence.pdf", fields },
+        idempotencyKey,
+      );
+      expect(replay.status).toBe(200);
+      expect((replay.body.data!.document as { id: string }).id).toBe(doc.id);
+      const changed = await upload(
+        foxtrot,
+        { bytes: PDF, name: "licence.pdf", fields: { ...fields, title: "Other" } },
+        idempotencyKey,
+      );
+      expect(changed.status).toBe(409);
+      // Another file under the same key → 409, and its object was removed again (compensation).
+      const otherBytes = new TextEncoder().encode("%PDF-1.4\n% other file\n%%EOF\n");
+      const otherFile = await upload(
+        foxtrot,
+        { bytes: otherBytes, name: "x.pdf", fields },
+        idempotencyKey,
+      );
+      expect(otherFile.status).toBe(409);
+      const listed = await client(foxtrot).storage.from(BUCKET).list(foxtrotId);
+      expect((listed.data ?? []).map((o) => o.name)).toEqual([path.split("/")[1]]);
+
+      const list = await call(FN, { token: foxtrot });
+      expect(list.status).toBe(200);
+      expect((list.body.data!.documents as { id: string }[]).map((d) => d.id)).toContain(doc.id);
+
+      // Signed URL: 60 s, returns exactly the uploaded bytes.
+      const signed = await call(FN, { token: foxtrot, query: { id: doc.id as string, url: "1" } });
+      expect(signed.status).toBe(200);
+      expect(signed.body.data!.expiresInSeconds).toBe(60);
+      const signedUrl = signed.body.data!.url as string;
+      expect(new URL(signedUrl).origin).toBe(new URL(url!).origin);
+      const fetched = await fetch(signedUrl);
+      expect(fetched.status).toBe(200);
+      expect(new Uint8Array(await fetched.arrayBuffer())).toEqual(PDF);
+
+      // Another professional: 404 everywhere, and Storage itself refuses the object.
+      for (const method of ["GET", "PATCH", "DELETE"] as const) {
+        const res = await call(FN, {
+          method,
+          token: golf,
+          query: method === "GET" ? { id: doc.id as string, url: "1" } : { id: doc.id as string },
+          body:
+            method === "PATCH"
+              ? { kind: "other", title: "pwned", expiresAt: null, qualificationId: null }
+              : undefined,
+        });
+        expect(res.status, method).toBe(404);
+      }
+      expect((await client(golf).storage.from(BUCKET).download(path)).error).toBeTruthy();
+      expect(
+        (await client(golf).storage.from(BUCKET).createSignedUrl(path, 60)).error,
+      ).toBeTruthy();
+      expect((await client(golf).from("professional_documents").select("id")).data).toEqual([]);
+      // The bucket is not public: the public URL shape serves nothing.
+      const publicUrl = new URL(`/storage/v1/object/public/${BUCKET}/${path}`, url);
+      expect((await fetch(publicUrl)).ok).toBe(false);
+
+      // PATCH: own metadata, title sanitised; strict schema.
+      const patched = await call(FN, {
+        method: "PATCH",
+        token: foxtrot,
+        query: { id: doc.id as string },
+        body: { kind: "course", title: 'E2E "renamed"', expiresAt: null, qualificationId: null },
+      });
+      expect(patched.status).toBe(200);
+      expect(patched.body.data!.document).toMatchObject({ kind: "course", title: "E2E renamed" });
+      const forged = await call(FN, {
+        method: "PATCH",
+        token: foxtrot,
+        query: { id: doc.id as string },
+        body: {
+          kind: "course",
+          title: "x",
+          expiresAt: null,
+          qualificationId: null,
+          scanStatus: "clean",
+        },
+      });
+      expect(forged.status).toBe(400);
+
+      // Rejections: a renamed executable, a text file called .pdf, > 5 MiB, no key, not a professional.
+      const exe = new Uint8Array([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]);
+      const renamed = await upload(foxtrot, { bytes: exe, name: "licence.pdf" });
+      expect(renamed.status).toBe(400);
+      expect(JSON.stringify(renamed.body.error)).toContain("v.document.file.type");
+      const fake = await upload(foxtrot, {
+        bytes: new TextEncoder().encode("this is not a pdf"),
+        name: "licence.pdf",
+      });
+      expect(fake.status).toBe(400);
+      const big = new Uint8Array(5 * 1024 * 1024 + 1);
+      big.set(PDF);
+      expect((await upload(foxtrot, { bytes: big, name: "big.pdf" })).status).toBe(413);
+      expect((await upload(foxtrot, { bytes: PDF, name: "l.pdf" }, null)).status).toBe(400);
+      expect((await upload(orgAdmin, { bytes: PDF, name: "l.pdf" })).status).toBe(403);
+      // …nor straight through the Storage API (insert policy requires a technician profile).
+      const orgId = subOf(orgAdmin);
+      const direct = await client(orgAdmin)
+        .storage.from(BUCKET)
+        .upload(`${orgId}/${randomUUID()}-0123456789abcdef`, PDF, {
+          contentType: "application/pdf",
+        });
+      expect(direct.error).toBeTruthy();
+
+      // Delete: row and object gone; the old signed URL no longer serves the bytes.
+      const deleted = await call(FN, {
+        method: "DELETE",
+        token: foxtrot,
+        query: { id: doc.id as string },
+      });
+      expect(deleted.status).toBe(200);
+      expect(deleted.body.data).toEqual({ deleted: true, id: doc.id });
+      created.splice(created.indexOf(doc.id as string), 1);
+      expect(
+        (await call(FN, { token: foxtrot, query: { id: doc.id as string, url: "1" } })).status,
+      ).toBe(404);
+      expect((await client(foxtrot).storage.from(BUCKET).list(foxtrotId)).data ?? []).toEqual([]);
+      expect((await fetch(signedUrl)).ok).toBe(false);
+    } finally {
+      for (const id of created) {
+        await call(FN, { method: "DELETE", token: foxtrot, query: { id } });
+      }
+    }
+  });
+});

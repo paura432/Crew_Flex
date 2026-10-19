@@ -42,7 +42,8 @@
     "workforce": "Workforce",
     "settings": "Settings",
     "verifications": "Qualification review",
-    "tools": "Tools"
+    "tools": "Tools",
+    "documents": "Document wallet"
   },
   "nav": {
     "organization": "Organization",
@@ -58,7 +59,8 @@
     "settings": "Settings",
     "platform": "Platform",
     "verifications": "Verifications",
-    "tools": "Tools"
+    "tools": "Tools",
+    "documents": "Documents"
   },
   "landing": {
     "eyebrow": "Aircraft maintenance workforce",
@@ -310,6 +312,21 @@
     "rotation": {
       "pattern": "Choose a valid pattern",
       "cycle": "The cycle needs 1–31 days, each work or rest"
+    },
+    "document": {
+      "kind": "Choose licence, course or other",
+      "title": {
+        "required": "Give the document a title"
+      },
+      "expiresAt": "Enter a valid expiry date",
+      "qualificationId": "Choose one of your qualifications",
+      "id": "A valid document id is required",
+      "file": {
+        "required": "Choose a file to upload",
+        "type": "Only PDF, PNG or JPEG files are accepted",
+        "tooLarge": "The file is larger than 5 MB",
+        "form": "The upload could not be read. Try again."
+      }
     }
   },
   "domain": {
@@ -954,5 +971,49 @@
       "hp": "mechanical hp",
       "PS": "metric hp (PS)"
     }
+  },
+  "documents": {
+    "eyebrow": "MY FILE",
+    "title": "Document wallet",
+    "description": "Your licences, courses and other documents, stored privately. Only you can see them.",
+    "noProfileDescription": "The document wallet belongs to professional accounts.",
+    "uploadTitle": "Upload a document",
+    "uploadIntro": "PDF, PNG or JPEG, up to 5 MB. Uploading a document does not certify a licence or a rating: verification is a separate process.",
+    "file": "File",
+    "fileHint": "The type is checked from the file's content, not its name.",
+    "kindLabel": "Type",
+    "kind": {
+      "license": "Licence",
+      "course": "Course",
+      "other": "Other"
+    },
+    "titleLabel": "Title",
+    "titleHint": "Leave it empty to use the file name.",
+    "expiresLabel": "Expiry (optional)",
+    "qualificationLabel": "Link to a qualification (optional)",
+    "qualificationHint": "Only your own declared qualifications.",
+    "noQualification": "— Not linked —",
+    "upload": "Upload document",
+    "uploaded": "Document saved in your private wallet.",
+    "updated": "Document updated.",
+    "deleted": "Document deleted.",
+    "listTitle": "Your documents ({count})",
+    "sharingNote": "No organization can see these documents. Sharing with third parties is not available until an approved file-security scan exists; when it does, it will always need your explicit consent for one specific need.",
+    "empty": "You have not uploaded any documents yet.",
+    "scan": {
+      "not_scanned": "Not scanned · not shareable",
+      "clean": "Scanned",
+      "infected": "Blocked"
+    },
+    "expired": "Expired",
+    "expiresOn": "expires {date}",
+    "linkedTo": "linked to {qualification}",
+    "mime": {
+      "pdf": "PDF",
+      "png": "PNG image",
+      "jpeg": "JPEG image"
+    },
+    "open": "Open",
+    "confirmDelete": "Confirm delete"
   }
 }

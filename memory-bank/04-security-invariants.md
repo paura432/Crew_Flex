@@ -35,12 +35,13 @@ authorization. Review every DEFINER for S-10 and test the "other organization" a
 
 ## Sensitive data
 
-| Data                                 | Where                                                                   | Who may read                                                                    |
-| ------------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Qualifications, expiry, verification | `technician_qualifications`                                             | owner · own-org admin/manager (OD-4) · platform admin · external pool minimised |
-| Availability                         | `availability_windows`                                                  | same as above; external pool only overlapping windows                           |
-| Review reason                        | `review_note`                                                           | owner (`own_qualification_reviews`) · platform admin                            |
-| Contact data, documents              | **not stored** (PLANNED: private bucket, signed URLs ≤ 60 s, D-07/D-10) | —                                                                               |
+| Data                                 | Where                                                              | Who may read                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Qualifications, expiry, verification | `technician_qualifications`                                        | owner · own-org admin/manager (OD-4) · platform admin · external pool minimised |
+| Availability                         | `availability_windows`                                             | same as above; external pool only overlapping windows                           |
+| Review reason                        | `review_note`                                                      | owner (`own_qualification_reviews`) · platform admin                            |
+| Contact data                         | **not stored** (D-07)                                              | —                                                                               |
+| Documents (D-10, LOCAL ONLY)         | `professional_documents` + private bucket `professional-documents` | owner only (no org/admin policy; no third-party sharing without a scanner)      |
 
 ## Multi-tenancy
 

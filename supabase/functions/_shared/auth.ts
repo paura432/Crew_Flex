@@ -31,6 +31,17 @@ export async function requireActor(ctx: RequestContext): Promise<Actor> {
   return { id: sub, client };
 }
 
+/** Professionals only: the technician profile must exist for the actor (read under RLS). */
+export async function requireTechnician(actor: Actor, message?: string): Promise<void> {
+  const { data, error } = await actor.client
+    .from("technician_profiles")
+    .select("profile_id")
+    .eq("profile_id", actor.id)
+    .maybeSingle();
+  if (error) throw new ApiError("INTERNAL_ERROR");
+  if (!data) throw new ApiError("FORBIDDEN", message);
+}
+
 /** Authorization from the database (never from the client): actor's role in an organization. */
 export async function requireOrganizationRole(
   actor: Actor,

@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { signOutAction } from "@/features/auth/actions";
-import { canOpenQualificationReview } from "@/server/feature-flags";
+import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/feature-flags";
 import type { SessionActor } from "@/server/session";
 import { NavLinks, type NavItem } from "./NavLinks";
 
@@ -21,6 +21,9 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/profile", label: tNav("profile") },
     { href: "/app/professional/qualifications", label: tNav("qualifications") },
     { href: "/app/professional/availability", label: tNav("availability") },
+    ...(isDocumentWalletEnabled()
+      ? [{ href: "/app/professional/documents", label: tNav("documents") }]
+      : []),
   ];
   const accountNav: NavItem[] = [
     { href: "/app/tools", label: tNav("tools") },

@@ -16,3 +16,15 @@ export function isQualificationReviewEnabled(): boolean {
 export function canOpenQualificationReview(profile: { platform_role: string }): boolean {
   return isQualificationReviewEnabled() && profile.platform_role === "platform_admin";
 }
+
+/**
+ * Document wallet (D-10) rollout gate. Server-side only and OFF unless the Next.js server sets
+ * `DOCUMENT_WALLET_ENABLED=true`: hides the navigation entry and turns
+ * `/app/professional/documents` into a 404. Production keeps it off (nothing to set in Vercel)
+ * until the wallet's own wave is approved — its blocker is file cleanup on account deletion
+ * (docs/product/DOCUMENT_WALLET.md, review M-3). Authorization never depends on this flag: the
+ * Edge Function, RLS and Storage policies decide access on their own.
+ */
+export function isDocumentWalletEnabled(): boolean {
+  return process.env.DOCUMENT_WALLET_ENABLED === "true";
+}

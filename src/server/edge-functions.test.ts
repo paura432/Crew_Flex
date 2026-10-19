@@ -67,4 +67,35 @@ describe("invokeEdgeFunction", () => {
     const [, init] = fetchMock.mock.calls[0]!;
     expect(init.headers.Authorization).toBe("Bearer user-jwt");
   });
+
+  it("sends a FormData body as is, without a JSON content type (multipart upload)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true, data: {}, requestId: "x" }), { status: 201 }),
+    );
+    const form = new FormData();
+    form.append("file", new Blob(["%PDF-1.4"]), "licence.pdf");
+    await invokeEdgeFunction("professional-documents", {
+      method: "POST",
+      body: form,
+      headers: { "Idempotency-Key": "6f1c2a52-7b8e-4c1e-9a3f-0d2b5e8c4a11" },
+    });
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.body).toBe(form);
+    expect(init.headers["Content-Type"]).toBeUndefined();
+    expect(init.headers.Authorization).toBe("Bearer user-jwt");
+  });
+
+  it("still sends JSON bodies as application/json", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true, data: {}, requestId: "x" })),
+    );
+    await invokeEdgeFunction("professional-documents", {
+      method: "PATCH",
+      query: { id: "6f1c2a52-7b8e-4c1e-9a3f-0d2b5e8c4a11" },
+      body: { kind: "other" },
+    });
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(init.body).toBe('{"kind":"other"}');
+    expect(init.headers["Content-Type"]).toBe("application/json");
+  });
 });
