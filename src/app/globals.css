@@ -18,6 +18,19 @@
   --color-danger: #ad3b44;
   --color-danger-bg: #fbecee;
   --color-info-bg: #eaf2fa;
+  /* Tools workbench sub-palette (V1.3/V1.8 prototype `styles/v13.css` .toolbox / .tb-*). Used only
+     under /app/tools; see DESIGN_SYSTEM.md. */
+  --color-tool: #057f7d;
+  --color-tool-strong: #146c6e;
+  --color-tool-soft: #e8f3f1;
+  --color-tool-hero: #112e40;
+  --color-tool-result: #103b49;
+  --color-tool-mint: #b5f0dc;
+  --color-tool-mint-ink: #153c3d;
+  --color-tool-glow: #79d7ca;
+  --color-tool-caption: #91c7c9;
+  --color-tool-hero-text: #b6cbd5;
+  --color-tool-ring: #2e5968;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 

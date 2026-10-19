@@ -41,7 +41,8 @@
     "matches": "Eligible professionals",
     "workforce": "Workforce",
     "settings": "Settings",
-    "verifications": "Qualification review"
+    "verifications": "Qualification review",
+    "tools": "Tools"
   },
   "nav": {
     "organization": "Organization",
@@ -56,7 +57,8 @@
     "availability": "Availability",
     "settings": "Settings",
     "platform": "Platform",
-    "verifications": "Verifications"
+    "verifications": "Verifications",
+    "tools": "Tools"
   },
   "landing": {
     "eyebrow": "Aircraft maintenance workforce",
@@ -762,6 +764,189 @@
       "decisionRejected": "Rejected",
       "yes": "Yes",
       "no": "No"
+    }
+  },
+  "tools": {
+    "kicker": "YOUR TOOLBOX",
+    "homeTitle": "For every shift.",
+    "lead": "Clear calculations. Visible units. References at hand.",
+    "allTools": "All tools",
+    "hero": {
+      "kicker": "CREWFLEX · WORKBENCH",
+      "title": "Your trade, a little simpler.",
+      "body": "The utilities you need, whether you are looking for work or already where you want to be.",
+      "cta": "Open the torque converter",
+      "artCaption": "Precision in every unit."
+    },
+    "favorites": "Your favourites",
+    "favoriteAdd": "Add {tool} to favourites",
+    "favoriteRemove": "Remove {tool} from favourites",
+    "open": "Open tool",
+    "privacyNote": "Your use of the tools is private: calculations run in your browser and are never sent to a server. Favourites are stored in this browser.",
+    "tile": {
+      "torque": {
+        "title": "Torque",
+        "sub": "N·m · lbf·ft · lbf·in"
+      },
+      "convert": {
+        "title": "Conversions",
+        "sub": "22 technical quantities"
+      },
+      "duration": {
+        "title": "Duration",
+        "sub": "HH:MM and decimal hours"
+      }
+    },
+    "converter": {
+      "kickerUnits": "UNITS",
+      "kickerTorque": "MECHANICS",
+      "titleUnits": "Technical converter",
+      "titleTorque": "Torque",
+      "defaultDescription": "Choose the quantity and the units of the reading.",
+      "magnitude": "Quantity",
+      "value": "Input value",
+      "valuePlaceholder": "Type a value",
+      "valueHintLength": "Also 3/16 or 1 3/16",
+      "valueHint": "No thousands separators",
+      "from": "From unit",
+      "to": "Result unit",
+      "swap": "Swap units",
+      "precision": "Maximum decimals",
+      "pressureReference": "Reference of both pressures",
+      "gauge": "gauge",
+      "absolute": "absolute",
+      "rangeToggle": "Also convert nominal ± tolerance",
+      "tolerance": "Tolerance from your source (%)",
+      "toleranceHint": "Enter the tolerance given by your source; there is no default.",
+      "result": "Equivalent",
+      "resultPressure": "{reference} pressure",
+      "rangeTitle": "Converted range",
+      "rangeNote": "Nominal ± {tolerance} %. The tolerance comes from your input.",
+      "others": "Other equivalents",
+      "footnoteTorque": "Check lbf·in against lbf·ft: they differ by a factor of 12. The applicable task sets the torque value.",
+      "footnoteUnits": "The source unit must always match your instrument or documentation.",
+      "formula": "Result = value × source factor / target factor. Absolute temperatures include the scale offset. Ranges are converted at both ends.",
+      "formulaTorque": "120 lbf·in = 10 lbf·ft ≈ 13.5581794833 N·m. It does not compute preload, select a torque or correct for adapters.",
+      "torqueNoticeTitle": "A mathematical conversion, not a torque specification",
+      "torqueNotice": "This result only converts units. The torque value, its tolerance, the sequence and any adapter or extension correction come from the approved maintenance data for the task (AMM, SRM, CMM or other authorised documentation). It does not replace that documentation or the check with a calibrated tool."
+    },
+    "duration": {
+      "title": "Shift duration",
+      "kicker": "TIME",
+      "description": "Converts a duration between HH:MM and decimal hours. 1:30 equals 1.5 h.",
+      "mode": "Duration conversion",
+      "clock": "HH:MM → decimal hours",
+      "decimal": "Decimal hours → HH:MM",
+      "inputClock": "Duration HH:MM",
+      "inputDecimal": "Decimal hours",
+      "result": "Result",
+      "hours": "h",
+      "formula": "Decimal hours = hours + minutes / 60. HH:MM is rounded to the nearest minute."
+    },
+    "copy": "Copy with units",
+    "copied": "Copied",
+    "references": "Formula, sources and scope",
+    "engineNote": "Engine {version}. Rounding is for display only. No thousands separators in the input; a comma or a dot marks decimals.",
+    "nistLink": "NIST · units and factors",
+    "error": {
+      "required": "Enter a value.",
+      "thousandsSeparator": "Do not use thousands separators.",
+      "zeroDenominator": "The denominator cannot be zero.",
+      "invalidNumber": "Invalid number or fraction.",
+      "outOfRange": "Outside the calculation range.",
+      "mustBePositive": "Must be greater than zero.",
+      "mustBeNonNegative": "Cannot be negative.",
+      "unitMismatch": "The units do not belong to the same quantity.",
+      "belowAbsoluteZero": "Temperature cannot be below 0 K.",
+      "resultOutOfRange": "The result is out of range.",
+      "toleranceRange": "The percentage tolerance must be between 0 and 100.",
+      "negativeAbsolutePressure": "Absolute pressure cannot be negative.",
+      "invalidClock": "Use HH:MM; minutes go from 00 to 59."
+    },
+    "magnitude": {
+      "torque": {
+        "label": "Torque",
+        "description": "Converts the torque given in the task. It does not determine how tight a fastener should be."
+      },
+      "length": {
+        "label": "Length",
+        "description": "Accepts fractions such as 3/16 or 1 3/16. Mil/thou means one thousandth of an inch."
+      },
+      "mass": {
+        "label": "Mass",
+        "description": "lb and oz are units of mass; lbf belongs to Force."
+      },
+      "volume": {
+        "label": "Volume",
+        "description": "US gallons and Imperial gallons are not equivalent. Choose the system on the receipt."
+      },
+      "density": {
+        "label": "Density",
+        "description": "Keep the same temperature basis. This conversion does not correct for thermal expansion."
+      },
+      "pressure": {
+        "label": "Pressure",
+        "description": "The conversion keeps the absolute or gauge reference of the reading."
+      },
+      "temperature": {
+        "label": "Temperature",
+        "description": "Absolute temperature: includes the scale offset. For increments use Temperature difference."
+      },
+      "temperatureDelta": {
+        "label": "Temperature difference",
+        "description": "An increase of 20 °C equals 36 °F; 32 is not added."
+      },
+      "force": {
+        "label": "Force",
+        "description": "Does not convert mass into force or estimate preload from a torque."
+      },
+      "area": {
+        "label": "Area"
+      },
+      "flowVolume": {
+        "label": "Volume flow",
+        "description": "Mass flow also needs a density; this only converts volume/time."
+      },
+      "flowMass": {
+        "label": "Mass flow"
+      },
+      "speed": {
+        "label": "Speed"
+      },
+      "distance": {
+        "label": "Distance",
+        "description": "NM is the nautical mile; N·m is torque and nm is the nanometre."
+      },
+      "power": {
+        "label": "Power"
+      },
+      "voltage": {
+        "label": "Voltage"
+      },
+      "current": {
+        "label": "Electric current"
+      },
+      "resistance": {
+        "label": "Resistance"
+      },
+      "frequency": {
+        "label": "Frequency"
+      },
+      "angle": {
+        "label": "Angle"
+      },
+      "rotation": {
+        "label": "Angular speed"
+      },
+      "time": {
+        "label": "Duration"
+      }
+    },
+    "unit": {
+      "tonne": "metric t",
+      "mile": "statute mi",
+      "hp": "mechanical hp",
+      "PS": "metric hp (PS)"
     }
   }
 }

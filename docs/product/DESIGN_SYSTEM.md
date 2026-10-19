@@ -25,6 +25,13 @@ overload, tiny text, decorative animation.
 | `warn`   | `#aa5916` | Pending / partial / urgent          | prototype                                        |
 | `danger` | `#ad3b44` | Blocker / gap / AOG                 | prototype                                        |
 
+Tools workbench sub-palette (`tool-*` tokens, used only under `/app/tools`): taken from the V1.3/V1.8
+prototype `styles/v13.css` (`.toolbox`, `.tb-*`) so the workbench keeps its own identity — teal
+`tool` `#057f7d`, hero `#112e40`, result card `#103b49`, mint CTA `#b5f0dc`, soft icon tile
+`#e8f3f1`. Radii 13/18 px as in the prototype. Deviations kept on purpose: Inter instead of the
+system font, the global orange focus ring (one focus style for the whole app), and the Tools link in
+the shared "Account" nav section because both professional and organization accounts use it.
+
 Typography: Inter (via `next/font`). Body 15px/1.6, never below 12px. Headings tight tracking.
 Numbers in metrics use tabular figures.
 

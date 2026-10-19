@@ -26,6 +26,8 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 | Remediation 2026-10-15: BR-1.4 in the DB (E-3), atomic passport (I-3), idempotent creates (I-1), eligible-first external pool + completeness summary (`20261015130000`…`130300`) | IMPLEMENTED (local Docker DB + PGlite + local E2E; not remote)         |
 | Platform-admin qualification review (`review_qualification`, `qualification-reviews`, `/app/admin/verifications`, `20261015130400`)                                              | IMPLEMENTED (local only) — **blocked for remote by OD-3 approval**     |
 | Availability work/rest cycle generator (V1.8 parity: preview, save/discard, atomic `PUT`, migration `20261019120000`)                                                            | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
+| Professional tools (D-11, owner 2026-10-19): unit conversion (22 quantities), torque conversion, durations — `/app/tools`, client-side engine 1.0.0                              | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
+| Availability: per-technician write lock + saved cycle pattern + undo (`20261019130000`, `20261019140000`)                                                                        | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
 | Remote apply of migrations + function deploy                                                                                                                                     | PENDING OWNER AUTHORIZATION (`docs/audit/CREWFLEX_DIFF_CURRENT.md` §5) |
 
 ## NEXT
@@ -51,7 +53,7 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 - Partial coverage (several technicians covering one requirement period by day blocks).
 - Urgent / AOG outreach intensity, opt-in priority contact.
 - Recruiter workspace and client representation.
-- Tools hub (converters, glossary, contractor calculators) and logbook from the prototype.
+- Tools hub beyond D-11: fuel sheet (after a technical review of its wording), glossary/ATA, daily challenge, translator; logbook from the prototype. Contractor calculators stay OUT.
 - Rates, logistics and contract conditions on requirements.
 
 ## OUT (not this product phase)

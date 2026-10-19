@@ -22,7 +22,10 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/qualifications", label: tNav("qualifications") },
     { href: "/app/professional/availability", label: tNav("availability") },
   ];
-  const accountNav: NavItem[] = [{ href: "/app/settings", label: tNav("settings") }];
+  const accountNav: NavItem[] = [
+    { href: "/app/tools", label: tNav("tools") },
+    { href: "/app/settings", label: tNav("settings") },
+  ];
   // Shown only to platform admins while the review is enabled (OD-3, server-side flag). UI
   // convenience: the page, function and RPC re-check both the flag and the role.
   const platformNav: NavItem[] = [
