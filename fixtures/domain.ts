@@ -32,6 +32,7 @@ export function madRequirement(
   return {
     startsAt: "2026-10-18T20:00:00Z",
     endsAt: "2026-10-22T06:00:00Z",
+    urgency: "urgent" as const, // as in the seed requirement
     headcount: 2,
     qualifications: [
       required(QT.B11),

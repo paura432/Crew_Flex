@@ -23,7 +23,10 @@ export interface Candidate {
   availability: AvailabilityWindow[];
 }
 
-export type MatchableRequirement = Pick<WorkRequirement, "startsAt" | "endsAt" | "qualifications">;
+export type MatchableRequirement = Pick<
+  WorkRequirement,
+  "startsAt" | "endsAt" | "urgency" | "qualifications"
+>;
 
 export type QualificationOutcome =
   "met" | "missing" | "not_verified" | "expired" | "expires_during";
@@ -151,6 +154,7 @@ export function evaluateMatch(
     candidate.availability,
     requirement.startsAt,
     requirement.endsAt,
+    requirement.urgency,
   );
   if (coverage.fullyCovered) reasons.push({ code: "AVAILABILITY_COVERS_REQUIREMENT" });
   else if (coverage.coveredPercent === 0) blockers.push({ code: "NOT_AVAILABLE" });

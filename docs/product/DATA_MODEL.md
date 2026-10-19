@@ -98,6 +98,8 @@ Writes are serialised per technician: trigger `availability_windows_lock_owner` 
 DELETE, `lock_availability_owner()`) takes `pg_advisory_xact_lock` keyed by the owner, as does
 `replace_availability_days` before reading (`20261019130000`, local only).
 
+`status` is `available` / `unavailable` / `aog_only` (`aog_only` added by `20261019150000`, local only; meaning in BR-4.8).
+
 ### `availability_rotations` (`20261019140000`, local only)
 
 The cycle generator's saved pattern, one row per technician: `pattern` (14 values, BR-4.7), `anchor`

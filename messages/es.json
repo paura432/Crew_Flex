@@ -489,12 +489,15 @@
       "blocked": "Bloqueados",
       "blockedDetail": "Días marcados como no disponibles",
       "windows": "Ventanas",
-      "windowsDetail": "Ventanas de tiempo guardadas"
+      "windowsDetail": "Ventanas de tiempo guardadas",
+      "aogOnly": "Solo AOG",
+      "aogOnlyDetail": "Días reservados para necesidades AOG"
     },
     "picker": {
       "available": "Disponible",
       "unavailable": "Bloqueado",
-      "clear": "Descanso (limpiar)"
+      "clear": "Descanso (limpiar)",
+      "aog_only": "Solo AOG"
     },
     "pickerLabel": "Estado a aplicar",
     "pickerHint": "Elige un estado y pulsa los días para aplicarlo. Los días son UTC.",
@@ -502,7 +505,8 @@
       "available": "Disponible",
       "unavailable": "Bloqueado",
       "mixed": "Parcial",
-      "none": "Descanso"
+      "none": "Descanso",
+      "aog_only": "Solo AOG"
     },
     "weekday": {
       "mon": "Lun",
@@ -580,7 +584,9 @@
       "undo": "Deshacer último cambio",
       "patternSaved": "Patrón guardado; ningún día necesitaba cambios."
     },
-    "pastDay": "{date} ya ha pasado y no se puede cambiar desde el calendario."
+    "pastDay": "{date} ya ha pasado y no se puede cambiar desde el calendario.",
+    "statusAogOnly": "Disponible solo para AOG",
+    "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos."
   },
   "organization": {
     "dashboard": {

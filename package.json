@@ -19,6 +19,7 @@
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm typecheck && pnpm test:run && pnpm format:check && pnpm lint:edge && pnpm typecheck:edge && pnpm test:edge",
     "db:types": "supabase gen types typescript --project-id sbjkzrkmcekokkqiuvvh --schema public > src/types/database.generated.ts",
+    "db:types:local": "bash scripts/local/db-types.sh",
     "prepare": "husky",
     "lint:edge": "deno lint --config supabase/functions/deno.json supabase/functions"
   },

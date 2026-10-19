@@ -1,5 +1,5 @@
-// Generated with `bash scripts/local/sb-local.sh gen types typescript --local --schema public` on
-// 2026-10-11 (LOCAL stack, schema = migrations incl. 20261011120000). Do not edit by hand.
+// Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
+// migrations up to 20261019150100. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -52,6 +52,39 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "organizations";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      availability_rotations: {
+        Row: {
+          anchor: string;
+          custom_cycle: string[];
+          pattern: string;
+          technician_profile_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          anchor: string;
+          custom_cycle?: string[];
+          pattern: string;
+          technician_profile_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          anchor?: string;
+          custom_cycle?: string[];
+          pattern?: string;
+          technician_profile_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "availability_rotations_technician_profile_id_fkey";
+            columns: ["technician_profile_id"];
+            isOneToOne: true;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
           },
         ];
       };
@@ -267,6 +300,9 @@ export type Database = {
           id: string;
           issued_at: string | null;
           qualification_type_id: string;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
           status: Database["public"]["Enums"]["qualification_status"];
           technician_profile_id: string;
           updated_at: string;
@@ -279,6 +315,9 @@ export type Database = {
           id?: string;
           issued_at?: string | null;
           qualification_type_id: string;
+          review_note?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           status?: Database["public"]["Enums"]["qualification_status"];
           technician_profile_id: string;
           updated_at?: string;
@@ -290,6 +329,9 @@ export type Database = {
           id?: string;
           issued_at?: string | null;
           qualification_type_id?: string;
+          review_note?: string | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           status?: Database["public"]["Enums"]["qualification_status"];
           technician_profile_id?: string;
           updated_at?: string;
@@ -301,6 +343,13 @@ export type Database = {
             columns: ["qualification_type_id"];
             isOneToOne: false;
             referencedRelation: "qualification_types";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "technician_qualifications_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
           {
@@ -419,6 +468,18 @@ export type Database = {
     };
     Functions: {
       can_view_member: { Args: { p_profile_id: string }; Returns: boolean };
+      create_availability_window: {
+        Args: {
+          p_ends_at: string;
+          p_idempotency_key: string;
+          p_starts_at: string;
+          p_status: Database["public"]["Enums"]["availability_status"];
+        };
+        Returns: {
+          id: string;
+          replayed: boolean;
+        }[];
+      };
       create_work_requirement: {
         Args: {
           p_ends_at: string;
@@ -433,6 +494,36 @@ export type Database = {
         };
         Returns: string;
       };
+      create_work_requirement_idempotent: {
+        Args: {
+          p_ends_at: string;
+          p_headcount: number;
+          p_idempotency_key: string;
+          p_location: string;
+          p_organization_id: string;
+          p_qualifications: Json;
+          p_shift: Database["public"]["Enums"]["shift_type"];
+          p_starts_at: string;
+          p_title: string;
+          p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+        };
+        Returns: {
+          id: string;
+          replayed: boolean;
+        }[];
+      };
+      declare_qualification: {
+        Args: {
+          p_expires_at: string;
+          p_idempotency_key: string;
+          p_issued_at: string;
+          p_qualification_type_id: string;
+        };
+        Returns: {
+          id: string;
+          replayed: boolean;
+        }[];
+      };
       get_requirement_candidate_pool: {
         Args: { p_requirement_id: string };
         Returns: {
@@ -445,6 +536,14 @@ export type Database = {
           candidate_years_experience: number;
         }[];
       };
+      get_requirement_external_pool_summary: {
+        Args: { p_requirement_id: string };
+        Returns: {
+          cap: number;
+          hard_eligible: number;
+          prefiltered: number;
+        }[];
+      };
       has_org_role: {
         Args: {
           p_organization_id: string;
@@ -454,10 +553,52 @@ export type Database = {
       };
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      own_qualification_reviews: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          qualification_id: string;
+          review_note: string;
+          reviewed_at: string;
+        }[];
+      };
+      replace_availability_days: {
+        Args: { p_days: Json; p_idempotency_key: string; p_rotation?: Json };
+        Returns: {
+          id: string;
+          replayed: boolean;
+          windows_created: number;
+        }[];
+      };
+      review_qualification: {
+        Args: {
+          p_decision: Database["public"]["Enums"]["verification_status"];
+          p_expected_updated_at: string;
+          p_note?: string;
+          p_qualification_id: string;
+          p_request_id?: string;
+        };
+        Returns: {
+          id: string;
+          reviewed_at: string;
+          verification_status: Database["public"]["Enums"]["verification_status"];
+        }[];
+      };
+      update_professional_profile: {
+        Args: {
+          p_base_location: string;
+          p_current_status: Database["public"]["Enums"]["technician_status"];
+          p_display_name: string;
+          p_expected_updated_at?: string;
+          p_mobility: Database["public"]["Enums"]["mobility"];
+          p_visibility: Database["public"]["Enums"]["profile_visibility"];
+          p_years_experience: number;
+        };
+        Returns: string;
+      };
     };
     Enums: {
       account_type: "professional" | "organization";
-      availability_status: "available" | "unavailable";
+      availability_status: "available" | "unavailable" | "aog_only";
       mobility: "local" | "national" | "international";
       organization_role: "member" | "manager" | "admin";
       organization_type: "mro" | "airline" | "operator" | "staffing_agency" | "other";
@@ -583,7 +724,7 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["professional", "organization"],
-      availability_status: ["available", "unavailable"],
+      availability_status: ["available", "unavailable", "aog_only"],
       mobility: ["local", "national", "international"],
       organization_role: ["member", "manager", "admin"],
       organization_type: ["mro", "airline", "operator", "staffing_agency", "other"],

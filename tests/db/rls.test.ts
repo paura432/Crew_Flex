@@ -1652,10 +1652,13 @@ describe("M. external pool: eligible candidates are never cut by the cap (migrat
         sql.rows.map((r) => [ref(madRequirementId, r.profile_id), r.hard_eligible]),
       );
 
-      const req = await tx.query<{ starts_at: Date; ends_at: Date }>(
-        "select starts_at, ends_at from public.work_requirements where id = $1",
-        [madRequirementId],
-      );
+      const req = await tx.query<{
+        starts_at: Date;
+        ends_at: Date;
+        urgency: "planned" | "urgent" | "aog";
+      }>("select starts_at, ends_at, urgency from public.work_requirements where id = $1", [
+        madRequirementId,
+      ]);
       const quals = await tx.query<{
         id: string;
         code: string;
@@ -1668,6 +1671,7 @@ describe("M. external pool: eligible candidates are never cut by the cap (migrat
       const requirement: MatchableRequirement = {
         startsAt: req.rows[0]!.starts_at.toISOString(),
         endsAt: req.rows[0]!.ends_at.toISOString(),
+        urgency: req.rows[0]!.urgency,
         qualifications: quals.rows.map((q) => ({
           qualificationTypeId: q.id,
           code: q.code,
@@ -1770,10 +1774,13 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     const pool = await tx.query("select * from public.get_requirement_candidate_pool($1)", [
       madRequirementId,
     ]);
-    const req = await tx.query<{ starts_at: Date; ends_at: Date }>(
-      "select starts_at, ends_at from public.work_requirements where id = $1",
-      [madRequirementId],
-    );
+    const req = await tx.query<{
+      starts_at: Date;
+      ends_at: Date;
+      urgency: "planned" | "urgent" | "aog";
+    }>("select starts_at, ends_at, urgency from public.work_requirements where id = $1", [
+      madRequirementId,
+    ]);
     const quals = await tx.query<{ id: string; code: string; requirement_level: "hard" | "soft" }>(
       `select qt.id, qt.code, wrq.requirement_level from public.work_requirement_qualifications wrq
        join public.qualification_types qt on qt.id = wrq.qualification_type_id where wrq.work_requirement_id = $1`,
@@ -1782,6 +1789,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     const requirement: MatchableRequirement = {
       startsAt: req.rows[0]!.starts_at.toISOString(),
       endsAt: req.rows[0]!.ends_at.toISOString(),
+      urgency: req.rows[0]!.urgency,
       qualifications: quals.rows.map((q) => ({
         qualificationTypeId: q.id,
         code: q.code,
@@ -2351,6 +2359,160 @@ describe("O. per-day availability replace (shift-cycle generator, migration 2026
           days(["2028-07-01", "available"]),
         ]),
       ).toMatch(/foreign key|row-level security/);
+    });
+  });
+});
+
+describe("P. `aog_only` availability: AOG requirements only, SQL and TypeScript agree (migrations 20261019150000/150100)", () => {
+  // MAD requirement period: 2026-10-18 20:00Z → 2026-10-22 06:00Z.
+  const S = "2026-10-18T20:00Z";
+  const MID = "2026-10-20T12:00Z";
+  const E = "2026-10-22T06:00Z";
+  type W = [string, string, "available" | "unavailable" | "aog_only"];
+  const cases: { name: string; windows: W[]; urgent: boolean; aog: boolean }[] = [
+    { name: "aog_only whole period", windows: [[S, E, "aog_only"]], urgent: false, aog: true },
+    {
+      name: "available whole period + aog_only overlapping part",
+      windows: [
+        [S, E, "available"],
+        [MID, E, "aog_only"],
+      ],
+      urgent: false, // aog_only is exclusive: it takes that part out of ordinary availability
+      aog: true,
+    },
+    {
+      name: "aog_only whole period + unavailable part",
+      windows: [
+        [S, E, "aog_only"],
+        [MID, E, "unavailable"],
+      ],
+      urgent: false,
+      aog: false, // unavailable overrides aog_only too
+    },
+    {
+      name: "available first half + aog_only second half",
+      windows: [
+        [S, MID, "available"],
+        [MID, E, "aog_only"],
+      ],
+      urgent: false,
+      aog: true,
+    },
+    { name: "available whole period", windows: [[S, E, "available"]], urgent: true, aog: true },
+    { name: "no windows", windows: [], urgent: false, aog: false },
+  ];
+  const ids = cases.map((_, i) => `00000000-0000-4000-9150-${String(i).padStart(12, "0")}`);
+  const replace_ = "select * from public.replace_availability_days($1, $2::jsonb)";
+
+  it("eligibility per urgency matches the BR-4.8 table, in SQL and in evaluateMatch", async () => {
+    await asUser(db, SEED.managerMro, async (tx) => {
+      await tx.exec("reset role");
+      await tx.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         select id, 'aog-' || id || '@crewflex.test', '{"account_type":"professional","display_name":"AOG case"}'
+         from unnest($1::uuid[]) id`,
+        [ids],
+      );
+      await tx.query(
+        "update public.technician_profiles set visibility = 'anonymous' where profile_id = any($1::uuid[])",
+        [ids],
+      );
+      await tx.query(
+        `insert into public.technician_qualifications
+           (technician_profile_id, qualification_type_id, expires_at, verification_status)
+         select p, wrq.qualification_type_id, date '2031-01-01', 'verified'
+         from unnest($1::uuid[]) p
+         cross join public.work_requirement_qualifications wrq
+         where wrq.work_requirement_id = $2 and wrq.requirement_level = 'hard'`,
+        [ids, madRequirementId],
+      );
+      for (const [i, c] of cases.entries()) {
+        for (const [startsAt, endsAt, status] of c.windows) {
+          await tx.query(
+            `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+             values ($1, $2, $3, $4)`,
+            [ids[i], startsAt, endsAt, status],
+          );
+        }
+      }
+      const quals = await tx.query<{
+        id: string;
+        code: string;
+        requirement_level: "hard" | "soft";
+      }>(
+        `select qt.id, qt.code, wrq.requirement_level from public.work_requirement_qualifications wrq
+         join public.qualification_types qt on qt.id = wrq.qualification_type_id where wrq.work_requirement_id = $1`,
+        [madRequirementId],
+      );
+
+      for (const urgency of ["urgent", "aog"] as const) {
+        await tx.query("update public.work_requirements set urgency = $2 where id = $1", [
+          madRequirementId,
+          urgency,
+        ]);
+        const sql = await tx.query<{ profile_id: string; hard_eligible: boolean }>(
+          "select profile_id, hard_eligible from app_private.ranked_external_pool($1) where profile_id = any($2::uuid[])",
+          [madRequirementId, ids],
+        );
+        const sqlEligible = new Map(sql.rows.map((r) => [r.profile_id, r.hard_eligible]));
+
+        await tx.exec("set local role authenticated");
+        const pool = await tx.query("select * from public.get_requirement_candidate_pool($1)", [
+          madRequirementId,
+        ]);
+        await tx.exec("reset role");
+        const byRef = new Map(pool.rows.map(toCandidate).map((c) => [c.id, c]));
+        const requirement: MatchableRequirement = {
+          startsAt: "2026-10-18T20:00:00.000Z",
+          endsAt: "2026-10-22T06:00:00.000Z",
+          urgency,
+          qualifications: quals.rows.map((q) => ({
+            qualificationTypeId: q.id,
+            code: q.code,
+            name: q.code,
+            level: q.requirement_level,
+          })),
+        };
+        for (const [i, c] of cases.entries()) {
+          const expected = urgency === "aog" ? c.aog : c.urgent;
+          expect(sqlEligible.get(ids[i]!), `${urgency} · SQL · ${c.name}`).toBe(expected);
+          const refId =
+            "CF-" +
+            createHash("sha256")
+              .update(`${madRequirementId}:${ids[i]}`)
+              .digest("hex")
+              .slice(0, 10)
+              .toUpperCase();
+          const candidate = byRef.get(refId);
+          expect(candidate, `${urgency} · in pool · ${c.name}`).toBeDefined();
+          expect(
+            evaluateMatch(requirement, candidate!).eligible,
+            `${urgency} · TS · ${c.name}`,
+          ).toBe(expected);
+        }
+      }
+    });
+  });
+
+  it("a professional can write `aog_only` windows only for themself", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.create_availability_window($1, '2028-10-01T00:00Z', '2028-10-02T00:00Z', 'aog_only')",
+        ["8a9b0c1d-2e3f-4a5b-8c6d-7e8f9a0b1c2d"],
+      );
+      expect(rows[0]?.id).toBeTruthy();
+      await tx.query(replace_, [
+        "9b0c1d2e-3f4a-4b5c-9d6e-8f9a0b1c2d3e",
+        JSON.stringify([{ date: "2028-10-05", status: "aog_only" }]),
+      ]);
+      expect(
+        await queryError(
+          tx,
+          `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+           values ($1, '2028-10-01T00:00Z', '2028-10-02T00:00Z', 'aog_only')`,
+          [SEED.echo],
+        ),
+      ).toMatch(/row-level security/);
     });
   });
 });

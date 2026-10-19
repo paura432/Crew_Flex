@@ -10,7 +10,8 @@ export interface CalendarWindow {
   status: AvailabilityStatus;
 }
 
-export type DayState = "available" | "unavailable" | "none" | "mixed";
+/** BR-4.8 display precedence: unavailable > aog_only > available. */
+export type DayState = "available" | "unavailable" | "aog_only" | "none" | "mixed";
 
 export interface CalendarDay {
   /** `YYYY-MM-DD` (UTC). */
@@ -55,6 +56,7 @@ function coverageOfDay(windows: CalendarWindow[], start: number, end: number): D
       ])
       .filter(([s, e]) => e > s);
   const unavailable = covered("unavailable");
+  const aogOnly = covered("aog_only");
   const available = covered("available");
   const fullDay = (ranges: [number, number][]) =>
     ranges.length > 0 &&
@@ -63,6 +65,8 @@ function coverageOfDay(windows: CalendarWindow[], start: number, end: number): D
       .reduce((cursor, [s, e]) => (s <= cursor ? Math.max(cursor, e) : cursor), start) >= end;
   if (fullDay(unavailable)) return "unavailable";
   if (unavailable.length > 0) return "mixed";
+  if (fullDay(aogOnly)) return "aog_only";
+  if (aogOnly.length > 0) return "mixed";
   if (fullDay(available)) return "available";
   if (available.length > 0) return "mixed";
   return "none";

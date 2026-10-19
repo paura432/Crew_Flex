@@ -489,12 +489,15 @@
       "blocked": "Blocked",
       "blockedDetail": "Days marked unavailable",
       "windows": "Windows",
-      "windowsDetail": "Saved time windows"
+      "windowsDetail": "Saved time windows",
+      "aogOnly": "AOG only",
+      "aogOnlyDetail": "Days reserved for AOG needs"
     },
     "picker": {
       "available": "Available",
       "unavailable": "Blocked",
-      "clear": "Rest (clear)"
+      "clear": "Rest (clear)",
+      "aog_only": "AOG only"
     },
     "pickerLabel": "State to apply",
     "pickerHint": "Select a state, then click the days to apply it. Days are UTC.",
@@ -502,7 +505,8 @@
       "available": "Available",
       "unavailable": "Blocked",
       "mixed": "Partial",
-      "none": "Rest"
+      "none": "Rest",
+      "aog_only": "AOG only"
     },
     "weekday": {
       "mon": "Mon",
@@ -580,7 +584,9 @@
       "undo": "Undo last change",
       "patternSaved": "Pattern saved; no day needed changing."
     },
-    "pastDay": "{date} is in the past and cannot be changed from the calendar."
+    "pastDay": "{date} is in the past and cannot be changed from the calendar.",
+    "statusAogOnly": "Available only for AOG",
+    "aogHint": "“AOG only” days count only for needs declared as AOG; every other need sees them as not available. Blocked days override both."
   },
   "organization": {
     "dashboard": {

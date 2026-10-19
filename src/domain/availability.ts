@@ -1,4 +1,10 @@
-export const AVAILABILITY_STATUSES = ["available", "unavailable"] as const;
+import type { Urgency } from "./work-requirement.ts";
+
+/**
+ * `aog_only` (owner decision C-8 / D-05, 2026-10-19): available exclusively for requirements whose
+ * declared urgency is `aog`. BR-4.8 precedence: unavailable > aog_only > available.
+ */
+export const AVAILABILITY_STATUSES = ["available", "unavailable", "aog_only"] as const;
 export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 
 /** Work/rest rotation patterns of the cycle generator (BR-4.7; V1.8 `planning.js` ROTATIONS). */
@@ -63,13 +69,27 @@ function overlapLength(a: Interval[], b: Interval[]): number {
 }
 
 /**
- * Share of `[startsAt, endsAt)` covered by `available` windows minus `unavailable` windows
- * (BR-4: unavailable overrides available; overlapping/adjacent windows merge).
+ * BR-4.8: what each window means for a requirement of the given urgency. `aog_only` adds
+ * availability for AOG requirements and blocks every other one; `unavailable` always blocks.
+ * The SQL prefilter (`app_private.ranked_external_pool`, migration 20261019150100) mirrors this.
+ */
+export function effectiveStatus(
+  status: AvailabilityStatus,
+  urgency: Urgency,
+): "available" | "unavailable" {
+  if (status === "aog_only") return urgency === "aog" ? "available" : "unavailable";
+  return status;
+}
+
+/**
+ * Share of `[startsAt, endsAt)` covered by effective `available` windows minus effective
+ * `unavailable` ones (BR-4: unavailable overrides; BR-4.8: `aog_only` by urgency; windows merge).
  */
 export function availabilityCoverage(
   windows: AvailabilityWindow[],
   startsAt: string,
   endsAt: string,
+  urgency: Urgency,
 ): AvailabilityCoverage {
   const start = Date.parse(startsAt);
   const end = Date.parse(endsAt);
@@ -77,12 +97,12 @@ export function availabilityCoverage(
   if (!(total > 0)) throw new RangeError("Period end must be after start");
 
   const available = clipAndMerge(
-    windows.filter((w) => w.status === "available"),
+    windows.filter((w) => effectiveStatus(w.status, urgency) === "available"),
     start,
     end,
   );
   const unavailable = clipAndMerge(
-    windows.filter((w) => w.status === "unavailable"),
+    windows.filter((w) => effectiveStatus(w.status, urgency) === "unavailable"),
     start,
     end,
   );

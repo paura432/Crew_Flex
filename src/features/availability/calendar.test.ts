@@ -53,3 +53,35 @@ describe("calendarDays", () => {
     expect(countDays(windows, "unavailable", "2026-10-01", "2026-11-01")).toBe(1);
   });
 });
+
+describe("aog_only day state (BR-4.8 display precedence)", () => {
+  const day = (
+    d: string,
+    status: "available" | "unavailable" | "aog_only",
+    from = "00:00",
+    to = "24:00",
+  ) => ({
+    id: `${d}-${status}-${from}`,
+    startsAt: `${d}T${from}:00Z`,
+    endsAt:
+      to === "24:00"
+        ? new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString()
+        : `${d}T${to}:00Z`,
+    status,
+  });
+  const stateOf = (windows: ReturnType<typeof day>[]) =>
+    calendarDays(windows, "2026-11").find((x) => x.date === "2026-11-10")!.state;
+
+  it("a whole aog_only day is 'aog_only'; unavailable still wins; partial aog is mixed", () => {
+    expect(stateOf([day("2026-11-10", "aog_only")])).toBe("aog_only");
+    expect(stateOf([day("2026-11-10", "available"), day("2026-11-10", "aog_only")])).toBe(
+      "aog_only",
+    );
+    expect(stateOf([day("2026-11-10", "aog_only"), day("2026-11-10", "unavailable")])).toBe(
+      "unavailable",
+    );
+    expect(
+      stateOf([day("2026-11-10", "available"), day("2026-11-10", "aog_only", "08:00", "12:00")]),
+    ).toBe("mixed");
+  });
+});

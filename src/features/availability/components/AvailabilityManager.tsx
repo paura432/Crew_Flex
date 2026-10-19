@@ -41,14 +41,22 @@ const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const PICKER_OPTIONS: { value: Picker; cls: string }[] = [
   { value: "available", cls: "border-ok/40 bg-ok-bg text-ok" },
   { value: "unavailable", cls: "border-line bg-canvas text-ink" },
+  { value: "aog_only", cls: "border-danger/40 bg-danger-bg text-danger" },
   { value: "clear", cls: "border-line bg-white text-muted" },
 ];
+
+const STATUS_CHIP = {
+  available: { tone: "ok", label: "statusAvailable" },
+  unavailable: { tone: "neutral", label: "statusUnavailable" },
+  aog_only: { tone: "danger", label: "statusAogOnly" },
+} as const satisfies Record<AvailabilityStatus, { tone: string; label: string }>;
 
 const PLANNED_STATE = (status: PlannedDay["status"]): DayState => status ?? "none";
 
 const DAY_STYLE: Record<DayState, string> = {
   available: "border-ok/40 bg-ok-bg text-ok",
   unavailable: "border-line bg-canvas text-muted",
+  aog_only: "border-danger/40 bg-danger-bg text-danger",
   mixed: "border-warn/40 bg-warn-bg text-warn",
   none: "border-line bg-white text-muted",
 };
@@ -100,6 +108,7 @@ export function AvailabilityManager({
   const monthEnd = `${shiftMonth(month, 1)}-01`;
   const availableDays = countDays(windows, "available", monthStart, monthEnd);
   const blockedDays = countDays(windows, "unavailable", monthStart, monthEnd);
+  const aogDays = countDays(windows, "aog_only", monthStart, monthEnd);
 
   function run(label: string, task: () => Promise<AvailabilityActionResult>, onOk?: () => void) {
     setNotice(null);
@@ -258,7 +267,7 @@ export function AvailabilityManager({
         referenceLabel={tRoot("common.reference", { id: notice?.requestId ?? "" })}
       />
 
-      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Metric
           label={t("metrics.available")}
           value={availableDays}
@@ -269,6 +278,12 @@ export function AvailabilityManager({
           label={t("metrics.blocked")}
           value={blockedDays}
           detail={t("metrics.blockedDetail")}
+        />
+        <Metric
+          label={t("metrics.aogOnly")}
+          value={aogDays}
+          detail={t("metrics.aogOnlyDetail")}
+          tone={aogDays > 0 ? "danger" : "neutral"}
         />
         <Metric
           label={t("metrics.windows")}
@@ -319,7 +334,8 @@ export function AvailabilityManager({
             </button>
           ))}
         </div>
-        <p className="mb-4 text-sm text-muted">{t("pickerHint")}</p>
+        <p className="text-sm text-muted">{t("pickerHint")}</p>
+        <p className="mb-4 text-sm text-muted">{t("aogHint")}</p>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold tracking-wide text-muted uppercase">
           {WEEKDAYS.map((d) => (
@@ -400,6 +416,7 @@ export function AvailabilityManager({
             <select {...input("status")} defaultValue={editing?.status ?? "available"}>
               <option value="available">{t("statusAvailable")}</option>
               <option value="unavailable">{t("statusUnavailable")}</option>
+              <option value="aog_only">{t("statusAogOnly")}</option>
             </select>
           </Field>
           <div className="flex gap-2">
@@ -432,8 +449,8 @@ export function AvailabilityManager({
           <ul className="divide-y divide-line">
             {windows.map((w) => (
               <li key={w.id} className="grid gap-2 py-3 text-sm sm:flex sm:items-center sm:gap-3">
-                <StatusChip tone={w.status === "available" ? "ok" : "neutral"}>
-                  {t(w.status === "available" ? "statusAvailable" : "statusUnavailable")}
+                <StatusChip tone={STATUS_CHIP[w.status].tone}>
+                  {t(STATUS_CHIP[w.status].label)}
                 </StatusChip>
                 <span className="min-w-0 flex-1 tabular-nums">
                   {formatDateTime(locale, w.startsAt)} <span className="text-muted">→</span>{" "}

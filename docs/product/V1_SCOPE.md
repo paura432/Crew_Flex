@@ -28,6 +28,7 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 | Availability work/rest cycle generator (V1.8 parity: preview, save/discard, atomic `PUT`, migration `20261019120000`)                                                            | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
 | Professional tools (D-11, owner 2026-10-19): unit conversion (22 quantities), torque conversion, durations — `/app/tools`, client-side engine 1.0.0                              | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
 | Availability: per-technician write lock + saved cycle pattern + undo (`20261019130000`, `20261019140000`)                                                                        | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
+| Availability «AOG only» (`aog_only`, BR-4.8, owner decision C-8/D-05; `20261019150000`, `150100`)                                                                                | IMPLEMENTED (local only, 2026-10-19; not deployed)                     |
 | Remote apply of migrations + function deploy                                                                                                                                     | PENDING OWNER AUTHORIZATION (`docs/audit/CREWFLEX_DIFF_CURRENT.md` §5) |
 
 ## NEXT
@@ -40,7 +41,7 @@ Current phase: **Foundation + Prototype V0**. Milestone:
   `professional-availability`, `professional-profile`, `professional-qualifications`, `user-preferences`,
   then push `main`. A partial set breaks pages (e.g. matches needs `summary.pool`).
 - V1.3 integration plan and pending decisions: `docs/integration/crewflex-v13/` (D-01…D-12).
-- Availability: "AOG only" day state (OD C-8). The shift-pattern generator is implemented locally (NOW).
+- Availability: AOG opt-in / priority contact (not part of the C-8 decision).
 - Organization member management (`organization-workforce` function): invite/add members.
 - Approve OD-3 / D-01, then deploy `qualification-reviews` with `QUALIFICATION_REVIEW_ENABLED=true` and
   insert the `qualification_review` flag row (the flow itself is implemented locally, 2026-10-15).
