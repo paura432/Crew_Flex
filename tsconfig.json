@@ -35,5 +35,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "supabase/functions", "tmp"]
+  "exclude": ["node_modules", "supabase/functions", "scripts/local/release-compat/serve.ts", "tmp"]
 }
