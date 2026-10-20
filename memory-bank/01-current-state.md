@@ -42,6 +42,11 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 ## Local (Docker, ports 563xx — `docs/qa/LOCAL_ENVIRONMENT.md`)
 
 - Local DB has every migration up to `20261020120100` (2026-10-20). Of these, production has the 15 up to `20261019150100`; **local only**: wallet `20261019160000`–`160200`, requirement close `20261020120000`, closed-frozen `20261020120100`. Seed loaded, `qualification_review` flag row **local only**.
+- 2026-10-20 (autonomous loop, `docs/integration/crewflex-v13/15-autonomous-migration-backlog.md`): batches 13–17 committed locally
+  (`108a244` visual P2, `67fd62f` TD-44, `55bdb54` integration junctions + `work-requirements` list filters, `1c44c1f` hiring docs,
+  then review fixes and the **report-only nonce CSP** in `src/proxy.ts` with zod `jitless`). No new migrations; the
+  `work-requirements` function changed (new optional `status`/`endsAfter` query filters) and is **not deployed**. Gates at HEAD:
+  `pnpm check` 0, build 0, local E2E 42/42, ui-smoke 105/105 (incl. CSP 0/17b/17c).
 - The browser smoke now also needs `QUALIFICATION_REVIEW_ENABLED=true` in `.env.local` (it refuses otherwise).
 - 2026-10-16 ~20:52: the owner's `pnpm e2e:remote` failed 24/25 with **503** — a LOCAL problem: `.env.e2e`
   targets `127.0.0.1:56321` and `supabase functions serve` was not running (Kong answers 503 for every
