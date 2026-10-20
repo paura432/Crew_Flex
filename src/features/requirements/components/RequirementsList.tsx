@@ -17,7 +17,7 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
     <>
       <table className="hidden w-full text-left text-sm md:table">
         <caption className="sr-only">{t("caption")}</caption>
-        <thead className="border-b border-line text-xs tracking-wide text-muted uppercase">
+        <thead className="border-b border-line bg-canvas text-[11px] text-muted">
           <tr>
             <th scope="col" className="py-2 pr-4 font-semibold">
               {t("columns.requirement")}

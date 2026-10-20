@@ -48,14 +48,16 @@ Numbers in metrics use tabular figures.
 
 ## Components (`src/components/ui`)
 
-| Component               | Purpose                                                                                 |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| `Button` / `ButtonLink` | Real `<button>` / `<a>`. Variants: primary (accent), secondary, ghost. Min height 40px. |
-| `StatusChip`            | Small uppercase chip; tones: neutral, ok, warn, danger, info.                           |
-| `Panel`                 | Single-level white surface with border. No nested panels.                               |
-| `Metric`                | Label + large tabular number + optional detail.                                         |
-| `Field`                 | Label + control + hint + error, wired with `aria-describedby`.                          |
-| `StateMessage`          | Loading / empty / error states with a clear next action.                                |
+| Component               | Purpose                                                                                                         |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `Button` / `ButtonLink` | Real `<button>` / `<a>`. Variants: primary (accent), secondary, ghost, danger. Min height 40px (44 on touch).   |
+| `StatusChip`            | Small bold sentence-case chip (v1.8 `.pill`, 12 px, never uppercase); tones: neutral, ok, warn, danger, info.   |
+| Table header            | `thead`: canvas background, 11 px, muted, sentence case (v1.8 `th`). Uppercase stays for eyebrows/kickers only. |
+| Nav icons               | Inline 18 px stroke icons per entry (v1.8 lucide map); the active entry's icon is accent.                       |
+| `Panel`                 | Single-level white surface with border. No nested panels.                                                       |
+| `Metric`                | Label + large tabular number + optional detail.                                                                 |
+| `Field`                 | Label + control + hint + error, wired with `aria-describedby`.                                                  |
+| `StateMessage`          | Loading / empty / error states with a clear next action.                                                        |
 
 ## Patterns
 

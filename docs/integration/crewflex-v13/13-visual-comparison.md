@@ -31,16 +31,21 @@ the rest.
 
 ## 2. Changes made from this comparison (batches 10–11)
 
-| Change                                                                     | Evidence                                                |
-| -------------------------------------------------------------------------- | ------------------------------------------------------- |
-| 44 px touch targets on coarse pointers (v12.css)                           | `ui-smoke` 25 (touch-emulated 390 px)                   |
-| «Menu» disclosure below `lg` (v1.8 drawer), closes on navigation           | `ui-smoke` 24c @360/390; `next-after/tech-home-390.jpg` |
-| Checklist folded behind «Show the 7 profile items» when complete           | `ui-smoke` 2e                                           |
-| `danger` button variant for the irreversible «Yes, close it»               | — (visual)                                              |
-| Cycle preview is the primary CTA; availability metrics 2 per row on phones | `next-after/tech-availability-390.jpg`                  |
+| Change                                                                                            | Evidence                                                |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 44 px touch targets on coarse pointers (v12.css)                                                  | `ui-smoke` 25 (touch-emulated 390 px)                   |
+| «Menu» disclosure below `lg` (v1.8 drawer), closes on navigation                                  | `ui-smoke` 24c @360/390; `next-after/tech-home-390.jpg` |
+| Checklist folded behind «Show the 7 profile items» when complete                                  | `ui-smoke` 2e                                           |
+| `danger` button variant for the irreversible «Yes, close it»                                      | — (visual)                                              |
+| Cycle preview is the primary CTA; availability metrics 2 per row on phones                        | `next-after/tech-availability-390.jpg`                  |
+| **Batch 13 (P2):** sidebar icons per entry, active icon accent (v1.8 `icons[tab]`, `.active svg`) | `ui-smoke` 24 nav; `next-after/*-1440` after batch 13   |
+| Table headers: canvas bg, 11 px, sentence case (v1.8 `th{background:#f3f7fb;font-size:11px}`)     | requirements, compare, review history tables            |
+| Status chips sentence case, bold (v1.8 `.pill` is never uppercase; v12 12 px)                     | `StatusChip`                                            |
 
 ## 3. Deliberately not copied
 
 Demo banners and role/character pickers (DEMO-ONLY), `admin/admin` «Control CrewFlex», the 5-item bottom dock
 (C-12, rejected L14 — owner to confirm against v1.8), Outfit display font (v1.8 itself uses Inter),
-teal focus ring (one orange focus style, DESIGN_SYSTEM), uppercase 12 px chips (kept, documented P2).
+teal focus ring and teal «today» border `#258c84` (one accent colour for focus/today, DESIGN_SYSTEM), panel
+shadow `0 3px 10px #19324e02` (alpha ≈ 1 %, invisible), topbar breadcrumb (`PageHeader` eyebrow carries the
+hierarchy; Next.js scrolls to top on navigation).

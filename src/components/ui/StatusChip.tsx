@@ -13,7 +13,8 @@ const tones: Record<Tone, string> = {
 export function StatusChip({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold tracking-wide uppercase ${tones[tone]}`}
+      // V1.8 `.pill`: 12 px, 700, sentence case (never uppercase: long ES labels stay readable).
+      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-bold ${tones[tone]}`}
     >
       {children}
     </span>

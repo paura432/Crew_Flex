@@ -8,6 +8,31 @@ export interface NavItem {
   label: string;
 }
 
+// V1.8 `icons[tab]` (Shared.jsx: lucide 19 px, fallback Briefcase). Inline paths: no icon dependency.
+const BRIEFCASE = "M3 7h18v13H3zM8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2";
+const DASHBOARD = "M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z";
+const ICON_PATHS: Record<string, string> = {
+  "/app/organization": DASHBOARD,
+  "/app/organization/requirements": BRIEFCASE,
+  "/app/organization/workforce":
+    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
+  "/app/professional": DASHBOARD,
+  "/app/professional/profile":
+    "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
+  "/app/professional/qualifications":
+    "M12 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12M15.5 13 17 22l-5-3-5 3 1.5-9",
+  "/app/professional/availability":
+    "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01",
+  "/app/professional/documents":
+    "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8",
+  "/app/tools":
+    "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-8 8l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 8-8z",
+  "/app/settings":
+    "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.8H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.8-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1",
+  "/app/admin/verifications":
+    "M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1 1 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1zM9 12l2 2 4-4",
+};
+
 /**
  * Client only for `aria-current` on the active link. Below `lg` the items wrap onto as many rows as
  * needed: a horizontally scrolling strip hid the last item ("Availability") with no affordance.
@@ -28,8 +53,21 @@ export function NavLinks({ items, label }: { items: NavItem[]; label: string }) 
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className="flex items-center rounded-lg px-3 py-2.5 text-sm pointer-coarse:min-h-11 whitespace-nowrap text-[#c4d3e1] hover:bg-white/5 hover:text-white aria-[current=page]:bg-navy-700 aria-[current=page]:text-white"
+                className="group flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm pointer-coarse:min-h-11 whitespace-nowrap text-[#c4d3e1] hover:bg-white/5 hover:text-white aria-[current=page]:bg-navy-700 aria-[current=page]:text-white"
               >
+                {/* V1.8 `.sidebar button.active svg{color:#ffad54}` */}
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="size-[18px] shrink-0 group-aria-[current=page]:text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d={ICON_PATHS[item.href] ?? BRIEFCASE} />
+                </svg>
                 {item.label}
               </Link>
             </li>

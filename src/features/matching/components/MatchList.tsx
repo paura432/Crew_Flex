@@ -179,9 +179,9 @@ export async function CompareTable({
       )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-left text-sm">
-          <thead>
+          <thead className="bg-canvas text-[11px] text-muted">
             <tr>
-              <th scope="col" className="py-2 pr-3 text-muted">
+              <th scope="col" className="py-2 pr-3">
                 <span className="sr-only">{t("compareCriterion")}</span>
               </th>
               {items.map(({ candidate }) => (
