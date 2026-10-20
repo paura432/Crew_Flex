@@ -372,7 +372,8 @@
       "open": "Open",
       "covered": "Covered",
       "cancelled": "Cancelled",
-      "closed": "Closed"
+      "closed": "Closed",
+      "expired": "Expired"
     },
     "level": {
       "hard": "Hard",

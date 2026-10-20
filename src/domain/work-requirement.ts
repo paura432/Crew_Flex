@@ -34,3 +34,11 @@ export interface WorkRequirement {
   createdAt: string;
   qualifications: RequiredQualification[];
 }
+
+/**
+ * V1.8 «Vencida» (`business.js` `effectiveStatus`): an open requirement whose period has ended (BR-10:
+ * UTC instants). Display only — derived at read time, never stored, never a transition; closing stays
+ * an explicit action (BR-1.9).
+ */
+export const isExpired = (r: Pick<WorkRequirement, "status" | "endsAt">, nowMs: number) =>
+  r.status === "open" && Date.parse(r.endsAt) <= nowMs;

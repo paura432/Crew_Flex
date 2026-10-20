@@ -58,7 +58,7 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
               <td className="space-y-1 py-3">
                 <UrgencyChip urgency={r.urgency} />
                 <div>
-                  <RequirementStatusChip status={r.status} />
+                  <RequirementStatusChip requirement={r} />
                 </div>
               </td>
             </tr>
@@ -71,7 +71,7 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
           <li key={r.id} className="space-y-2 py-4">
             <div className="flex flex-wrap items-center gap-2">
               <UrgencyChip urgency={r.urgency} />
-              <RequirementStatusChip status={r.status} />
+              <RequirementStatusChip requirement={r} />
             </div>
             <Link href={detailHref(r.id)} className="block font-semibold text-blue hover:underline">
               {r.title}

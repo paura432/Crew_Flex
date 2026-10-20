@@ -1,6 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import { StatusChip, type Tone } from "@/components/ui/StatusChip";
-import type { RequiredQualification, RequirementStatus, Urgency } from "@/domain/work-requirement";
+import {
+  isExpired,
+  type RequiredQualification,
+  type RequirementStatus,
+  type Urgency,
+  type WorkRequirement,
+} from "@/domain/work-requirement";
 
 const URGENCY_TONE: Record<Urgency, Tone> = { planned: "info", urgent: "warn", aog: "danger" };
 const STATUS_TONE: Record<RequirementStatus, Tone> = {
@@ -16,8 +22,20 @@ export async function UrgencyChip({ urgency }: { urgency: Urgency }) {
   return <StatusChip tone={URGENCY_TONE[urgency]}>{t(`urgency.${urgency}`)}</StatusChip>;
 }
 
-export async function RequirementStatusChip({ status }: { status: RequirementStatus }) {
+/** Request time (dynamic, authenticated pages): same pattern as the dashboard's focus helper. */
+const expiredNow = (r: Pick<WorkRequirement, "status" | "endsAt">) => isExpired(r, Date.now());
+
+/** Stored status, or the derived V1.8 «Vencida» for an open need whose period has ended. */
+export async function RequirementStatusChip({
+  requirement,
+}: {
+  requirement: Pick<WorkRequirement, "status" | "endsAt">;
+}) {
   const t = await getTranslations("domain");
+  if (expiredNow(requirement)) {
+    return <StatusChip tone="warn">{t("requirementStatus.expired")}</StatusChip>;
+  }
+  const { status } = requirement;
   return <StatusChip tone={STATUS_TONE[status]}>{t(`requirementStatus.${status}`)}</StatusChip>;
 }
 

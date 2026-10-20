@@ -686,6 +686,28 @@ ok(
   /no longer be reopened/.test(closedText) &&
     (await page.getByRole("button", { name: "Close requirement" }).count()) === 0,
 );
+// 12c (batch 9, V1.8 «Vencida»): an open need whose period ended shows «Expired» (derived, not stored)
+// and can still be closed.
+await page.goto(`${BASE}/app/organization/requirements/new`);
+await page.waitForLoadState("networkidle");
+await page.fill("#title", "Local UI check · expired");
+await page.fill("#location", "Madrid (MAD)");
+await page.fill("#headcount", "1");
+await page.fill("#startsAt", "2026-01-05T08:00");
+await page.fill("#endsAt", "2026-01-06T08:00");
+await page.locator("label:has-text('B2')").first().click();
+await page.click("main form button[type=submit]");
+await page.waitForURL((u) => /\/requirements\/[0-9a-f-]{36}$/.test(u.pathname), { timeout: 30000 });
+await page.waitForLoadState("networkidle");
+const expiredChip = await page.locator("main").getByText("Expired", { exact: true }).count();
+await page.getByRole("button", { name: "Close requirement" }).click();
+await page.getByRole("button", { name: "Yes, close it" }).click();
+await page.getByText("can no longer be reopened").waitFor({ timeout: 15_000 });
+ok(
+  "12c expired need: «Expired» shown (derived), still closable → Closed",
+  expiredChip === 1 &&
+    (await page.locator("main").getByText("Expired", { exact: true }).count()) === 0,
+);
 await logout();
 
 // 3. Cross-organization: admin.other cannot open the MAD requirement

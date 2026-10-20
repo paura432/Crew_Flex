@@ -372,7 +372,8 @@
       "open": "Abierta",
       "covered": "Cubierta",
       "cancelled": "Cancelada",
-      "closed": "Cerrada"
+      "closed": "Cerrada",
+      "expired": "Vencida"
     },
     "level": {
       "hard": "Obligatoria",
