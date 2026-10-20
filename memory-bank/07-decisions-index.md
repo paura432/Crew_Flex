@@ -34,6 +34,10 @@ Sources: `docs/architecture/ADR-*.md` · `docs/product/OPEN_DECISIONS.md` (C-x, 
 
 ## Open — need a human (blocking first)
 
+Consolidated pack with classes (decided / owner proposal to ratify / Claude proposal / unanswered):
+`docs/integration/crewflex-v13/14-decision-pack.md` (2026-10-20). New: **T22** — enable «require current
+password» in production Auth (evidence: `docs/product/SECURITY_PRIVACY.md` §T22).
+
 | ID                     | Topic                                                               | Blocks                                                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **OD-3 / D-01 / R-D1** | Who verifies qualifications in production, with which evidence      | Direction accepted 2026-10-19 (manual verification by authorised platform admins, evidence + audit). STILL BLOCKED for production: evidence procedure and verifier list not reviewed; `qualification-reviews` + flags stay OFF                                  |
