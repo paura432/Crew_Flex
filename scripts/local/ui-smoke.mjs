@@ -58,7 +58,9 @@ const expectedErrorUrls = new Set(); // pages whose 404 is the behaviour under t
 const isExpected404 = (text, url) =>
   /status of 404/.test(text) && [...expectedErrorUrls].some((u) => url.startsWith(u));
 page.on("pageerror", (e) => errors.push(`${String(e)} @ ${page.url()}`));
+const cspViolations = [];
 page.on("console", (m) => {
+  if (/Content Security Policy/.test(m.text())) cspViolations.push(`${m.text()} @ ${page.url()}`);
   if (m.type() === "error" && !isExpected404(m.text(), page.url()))
     errors.push(`${m.text()} @ ${page.url()}`);
 });
@@ -170,6 +172,14 @@ async function ensureGolfPending() {
 ok("0 seed precondition: Golf's B1.1 is pending", await ensureGolfPending(), "");
 
 // 1. Technician: login, profile, availability CRUD + reload, logout
+const loginResponse = await page.goto(`${BASE}/login`);
+const cspHeader = loginResponse?.headers()["content-security-policy-report-only"] ?? "";
+ok(
+  "0 CSP report-only header with a nonce and strict-dynamic (T18)",
+  /script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/.test(cspHeader) &&
+    /frame-ancestors 'none'/.test(cspHeader),
+  cspHeader.slice(0, 80),
+);
 await login("delta@crewflex.test");
 ok(
   "1 login delta (external professional) → /app/professional",
@@ -196,9 +206,9 @@ ok(
   "",
 );
 ok(
-  "2g TD-44 review list: nothing declared expires within 60 days (seed Delta)",
+  "2g TD-44 review panel present with its «declared dates» hint (rows depend on the clock)",
   /Documents and courses to review/.test(profileText) &&
-    /Nothing declared expires within the next 60 days/.test(profileText),
+    /Based on the dates you declared/.test(profileText),
   "",
 );
 await shot("01-technician-overview");
@@ -418,9 +428,34 @@ ok(
 );
 // Batch 14 (TD-44 / BR-12): an expiry 30 days out shows the «Expires soon» chip on the row and the
 // overview lists it under «Documents and courses to review» with a link back.
-const soon = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+const dayOffset = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 await b2Row.locator("button:has-text('Edit')").click();
-await page.fill("#expiresAt", soon);
+await page.fill("#expiresAt", dayOffset(-1));
+await page.click("main form button[type=submit]:has-text('Save')");
+await page.waitForSelector("[role=status]:has-text('B2 updated')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "5f1 BR-12 chip on the qualification row: Expired",
+  /Expired\b/.test(await b2Row.innerText()), // «…2026Expired»: no word boundary before the chip
+  (await b2Row.innerText()).replace(/\s+/g, " ").slice(0, 120),
+);
+await page.goto(`${BASE}/app/professional`);
+await page.waitForLoadState("networkidle");
+ok(
+  "5f1b TD-44 overview lists the expired B2 first as «Date passed»",
+  /B2 · Part-66 B2/.test(
+    await page
+      .locator("li", { hasText: /Date passed/ })
+      .first()
+      .innerText(),
+  ),
+  "",
+);
+await page.goto(`${BASE}/app/professional/qualifications`);
+await page.waitForLoadState("networkidle");
+await b2Row.locator("button:has-text('Edit')").click();
+await page.fill("#expiresAt", dayOffset(30));
 await page.click("main form button[type=submit]:has-text('Save')");
 await page.waitForSelector("[role=status]:has-text('B2 updated')", { timeout: 15000 });
 await page.reload();
@@ -1020,6 +1055,79 @@ ok(
   nonLocal.join(",") || `${new URL(BASE).host} only`,
 );
 ok("17 zero console/page errors", errors.length === 0, errors.slice(0, 3).join(" | "));
+// Playwright's own `page.evaluate` is an eval in the page and trips the report-only CSP, so the
+// instrumented run may only show that message; a fresh, uninstrumented context must show nothing.
+ok(
+  "17b instrumented run: no CSP violation other than Playwright's own evaluate (T18)",
+  cspViolations.every((v) => /Evaluating a string as JavaScript/.test(v)),
+  cspViolations
+    .filter((v) => !/Evaluating a string as JavaScript/.test(v))
+    .slice(0, 3)
+    .join(" | "),
+);
+{
+  const clean = [];
+  const cctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const cpage = await cctx.newPage();
+  cpage.on("console", (m) => {
+    if (/Content Security Policy/.test(m.text()))
+      clean.push(`${m.text().slice(0, 120)} @ ${cpage.url()}`);
+  });
+  const visit = async (routes) => {
+    for (const r of routes) {
+      await cpage.goto(`${BASE}${r}`);
+      await cpage.waitForLoadState("networkidle");
+    }
+  };
+  const signIn = async (email) => {
+    await cpage.goto(`${BASE}/login`);
+    await cpage.fill("#email", email);
+    await cpage.fill("#password", PW);
+    await cpage.click("button[type=submit]");
+    await cpage.waitForURL(/\/app/);
+  };
+  await visit(["/", "/login", "/register", "/forgot-password"]);
+  await signIn("delta@crewflex.test");
+  await visit([
+    "/app/professional",
+    "/app/professional/profile",
+    "/app/professional/qualifications",
+    "/app/professional/availability",
+    "/app/professional/documents",
+    "/app/tools",
+    "/app/tools/torque",
+    "/app/settings",
+  ]);
+  await cpage.setViewportSize({ width: 390, height: 800 });
+  await visit(["/app/professional", "/app/professional/availability"]);
+  await cctx.close();
+  const octx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const opage = await octx.newPage();
+  opage.on("console", (m) => {
+    if (/Content Security Policy/.test(m.text()))
+      clean.push(`${m.text().slice(0, 120)} @ ${opage.url()}`);
+  });
+  await opage.goto(`${BASE}/login`);
+  await opage.fill("#email", "admin.mro@crewflex.test");
+  await opage.fill("#password", PW);
+  await opage.click("button[type=submit]");
+  await opage.waitForURL(/\/app/);
+  for (const r of [
+    "/app/organization",
+    "/app/organization/requirements",
+    "/app/organization/requirements/new",
+    "/app/organization/workforce",
+  ]) {
+    await opage.goto(`${BASE}${r}`);
+    await opage.waitForLoadState("networkidle");
+  }
+  await octx.close();
+  ok(
+    "17c uninstrumented pass over 18 routes (2 roles, 1440 + 390): zero CSP violations (T18)",
+    clean.length === 0,
+    clean.slice(0, 3).join(" | "),
+  );
+}
 await browser.close();
 const failed = results.filter((r) => !r.pass);
 console.log(`\nSUMMARY ${results.length - failed.length}/${results.length} passed`);

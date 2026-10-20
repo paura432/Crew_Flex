@@ -1,7 +1,7 @@
 // Row → domain mapping of get_requirement_candidate_pool(). One implementation shared by the Edge
 // Functions (Deno) and the database tests (Node). Rows are parsed, not cast, so schema drift fails
 // loudly instead of corrupting eligibility. Deno-compatible imports (relative, `.ts`, bare "zod").
-import { z } from "zod";
+import { z } from "./validation/zod.ts";
 import { AVAILABILITY_STATUSES, type AvailabilityStatus } from "../domain/availability.ts";
 import type { Candidate } from "../domain/matching.ts";
 import { QUALIFICATION_STATUSES, VERIFICATION_STATUSES } from "../domain/qualification.ts";

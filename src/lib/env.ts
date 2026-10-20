@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./validation/zod.ts";
 
 // Public, non-privileged configuration only. Secrets never live in NEXT_PUBLIC_* variables.
 const publicEnvSchema = z.object({

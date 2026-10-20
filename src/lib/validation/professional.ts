@@ -4,7 +4,7 @@
 // Identity never travels in a payload: the technician is the JWT subject. Every schema is strict so
 // `profileId`, `technicianProfileId`, `verificationStatus`, `platformRole`… are rejected (check E).
 // Messages are i18n keys (`v.*`, messages/*.json) resolved by the UI.
-import { z } from "zod";
+import { z } from "./zod.ts";
 import {
   BASE_LOCATION_MAX,
   DISPLAY_NAME_MAX,

@@ -1,7 +1,7 @@
 // Shared by the availability form, the server actions and the `professional-availability`
 // Edge Function. Deno-compatible imports (relative, `.ts`, bare "zod"). Messages are i18n keys
 // (`v.*`, messages/*.json) resolved by the UI; the API returns the keys in `issues[].message`.
-import { z } from "zod";
+import { z } from "./zod.ts";
 import {
   AVAILABILITY_STATUSES,
   CYCLE_DAYS,

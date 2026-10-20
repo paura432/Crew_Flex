@@ -1,7 +1,7 @@
 // Platform-admin qualification review (phase 6, migration 20261015130400). Shared by the review
 // form, the server action and the `qualification-reviews` Edge Function. Deno-compatible imports.
 // The reviewer is the JWT subject; their role is read from the database, never from the payload.
-import { z } from "zod";
+import { z } from "./zod.ts";
 
 export const REVIEW_DECISIONS = ["verified", "rejected"] as const;
 export type ReviewDecision = (typeof REVIEW_DECISIONS)[number];

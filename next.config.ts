@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
-// Security headers for every route. CSP is intentionally not set yet: Next.js inline
-// runtime scripts need a nonce-based CSP, tracked in docs/product/SECURITY_PRIVACY.md.
+// Security headers for every route. The nonce-based CSP lives in src/proxy.ts (per request,
+// report-only until a clean window; docs/product/SECURITY_PRIVACY.md T18).
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },

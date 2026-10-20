@@ -5,7 +5,7 @@
 // Identity and storage never travel in a payload: the owner is the JWT subject, the object path,
 // mime type, size and hash are derived by the function from the uploaded bytes. Every schema is
 // strict, so `ownerId`, `storagePath`, `mimeType`, `scanStatus`… are rejected.
-import { z } from "zod";
+import { z } from "./zod.ts";
 import {
   DOCUMENT_KINDS,
   InvalidDocumentTitleError,

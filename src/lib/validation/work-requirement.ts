@@ -1,7 +1,7 @@
 // Shared by the requirement form, the server action and the `work-requirements` Edge Function.
 // Imports must stay Deno-compatible: relative paths with `.ts`, bare "zod" (mapped in deno.json).
 // Messages are i18n keys (`v.*`, messages/*.json) resolved by the UI.
-import { z } from "zod";
+import { z } from "./zod.ts";
 import {
   HEADCOUNT_MAX,
   MAX_REQUIREMENT_DAYS,

@@ -1,4 +1,4 @@
-import type { ZodError } from "zod";
+import type { ZodError } from "./zod.ts";
 
 export type FieldErrors = Record<string, string>;
 

@@ -1,5 +1,5 @@
 // Messages are i18n keys (`v.*`, messages/*.json) resolved by the UI (src/i18n/validation.ts).
-import { z } from "zod";
+import { z } from "./zod.ts";
 
 const email = z.email("v.email.invalid").max(254, "v.email.invalid");
 
