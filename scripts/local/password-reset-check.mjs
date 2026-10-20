@@ -135,6 +135,18 @@ try {
     "4 /reset-password without a session asks for a new link",
     await p2.locator('a[href="/forgot-password"]').isVisible(),
   );
+  // 4b (second audit 2026-10-20): a plain password session (shared device, stolen cookie) must not
+  // reach the reset form — only a session opened by the recovery link may set a new password.
+  await p2.goto(`${BASE}/login`);
+  await p2.fill("#email", EMAIL);
+  await p2.fill("#password", NEW_PW);
+  await Promise.all([p2.waitForURL(/\/app/), p2.click("form button[type=submit]")]);
+  await p2.goto(`${BASE}/reset-password`);
+  ok(
+    "4b a password-only session gets no reset form",
+    (await p2.locator("#password").count()) === 0 &&
+      (await p2.locator('a[href="/forgot-password"]').isVisible()),
+  );
   await fresh.close();
 
   // Restore the seed password through the same flow (also checks SAME_PASSWORD).

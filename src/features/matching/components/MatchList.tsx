@@ -72,25 +72,50 @@ export async function MatchListControls({ query, base }: { query: MatchListQuery
   );
 }
 
-/** Checkbox bound to the compare form (`form` attribute), so it can sit inside each card. */
-export async function CompareToggle({ id, checked }: { id: string; checked: boolean }) {
+/**
+ * Checkbox bound to the compare form (`form` attribute), so it can sit inside each card. Once 3 are
+ * selected the others are disabled (V1.8 `CandidateDirectory`); the name says which candidate it is.
+ */
+export async function CompareToggle({
+  id,
+  checked,
+  full,
+}: {
+  id: string;
+  checked: boolean;
+  full: boolean;
+}) {
   const t = await getTranslations("organization.matches.list");
   return (
     <label className="mt-3 flex items-center gap-2 text-sm text-muted">
       <input
+        // Remount when the selection changes: after a soft navigation (e.g. «Clear comparison») an
+        // uncontrolled checkbox would otherwise keep its old ticked state and be submitted again.
+        key={String(checked)}
         type="checkbox"
         form="compare-form"
         name="compare"
         value={id}
         defaultChecked={checked}
+        disabled={full && !checked}
+        aria-label={t("compareCandidate", { ref: id })}
       />
       {t("compareThis")}
     </label>
   );
 }
 
-/** Submits the selection; keeps the current filters. More than 3 → the first 3 are compared. */
-export async function CompareForm({ query }: { query: MatchListQuery }) {
+/**
+ * Submits the selection; keeps the current filters and the candidates selected on other pages or
+ * hidden by the filter (their checkboxes are not on this page). More than 3 → the first 3 are compared.
+ */
+export async function CompareForm({
+  query,
+  visibleIds,
+}: {
+  query: MatchListQuery;
+  visibleIds: string[];
+}) {
   const t = await getTranslations("organization.matches.list");
   return (
     <form id="compare-form" method="get" className="flex flex-wrap items-center gap-3">
@@ -98,6 +123,11 @@ export async function CompareForm({ query }: { query: MatchListQuery }) {
       {query.eligibleOnly && <input type="hidden" name="eligible" value="1" />}
       {query.sort !== "relevance" && <input type="hidden" name="sort" value={query.sort} />}
       {query.page > 1 && <input type="hidden" name="page" value={query.page} />}
+      {query.compare
+        .filter((id) => !visibleIds.includes(id))
+        .map((id) => (
+          <input key={id} type="hidden" name="compare" value={id} />
+        ))}
       <button type="submit" className={buttonClass()}>
         {t("compareSubmit", { max: MAX_COMPARE })}
       </button>

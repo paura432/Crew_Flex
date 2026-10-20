@@ -75,6 +75,9 @@ export function listMatches(items: EvaluatedCandidate[], query: MatchListQuery) 
       .map((id) => items.find((item) => item.candidate.id === id))
       .filter((item): item is EvaluatedCandidate => item !== undefined)
       .slice(0, MAX_COMPARE),
-    compareTruncated: query.compare.length > MAX_COMPARE,
+    // Stale ids (no longer in the pool) do not count towards the cap.
+    compareTruncated:
+      query.compare.filter((id) => items.some((item) => item.candidate.id === id)).length >
+      MAX_COMPARE,
   };
 }

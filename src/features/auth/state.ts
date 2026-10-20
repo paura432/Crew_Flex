@@ -37,3 +37,25 @@ export function safeNextPath(next: unknown): string {
 export function safeConfirmNext(next: unknown): string {
   return next === "/reset-password" ? next : safeNextPath(next);
 }
+
+/** v1.8 reset links lived 1 h (`server/app.mjs:164`); the reset form is open for the same window. */
+export const RECOVERY_WINDOW_SECONDS = 3600;
+
+/**
+ * True when the JWT `amr` claim shows the session was opened by a recovery e-mail link within the
+ * window. A plain signed-in session (shared device, stolen cookie) must not set a new password
+ * without the current one.
+ */
+export function isRecentRecovery(amr: unknown, nowSeconds: number): boolean {
+  return (
+    Array.isArray(amr) &&
+    amr.some(
+      (entry: unknown) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        (entry as { method?: unknown }).method === "recovery" &&
+        typeof (entry as { timestamp?: unknown }).timestamp === "number" &&
+        nowSeconds - (entry as { timestamp: number }).timestamp <= RECOVERY_WINDOW_SECONDS,
+    )
+  );
+}

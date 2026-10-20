@@ -10,6 +10,7 @@ import {
   signUpInput,
 } from "@/lib/validation/auth";
 import { toFieldErrors } from "@/lib/validation/errors";
+import { hasRecentRecoverySession } from "./recovery";
 import { safeNextPath, type AuthErrorCode, type AuthFormState } from "./state";
 
 interface AuthErrorLike {
@@ -157,7 +158,11 @@ export async function requestPasswordResetAction(
   return { status: "check_email", email: parsed.data.email };
 }
 
-/** Sets the new password in the recovery session, then ends every other session of the user. */
+/**
+ * Sets the new password, only in a session opened by a recovery link within the last hour (a plain
+ * signed-in session cannot change the password without the current one), then ends every other
+ * session of the user.
+ */
 export async function updatePasswordAction(
   _prev: AuthFormState,
   formData: FormData,
@@ -170,6 +175,9 @@ export async function updatePasswordAction(
     return { status: "error", code: "VALIDATION_ERROR", fieldErrors: toFieldErrors(parsed.error) };
   }
   const supabase = await createServerSupabase();
+  if (!(await hasRecentRecoverySession(supabase))) {
+    return { status: "error", code: "RECOVERY_EXPIRED" };
+  }
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { status: "error", ...mapAuthError(error) };
   await supabase.auth.signOut({ scope: "others" });

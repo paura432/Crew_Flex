@@ -197,7 +197,9 @@ ok(
 );
 await shot("01-technician-overview");
 // Batch 3 (M02, V1.8 TechnicianHome): full status checklist + read-only month calendar.
-const checklist = page.locator("main section", { hasText: /Profile status/ }).locator("li");
+const checklist = page
+  .locator("main section", { hasText: /Profile completeness · / })
+  .locator("li");
 const today = new Date().toISOString().slice(0, 10);
 const todayCell = page.locator(`main li[aria-current=date]`);
 ok(
@@ -555,6 +557,40 @@ await compare.waitFor({ timeout: 15_000 });
 ok(
   "11k compare: side-by-side table of the 2 selected, cleared by its link",
   (await compare.locator("thead th").count()) === 3 && /Verdict/.test(await compare.innerText()),
+);
+await compare.getByRole("link", { name: "Clear comparison" }).click();
+await page.waitForURL((u) => !u.search.includes("compare"));
+// 11l (second audit 2026-10-20): candidates selected earlier stay selected when the filter hides
+// them — pick 2 non-eligible, filter eligible-only, add 1 eligible → 3 compared; then the cap.
+await cards().nth(8).getByLabel("Compare").check();
+await cards().nth(9).getByLabel("Compare").check();
+await Promise.all([
+  page.waitForURL(/compare=.*compare=/),
+  page.getByRole("button", { name: /Compare selected/ }).click(),
+]);
+await listed();
+await page.locator('input[name="eligible"]').check();
+await Promise.all([
+  page.waitForURL(/eligible=1/),
+  page.getByRole("button", { name: "Apply" }).click(),
+]);
+await listed();
+await cards().nth(0).getByLabel("Compare").check();
+await Promise.all([
+  page.waitForURL((u) => u.searchParams.getAll("compare").length === 3),
+  page.getByRole("button", { name: /Compare selected/ }).click(),
+]);
+await compare.waitFor({ timeout: 15_000 });
+ok(
+  "11l compare keeps selections hidden by the filter (3 compared)",
+  (await compare.locator("thead th").count()) === 4,
+  `${await compare.locator("thead th").count()} header cells`,
+);
+await listed();
+ok(
+  "11m with 3 selected the other compare boxes are disabled",
+  (await cards().nth(1).locator('input[name="compare"]').isDisabled()) &&
+    !(await cards().nth(0).locator('input[name="compare"]').isDisabled()),
 );
 await compare.getByRole("link", { name: "Clear comparison" }).click();
 await page.waitForURL((u) => !u.search.includes("compare"));

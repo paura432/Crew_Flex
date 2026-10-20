@@ -92,5 +92,9 @@ describe("listMatches", () => {
     const r = listMatches(pool, q({ eligible: "1", compare: ["CF-B", "CF-A", "CF-C", "CF-D"] }));
     expect(r.compared.map((i) => i.candidate.id)).toEqual(["CF-B", "CF-A", "CF-C"]);
     expect(r.compareTruncated).toBe(true);
+    // Stale ids no longer in the pool do not trigger the "only 3 compared" notice.
+    const stale = listMatches(pool, q({ compare: ["CF-B", "CF-A", "CF-C", "CF-GONE"] }));
+    expect(stale.compared).toHaveLength(3);
+    expect(stale.compareTruncated).toBe(false);
   });
 });

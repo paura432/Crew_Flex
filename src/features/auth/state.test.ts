@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeConfirmNext, safeNextPath } from "./state";
+import { isRecentRecovery, safeConfirmNext, safeNextPath } from "./state";
 
 describe("safeNextPath", () => {
   it.each([
@@ -23,5 +23,28 @@ describe("safeConfirmNext (e-mail link landing)", () => {
     [null, "/app"],
   ])("%s → %s", (input, expected) => {
     expect(safeConfirmNext(input)).toBe(expected);
+  });
+});
+
+describe("isRecentRecovery (reset-password gate)", () => {
+  const now = 1_800_000_000;
+  it.each([
+    [[{ method: "recovery", timestamp: now - 60 }], true],
+    [
+      [
+        { method: "password", timestamp: now - 10 },
+        { method: "recovery", timestamp: now },
+      ],
+      true,
+    ],
+    [[{ method: "recovery", timestamp: now - 3600 }], true],
+    [[{ method: "recovery", timestamp: now - 3601 }], false],
+    [[{ method: "password", timestamp: now }], false],
+    [["recovery"], false],
+    [[{ method: "recovery", timestamp: "1" }], false],
+    [undefined, false],
+    [null, false],
+  ])("%j → %s", (amr, expected) => {
+    expect(isRecentRecovery(amr, now)).toBe(expected);
   });
 });

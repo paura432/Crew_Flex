@@ -127,3 +127,11 @@ experience > 0 · an active licence or type rating · an active **verified** qua
 Shown as **"Profile completeness"**, next to "Verified N of M" and the count awaiting review: 100 % means
 the seven profile items are done, **not** that the professional or all of their qualifications are verified
 (remediation 2026-10-15, UX 8.2).
+
+## BR-12 Document expiry state — `documentExpiryState()`
+
+Wallet documents (owner only, D-10) show one state per document, by UTC date (BR-10): no expiry date →
+**no expiry** · `expiresAt < today` → **expired** · `today ≤ expiresAt ≤ today + 45 days` → **expires
+soon** (expiring today counts as soon) · later → **valid**. Same thresholds as v1.8 `documentStatus`
+(45 days). Display only: it never changes eligibility (qualifications decide that, BR-2/BR-3).
+IMPLEMENTED (local, batch 4; documented by the second audit 2026-10-20).

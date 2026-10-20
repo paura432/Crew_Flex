@@ -15,7 +15,7 @@ import {
   matchListHref,
   MatchPager,
 } from "@/features/matching/components/MatchList";
-import { listMatches, parseMatchListQuery } from "@/features/matching/list";
+import { listMatches, MAX_COMPARE, parseMatchListQuery } from "@/features/matching/list";
 import { PoolCoverageNote } from "@/features/matching/components/PoolCoverageNote";
 import { getRequirement } from "@/features/requirements/api";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
@@ -106,7 +106,10 @@ export default async function RequirementMatchesPage({
             ) : (
               <>
                 <div className="mb-4">
-                  <CompareForm query={query} />
+                  <CompareForm
+                    query={query}
+                    visibleIds={list.items.map((item) => item.candidate.id)}
+                  />
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   {list.items.map((item) => (
@@ -117,6 +120,7 @@ export default async function RequirementMatchesPage({
                         <CompareToggle
                           id={item.candidate.id}
                           checked={selected.has(item.candidate.id)}
+                          full={list.compared.length >= MAX_COMPARE}
                         />
                       }
                     />
