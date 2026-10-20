@@ -8,6 +8,7 @@ const A = "http://127.0.0.1:56321/auth/v1",
   M = "http://127.0.0.1:56324";
 const SITE = "http://localhost:3000"; // local site_url
 let failed = 0;
+for (const u of [A, M]) if (!/^http:\/\/127\.0\.0\.1:/.test(u)) throw new Error("local only");
 const H = { apikey: process.env.ANON, "Content-Type": "application/json" };
 const SRH = { ...H, Authorization: `Bearer ${process.env.SR}` };
 const email = `redir-${Date.now()}@crewflex.test`;

@@ -79,6 +79,14 @@ Source check (supabase/auth `internal/api/user.go`): the current-password check 
 `session.IsRecovery()`; reauthentication applies only when the session is older than 24 h. A recovery link
 verified with `token_hash` carries `amr` `otp`, a PKCE `code` link carries `recovery` — the app gate accepts both.
 
+**Limits (review of `5d22175`):** GoTrue's `IsRecovery()` also covers sessions opened by magic link or e-mail
+OTP and has **no time limit** (the AMR survives refresh). Mitigation in the app: after a reset every session
+ends, the recovery one included (`signOut({ scope: "global" })`, V1.8 A:165), so no long-lived recovery session
+remains. Residual: a session opened by magic link / e-mail OTP keeps the exemption — the app never offers those
+sign-ins, but GoTrue's `/otp` is reachable while the e-mail provider is on. Users without a password and MFA
+(AAL2) rules are out of this matrix. **Also an owner check:** production must keep secure e-mail change
+(`double_confirm_changes`) on, otherwise a stolen session takes the account through an e-mail change.
+
 **Recommendation:** enable **require current password** (Management API `security_update_password_require_current_password`,
 dashboard Auth → Providers → Email) in production. `secure_password_change` adds nothing for sessions < 24 h
 and would force a nonce e-mail on old sessions; optional. Recovery keeps working (exempt). The app has no

@@ -3516,6 +3516,10 @@ describe("R. closing a requirement (V1.8 job.status, migrations 20261020120000/1
           [madRequirementId],
         );
         expect(rows).toHaveLength(0);
+        const parent = await owner.query("select 1 from public.work_requirements where id = $1", [
+          madRequirementId,
+        ]);
+        expect(parent.rows).toHaveLength(0);
         throw new Error("rollback");
       })
       .catch((error: Error) => expect(error.message).toBe("rollback"));

@@ -94,7 +94,8 @@
       "submitting": "Signing in…",
       "email": "Email",
       "password": "Password",
-      "forgot": "Forgot your password?"
+      "forgot": "Forgot your password?",
+      "passwordChanged": "Password changed. Every session was signed out: sign in with your new password."
     },
     "register": {
       "title": "Create account",

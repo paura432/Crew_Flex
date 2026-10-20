@@ -116,8 +116,13 @@ try {
   ok("3 mismatched confirmation is rejected", true);
   await page.fill("#password", NEW_PW);
   await page.fill("#confirm", NEW_PW);
-  await Promise.all([page.waitForURL(/\/app/), page.click("form button[type=submit]")]);
-  ok("3 new password saved, user lands in /app", page.url().includes("/app"));
+  await Promise.all([page.waitForURL(/\/login\?reset=1/), page.click("form button[type=submit]")]);
+  ok(
+    "3 new password saved; every session ended, this one too (V1.8 A:165) → /login with notice",
+    await page.locator('main [role="status"]').isVisible(),
+  );
+  await page.goto(`${BASE}/app`);
+  ok("3 the recovery session itself was signed out", /\/login/.test(page.url()), page.url());
   ok("3 new password signs in", Boolean((await signIn(NEW_PW)).data.session));
   ok("3 old password no longer signs in", Boolean((await signIn(SEED_PW)).error));
   const refreshed = await createClient(URL_, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
@@ -160,7 +165,7 @@ try {
   ok("5 reusing the current password is refused", /different/.test(alertText), alertText);
   await page.fill("#password", SEED_PW);
   await page.fill("#confirm", SEED_PW);
-  await Promise.all([page.waitForURL(/\/app/), page.click("form button[type=submit]")]);
+  await Promise.all([page.waitForURL(/\/login\?reset=1/), page.click("form button[type=submit]")]);
   ok("5 seed password restored", Boolean((await signIn(SEED_PW)).data.session));
 } catch (e) {
   ok("unexpected error", false, String(e));

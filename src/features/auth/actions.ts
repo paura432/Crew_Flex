@@ -164,8 +164,8 @@ export async function requestPasswordResetAction(
 
 /**
  * Sets the new password, only in a session opened by a recovery link within the last hour (a plain
- * signed-in session cannot change the password without the current one), then ends every other
- * session of the user.
+ * signed-in session cannot change the password without the current one), then ends every session
+ * of the user, this one included.
  */
 export async function updatePasswordAction(
   _prev: AuthFormState,
@@ -184,8 +184,10 @@ export async function updatePasswordAction(
   }
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { status: "error", ...mapAuthError(error) };
-  await supabase.auth.signOut({ scope: "others" });
-  redirect("/app");
+  // V1.8 parity (server/app.mjs:165): every session ends, this one too — the recovery session keeps
+  // GoTrue's «no current password» exemption for its whole life (review of 5d22175).
+  await supabase.auth.signOut({ scope: "global" });
+  redirect("/login?reset=1");
 }
 
 export async function signOutAction() {

@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
   const next = safeConfirmNext(searchParams.get("next"));
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
-  const type = searchParams.get("type") as EmailOtpType | null;
+  // Recovery links only: any other `token_hash` type (magic link, invite…) would allow login CSRF.
+  const type: EmailOtpType | null = searchParams.get("type") === "recovery" ? "recovery" : null;
 
   const supabase = await createServerSupabase();
   const { error } = code

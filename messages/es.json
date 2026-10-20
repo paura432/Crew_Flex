@@ -94,7 +94,8 @@
       "submitting": "Iniciando sesión…",
       "email": "Correo electrónico",
       "password": "Contraseña",
-      "forgot": "¿Has olvidado tu contraseña?"
+      "forgot": "¿Has olvidado tu contraseña?",
+      "passwordChanged": "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña."
     },
     "register": {
       "title": "Crear cuenta",
