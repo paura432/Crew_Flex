@@ -43,8 +43,9 @@ export const RECOVERY_WINDOW_SECONDS = 3600;
 
 /**
  * True when the JWT `amr` claim shows the session was opened by a recovery e-mail link within the
- * window. A plain signed-in session (shared device, stolen cookie) must not set a new password
- * without the current one.
+ * window. A plain signed-in session (shared device) must not set a new password from this app without
+ * the current one. Defense in depth only: Supabase Auth itself (`PUT /auth/v1/user`) still accepts a
+ * password change from any session until `secure_password_change` is enabled (owner, SECURITY_PRIVACY).
  */
 export function isRecentRecovery(amr: unknown, nowSeconds: number): boolean {
   return (

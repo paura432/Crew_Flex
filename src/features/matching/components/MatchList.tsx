@@ -111,9 +111,12 @@ export async function CompareToggle({
  */
 export async function CompareForm({
   query,
+  selectedIds,
   visibleIds,
 }: {
   query: MatchListQuery;
+  /** Selected ids that exist in the pool (stale or forged ids are dropped here). */
+  selectedIds: string[];
   visibleIds: string[];
 }) {
   const t = await getTranslations("organization.matches.list");
@@ -123,7 +126,7 @@ export async function CompareForm({
       {query.eligibleOnly && <input type="hidden" name="eligible" value="1" />}
       {query.sort !== "relevance" && <input type="hidden" name="sort" value={query.sort} />}
       {query.page > 1 && <input type="hidden" name="page" value={query.page} />}
-      {query.compare
+      {selectedIds
         .filter((id) => !visibleIds.includes(id))
         .map((id) => (
           <input key={id} type="hidden" name="compare" value={id} />

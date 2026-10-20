@@ -108,6 +108,7 @@ export default async function RequirementMatchesPage({
                 <div className="mb-4">
                   <CompareForm
                     query={query}
+                    selectedIds={list.compared.map((item) => item.candidate.id)}
                     visibleIds={list.items.map((item) => item.candidate.id)}
                   />
                 </div>
