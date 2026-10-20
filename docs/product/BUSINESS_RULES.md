@@ -135,3 +135,12 @@ Wallet documents (owner only, D-10) show one state per document, by UTC date (BR
 soon** (expiring today counts as soon) · later → **valid**. Same thresholds as v1.8 `documentStatus`
 (45 days). Display only: it never changes eligibility (qualifications decide that, BR-2/BR-3).
 IMPLEMENTED (local, batch 4; documented by the second audit 2026-10-20).
+
+## BR-13 Application transitions (contract only) — `src/domain/applications.ts`
+
+The D-06 state table of `APPLICATIONS_STATE_MACHINE.md` as pure data: 9 states, 4 terminal; the technician
+only accepts or withdraws (V1.8 A:115-117); a reason is required exactly for `rejected` and `cancelled`;
+`accepted → proposed` is a new proposal version (R-08, decided). Rows that depend on owner proposals not
+ratified yet are marked `pending` (Q2 cancel an accepted application, Q3 cancel a confirmed one, Q4 explicit
+finish). **Not used by any migration, Edge Function or screen** until the contract is ratified (§4.1).
+DESIGN ONLY (tested, 2026-10-20).

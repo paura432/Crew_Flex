@@ -106,7 +106,8 @@ items it depends on (`CANDIDATE_PACK.md` §4.1):
 - Anything that unlocks identity, contact or documents (D-07, separate consents).
 
 Not sensitive and not blocked by ratification: the pure transition table in `src/domain` with its
-tests, and documentation. No migration, Edge Function or UI for applications is written before
+tests, and documentation. **Done 2026-10-20:** `src/domain/applications.ts` (BR-13; rows depending on
+Q2–Q4 carry `pending`), 6 tests — still used by nothing. No migration, Edge Function or UI for applications is written before
 ratification.
 
 ## 5. Not in this block
