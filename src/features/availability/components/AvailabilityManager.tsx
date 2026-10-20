@@ -41,14 +41,14 @@ type Picker = AvailabilityStatus | "clear";
 const PICKER_OPTIONS: { value: Picker; cls: string }[] = [
   { value: "available", cls: "border-ok/40 bg-ok-bg text-ok" },
   { value: "unavailable", cls: "border-line bg-canvas text-ink" },
-  { value: "aog_only", cls: "border-danger/40 bg-danger-bg text-danger" },
+  { value: "aog_only", cls: DAY_STYLE.aog_only },
   { value: "clear", cls: "border-line bg-white text-muted" },
 ];
 
 const STATUS_CHIP = {
   available: { tone: "ok", label: "statusAvailable" },
   unavailable: { tone: "neutral", label: "statusUnavailable" },
-  aog_only: { tone: "danger", label: "statusAogOnly" },
+  aog_only: { tone: "warn", label: "statusAogOnly" },
 } as const satisfies Record<AvailabilityStatus, { tone: string; label: string }>;
 
 const PLANNED_STATE = (status: PlannedDay["status"]): DayState => status ?? "none";
@@ -275,7 +275,7 @@ export function AvailabilityManager({
           label={t("metrics.aogOnly")}
           value={aogDays}
           detail={t("metrics.aogOnlyDetail")}
-          tone={aogDays > 0 ? "danger" : "neutral"}
+          tone={aogDays > 0 ? "warn" : "neutral"}
         />
         <Metric
           label={t("metrics.windows")}

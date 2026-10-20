@@ -32,8 +32,9 @@ export const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as con
 export const DAY_STYLE: Record<DayState, string> = {
   available: "border-ok/40 bg-ok-bg text-ok",
   unavailable: "border-line bg-canvas text-muted",
-  aog_only: "border-danger/40 bg-danger-bg text-danger",
-  mixed: "border-warn/40 bg-warn-bg text-warn",
+  // V1.8: AOG is orange (v11.css `.day.aog`), never the error red; a partial day is hatched (v18.css).
+  aog_only: "border-warn/40 bg-warn-bg text-warn",
+  mixed: "border-ok/40 bg-partial text-ok",
   none: "border-line bg-white text-muted",
 };
 

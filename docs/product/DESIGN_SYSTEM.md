@@ -12,18 +12,21 @@ overload, tiny text, decorative animation.
 
 ## Tokens (`src/app/globals.css`, Tailwind v4 `@theme`)
 
-| Token    | Value     | Use                                 | Origin                                           |
-| -------- | --------- | ----------------------------------- | ------------------------------------------------ |
-| `navy`   | `#0c2137` | Sidebar, brand, dark surfaces       | prototype                                        |
-| `ink`    | `#172c44` | Body text                           | prototype                                        |
-| `muted`  | `#5b6f84` | Secondary text (≥ 4.5:1 on white)   | prototype (darkened from `#60758b` for contrast) |
-| `line`   | `#dce4ed` | Borders, dividers                   | prototype                                        |
-| `canvas` | `#f5f7fa` | App background                      | prototype                                        |
-| `accent` | `#ff982f` | Primary CTA background (text = ink) | prototype                                        |
-| `blue`   | `#18558f` | Links, info                         | prototype                                        |
-| `ok`     | `#16745d` | Eligible / verified / covered       | prototype                                        |
-| `warn`   | `#aa5916` | Pending / partial / urgent          | prototype                                        |
-| `danger` | `#ad3b44` | Blocker / gap / AOG                 | prototype                                        |
+| Token    | Value     | Use                                          | Origin                                           |
+| -------- | --------- | -------------------------------------------- | ------------------------------------------------ |
+| `navy`   | `#0c2137` | Sidebar, brand, dark surfaces                | prototype                                        |
+| `ink`    | `#172c44` | Body text                                    | prototype                                        |
+| `muted`  | `#5b6f84` | Secondary text (≥ 4.5:1 on white)            | prototype (darkened from `#60758b` for contrast) |
+| `line`   | `#dce4ed` | Borders, dividers                            | prototype                                        |
+| `canvas` | `#f5f7fa` | App background                               | prototype                                        |
+| `accent` | `#ff982f` | Primary CTA background (text = ink)          | prototype                                        |
+| `blue`   | `#18558f` | Links, info                                  | prototype                                        |
+| `ok`     | `#16745d` | Eligible / verified / covered                | prototype                                        |
+| `warn`   | `#aa5916` | Pending / urgent / **AOG day** (V1.8 orange) | prototype                                        |
+| `danger` | `#ad3b44` | Blocker / gap / error                        | prototype                                        |
+
+Calendar partial day: `bg-partial` hatched utility (V1.8 `styles/v18.css:1`, `#eef6f4`/`#dcece6`, text `ok`);
+AOG-only day uses `warn` (V1.8 orange, never the error red) — second audit 2026-10-20.
 
 Tools workbench sub-palette (`tool-*` tokens, used only under `/app/tools`): taken from the V1.3/V1.8
 prototype `styles/v13.css` (`.toolbox`, `.tb-*`) so the workbench keeps its own identity — teal

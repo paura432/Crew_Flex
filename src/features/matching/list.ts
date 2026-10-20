@@ -27,7 +27,8 @@ export function parseMatchListQuery(params: Record<string, Param>): MatchListQue
     eligibleOnly: first(params.eligible) === "1",
     sort: MATCH_SORTS.includes(sort as MatchSort) ? (sort as MatchSort) : "relevance",
     page: Number.isFinite(page) && page > 0 ? page : 1,
-    compare: [...new Set(compare)],
+    // Bounded: a crafted URL with thousands of ids must not inflate the page (review S-5).
+    compare: [...new Set(compare)].slice(0, MAX_COMPARE * 3),
   };
 }
 

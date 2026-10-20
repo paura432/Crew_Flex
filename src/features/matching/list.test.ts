@@ -46,6 +46,9 @@ describe("parseMatchListQuery", () => {
   });
   it("keeps distinct, well-formed compare ids", () => {
     expect(q({ compare: ["CF-A", "CF-A", "x'or 1=1", "CF-B"] }).compare).toEqual(["CF-A", "CF-B"]);
+    expect(q({ compare: Array.from({ length: 500 }, (_, i) => `CF-${i}`) }).compare).toHaveLength(
+      9,
+    );
   });
 });
 

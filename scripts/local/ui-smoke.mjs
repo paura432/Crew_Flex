@@ -219,6 +219,23 @@ ok(
   /: Rest$/.test(nextMonthDay ?? ""),
   nextMonthDay,
 );
+// 2d (batch 7, V1.8 colours): AOG legend swatch is orange (warn-bg), the partial day is hatched.
+const swatch = (label) =>
+  page
+    .locator("main li:has(> span.size-3)", { hasText: label })
+    .locator("span[aria-hidden]")
+    .first()
+    .evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return `${cs.backgroundColor}|${cs.backgroundImage}`;
+    });
+const aogSwatch = await swatch("AOG only");
+const partialSwatch = await swatch("Partial");
+ok(
+  "2d calendar colours: AOG orange (not red), partial day hatched",
+  aogSwatch.startsWith("rgb(255, 240, 225)") && /repeating-linear-gradient/.test(partialSwatch),
+  `${aogSwatch} · ${partialSwatch}`,
+);
 await page.goto(`${BASE}/app/professional/availability`);
 await page.waitForLoadState("networkidle");
 const before = await page.locator("li:has(button:has-text('Delete'))").count();
