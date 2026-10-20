@@ -56,6 +56,7 @@ export default async function ProfessionalOverviewPage({
   // V1.8 Badges «Documentos y cursos próximos a revisar» (TD-44): declared expiries within 60 days,
   // expired included, over active qualifications and (when the wallet is on) own documents.
   const documents = walletEnabled ? await listOwnDocumentExpiries() : [];
+  const documentsFailed = documents === null;
   const toReview = [
     ...overview.qualifications
       .filter((q) => q.status === "active" && q.expires_at !== null)
@@ -65,7 +66,7 @@ export default async function ProfessionalOverviewPage({
         expiresAt: q.expires_at as string,
         href: "/app/professional/qualifications",
       })),
-    ...documents.map((d) => ({
+    ...(documents ?? []).map((d) => ({
       key: `d-${d.id}`,
       title: d.title,
       expiresAt: d.expiresAt,
@@ -155,6 +156,11 @@ export default async function ProfessionalOverviewPage({
           </Panel>
         )}
         <Panel title={t("overview.reviewTitle")}>
+          {documentsFailed && (
+            <p className="mb-3 text-sm text-danger" role="alert">
+              {t("overview.reviewError")}
+            </p>
+          )}
           {toReview.length === 0 ? (
             <p className="text-sm text-muted">
               {t("overview.reviewNone", { days: REVIEW_WINDOW_DAYS })}
@@ -178,7 +184,12 @@ export default async function ProfessionalOverviewPage({
                           ? t("overview.reviewExpired")
                           : t("overview.reviewSoon", { days: REVIEW_WINDOW_DAYS })}
                       </StatusChip>
-                      <ButtonLink href={item.href}>{t("overview.reviewOpen")}</ButtonLink>
+                      <ButtonLink
+                        href={item.href}
+                        aria-label={`${t("overview.reviewOpen")} · ${item.title}`}
+                      >
+                        {t("overview.reviewOpen")}
+                      </ButtonLink>
                     </span>
                   </li>
                 );

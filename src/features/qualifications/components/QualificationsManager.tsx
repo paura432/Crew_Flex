@@ -300,13 +300,16 @@ export function QualificationsManager({
                         {q.expiresAt
                           ? t("validUntil", { date: formatDate(locale, q.expiresAt) })
                           : t("noExpiry")}
-                        {/* BR-12: same «expires soon» / «expired» chip as the wallet. */}
+                        {/* BR-12: same «expires soon» / «expired» chip as the wallet; held rows only. */}
                         {(() => {
                           const expiry = documentExpiryState(q.expiresAt, today);
-                          return expiry === "soon" || expiry === "expired" ? (
-                            <StatusChip tone={EXPIRY_TONE[expiry]}>
-                              {tDocuments(`expiry.${expiry}`)}
-                            </StatusChip>
+                          return q.status === "active" &&
+                            (expiry === "soon" || expiry === "expired") ? (
+                            <span className="ml-2">
+                              <StatusChip tone={EXPIRY_TONE[expiry]}>
+                                {tDocuments(`expiry.${expiry}`)}
+                              </StatusChip>
+                            </span>
                           ) : null;
                         })()}
                       </span>

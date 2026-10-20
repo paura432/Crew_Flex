@@ -56,15 +56,15 @@ export default async function VerificationsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[32rem] text-left text-sm">
                   <caption className="sr-only">{t("historyTitle")}</caption>
-                  <thead className="bg-canvas text-[11px] text-muted">
+                  <thead className="bg-canvas text-[11px] font-semibold text-muted">
                     <tr>
-                      <th scope="col" className="py-2 pr-4 font-medium">
+                      <th scope="col" className="py-2 pr-4">
                         {t("when")}
                       </th>
-                      <th scope="col" className="py-2 pr-4 font-medium">
+                      <th scope="col" className="py-2 pr-4">
                         {t("decision")}
                       </th>
-                      <th scope="col" className="py-2 pr-4 font-medium">
+                      <th scope="col" className="py-2 pr-4">
                         {t("reasonGiven")}
                       </th>
                       <th scope="col" className="py-2 font-medium">

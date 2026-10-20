@@ -462,7 +462,8 @@
       "reviewExpired": "Fecha superada",
       "reviewSoon": "Próximos {days} días",
       "reviewOpen": "Abrir",
-      "reviewHint": "Según las fechas declaradas. No se envían avisos externos; los documentos sin fecha no se consideran verificados."
+      "reviewHint": "Según las fechas declaradas. No se envían avisos externos; los documentos sin fecha no se consideran verificados.",
+      "reviewError": "No se han podido cargar tus documentos; la lista solo incluye cualificaciones."
     },
     "hint": {
       "display_name": "Siguiente: añade tu nombre profesional",

@@ -462,7 +462,8 @@
       "reviewExpired": "Date passed",
       "reviewSoon": "Next {days} days",
       "reviewOpen": "Open",
-      "reviewHint": "Based on the dates you declared. No external reminders are sent; documents without a date are not treated as verified."
+      "reviewHint": "Based on the dates you declared. No external reminders are sent; documents without a date are not treated as verified.",
+      "reviewError": "Your documents could not be loaded; the list below covers qualifications only."
     },
     "hint": {
       "display_name": "Next: add your professional name",

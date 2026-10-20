@@ -17,21 +17,21 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
     <>
       <table className="hidden w-full text-left text-sm md:table">
         <caption className="sr-only">{t("caption")}</caption>
-        <thead className="border-b border-line bg-canvas text-[11px] text-muted">
+        <thead className="border-b border-line bg-canvas text-[11px] font-semibold text-muted">
           <tr>
-            <th scope="col" className="py-2 pr-4 font-semibold">
+            <th scope="col" className="py-2 pr-4">
               {t("columns.requirement")}
             </th>
-            <th scope="col" className="py-2 pr-4 font-semibold">
+            <th scope="col" className="py-2 pr-4">
               {t("columns.period")}
             </th>
-            <th scope="col" className="py-2 pr-4 font-semibold">
+            <th scope="col" className="py-2 pr-4">
               {t("columns.need")}
             </th>
-            <th scope="col" className="py-2 pr-4 font-semibold">
+            <th scope="col" className="py-2 pr-4">
               {t("columns.qualifications")}
             </th>
-            <th scope="col" className="py-2 font-semibold">
+            <th scope="col" className="py-2">
               {t("columns.status")}
             </th>
           </tr>

@@ -37,14 +37,18 @@ export interface DocumentExpiry {
   expiresAt: string;
 }
 
-/** Own documents with a declared expiry, read under RLS (owner only) for the review list (TD-44). */
-export async function listOwnDocumentExpiries(): Promise<DocumentExpiry[]> {
+/**
+ * Own documents with a declared expiry, read under RLS (owner only) for the review list (TD-44).
+ * `null` when the query fails: the caller shows an error line, never the «nothing expires» state.
+ */
+export async function listOwnDocumentExpiries(): Promise<DocumentExpiry[] | null> {
   const supabase = await createServerSupabase();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("professional_documents")
     .select("id, title, expires_at")
     .not("expires_at", "is", null)
     .order("expires_at")
     .overrideTypes<{ id: string; title: string; expires_at: string }[], { merge: false }>();
-  return (data ?? []).map((d) => ({ id: d.id, title: d.title, expiresAt: d.expires_at }));
+  if (error) return null;
+  return data.map((d) => ({ id: d.id, title: d.title, expiresAt: d.expires_at }));
 }

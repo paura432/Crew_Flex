@@ -179,13 +179,13 @@ export async function CompareTable({
       )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-left text-sm">
-          <thead className="bg-canvas text-[11px] text-muted">
+          <thead className="bg-canvas text-[11px] font-semibold text-muted">
             <tr>
               <th scope="col" className="py-2 pr-3">
                 <span className="sr-only">{t("compareCriterion")}</span>
               </th>
               {items.map(({ candidate }) => (
-                <th key={candidate.id} scope="col" className="py-2 pr-3 font-semibold break-words">
+                <th key={candidate.id} scope="col" className="py-2 pr-3 break-words">
                   {candidate.displayName ?? tm("anonymous", { ref: candidate.id })}
                 </th>
               ))}

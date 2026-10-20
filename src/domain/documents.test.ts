@@ -116,4 +116,8 @@ describe("isDueForReview (V1.8 Badges «próximos a revisar», 60 days, expired 
   ] as const)("%s → %s", (expiresAt, due) => {
     expect(isDueForReview(expiresAt, today)).toBe(due);
   });
+  it("crosses the year boundary (2026-12-31 + 60 = 2027-03-01)", () => {
+    expect(isDueForReview("2027-03-01", "2026-12-31")).toBe(true);
+    expect(isDueForReview("2027-03-02", "2026-12-31")).toBe(false);
+  });
 });
