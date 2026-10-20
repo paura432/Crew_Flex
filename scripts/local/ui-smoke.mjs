@@ -677,9 +677,7 @@ await shot("08-requirement-created");
 // 12b (batch 6, V1.8 job.status): close with a confirmation step; terminal after reload.
 await page.getByRole("button", { name: "Close requirement" }).click();
 await page.getByRole("button", { name: "Yes, close it" }).click();
-await page
-  .locator("main [role=status]", { hasText: "Requirement closed." })
-  .waitFor({ timeout: 15_000 });
+await page.getByText("can no longer be reopened").waitFor({ timeout: 15_000 });
 await page.reload();
 await page.waitForLoadState("networkidle");
 const closedText = await page.locator("main").innerText();

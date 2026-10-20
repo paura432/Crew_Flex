@@ -15,6 +15,9 @@ export const handler = createHandler("capacity-evaluate", {
     const { requirementId } = await parseJsonBody(ctx.req, evaluateRequirementInput);
     const requirement = await loadRequirement(actor, requirementId);
     await requireOrganizationRole(actor, requirement.organizationId, ["admin", "manager"]);
+    // V1.8 evaluates published jobs only: a closed need no longer exposes the candidate pool.
+    if (requirement.status === "closed")
+      throw new ApiError("CONFLICT", "This requirement is closed.");
 
     const workforce = (await loadCandidatePool(actor, requirementId)).filter(
       (c) => c.pool === "internal",

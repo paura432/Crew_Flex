@@ -690,7 +690,6 @@
         "explain": "Cerrar es definitivo: una necesidad cerrada no se puede reabrir. Se conserva en tu lista y en el historial.",
         "confirm": "Sí, cerrarla",
         "cancel": "Mantenerla abierta",
-        "done": "Necesidad cerrada.",
         "closedNote": "Esta necesidad está cerrada. Ya no se puede reabrir."
       }
     },

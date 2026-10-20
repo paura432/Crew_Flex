@@ -690,7 +690,6 @@
         "explain": "Closing is final: a closed requirement cannot be reopened. It stays in your list and history.",
         "confirm": "Yes, close it",
         "cancel": "Keep it open",
-        "done": "Requirement closed.",
         "closedNote": "This requirement is closed. It can no longer be reopened."
       }
     },

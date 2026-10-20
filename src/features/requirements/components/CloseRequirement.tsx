@@ -18,19 +18,25 @@ export function CloseRequirement({ id }: { id: string }) {
     startTransition(async () => {
       const result = await closeRequirementAction(id);
       setConfirming(false);
-      setNotice(result.ok ? { tone: "ok", text: t("done") } : actionErrorCopy(tRoot, result));
+      // Success re-renders the page as closed (its note replaces this component).
+      if (!result.ok) setNotice(actionErrorCopy(tRoot, result));
     });
 
   return (
     <div className="space-y-3">
       {confirming ? (
-        <div className="space-y-3 rounded-lg border border-line p-4">
+        <div
+          role="group"
+          aria-label={t("action")}
+          className="space-y-3 rounded-lg border border-line p-4"
+        >
           <p className="text-sm">{t("explain")}</p>
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" disabled={pending} onClick={close}>
               {t("confirm")}
             </Button>
-            <Button disabled={pending} onClick={() => setConfirming(false)}>
+            {/* Focus lands on the safe choice when the irreversible step opens. */}
+            <Button autoFocus disabled={pending} onClick={() => setConfirming(false)}>
               {t("cancel")}
             </Button>
           </div>

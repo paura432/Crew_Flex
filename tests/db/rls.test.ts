@@ -3417,7 +3417,7 @@ describe("Q. document wallet (migration 20261019160000)", () => {
   });
 });
 
-describe("M. closing a requirement (V1.8 job.status, migration 20261020120000)", () => {
+describe("R. closing a requirement (V1.8 job.status, migrations 20261020120000/120100)", () => {
   const status = async (tx: { query: PGlite["query"] }) =>
     (
       await tx.query<{ status: string }>(
@@ -3456,9 +3456,51 @@ describe("M. closing a requirement (V1.8 job.status, migration 20261020120000)",
             `update public.work_requirements set status = '${next}' where id = $1`,
             [madRequirementId],
           ),
-        ).toMatch(/cannot be reopened/);
+        ).toMatch(/cannot be (reopened|changed)/);
       }
       expect(await status(tx)).toBe("closed");
+    });
+  });
+
+  it("a closed requirement is frozen: no field edits, no qualification changes (M1 review)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await tx.query("update public.work_requirements set status = 'closed' where id = $1", [
+        madRequirementId,
+      ]);
+      for (const sql of [
+        "update public.work_requirements set title = 'Rewritten' where id = $1",
+        "update public.work_requirements set headcount = 9 where id = $1",
+        "update public.work_requirements set ends_at = ends_at + interval '1 day' where id = $1",
+        "delete from public.work_requirement_qualifications where work_requirement_id = $1",
+      ]) {
+        expect(await queryError(tx, sql, [madRequirementId])).toMatch(/cannot be changed/);
+      }
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.qualification_types where code = 'NDT-UT2'",
+      );
+      expect(
+        await queryError(
+          tx,
+          `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+           values ($1, $2, 'soft')`,
+          [madRequirementId, rows[0]!.id],
+        ),
+      ).toMatch(/cannot be changed/);
+    });
+  });
+
+  it("an open requirement keeps its qualification edits (BR-1.4 parent touch still works)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const { rows } = await tx.query<{ id: string }>(
+        "select id from public.qualification_types where code = 'NDT-UT2'",
+      );
+      await tx.query(
+        `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+         values ($1, $2, 'soft')`,
+        [madRequirementId, rows[0]!.id],
+      );
+      await tx.exec("set constraints all immediate");
+      expect(await status(tx)).toBe("open");
     });
   });
 

@@ -33,7 +33,9 @@ export default async function RequirementDetailPage({
     return <ApiErrorState error={result.error} requestId={result.requestId} />;
   }
   const { requirement } = result.data;
-  const capacity = canManage ? await evaluateRequirementCapacity(requirement.id) : null;
+  const closed = requirement.status === "closed";
+  // V1.8 evaluates published jobs only: a closed need shows its facts, not the candidate pool.
+  const capacity = canManage && !closed ? await evaluateRequirementCapacity(requirement.id) : null;
 
   return (
     <>
@@ -41,7 +43,7 @@ export default async function RequirementDetailPage({
       <div className="space-y-6">
         <Panel>
           <RequirementFacts requirement={requirement} />
-          {requirement.status === "closed" ? (
+          {closed ? (
             <p className="mt-4 border-t border-line pt-4 text-sm text-muted">
               {t("close.closedNote")}
             </p>
@@ -53,7 +55,7 @@ export default async function RequirementDetailPage({
             )
           )}
         </Panel>
-        {!capacity ? (
+        {closed ? null : !capacity ? (
           <StateMessage
             title={tDashboard("managersOnlyTitle")}
             description={tDashboard("managersOnlyDescription")}

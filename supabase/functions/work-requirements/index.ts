@@ -6,7 +6,7 @@
 //                                      `job.status`, enforced and audited by the database); closing
 //                                      a closed requirement again is a no-op (200)
 import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
-import { fromDatabaseError } from "../_shared/errors.ts";
+import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { loadRequirement, REQUIREMENT_SELECT, toWorkRequirement } from "../_shared/requirements.ts";
 import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_shared/validation.ts";
@@ -82,11 +82,13 @@ export const handler = createHandler("work-requirements", {
     const current = await loadRequirement(actor, input.id); // hidden and missing → 404
     await requireOrganizationRole(actor, current.organizationId, ["admin", "manager"]);
     if (current.status !== input.status) {
-      const { error } = await actor.client
+      const { data, error } = await actor.client
         .from("work_requirements")
         .update({ status: input.status })
-        .eq("id", input.id);
-      if (error) throw fromDatabaseError(error); // 55000 → CONFLICT (already closed meanwhile: no)
+        .eq("id", input.id)
+        .select("id");
+      if (error) throw fromDatabaseError(error); // 55000 → CONFLICT
+      if (!data?.length) throw new ApiError("FORBIDDEN"); // RLS matched no row (role revoked meanwhile)
     }
     const requirement = await loadRequirement(actor, input.id);
     return { data: { requirement } satisfies WorkRequirementResponse };

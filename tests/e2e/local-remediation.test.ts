@@ -909,5 +909,14 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
       .update({ status: "open" })
       .eq("id", id);
     expect(direct.error?.code).toBe("55000");
+    const edit = await client(manager)
+      .from("work_requirements")
+      .update({ title: "E2E rewritten after close" })
+      .eq("id", id);
+    expect(edit.error?.code).toBe("55000"); // frozen (20261020120100)
+    for (const fn of ["capacity-evaluate", "matching-evaluate"]) {
+      const res = await call(fn, { method: "POST", token: manager, body: { requirementId: id } });
+      expect([fn, res.status]).toEqual([fn, 409]); // V1.8 evaluates published jobs only
+    }
   });
 });
