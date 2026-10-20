@@ -11,13 +11,12 @@ import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
-import { StatusChip } from "@/components/ui/StatusChip";
+import { EXPIRY_TONE, StatusChip } from "@/components/ui/StatusChip";
 import {
   DOCUMENT_KINDS,
   documentExpiryState,
   MAX_DOCUMENT_BYTES,
   type DocumentKind,
-  type ExpiryState,
 } from "@/domain/documents";
 import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/i18n/format";
@@ -33,12 +32,6 @@ import {
   updateDocumentAction,
 } from "../actions";
 import { uploadDocument } from "../upload";
-
-const EXPIRY_TONE: Record<Exclude<ExpiryState, "none">, "ok" | "warn" | "danger"> = {
-  valid: "ok",
-  soon: "warn",
-  expired: "danger",
-};
 
 export interface QualificationOption {
   id: string;

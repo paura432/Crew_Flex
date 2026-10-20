@@ -134,7 +134,12 @@ Wallet documents (owner only, D-10) show one state per document, by UTC date (BR
 **no expiry** · `expiresAt < today` → **expired** · `today ≤ expiresAt ≤ today + 45 days` → **expires
 soon** (expiring today counts as soon) · later → **valid**. Same thresholds as v1.8 `documentStatus`
 (45 days). Display only: it never changes eligibility (qualifications decide that, BR-2/BR-3).
-IMPLEMENTED (local, batch 4; documented by the second audit 2026-10-20).
+IMPLEMENTED (local, batch 4; documented by the second audit 2026-10-20). The same chip is shown on the
+qualifications list (batch 14). **Review list** — `isDueForReview()`: the professional's overview lists every
+active qualification and (wallet on) every own document whose declared expiry is `≤ today + 60 days`,
+**expired included** («Fecha superada» / «Próximos 60 días»), with a link to the list it belongs to.
+Two windows on purpose, as in v1.8 (`documentStatus` 45 d vs `Badges` 60 d). Declared dates are never
+treated as verification; no external reminder is sent (TD-44, batch 14).
 
 ## BR-13 Application transitions (contract only) — `src/domain/applications.ts`
 

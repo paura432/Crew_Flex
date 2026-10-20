@@ -1,4 +1,5 @@
 import "server-only";
+import { createServerSupabase } from "@/lib/supabase/server";
 import type { UpdateDocumentInput } from "@/lib/validation/documents";
 import { invokeEdgeFunction } from "@/server/edge-functions";
 import type {
@@ -29,3 +30,21 @@ export const deleteDocument = (id: string) =>
     method: "DELETE",
     query: { id },
   });
+
+export interface DocumentExpiry {
+  id: string;
+  title: string;
+  expiresAt: string;
+}
+
+/** Own documents with a declared expiry, read under RLS (owner only) for the review list (TD-44). */
+export async function listOwnDocumentExpiries(): Promise<DocumentExpiry[]> {
+  const supabase = await createServerSupabase();
+  const { data } = await supabase
+    .from("professional_documents")
+    .select("id, title, expires_at")
+    .not("expires_at", "is", null)
+    .order("expires_at")
+    .overrideTypes<{ id: string; title: string; expires_at: string }[], { merge: false }>();
+  return (data ?? []).map((d) => ({ id: d.id, title: d.title, expiresAt: d.expires_at }));
+}

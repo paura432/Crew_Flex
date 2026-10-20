@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ButtonLink } from "@/components/ui/Button";
 import { Metric } from "@/components/ui/Metric";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
+import { EXPIRY_TONE, StatusChip } from "@/components/ui/StatusChip";
+import { documentExpiryState, isDueForReview, REVIEW_WINDOW_DAYS } from "@/domain/documents";
 import {
   COMPLETENESS_ITEMS,
   profileCompleteness,
@@ -12,8 +14,12 @@ import {
 } from "@/domain/professional";
 import { parseMonth } from "@/features/availability/calendar";
 import { AvailabilityMonth } from "@/features/availability/components/AvailabilityMonth";
+import { listOwnDocumentExpiries } from "@/features/documents/api";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
 import { loadProfessionalContext } from "@/features/professional/load";
+import { formatDate } from "@/i18n/format";
+import type { Locale } from "@/i18n/config";
+import { isDocumentWalletEnabled } from "@/server/feature-flags";
 
 /** Where each missing BR-11 item is completed. */
 const NEXT_STEP_HREF: Record<CompletenessItem, string> = {
@@ -34,15 +40,40 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ProfessionalOverviewPage({
   searchParams,
 }: PageProps<"/app/professional">) {
-  const [{ month: monthParam }, { actor, overview }, t, tDomain] = await Promise.all([
-    searchParams,
-    loadProfessionalContext(),
-    getTranslations("professional"),
-    getTranslations("domain"),
-  ]);
+  const [{ month: monthParam }, { actor, overview }, t, tDomain, locale, walletEnabled] =
+    await Promise.all([
+      searchParams,
+      loadProfessionalContext(),
+      getTranslations("professional"),
+      getTranslations("domain"),
+      getLocale() as Promise<Locale>,
+      isDocumentWalletEnabled(),
+    ]);
   if (!overview) {
     return <StateMessage title={t("noProfileTitle")} description={t("noProfileDescription")} />;
   }
+  const today = new Date().toISOString().slice(0, 10);
+  // V1.8 Badges «Documentos y cursos próximos a revisar» (TD-44): declared expiries within 60 days,
+  // expired included, over active qualifications and (when the wallet is on) own documents.
+  const documents = walletEnabled ? await listOwnDocumentExpiries() : [];
+  const toReview = [
+    ...overview.qualifications
+      .filter((q) => q.status === "active" && q.expires_at !== null)
+      .map((q) => ({
+        key: `q-${q.id}`,
+        title: `${q.qualification_types.code} · ${q.qualification_types.name}`,
+        expiresAt: q.expires_at as string,
+        href: "/app/professional/qualifications",
+      })),
+    ...documents.map((d) => ({
+      key: `d-${d.id}`,
+      title: d.title,
+      expiresAt: d.expiresAt,
+      href: "/app/professional/documents",
+    })),
+  ]
+    .filter((item) => isDueForReview(item.expiresAt, today))
+    .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
   const active = overview.qualifications.filter((q) => q.status === "active");
   const verified = active.filter((q) => q.verification_status === "verified").length;
   const awaiting = active.filter((q) => q.verification_status === "pending").length;
@@ -63,7 +94,6 @@ export default async function ProfessionalOverviewPage({
     availableWindows: overview.availability.filter((w) => w.status !== "unavailable").length,
   });
   const nextStep = completeness.missing[0];
-  const today = new Date().toISOString().slice(0, 10);
   const month = parseMonth(monthParam) ?? today.slice(0, 7);
   const windows = overview.availability.map((w) => ({
     id: w.id,
@@ -124,6 +154,39 @@ export default async function ProfessionalOverviewPage({
             </ul>
           </Panel>
         )}
+        <Panel title={t("overview.reviewTitle")}>
+          {toReview.length === 0 ? (
+            <p className="text-sm text-muted">
+              {t("overview.reviewNone", { days: REVIEW_WINDOW_DAYS })}
+            </p>
+          ) : (
+            <ul className="divide-y divide-line text-sm">
+              {toReview.map((item) => {
+                const expired = documentExpiryState(item.expiresAt, today) === "expired";
+                return (
+                  <li
+                    key={item.key}
+                    className="flex flex-wrap items-center justify-between gap-3 py-2"
+                  >
+                    <span>
+                      <span className="font-semibold">{item.title}</span> ·{" "}
+                      <span className="tabular-nums">{formatDate(locale, item.expiresAt)}</span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <StatusChip tone={EXPIRY_TONE[expired ? "expired" : "soon"]}>
+                        {expired
+                          ? t("overview.reviewExpired")
+                          : t("overview.reviewSoon", { days: REVIEW_WINDOW_DAYS })}
+                      </StatusChip>
+                      <ButtonLink href={item.href}>{t("overview.reviewOpen")}</ButtonLink>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p className="mt-3 text-xs text-muted">{t("overview.reviewHint")}</p>
+        </Panel>
         <div className="grid gap-6 lg:grid-cols-2">
           {/* V1.8 «Estado de mi perfil»: every BR-11 item with a direct link to complete it. */}
           <Panel title={t("overview.checklistTitle", { percent: completeness.percent })}>

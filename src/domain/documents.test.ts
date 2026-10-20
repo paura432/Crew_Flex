@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   documentExpiryState,
+  isDueForReview,
   canShareWithThirdParties,
   DOCUMENT_SCAN_STATUSES,
   DOCUMENT_TITLE_MAX,
@@ -101,5 +102,18 @@ describe("documentExpiryState (V1.8 documentStatus)", () => {
     ["2026-12-04", "valid"], // 46 days
   ] as const)("%s → %s", (expiresAt, state) => {
     expect(documentExpiryState(expiresAt, today)).toBe(state);
+  });
+});
+
+describe("isDueForReview (V1.8 Badges «próximos a revisar», 60 days, expired included)", () => {
+  const today = "2026-10-20";
+  it.each([
+    [null, false],
+    ["2020-01-01", true], // expired stays listed («Fecha superada»)
+    ["2026-10-20", true],
+    ["2026-12-19", true], // 60 days
+    ["2026-12-20", false], // 61 days
+  ] as const)("%s → %s", (expiresAt, due) => {
+    expect(isDueForReview(expiresAt, today)).toBe(due);
   });
 });

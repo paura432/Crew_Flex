@@ -456,7 +456,13 @@
       "itemPending": "pending",
       "calendarTitle": "My availability this month",
       "openAvailability": "Edit availability",
-      "showChecklist": "The {count} profile items"
+      "showChecklist": "The {count} profile items",
+      "reviewTitle": "Documents and courses to review",
+      "reviewNone": "Nothing declared expires within the next {days} days.",
+      "reviewExpired": "Date passed",
+      "reviewSoon": "Next {days} days",
+      "reviewOpen": "Open",
+      "reviewHint": "Based on the dates you declared. No external reminders are sent; documents without a date are not treated as verified."
     },
     "hint": {
       "display_name": "Next: add your professional name",

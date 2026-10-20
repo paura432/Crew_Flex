@@ -456,7 +456,13 @@
       "itemPending": "pendiente",
       "calendarTitle": "Mi disponibilidad este mes",
       "openAvailability": "Editar disponibilidad",
-      "showChecklist": "Los {count} apartados del perfil"
+      "showChecklist": "Los {count} apartados del perfil",
+      "reviewTitle": "Documentos y cursos próximos a revisar",
+      "reviewNone": "Nada de lo declarado caduca en los próximos {days} días.",
+      "reviewExpired": "Fecha superada",
+      "reviewSoon": "Próximos {days} días",
+      "reviewOpen": "Abrir",
+      "reviewHint": "Según las fechas declaradas. No se envían avisos externos; los documentos sin fecha no se consideran verificados."
     },
     "hint": {
       "display_name": "Siguiente: añade tu nombre profesional",

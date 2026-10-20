@@ -90,3 +90,13 @@ export function documentExpiryState(expiresAt: string | null, today: string): Ex
     (Date.parse(`${expiresAt}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000;
   return days <= EXPIRY_SOON_DAYS ? "soon" : "valid";
 }
+
+/** V1.8 `Badges.jsx` «próximos a revisar»: anything expiring within this many days, expired included. */
+export const REVIEW_WINDOW_DAYS = 60;
+
+const addDays = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+/** Declared expiry on or before `today + REVIEW_WINDOW_DAYS` (UTC dates); no date → never listed. */
+export const isDueForReview = (expiresAt: string | null, today: string): boolean =>
+  expiresAt !== null && expiresAt <= addDays(today, REVIEW_WINDOW_DAYS);

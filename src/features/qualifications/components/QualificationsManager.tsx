@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
-import { StatusChip, type Tone } from "@/components/ui/StatusChip";
+import { EXPIRY_TONE, StatusChip, type Tone } from "@/components/ui/StatusChip";
+import { documentExpiryState } from "@/domain/documents";
 import {
   QUALIFICATION_CATEGORIES,
   type QualificationType,
@@ -48,11 +49,15 @@ const toNull = (value: FormDataEntryValue | null) => {
 export function QualificationsManager({
   qualifications,
   catalog,
+  today,
 }: {
   qualifications: Qualification[];
   catalog: QualificationType[];
+  /** `YYYY-MM-DD` (UTC) from the server render, for the BR-12 expiry chip. */
+  today: string;
 }) {
   const t = useTranslations("qualifications");
+  const tDocuments = useTranslations("documents");
   const tDomain = useTranslations("domain");
   const tRoot = useTranslations();
   const locale = useLocale();
@@ -295,6 +300,15 @@ export function QualificationsManager({
                         {q.expiresAt
                           ? t("validUntil", { date: formatDate(locale, q.expiresAt) })
                           : t("noExpiry")}
+                        {/* BR-12: same «expires soon» / «expired» chip as the wallet. */}
+                        {(() => {
+                          const expiry = documentExpiryState(q.expiresAt, today);
+                          return expiry === "soon" || expiry === "expired" ? (
+                            <StatusChip tone={EXPIRY_TONE[expiry]}>
+                              {tDocuments(`expiry.${expiry}`)}
+                            </StatusChip>
+                          ) : null;
+                        })()}
                       </span>
                       {q.verificationStatus === "rejected" && q.reviewNote && (
                         <span className="mt-1 block text-xs text-danger">

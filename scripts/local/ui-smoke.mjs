@@ -195,6 +195,12 @@ ok(
     /QUALIFICATIONS\s*5/i.test(profileText),
   "",
 );
+ok(
+  "2g TD-44 review list: nothing declared expires within 60 days (seed Delta)",
+  /Documents and courses to review/.test(profileText) &&
+    /Nothing declared expires within the next 60 days/.test(profileText),
+  "",
+);
 await shot("01-technician-overview");
 // Batch 3 (M02, V1.8 TechnicianHome): full status checklist + read-only month calendar.
 const checklist = page
@@ -410,6 +416,35 @@ ok(
   /15 Jan 2032/.test(await b2Row.innerText()),
   (await b2Row.innerText()).replace(/\s+/g, " ").slice(0, 120),
 );
+// Batch 14 (TD-44 / BR-12): an expiry 30 days out shows the «Expires soon» chip on the row and the
+// overview lists it under «Documents and courses to review» with a link back.
+const soon = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+await b2Row.locator("button:has-text('Edit')").click();
+await page.fill("#expiresAt", soon);
+await page.click("main form button[type=submit]:has-text('Save')");
+await page.waitForSelector("[role=status]:has-text('B2 updated')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "5f2 BR-12 chip on the qualification row: Expires soon",
+  /Expires soon/.test(await b2Row.innerText()),
+  (await b2Row.innerText()).replace(/\s+/g, " ").slice(0, 120),
+);
+await page.goto(`${BASE}/app/professional`);
+await page.waitForLoadState("networkidle");
+const reviewRow = page
+  .locator("li", { hasText: /B2 · Part-66 B2/ })
+  .filter({ hasText: /Next 60 days/ });
+ok(
+  "5f3 TD-44 overview lists B2 under «Documents and courses to review» with a link",
+  (await reviewRow.count()) === 1 &&
+    (await reviewRow.locator("a[href='/app/professional/qualifications']").count()) === 1,
+  (await page.locator("main").innerText()).match(
+    /Documents and courses to review[\s\S]{0,160}/,
+  )?.[0] ?? "",
+);
+await page.goto(`${BASE}/app/professional/qualifications`);
+await page.waitForLoadState("networkidle");
 await b2Row.locator("button:has-text('Remove')").click();
 await page.waitForSelector("[role=status]:has-text('B2 removed')", { timeout: 15000 });
 await page.reload();

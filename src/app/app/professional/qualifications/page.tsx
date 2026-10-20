@@ -40,7 +40,11 @@ export default async function ProfessionalQualificationsPage() {
           description={t("catalogErrorDescription")}
         />
       ) : (
-        <QualificationsManager qualifications={result.data.qualifications} catalog={catalog} />
+        <QualificationsManager
+          qualifications={result.data.qualifications}
+          catalog={catalog}
+          today={new Date().toISOString().slice(0, 10)}
+        />
       )}
     </>
   );
