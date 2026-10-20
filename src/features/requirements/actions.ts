@@ -1,11 +1,15 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { idempotencyKeySchema } from "@/lib/validation/idempotency";
-import { createWorkRequirementInput } from "@/lib/validation/work-requirement";
+import {
+  closeWorkRequirementInput,
+  createWorkRequirementInput,
+} from "@/lib/validation/work-requirement";
 import type { ApiErrorCode } from "@/types/api";
-import { createRequirement } from "./api";
+import { closeRequirement, createRequirement } from "./api";
 
 export type CreateRequirementState =
   | { status: "idle" }
@@ -55,4 +59,24 @@ export async function createRequirementAction(
     };
   }
   redirect(`/app/organization/requirements/${result.data.requirement.id}`);
+}
+
+export type CloseRequirementResult =
+  { ok: true } | { ok: false; code: ApiErrorCode; message: string; requestId?: string };
+
+/** V1.8 `job.status` → closed. Terminal: the database refuses any later status change. */
+export async function closeRequirementAction(id: unknown): Promise<CloseRequirementResult> {
+  const parsed = closeWorkRequirementInput.safeParse({ id, status: "closed" });
+  if (!parsed.success) return { ok: false, code: "VALIDATION_ERROR", message: "v.requirement.id" };
+  const result = await closeRequirement(parsed.data.id);
+  if (!result.ok) {
+    return {
+      ok: false,
+      code: result.error.code,
+      message: result.error.message,
+      requestId: result.requestId,
+    };
+  }
+  revalidatePath("/app/organization", "layout");
+  return { ok: true };
 }

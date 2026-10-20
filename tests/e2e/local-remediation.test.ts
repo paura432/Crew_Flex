@@ -854,4 +854,60 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
       if (youngPath) await client(foxtrot).storage.from(BUCKET).remove([youngPath]);
     }
   });
+
+  it("close (V1.8 job.status, 20261020120000): 403 member · 404 other org · 200 manager, repeat 200; never reopened", async () => {
+    const manager = await signIn("manager.mro@crewflex.test");
+    const { data: mad } = await client(manager)
+      .from("work_requirements")
+      .select("organization_id")
+      .eq("title", MAD)
+      .single();
+    const mroId = mad!.organization_id as string;
+    const { data: types } = await client(manager)
+      .from("qualification_types")
+      .select("id")
+      .eq("code", "B1.1")
+      .single();
+    const created = await call("work-requirements", {
+      method: "POST",
+      token: manager,
+      headers: { "Idempotency-Key": randomUUID() },
+      body: {
+        organizationId: mroId,
+        title: `E2E close ${randomUUID().slice(0, 8)}`,
+        location: "Madrid (MAD)",
+        startsAt: "2031-06-01T06:00:00.000Z",
+        endsAt: "2031-06-02T18:00:00.000Z",
+        shift: "day",
+        headcount: 1,
+        urgency: "planned",
+        qualifications: [{ qualificationTypeId: types!.id, level: "hard" }],
+      },
+    });
+    expect(created.status).toBe(201);
+    const id = (created.body.data?.requirement as { id: string }).id;
+    const close = (token: string) =>
+      call("work-requirements", { method: "PATCH", token, body: { id, status: "closed" } });
+    const [charlie, adminOther] = await Promise.all([
+      signIn("charlie@crewflex.test"),
+      signIn("admin.other@crewflex.test"),
+    ]);
+    expect((await close(charlie)).status).toBe(403);
+    expect((await close(adminOther)).status).toBe(404);
+    const reopen = await call("work-requirements", {
+      method: "PATCH",
+      token: manager,
+      body: { id, status: "open" },
+    });
+    expect(reopen.status).toBe(400); // the API offers no other transition
+    const first = await close(manager);
+    const again = await close(manager);
+    expect([first.status, again.status]).toEqual([200, 200]);
+    expect((again.body.data?.requirement as { status: string }).status).toBe("closed");
+    const direct = await client(manager)
+      .from("work_requirements")
+      .update({ status: "open" })
+      .eq("id", id);
+    expect(direct.error?.code).toBe("55000");
+  });
 });

@@ -3416,3 +3416,62 @@ describe("Q. document wallet (migration 20261019160000)", () => {
     });
   });
 });
+
+describe("M. closing a requirement (V1.8 job.status, migration 20261020120000)", () => {
+  const status = async (tx: { query: PGlite["query"] }) =>
+    (
+      await tx.query<{ status: string }>(
+        "select status from public.work_requirements where id = $1",
+        [madRequirementId],
+      )
+    ).rows[0]?.status;
+
+  it("a manager closes it; the change is audited with actor, from and to", async () => {
+    await asUser(db, SEED.managerMro, async (tx) => {
+      await tx.query("update public.work_requirements set status = 'closed' where id = $1", [
+        madRequirementId,
+      ]);
+      expect(await status(tx)).toBe("closed");
+      await tx.exec("reset role"); // the trail is admin-only (audit_events_select): read as owner
+      const { rows } = await tx.query<{ actor_profile_id: string; metadata: unknown }>(
+        `select actor_profile_id, metadata from public.audit_events
+         where entity_id = $1 and action = 'requirement.status_changed'`,
+        [madRequirementId],
+      );
+      expect(rows).toEqual([
+        { actor_profile_id: SEED.managerMro, metadata: { from: "open", to: "closed" } },
+      ]);
+    });
+  });
+
+  it("a closed requirement is never reopened, even by a direct write", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await tx.query("update public.work_requirements set status = 'closed' where id = $1", [
+        madRequirementId,
+      ]);
+      for (const next of ["open", "covered", "draft", "cancelled"]) {
+        expect(
+          await queryError(
+            tx,
+            `update public.work_requirements set status = '${next}' where id = $1`,
+            [madRequirementId],
+          ),
+        ).toMatch(/cannot be reopened/);
+      }
+      expect(await status(tx)).toBe("closed");
+    });
+  });
+
+  it("plain members and other organizations cannot close it (no rows touched)", async () => {
+    for (const user of [SEED.charlieMember, SEED.adminOther]) {
+      await asUser(db, user, async (tx) => {
+        const { affectedRows } = await tx.query(
+          "update public.work_requirements set status = 'closed' where id = $1",
+          [madRequirementId],
+        );
+        expect(affectedRows ?? 0).toBe(0);
+      });
+    }
+    expect(await status(db)).toBe("open");
+  });
+});

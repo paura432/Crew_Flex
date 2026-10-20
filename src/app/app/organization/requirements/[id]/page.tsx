@@ -9,6 +9,7 @@ import { evaluateRequirementCapacity } from "@/features/capacity/api";
 import { CapacityOverview } from "@/features/capacity/components/CapacityOverview";
 import { MatchCard } from "@/features/matching/components/MatchCard";
 import { getRequirement } from "@/features/requirements/api";
+import { CloseRequirement } from "@/features/requirements/components/CloseRequirement";
 import { RequirementFacts } from "@/features/requirements/components/RequirementFacts";
 import { requireOrganizationContext } from "@/server/session";
 
@@ -40,6 +41,17 @@ export default async function RequirementDetailPage({
       <div className="space-y-6">
         <Panel>
           <RequirementFacts requirement={requirement} />
+          {requirement.status === "closed" ? (
+            <p className="mt-4 border-t border-line pt-4 text-sm text-muted">
+              {t("close.closedNote")}
+            </p>
+          ) : (
+            canManage && (
+              <div className="mt-4 border-t border-line pt-4">
+                <CloseRequirement id={requirement.id} />
+              </div>
+            )
+          )}
         </Panel>
         {!capacity ? (
           <StateMessage

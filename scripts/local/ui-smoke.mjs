@@ -575,6 +575,9 @@ await Promise.all([
   page.getByRole("button", { name: "Apply" }).click(),
 ]);
 await listed();
+const hiddenSelected = await page
+  .locator('#compare-form input[type=hidden][name="compare"]')
+  .count();
 await cards().nth(0).getByLabel("Compare").check();
 await Promise.all([
   page.waitForURL((u) => u.searchParams.getAll("compare").length === 3),
@@ -583,8 +586,8 @@ await Promise.all([
 await compare.waitFor({ timeout: 15_000 });
 ok(
   "11l compare keeps selections hidden by the filter (3 compared)",
-  (await compare.locator("thead th").count()) === 4,
-  `${await compare.locator("thead th").count()} header cells`,
+  hiddenSelected === 2 && (await compare.locator("thead th").count()) === 4,
+  `${hiddenSelected} carried hidden, ${await compare.locator("thead th").count()} header cells`,
 );
 await listed();
 ok(
@@ -654,6 +657,20 @@ ok(
   page.url(),
 );
 await shot("08-requirement-created");
+// 12b (batch 6, V1.8 job.status): close with a confirmation step; terminal after reload.
+await page.getByRole("button", { name: "Close requirement" }).click();
+await page.getByRole("button", { name: "Yes, close it" }).click();
+await page
+  .locator("main [role=status]", { hasText: "Requirement closed." })
+  .waitFor({ timeout: 15_000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+const closedText = await page.locator("main").innerText();
+ok(
+  "12b close requirement: confirmed, status closed after reload, no close button left",
+  /no longer be reopened/.test(closedText) &&
+    (await page.getByRole("button", { name: "Close requirement" }).count()) === 0,
+);
 await logout();
 
 // 3. Cross-organization: admin.other cannot open the MAD requirement

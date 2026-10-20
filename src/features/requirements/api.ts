@@ -17,3 +17,9 @@ export const createRequirement = (input: CreateWorkRequirementInput, idempotency
     body: input,
     headers: { "Idempotency-Key": idempotencyKey },
   });
+
+export const closeRequirement = (id: string) =>
+  invokeEdgeFunction<WorkRequirementResponse>("work-requirements", {
+    method: "PATCH",
+    body: { id, status: "closed" },
+  });
