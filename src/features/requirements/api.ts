@@ -1,11 +1,15 @@
 import "server-only";
 import type { CreateWorkRequirementInput } from "@/lib/validation/work-requirement";
 import { invokeEdgeFunction } from "@/server/edge-functions";
+import type { WorkRequirement } from "@/domain/work-requirement";
 import type { WorkRequirementListResponse, WorkRequirementResponse } from "@/types/api";
 
-export const listRequirements = (organizationId: string) =>
+export const listRequirements = (
+  organizationId: string,
+  filters: { status?: WorkRequirement["status"]; endsAfter?: string } = {},
+) =>
   invokeEdgeFunction<WorkRequirementListResponse>("work-requirements", {
-    query: { organizationId },
+    query: { organizationId, ...filters },
   });
 
 export const getRequirement = (id: string) =>

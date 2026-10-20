@@ -23,6 +23,10 @@ function focusRequirement(requirements: WorkRequirement[]) {
   return requirements.find((r) => r.status === "open" && !isExpired(r, now));
 }
 
+/** Open, not yet ended, soonest first — filtered by the API so the 50-row page cannot hide the focus. */
+const listFocusCandidates = (organizationId: string) =>
+  listRequirements(organizationId, { status: "open", endsAfter: new Date().toISOString() });
+
 async function FocusCapacity({ requirement }: { requirement: WorkRequirement }) {
   const result = await evaluateRequirementCapacity(requirement.id);
   if (!result.ok) return <ApiErrorState error={result.error} requestId={result.requestId} />;
@@ -40,8 +44,11 @@ export default async function OrganizationDashboard() {
     requireOrganizationContext(),
     getTranslations("organization.dashboard"),
   ]);
-  const result = await listRequirements(organization.id);
-  const focus = result.ok ? focusRequirement(result.data.requirements) : undefined;
+  const [result, open] = await Promise.all([
+    listRequirements(organization.id),
+    listFocusCandidates(organization.id),
+  ]);
+  const focus = open.ok ? focusRequirement(open.data.requirements) : undefined;
 
   const newButton = canManage && (
     <ButtonLink href="/app/organization/requirements/new" variant="primary">

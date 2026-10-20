@@ -6,6 +6,7 @@ import {
   HEADCOUNT_MAX,
   MAX_REQUIREMENT_DAYS,
   REQUIREMENT_LEVELS,
+  REQUIREMENT_STATUSES,
   SHIFTS,
   URGENCIES,
 } from "../../domain/work-requirement.ts";
@@ -74,6 +75,9 @@ export const listWorkRequirementsQuery = z.strictObject({
   id: z.uuid().optional(),
   organizationId: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
+  status: z.enum(REQUIREMENT_STATUSES).optional(),
+  /** Only needs whose period ends after this instant (the dashboard focus: open and not expired). */
+  endsAfter: z.iso.datetime({ offset: true }).optional(),
 });
 export type ListWorkRequirementsQuery = z.infer<typeof listWorkRequirementsQuery>;
 

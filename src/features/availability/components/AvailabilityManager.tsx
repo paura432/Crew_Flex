@@ -69,7 +69,12 @@ export function AvailabilityManager({
   const t = useTranslations("availability");
   const tRoot = useTranslations();
   const locale = useLocale();
-  const [month, setMonth] = useState(initialMonth);
+  const [month, setMonthState] = useState(initialMonth);
+  /** Month survives reload and back/forward (`?month=`), as the overview calendar does. */
+  const setMonth = (m: string) => {
+    setMonthState(m);
+    window.history.replaceState(null, "", `?month=${m}`);
+  };
   const [picker, setPicker] = useState<Picker>("available");
   const [editing, setEditing] = useState<AvailabilityWindow | null>(null);
   const [rawErrors, setErrors] = useState<FieldErrors>({});

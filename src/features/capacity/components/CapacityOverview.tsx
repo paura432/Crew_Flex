@@ -58,14 +58,13 @@ export async function CapacityOverview({
       </dl>
 
       <footer className="flex flex-wrap gap-3 border-t border-line px-5 py-4 sm:px-6">
-        {hasGap && (
-          <ButtonLink
-            href={`/app/organization/requirements/${requirement.id}/matches`}
-            variant="primary"
-          >
-            {t("viewEligible")}
-          </ButtonLink>
-        )}
+        {/* V1.8: the candidate list is always reachable from a job; the CTA is primary only with a gap. */}
+        <ButtonLink
+          href={`/app/organization/requirements/${requirement.id}/matches`}
+          variant={hasGap ? "primary" : "secondary"}
+        >
+          {t("viewEligible")}
+        </ButtonLink>
         {showRequirementLink && (
           <ButtonLink href={`/app/organization/requirements/${requirement.id}`}>
             {t("detail")}

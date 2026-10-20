@@ -72,6 +72,12 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
 }
 
 /** Loads a requirement visible to the actor (RLS). Hidden and missing look the same. */
+/** V1.8 evaluates published jobs only: a closed need no longer exposes the candidate pool (BR-1.9). */
+export function assertEvaluableStatus(requirement: Pick<WorkRequirement, "status">): void {
+  if (requirement.status === "closed")
+    throw new ApiError("CONFLICT", "This requirement is closed.");
+}
+
 export async function loadRequirement(actor: Actor, id: string): Promise<WorkRequirement> {
   const { data, error } = await actor.client
     .from("work_requirements")

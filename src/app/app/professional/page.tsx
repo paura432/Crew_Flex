@@ -224,7 +224,7 @@ export default async function ProfessionalOverviewPage({
           <Panel
             title={t("overview.calendarTitle")}
             actions={
-              <ButtonLink href="/app/professional/availability">
+              <ButtonLink href={`/app/professional/availability?month=${month}`}>
                 {t("overview.openAvailability")}
               </ButtonLink>
             }

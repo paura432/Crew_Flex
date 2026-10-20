@@ -31,13 +31,23 @@ export default async function RequirementMatchesPage({
   params,
   searchParams,
 }: PageProps<"/app/organization/requirements/[id]/matches">) {
-  const [{ id }, search, , t, locale] = await Promise.all([
+  const [{ id }, search, { canManage }, t, tDashboard, locale] = await Promise.all([
     params,
     searchParams,
     requireOrganizationContext(),
     getTranslations("organization.matches"),
+    getTranslations("organization.dashboard"),
     getLocale(),
   ]);
+  // Same gate as the detail page and the dashboard; the RPC re-checks the role on its own.
+  if (!canManage) {
+    return (
+      <StateMessage
+        title={tDashboard("managersOnlyTitle")}
+        description={tDashboard("managersOnlyDescription")}
+      />
+    );
+  }
   const [requirementResult, matchesResult] = await Promise.all([
     getRequirement(id),
     evaluateRequirementMatches(id),

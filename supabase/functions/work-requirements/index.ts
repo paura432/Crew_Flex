@@ -36,6 +36,8 @@ export const handler = createHandler("work-requirements", {
       .order("starts_at", { ascending: true })
       .limit(query.limit);
     if (query.organizationId) request = request.eq("organization_id", query.organizationId);
+    if (query.status) request = request.eq("status", query.status);
+    if (query.endsAfter) request = request.gt("ends_at", query.endsAfter);
     const { data, error } = await request;
     if (error) throw fromDatabaseError(error);
     return {

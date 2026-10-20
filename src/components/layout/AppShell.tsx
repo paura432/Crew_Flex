@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { signOutAction } from "@/features/auth/actions";
 import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/feature-flags";
-import type { SessionActor } from "@/server/session";
+import { primaryMembership, type SessionActor } from "@/server/session";
 import { NavDrawer } from "./NavDrawer";
 import { NavLinks, type NavItem } from "./NavLinks";
 
@@ -13,7 +13,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     getTranslations("nav"),
     actor.profile.account_type === "professional" ? isDocumentWalletEnabled() : false,
   ]);
-  const organization = actor.memberships[0]?.organization;
+  const organization = primaryMembership(actor)?.organization;
   const isProfessional = actor.profile.account_type === "professional";
 
   const organizationNav: NavItem[] = [

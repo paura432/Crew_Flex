@@ -4,6 +4,7 @@ import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { listAvailability } from "@/features/availability/api";
+import { parseMonth } from "@/features/availability/calendar";
 import { AvailabilityManager } from "@/features/availability/components/AvailabilityManager";
 import { requireSessionActor } from "@/server/session";
 
@@ -12,8 +13,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("availability") };
 }
 
-export default async function ProfessionalAvailabilityPage() {
-  const [actor, t, tProfessional] = await Promise.all([
+export default async function ProfessionalAvailabilityPage({
+  searchParams,
+}: PageProps<"/app/professional/availability">) {
+  const [{ month: monthParam }, actor, t, tProfessional] = await Promise.all([
+    searchParams,
     requireSessionActor(),
     getTranslations("availability"),
     getTranslations("professional"),
@@ -36,7 +40,7 @@ export default async function ProfessionalAvailabilityPage() {
         <AvailabilityManager
           windows={result.data.windows}
           rotation={result.data.rotation}
-          initialMonth={today.slice(0, 7)}
+          initialMonth={parseMonth(monthParam) ?? today.slice(0, 7)}
           today={today}
         />
       ) : (

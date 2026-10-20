@@ -918,5 +918,18 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
       const res = await call(fn, { method: "POST", token: manager, body: { requirementId: id } });
       expect([fn, res.status]).toEqual([fn, 409]); // V1.8 evaluates published jobs only
     }
+    // Batch 15: list filters (the dashboard focus asks for open needs ending after now).
+    const ids = async (query: Record<string, string>) => {
+      const res = await call("work-requirements", { token: manager, query });
+      expect(res.status).toBe(200);
+      return (res.body.data?.requirements as { id: string }[]).map((r) => r.id);
+    };
+    expect(await ids({ organizationId: mroId, status: "closed" })).toContain(id);
+    expect(
+      await ids({ organizationId: mroId, status: "open", endsAfter: new Date().toISOString() }),
+    ).not.toContain(id);
+    expect(
+      (await call("work-requirements", { token: manager, query: { status: "nope" } })).status,
+    ).toBe(400);
   });
 });
