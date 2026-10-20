@@ -1,3 +1,8 @@
+> **Stale (second audit 2026-10-20):** this file compares against v1.1 (S1). The migration target is **v1.8**;
+> the current visual diff is `docs/integration/crewflex-v13/11-independent-parity-audit.md` §8 and
+> `docs/integration/crewflex-v13/13-visual-comparison.md`. Known stale lines: Outfit display font (v1.8 uses Inter),
+> «Wallet / Herramientas absent», nav «horizontal scroll», shift patterns / Solo AOG «deferred».
+
 # Visual parity
 
 Reference: S1 `CrewFlex_v1.1.html` rendered with headless Chromium (file://), 1440×900 and 390×844,

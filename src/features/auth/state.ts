@@ -42,10 +42,11 @@ export function safeConfirmNext(next: unknown): string {
 export const RECOVERY_WINDOW_SECONDS = 3600;
 
 /**
- * True when the JWT `amr` claim shows the session was opened by a recovery e-mail link within the
- * window. A plain signed-in session (shared device) must not set a new password from this app without
- * the current one. Defense in depth only: Supabase Auth itself (`PUT /auth/v1/user`) still accepts a
- * password change from any session until `secure_password_change` is enabled (owner, SECURITY_PRIVACY).
+ * True when the JWT `amr` claim shows the session was opened from an e-mail link within the window:
+ * `recovery` (PKCE `code` link) or `otp` (`token_hash` link — GoTrue v2.197 records recovery
+ * verification as `otp`; T22 matrix 2026-10-20). Both prove control of the mailbox. UX gate only: the
+ * provider-level control is `update_password_require_current_password`, which exempts recovery sessions
+ * natively (docs/product/SECURITY_PRIVACY.md T22).
  */
 export function isRecentRecovery(amr: unknown, nowSeconds: number): boolean {
   return (
@@ -54,7 +55,7 @@ export function isRecentRecovery(amr: unknown, nowSeconds: number): boolean {
       (entry: unknown) =>
         typeof entry === "object" &&
         entry !== null &&
-        (entry as { method?: unknown }).method === "recovery" &&
+        ["recovery", "otp"].includes((entry as { method?: unknown }).method as string) &&
         typeof (entry as { timestamp?: unknown }).timestamp === "number" &&
         nowSeconds - (entry as { timestamp: number }).timestamp <= RECOVERY_WINDOW_SECONDS,
     )

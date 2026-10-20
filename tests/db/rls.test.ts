@@ -3504,6 +3504,23 @@ describe("R. closing a requirement (V1.8 job.status, migrations 20261020120000/1
     });
   });
 
+  it("deleting the organization still cascades through a closed requirement (account deletion)", async () => {
+    await db
+      .transaction(async (owner) => {
+        await owner.query("update public.work_requirements set status = 'closed' where id = $1", [
+          madRequirementId,
+        ]);
+        await owner.query("delete from public.organizations where id = $1", [mroId]);
+        const { rows } = await owner.query(
+          "select 1 from public.work_requirement_qualifications where work_requirement_id = $1",
+          [madRequirementId],
+        );
+        expect(rows).toHaveLength(0);
+        throw new Error("rollback");
+      })
+      .catch((error: Error) => expect(error.message).toBe("rollback"));
+  });
+
   it("plain members and other organizations cannot close it (no rows touched)", async () => {
     for (const user of [SEED.charlieMember, SEED.adminOther]) {
       await asUser(db, user, async (tx) => {

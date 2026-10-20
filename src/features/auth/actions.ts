@@ -37,6 +37,10 @@ function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode } {
       return { code: "WEAK_PASSWORD" };
     case "same_password":
       return { code: "SAME_PASSWORD" };
+    // Provider refused a password change outside a recovery session (T22 settings).
+    case "current_password_required":
+    case "reauthentication_needed":
+      return { code: "RECOVERY_EXPIRED" };
     default:
       return { code: "UNKNOWN" };
   }

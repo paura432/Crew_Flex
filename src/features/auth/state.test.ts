@@ -40,6 +40,8 @@ describe("isRecentRecovery (reset-password gate)", () => {
     [[{ method: "recovery", timestamp: now - 3600 }], true],
     [[{ method: "recovery", timestamp: now - 3601 }], false],
     [[{ method: "password", timestamp: now }], false],
+    [[{ method: "otp", timestamp: now - 60 }], true], // token_hash recovery link (GoTrue v2.197)
+    [[{ method: "otp", timestamp: now - 3601 }], false],
     [["recovery"], false],
     [[{ method: "recovery", timestamp: "1" }], false],
     [undefined, false],
