@@ -221,8 +221,8 @@ ok(
 );
 // 2e (batch 11, V1.8 hides the progress when complete): Delta is at 100 % → list folded, one click away.
 ok(
-  "2e complete profile: checklist folded behind «Show the 7 profile items»",
-  (await page.getByText("Show the 7 profile items").isVisible()) &&
+  "2e complete profile: checklist folded behind «The 7 profile items»",
+  (await page.getByText("The 7 profile items").isVisible()) &&
     !(await checklist.first().isVisible()),
 );
 // 2d (batch 7, V1.8 colours): AOG legend swatch is orange (warn-bg), the partial day is hatched.
@@ -904,7 +904,14 @@ for (const width of [360, 390]) {
     spilling.join(" | "),
   );
   await shot(`23-overview-nav-${width}`);
-  await menu.click(); // close again for the next width
+  await page.locator("aside nav a", { hasText: "Passport" }).click();
+  await page.waitForURL(/\/profile/);
+  await page.goBack();
+  await page.waitForURL(/\/app\/professional$/);
+  ok(
+    `24d nav @${width}: following a link and going back leaves the menu closed`,
+    (await menu.getAttribute("aria-expanded")) === "false",
+  );
 }
 await page.setViewportSize({ width: 1440, height: 900 });
 await logout();
@@ -940,12 +947,14 @@ await tp.fill("#password", "crewflex-local-only");
 await Promise.all([tp.waitForURL(/\/app/), tp.click("form button[type=submit]")]);
 const small = [];
 for (const path of [
+  "/app/professional",
   "/app/professional/availability",
   "/app/professional/profile",
   "/app/tools/convert",
 ]) {
   await tp.goto(`${BASE}${path}`);
   await tp.waitForLoadState("networkidle");
+  await tp.getByRole("button", { name: "Menu" }).click(); // measure the nav links too
   small.push(
     ...(await tp.evaluate(() =>
       [
@@ -962,7 +971,7 @@ for (const path of [
   );
 }
 ok(
-  "25 touch targets ≥ 44 px on a touch screen (availability, passport, converter)",
+  "25 touch targets ≥ 44 px on a touch screen (overview, availability, passport, converter, nav)",
   small.length === 0,
   small.slice(0, 5).join(" | "),
 );

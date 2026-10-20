@@ -1,7 +1,8 @@
 /* eslint-disable no-console -- CLI check script: console output is its report */
 // Side-by-side captures: CrewFlex v1.8 reference (demo build from tmp/CrewFlex_v1.8.zip, served on
 // 127.0.0.1 only) vs the local Next.js app. Isolation: fresh ephemeral browser context (no profile),
-// service workers blocked, and EVERY request outside 127.0.0.1/localhost is aborted and logged.
+// service workers blocked, every HTTP(S) request outside 127.0.0.1/localhost aborted and logged,
+// WebSockets closed, and DNS for any other host fails (--host-resolver-rules: no preconnect/prefetch).
 // Usage (from the repo root, local stack + `next start -p 3001` running):
 //   python3 -I -m http.server 56380 --bind 127.0.0.1 --directory <extracted zip>/CrewFlex-v1.8/dist &
 //   PLAYWRIGHT_CORE=… CHROME=… OUT=docs/audit/evidence/v18-compare node scripts/local/visual-compare.mjs
@@ -16,16 +17,23 @@ const TWO = [1440, 390];
 const require = createRequire(`${process.env.PLAYWRIGHT_CORE}/playwright-core/package.json`);
 const { chromium } = require("playwright-core");
 const blocked = new Set();
-const browser = await chromium.launch({ executablePath: process.env.CHROME, headless: true });
+const browser = await chromium.launch({
+  executablePath: process.env.CHROME,
+  headless: true,
+  args: ["--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1, EXCLUDE localhost"],
+});
 
 async function context() {
   const ctx = await browser.newContext({ serviceWorkers: "block", locale: "es-ES" });
   await ctx.route("**/*", (route) => {
     const u = new URL(route.request().url());
-    if (["127.0.0.1", "localhost"].includes(u.hostname) || u.protocol === "data:")
-      return route.continue();
+    if (["127.0.0.1", "localhost"].includes(u.hostname)) return route.continue();
     blocked.add(u.origin);
     return route.abort();
+  });
+  await ctx.routeWebSocket(/.*/, (ws) => {
+    blocked.add(`ws:${ws.url()}`);
+    ws.close();
   });
   return ctx;
 }

@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
-import type { WorkRequirement } from "@/domain/work-requirement";
+import { isExpired, type WorkRequirement } from "@/domain/work-requirement";
 import { evaluateRequirementCapacity } from "@/features/capacity/api";
 import { CapacityOverview } from "@/features/capacity/components/CapacityOverview";
 import { listRequirements } from "@/features/requirements/api";
@@ -17,11 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("organization") };
 }
 
-/** Next open requirement that has not ended yet (request time), else the earliest open one. */
+/** Next open requirement that has not ended yet (request time); expired ones are not a focus (V1.8). */
 function focusRequirement(requirements: WorkRequirement[]) {
   const now = Date.now();
-  const open = requirements.filter((r) => r.status === "open");
-  return open.find((r) => Date.parse(r.endsAt) > now) ?? open[0];
+  return requirements.find((r) => r.status === "open" && !isExpired(r, now));
 }
 
 async function FocusCapacity({ requirement }: { requirement: WorkRequirement }) {

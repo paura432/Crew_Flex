@@ -127,10 +127,10 @@ export default async function ProfessionalOverviewPage({
         <div className="grid gap-6 lg:grid-cols-2">
           {/* V1.8 «Estado de mi perfil»: every BR-11 item with a direct link to complete it. */}
           <Panel title={t("overview.checklistTitle", { percent: completeness.percent })}>
-            {/* V1.8 hides the progress once the profile is (nearly) complete; the list stays one click away. */}
+            {/* V1.8 hides the progress from 95 %; with 7 items that is 100 %. The list stays one click away. */}
             <details open={completeness.percent < 100} className="group">
-              <summary className="cursor-pointer text-sm font-semibold text-blue group-open:hidden">
-                {t("overview.showChecklist")}
+              <summary className="flex cursor-pointer items-center text-sm font-semibold text-blue pointer-coarse:min-h-11">
+                {t("overview.showChecklist", { count: COMPLETENESS_ITEMS.length })}
               </summary>
               <ul className="divide-y divide-line text-sm">
                 {COMPLETENESS_ITEMS.map((item) => {

@@ -456,7 +456,7 @@
       "itemPending": "pending",
       "calendarTitle": "My availability this month",
       "openAvailability": "Edit availability",
-      "showChecklist": "Show the 7 profile items"
+      "showChecklist": "The {count} profile items"
     },
     "hint": {
       "display_name": "Next: add your professional name",

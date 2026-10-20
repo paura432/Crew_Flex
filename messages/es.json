@@ -456,7 +456,7 @@
       "itemPending": "pendiente",
       "calendarTitle": "Mi disponibilidad este mes",
       "openAvailability": "Editar disponibilidad",
-      "showChecklist": "Ver los 7 apartados del perfil"
+      "showChecklist": "Los {count} apartados del perfil"
     },
     "hint": {
       "display_name": "Siguiente: añade tu nombre profesional",

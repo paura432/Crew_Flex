@@ -2,8 +2,9 @@
 
 **Reference:** demo build `dist/` of `tmp/CrewFlex_v1.8.zip` (sha256 `53ee5b61…`, manifest 125/125), served by
 `python3 -I -m http.server` on `127.0.0.1:56380` from a fresh extraction. **Isolation:** headless Chromium, a
-new ephemeral context per side (no user profile, no extensions), service workers blocked, every request
-outside `127.0.0.1`/`localhost` aborted — **0 external origins were requested** (no fonts, no CDN, no API).
+new ephemeral context per side (no user profile, no extensions), service workers blocked, every HTTP(S)
+request outside `127.0.0.1`/`localhost` aborted, WebSockets closed, DNS for any other host failing
+(`--host-resolver-rules`) — **0 external origins were requested** (no fonts, no CDN, no API).
 The connected v1.8 server (Node + SQLite) was **not** run: it needs invite-minted accounts; its contracts are
 audited from the code (`11-independent-parity-audit.md` §3). **Current app:** `next build && next start` on
 the local stack, seed accounts Delta (professional) and Admin MRO (organization).
