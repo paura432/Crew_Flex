@@ -69,6 +69,7 @@ export default async function OrganizationDashboard() {
         />
       ) : (
         <div className="space-y-6">
+          {!open.ok && <ApiErrorState error={open.error} requestId={open.requestId} />}
           {focus && canManage && <FocusCapacity requirement={focus} />}
           {focus && !canManage && (
             <StateMessage

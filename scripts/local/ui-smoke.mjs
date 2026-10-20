@@ -1086,7 +1086,7 @@ ok(
     await cpage.click("button[type=submit]");
     await cpage.waitForURL(/\/app/);
   };
-  await visit(["/", "/login", "/register", "/forgot-password"]);
+  await visit(["/", "/login", "/register", "/forgot-password", "/reset-password"]);
   await signIn("delta@crewflex.test");
   await visit([
     "/app/professional",
@@ -1096,7 +1096,10 @@ ok(
     "/app/professional/documents",
     "/app/tools",
     "/app/tools/torque",
+    "/app/tools/convert",
+    "/app/tools/duration",
     "/app/settings",
+    "/app",
   ]);
   await cpage.setViewportSize({ width: 390, height: 800 });
   await visit(["/app/professional", "/app/professional/availability"]);
@@ -1121,9 +1124,39 @@ ok(
     await opage.goto(`${BASE}${r}`);
     await opage.waitForLoadState("networkidle");
   }
+  await opage.goto(`${BASE}/app/organization/requirements`);
+  await opage.waitForLoadState("networkidle");
+  const detail = await opage
+    .locator("main a[href*='/app/organization/requirements/']", {
+      hasText: "A320 line maintenance",
+    })
+    .first()
+    .getAttribute("href");
+  for (const r of [
+    detail,
+    `${detail}/matches`,
+    `${detail}/matches?page=2&compare=nobody&eligible=1&q=a`,
+  ]) {
+    await opage.goto(`${BASE}${r}`);
+    await opage.waitForLoadState("networkidle");
+  }
   await octx.close();
+  const actx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const apage = await actx.newPage();
+  apage.on("console", (m) => {
+    if (/Content Security Policy/.test(m.text()))
+      clean.push(`${m.text().slice(0, 120)} @ ${apage.url()}`);
+  });
+  await apage.goto(`${BASE}/login`);
+  await apage.fill("#email", "platform.admin@crewflex.test");
+  await apage.fill("#password", PW);
+  await apage.click("button[type=submit]");
+  await apage.waitForURL(/\/app/);
+  await apage.goto(`${BASE}/app/admin/verifications`);
+  await apage.waitForLoadState("networkidle");
+  await actx.close();
   ok(
-    "17c uninstrumented pass over 18 routes (2 roles, 1440 + 390): zero CSP violations (T18)",
+    "17c uninstrumented pass over 26 routes (3 roles, 1440 + 390, incl. detail/matches/admin): zero CSP violations (T18)",
     clean.length === 0,
     clean.slice(0, 3).join(" | "),
   );

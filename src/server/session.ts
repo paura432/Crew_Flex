@@ -68,9 +68,15 @@ const ROLE_RANK: Record<OrganizationRole, number> = { admin: 0, manager: 1, memb
  * V0: one active organization per user (the highest-role membership). Multi-organization
  * switching is NEXT.
  */
-/** The membership the organization pages act on: the highest role (V0, one active organization). */
-export const primaryMembership = (actor: SessionActor) =>
-  [...actor.memberships].sort((a, b) => ROLE_RANK[a.role] - ROLE_RANK[b.role])[0];
+/**
+ * The membership the organization pages act on: the highest role (V0, one active organization);
+ * ties broken by organization id so the acting organization never flips between requests.
+ */
+export const primaryMembership = (actor: Pick<SessionActor, "memberships">) =>
+  [...actor.memberships].sort(
+    (a, b) =>
+      ROLE_RANK[a.role] - ROLE_RANK[b.role] || a.organization.id.localeCompare(b.organization.id),
+  )[0];
 
 export async function requireOrganizationContext() {
   const actor = await requireSessionActor();

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { toFieldErrors } from "./errors.ts";
-import { createWorkRequirementInput, evaluateRequirementInput } from "./work-requirement.ts";
+import {
+  createWorkRequirementInput,
+  evaluateRequirementInput,
+  listWorkRequirementsQuery,
+} from "./work-requirement.ts";
 
 const B11 = "11111111-1111-4111-8111-000000000001";
 const SMS = "11111111-1111-4111-8111-000000000006";
@@ -72,6 +76,20 @@ describe("createWorkRequirementInput", () => {
       level: "hard",
     }));
     expect(errorsFor({ ...valid, qualifications }).qualifications).toBe("v.qualifications.max");
+  });
+});
+
+describe("listWorkRequirementsQuery (batch 15 filters)", () => {
+  const ok = (q: Record<string, string>) => listWorkRequirementsQuery.safeParse(q).success;
+  it("accepts the known statuses and an offset ISO instant", () => {
+    expect(ok({ status: "open", endsAfter: "2026-10-20T10:00:00.000Z" })).toBe(true);
+    expect(ok({ endsAfter: "2026-10-20T12:00:00+02:00" })).toBe(true);
+  });
+  it("rejects unknown statuses, date-only values and unknown keys", () => {
+    expect(ok({ status: "nope" })).toBe(false);
+    expect(ok({ endsAfter: "2026-10-20" })).toBe(false);
+    expect(ok({ endsAfter: "x' or 1=1" })).toBe(false);
+    expect(ok({ foo: "bar" })).toBe(false);
   });
 });
 
