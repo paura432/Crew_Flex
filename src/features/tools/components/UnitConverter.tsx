@@ -155,7 +155,7 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
             <button
               type="button"
               onClick={swap}
-              className="inline-flex min-h-[42px] items-center gap-2 rounded-lg border border-[#ccd9df] px-4 text-xs font-bold text-[#1d4458] hover:bg-tool-soft"
+              className="inline-flex min-h-[42px] pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#ccd9df] px-4 text-xs font-bold text-[#1d4458] hover:bg-tool-soft"
             >
               <SwapIcon size={17} />
               {t("converter.swap")}

@@ -75,7 +75,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
           <form action={signOutAction} className="lg:hidden">
             <button
               type="submit"
-              className="rounded-lg px-3 py-2 text-sm text-[#c4d3e1] hover:bg-white/5"
+              className="rounded-lg px-3 py-2 text-sm text-[#c4d3e1] hover:bg-white/5 pointer-coarse:min-h-11"
             >
               {t("signOut")}
             </button>

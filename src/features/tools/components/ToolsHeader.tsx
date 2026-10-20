@@ -16,7 +16,7 @@ export async function ToolsHeader({ title, back = false }: { title: string; back
       {back && (
         <Link
           href="/app/tools"
-          className="inline-flex min-h-10 items-center rounded-lg border border-[#ccd9df] px-4 text-xs font-bold text-[#1d4458] hover:bg-white"
+          className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center rounded-lg border border-[#ccd9df] px-4 text-xs font-bold text-[#1d4458] hover:bg-white"
         >
           {t("allTools")}
         </Link>

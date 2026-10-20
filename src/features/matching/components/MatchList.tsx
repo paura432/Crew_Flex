@@ -56,7 +56,7 @@ export async function MatchListControls({ query, base }: { query: MatchListQuery
           ))}
         </select>
       </label>
-      <label className="flex min-h-10 items-center gap-2 text-sm">
+      <label className="flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 text-sm">
         <input type="checkbox" name="eligible" value="1" defaultChecked={query.eligibleOnly} />
         {t("eligibleOnly")}
       </label>
@@ -87,7 +87,7 @@ export async function CompareToggle({
 }) {
   const t = await getTranslations("organization.matches.list");
   return (
-    <label className="mt-3 flex items-center gap-2 text-sm text-muted">
+    <label className="mt-3 flex min-h-8 pointer-coarse:min-h-11 items-center gap-2 text-sm text-muted">
       <input
         // Remount when the selection changes: after a soft navigation (e.g. «Clear comparison») an
         // uncontrolled checkbox would otherwise keep its old ticked state and be submitted again.

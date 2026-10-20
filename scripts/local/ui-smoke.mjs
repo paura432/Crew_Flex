@@ -907,6 +907,48 @@ await shot("21-login-es");
 await page.locator("[role=radio][lang=en]").first().click();
 await page.waitForTimeout(1500);
 
+// 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
+// is at least 44 px tall (desktop keeps its density).
+const touch = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  hasTouch: true,
+  isMobile: true,
+});
+const tp = await touch.newPage();
+await tp.goto(`${BASE}/login`);
+await tp.fill("#email", "delta@crewflex.test");
+await tp.fill("#password", "crewflex-local-only");
+await Promise.all([tp.waitForURL(/\/app/), tp.click("form button[type=submit]")]);
+const small = [];
+for (const path of [
+  "/app/professional/availability",
+  "/app/professional/profile",
+  "/app/tools/convert",
+]) {
+  await tp.goto(`${BASE}${path}`);
+  await tp.waitForLoadState("networkidle");
+  small.push(
+    ...(await tp.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          "button, select, input:not([type=checkbox]):not([type=radio]):not([type=hidden]), nav a",
+        ),
+      ]
+        .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 43.5)
+        .map(
+          (el) =>
+            `${location.pathname} ${el.tagName} «${(el.textContent || el.getAttribute("name") || "").trim().slice(0, 20)}» ${Math.round(el.getBoundingClientRect().height)}px`,
+        ),
+    )),
+  );
+}
+ok(
+  "22 touch targets ≥ 44 px on a touch screen (availability, passport, converter)",
+  small.length === 0,
+  small.slice(0, 5).join(" | "),
+);
+await touch.close();
+
 // 5. Only localhost was used
 const nonLocal = [...hosts].filter((h) => !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h));
 ok(

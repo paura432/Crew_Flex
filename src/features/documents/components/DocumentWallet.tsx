@@ -223,7 +223,7 @@ export function DocumentWallet({
               disabled={pending}
               aria-invalid={Boolean(errors.file)}
               aria-describedby={describedBy("file", errors.file, t("fileHint"))}
-              className="block w-full text-sm file:mr-3 file:min-h-10 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:font-semibold"
+              className="block w-full text-sm file:mr-3 file:min-h-10 pointer-coarse:file:min-h-11 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:font-semibold"
             />
           </Field>
           <Field id="kind" label={t("kindLabel")} error={errors.kind}>

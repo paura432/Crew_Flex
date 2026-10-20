@@ -106,7 +106,7 @@ export function ToolsHome() {
               <Link
                 key={id}
                 href={`/app/tools/${id}`}
-                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#ccd9df] bg-white px-4 text-xs font-bold text-[#1d4458] hover:bg-canvas"
+                className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#ccd9df] bg-white px-4 text-xs font-bold text-[#1d4458] hover:bg-canvas"
               >
                 {ICONS[id]}
                 {t(`tile.${id}.title`)}
@@ -147,7 +147,7 @@ export function ToolsHome() {
               <p className="mb-6 text-xs text-[#587083]">{t(`tile.${id}.sub`)}</p>
               <Link
                 href={`/app/tools/${id}`}
-                className="mt-auto inline-flex min-h-10 w-fit items-center gap-2 text-xs font-bold text-tool-strong hover:underline"
+                className="mt-auto inline-flex min-h-10 pointer-coarse:min-h-11 w-fit items-center gap-2 text-xs font-bold text-tool-strong hover:underline"
               >
                 {t("open")} <ChevronIcon size={17} />
                 <span className="sr-only">: {title}</span>

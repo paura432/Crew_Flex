@@ -51,7 +51,7 @@ export function LocaleSwitcher({ variant = "cards" }: { variant?: "cards" | "com
             lang={value}
             disabled={pending}
             onClick={() => choose(value)}
-            className="min-h-8 rounded-md border border-line bg-white px-2 font-semibold text-muted uppercase aria-checked:border-navy aria-checked:bg-navy aria-checked:text-white disabled:opacity-60"
+            className="min-h-8 pointer-coarse:min-h-11 rounded-md border border-line bg-white px-2 font-semibold text-muted uppercase aria-checked:border-navy aria-checked:bg-navy aria-checked:text-white disabled:opacity-60"
           >
             {value}
           </button>

@@ -320,7 +320,7 @@ export function AvailabilityManager({
               type="button"
               aria-pressed={picker === value}
               onClick={() => setPicker(value)}
-              className={`min-h-9 rounded-lg border px-3 text-sm font-semibold ${cls} aria-[pressed=true]:ring-2 aria-[pressed=true]:ring-navy`}
+              className={`min-h-9 pointer-coarse:min-h-11 rounded-lg border px-3 text-sm font-semibold ${cls} aria-[pressed=true]:ring-2 aria-[pressed=true]:ring-navy`}
             >
               {t(`picker.${value}`)}
             </button>

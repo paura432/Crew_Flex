@@ -203,7 +203,7 @@ export function RequirementForm({
                             aria-label={t("levelAria", { code: q.code })}
                             value={level}
                             onChange={(e) => setLevel(q.id, e.target.value as RequirementLevel)}
-                            className="min-h-9 rounded-md border border-line bg-white px-2 text-sm"
+                            className="min-h-9 pointer-coarse:min-h-11 rounded-md border border-line bg-white px-2 text-sm"
                           >
                             <option value="hard">{tDomain("level.hard")}</option>
                             <option value="soft">{tDomain("level.soft")}</option>

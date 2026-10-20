@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 export const controlClass =
-  "block w-full min-h-10 rounded-lg border border-line bg-white px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 aria-[invalid=true]:border-danger";
+  "block w-full min-h-10 pointer-coarse:min-h-11 rounded-lg border border-line bg-white px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 aria-[invalid=true]:border-danger";
 
 /** Label + control + hint + error. The control must use `id={id}` and the describedby ids. */
 export function Field({

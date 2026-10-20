@@ -134,7 +134,7 @@ export function CopyResult({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#547e89] px-4 text-[11px] font-bold text-[#c7e9e6] hover:bg-white/5"
+      className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#547e89] px-4 text-[11px] font-bold text-[#c7e9e6] hover:bg-white/5"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
