@@ -33,9 +33,11 @@ functions read platform-provided variables plus `ALLOWED_ORIGINS`.
 
 `requestPasswordResetAction` sends `redirectTo = <origin>/auth/confirm?next=/reset-password`. Supabase only
 honours it when the URL is allow-listed: locally `supabase/config.toml` `additional_redirect_urls` includes
-`http://localhost:3001/**`; **production needs `https://crew-flex.vercel.app/auth/confirm` added to Auth → URL
+`http://localhost:3001/**`; **production needs the glob `https://crew-flex.vercel.app/auth/confirm**` added to Auth → URL
 Configuration → Redirect URLs** (owner action, Auth setting) before the recovery flow is published — otherwise
-the link falls back to the Site URL and the reset page reports «needs a valid reset link».
+the link falls back to the Site URL and the reset page reports «needs a valid reset link». An exact entry does not
+match: the link carries `?next=/reset-password` and GoTrue matches entries as globs against the full URL (a bare
+hostname match applies only when the Site URL host is already the Vercel host — read it first).
 
 ## 2. Risk assumed and compensating controls
 

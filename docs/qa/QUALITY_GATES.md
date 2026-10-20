@@ -64,6 +64,10 @@ Docker stack is available and is the default second check — apply new migratio
   PASS for E2E; run the command above. Since 2026-10-15 the same command also runs
   `tests/e2e/local-remediation.test.ts` (6 local-only checks: E-3 via PostgREST, I-1 replays, I-3 conflict,
   pool completeness, platform review → matching), 25 in total.
+- Release-2 compatibility drill `bash scripts/local/release-compat/release2.sh` (resets the local DB twice, ~2 min;
+  `docs/qa/ROLLOUT_PLAN_RELEASE2.md` §3): production `work-requirements` vs the working tree's, each on schema 15 and 20;
+  23 checks, 2026-10-20 23/23. Afterwards re-insert the local flag rows and restart `functions serve` (stale
+  connections make the wallet E2E fail until then).
 - Browser smoke `scripts/local/ui-smoke.mjs` (`docs/qa/LOCAL_ENVIRONMENT.md` §5): login/logout, passport,
   qualifications, availability, organization flows, cross-org 404, 1440 / 768 / 390 px without horizontal
   overflow, only localhost; **both languages**: Settings → Español → navigate → reload (flow 6), English →

@@ -47,6 +47,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
   then review fixes and the **report-only nonce CSP** in `src/proxy.ts` with zod `jitless`). No new migrations; the
   `work-requirements` function changed (new optional `status`/`endsAfter` query filters) and is **not deployed**. Gates at HEAD:
   `pnpm check` 0, build 0, local E2E 42/42, ui-smoke 105/105 (incl. CSP 0/17b/17c).
+- 2026-10-20 (batch 18): publication plan for the local batches `docs/qa/ROLLOUT_PLAN_RELEASE2.md` (**NOT executed**; two compositions for the owner) with the local drill `scripts/local/release-compat/release2.sh` 23/23: the HEAD frontend on the production `work-requirements` gets 400 on the dashboard focus (deploy the function before pushing `main`); the HEAD function on schema 15 closes without audit or freeze (push the close migrations before the function); the production function reads the new schema fine (rollback safe).
 - The browser smoke now also needs `QUALIFICATION_REVIEW_ENABLED=true` in `.env.local` (it refuses otherwise).
 - 2026-10-16 ~20:52: the owner's `pnpm e2e:remote` failed 24/25 with **503** — a LOCAL problem: `.env.e2e`
   targets `127.0.0.1:56321` and `supabase functions serve` was not running (Kong answers 503 for every
@@ -77,7 +78,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 
 2026-10-19 on the release checkout `65df3b9`: `pnpm check` (Vitest 290, Deno 50), `pnpm build`, `git diff --check` PASS; compat harness 111/111. Production E2E: NOT RUN.
 Release-1 E2E prepared 2026-10-19 (local commits after `65df3b9`, not deployed — tests and scripts only):
-local API 41/41, browser `scripts/e2e/ui-release1.mjs` 24/24; production suite refuses without the
+local API 41/41, browser `scripts/e2e/ui-release1.mjs` 23/23; production suite refuses without the
 per-run confirmation (0 requests).
 
 ## Blockers

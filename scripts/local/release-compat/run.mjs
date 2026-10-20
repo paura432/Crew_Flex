@@ -1,13 +1,21 @@
-/* eslint-disable no-console -- CLI report */
 // Release compatibility harness (LOCAL Docker stack only). Reproduces every intermediate state of
 // the wave-1 rollout: functions served from the production commit (ddf5c4b) or the release commit
 // (65df3b9) against the local DB at the production schema (10 migrations) or the release schema (15).
 // With MID_SHA (a commit holding the release migrations that come before the enum value, e.g.
 // 2216d38 = #1–#3) it proves the safe order instead: schema 13 → new professional-availability →
 // enum + filter (14, 15), so no old reader ever meets an `aog_only` row.
-import { spawn, execFileSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import {
+  call as callPort,
+  localEnv,
+  psql,
+  reporter,
+  serve,
+  stop,
+  token as tokenFor,
+} from "./lib.mjs";
 
 const S = process.env.WT_DIR,
   REPO = process.cwd();
@@ -17,102 +25,23 @@ const P = process.env.PROD_SHA,
   R = process.env.RELEASE_SHA,
   MID = process.env.MID_SHA;
 if (!P || !R) throw new Error("PROD_SHA and RELEASE_SHA are required");
-const HERE = new URL(".", import.meta.url).pathname;
-const env = Object.fromEntries(
-  readFileSync(`${REPO}/.env.local`, "utf8")
-    .split("\n")
-    .filter((l) => l.includes("="))
-    .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]),
-);
-const URL_ = env.NEXT_PUBLIC_SUPABASE_URL,
-  KEY = env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-if (!/^http:\/\/(127\.0\.0\.1|localhost):/.test(URL_)) throw new Error("not a local stack");
-const PW = "crewflex-local-only";
-const psql = (sql) =>
-  execFileSync(
-    "docker",
-    [
-      "exec",
-      "-i",
-      "supabase_db_crew-flex",
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-At",
-      "-v",
-      "ON_ERROR_STOP=1",
-      "-c",
-      sql,
-    ],
-    { encoding: "utf8" },
-  ).trim();
+const ENV = localEnv(REPO);
 const PORT = {
   "matching-evaluate": 54701,
   "capacity-evaluate": 54702,
   "professional-availability": 54703,
 };
-let procs = [];
-async function start(map) {
-  for (const p of procs) p.kill();
-  procs = [];
-  await new Promise((r) => setTimeout(r, 800));
-  for (const [fn, commit] of Object.entries(map)) {
-    const wt = `${S}/wt-${commit}`;
-    procs.push(
-      spawn(
-        "deno",
-        ["run", "-A", "--config", `${wt}/supabase/functions/deno.json`, `${HERE}serve.ts`],
-        {
-          env: {
-            ...process.env,
-            FN_ENTRY: `${wt}/supabase/functions/${fn}/index.ts`,
-            PORT: String(PORT[fn]),
-            SUPABASE_URL: URL_,
-            SUPABASE_ANON_KEY: KEY,
-          },
-          stdio: ["ignore", "ignore", "inherit"],
-        },
-      ),
-    );
-  }
-  for (const fn of Object.keys(map)) {
-    for (let i = 0; i < 120; i++) {
-      try {
-        await fetch(`http://127.0.0.1:${PORT[fn]}/`);
-        break;
-      } catch {
-        await new Promise((r) => setTimeout(r, 500));
-      }
-    }
-  }
-}
-async function token(email) {
-  const r = await fetch(`${URL_}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { apikey: KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: PW }),
-  });
-  return (await r.json()).access_token;
-}
-async function call(fn, tok, { method = "GET", body, query = "", headers = {} } = {}) {
-  const r = await fetch(`http://127.0.0.1:${PORT[fn]}/${query}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${tok}`,
-      apikey: KEY,
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    body: body && JSON.stringify(body),
-  });
-  let json = null;
-  try {
-    json = await r.json();
-  } catch {}
-  return { status: r.status, json };
-}
+const start = (map) =>
+  serve(
+    Object.entries(map).map(([fn, commit]) => ({
+      entry: `${S}/wt-${commit}/supabase/functions/${fn}/index.ts`,
+      config: `${S}/wt-${commit}/supabase/functions/deno.json`,
+      port: PORT[fn],
+    })),
+    ENV,
+  );
+const token = (email) => tokenFor(ENV, email);
+const call = (fn, tok, opts) => callPort(PORT[fn], ENV, tok, opts);
 const ref = (req, profile) =>
   "CF-" + createHash("sha256").update(`${req}:${profile}`).digest("hex").slice(0, 10).toUpperCase();
 const DELTA = "00000000-0000-4000-8000-000000000021",
@@ -129,15 +58,7 @@ if (!AOG) {
           select wr.id, q.qualification_type_id, q.requirement_level from wr, public.work_requirement_qualifications q where q.work_requirement_id = '${MAD}'`);
   AOG = psql("select id from public.work_requirements where title = 'COMPAT · AOG twin of MAD'");
 }
-const rows = [];
-const rec = (state, check, got, expected) =>
-  rows.push({
-    state,
-    check,
-    got: String(got),
-    expected: String(expected),
-    ok: String(got) === String(expected),
-  });
+const { rec, print } = reporter();
 
 async function snapshot(state, { aogRows, newAvailability }) {
   const [mgr, fox, del] = await Promise.all([
@@ -397,12 +318,6 @@ await start({ "matching-evaluate": P, "capacity-evaluate": P, "professional-avai
   rec("R2 rollback fns, aog rows converted/removed", "OLD matching MAD HTTP", m2.status, 200);
   rec("R2", "results identical to S0", elig(s0.mMad) === elig(m2), true);
 }
-for (const p of procs) p.kill();
-psql(`delete from public.work_requirements where title = 'COMPAT · AOG twin of MAD'`).toString();
-const width = Math.max(...rows.map((r) => r.state.length));
-for (const r of rows)
-  console.log(
-    `${r.ok ? "PASS" : "FAIL"}  ${r.state.padEnd(width)}  ${r.check} = ${r.got}${r.ok ? "" : ` (expected ${r.expected})`}`,
-  );
-console.log(`\n${rows.filter((r) => r.ok).length}/${rows.length} as expected`);
-process.exit(rows.every((r) => r.ok) ? 0 : 1);
+stop();
+psql(`delete from public.work_requirements where title = 'COMPAT · AOG twin of MAD'`);
+process.exit(print() ? 0 : 1);

@@ -33,7 +33,7 @@ D-06 ratification (§4.1 forbids migrations before it). S-4 closed by evidence (
 - Applications touch capacity under concurrency: use one transaction per transition with row locks (v1.8
   serialised everything with `BEGIN IMMEDIATE`, A:43).
 - Visual batches must not reintroduce v1.8 security shortcuts (directory owner id, `admin/admin`, raw tokens).
-- Production carries release 1 only; every local migration since `20261019160000` needs the publication plan.
+- Production carries release 1 only. The publication plan for the local batches is `docs/qa/ROLLOUT_PLAN_RELEASE2.md` (two compositions, owner choice; local drill 20/20; nothing executed).
 
 ## 3. QA strategy
 
