@@ -54,7 +54,7 @@ stateDiagram-v2
 | proposed → accepted            | technician                                            | explicit `acceptTerms = true` **and** the proposal version id the technician saw (stale version → 409)                                                                                                                                                                                                                                                                                                 | `accepted_version`, `accepted_at`                                                        | `application.accepted`    |
 | accepted → confirmed           | org admin/manager                                     | **all re-checked at commit:** requirement open and not started; every hard qualification active + verified + valid (BR-2/3, OD-3: pending never counts); availability covers 100 % with BR-4.8 for the requirement's urgency; no overlapping confirmed assignment of the technician; confirmed count < headcount (row lock on the requirement); D-07 document conditions if the requirement needs them | status, `assignment` (derived), requirement → `covered` when headcount reached           | `application.confirmed`   |
 | confirmed → finished           | org admin/manager (explicit, Q4)                      | last day has ended                                                                                                                                                                                                                                                                                                                                                                                     | status                                                                                   | `application.finished`    |
-| * → rejected                   | org admin/manager                                     | from received/shortlisted/proposed (and accepted, see R-08); reason 1–1000 chars                                                                                                                                                                                                                                                                                                                       | status, reason                                                                           | `application.rejected`    |
+| * → rejected                   | org admin/manager                                     | from received/shortlisted/proposed; **from accepted: Q7, to settle at ratification** (the R-08 recommendation in `03-business-rule-conflicts.md` lists it; the diagram and the pure table do not); reason 1–1000 chars                                                                                                                                                                                 | status, reason                                                                           | `application.rejected`    |
 | * → withdrawn                  | technician                                            | before `confirmed`                                                                                                                                                                                                                                                                                                                                                                                     | status; D-07 access ends for the future                                                  | `application.withdrawn`   |
 | accepted/confirmed → cancelled | org admin/manager; technician for `confirmed` (Q2/Q3) | reason 1–1000 chars                                                                                                                                                                                                                                                                                                                                                                                    | status, reason; assignment released                                                      | `application.cancelled`   |
 
@@ -108,7 +108,36 @@ items it depends on (`CANDIDATE_PACK.md` §4.1):
 Not sensitive and not blocked by ratification: the pure transition table in `src/domain` with its
 tests, and documentation. **Done 2026-10-20:** `src/domain/applications.ts` (BR-13; rows depending on
 Q2–Q4 carry `pending`), 6 tests — still used by nothing. No migration, Edge Function or UI for applications is written before
-ratification.
+ratification. The `pending` flag marks only the rows whose _shape_ depends on Q2–Q4; rows without it
+(`proposed → accepted`, `accepted → confirmed`, …) are **not activatable either** until the contract as a
+whole is ratified (list above). Q5 (re-application) and Q6 (one period) are constraints, not rows, and are
+not encoded in the table.
+
+### 4.2 Test design prepared before ratification (batch 16, 2026-10-20 — design only, no code)
+
+Each scenario becomes a PGlite case (`tests/db/rls.test.ts`, new suite) plus a local E2E once the SQL
+functions exist. Nothing below is written before §4.1 is ratified.
+
+| #   | Scenario                                                                                                                               | Expected                                                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| T1  | Transition parity: every row of `APPLICATION_TRANSITIONS` vs the SQL function's allowed pairs                                          | identical sets (as suite M/P for the candidate prefilter)                             |
+| T2  | Invalid transition (`received → confirmed`, terminal → anything)                                                                       | 409 `CONFLICT`, no row change, no audit row                                           |
+| T3  | Wrong actor (technician shortlists; other org's manager; member)                                                                       | 403/404 without an existence oracle (same body for «not yours» and «does not exist»)  |
+| T4  | Headcount race: two `accepted → confirmed` on the last seat, concurrently                                                              | exactly one 200; the other 409; requirement `covered` once; one audit row per success |
+| T5  | Stale version: accept with a proposal version id older than the current one                                                            | 409; `accepted_version` unchanged                                                     |
+| T6  | Idempotent replay: same `Idempotency-Key` for the same transition                                                                      | same status and body; one audit row                                                   |
+| T7  | Same key, other payload                                                                                                                | 409 (as `create_work_requirement_idempotent`)                                         |
+| T8  | Optimistic check: `expectedUpdatedAt` behind the row                                                                                   | 409 (CF412 → `CONFLICT`, existing mapping in `_shared/errors.ts`)                     |
+| T9  | Confirmation re-checks at commit: expired hard qualification, availability < 100 %, overlapping assignment, closed/started requirement | 409 with a stable reason code; no partial writes                                      |
+| T10 | Reason rule: `rejected`/`cancelled` without a reason or > 1000 chars                                                                   | 400 validation; with a reason: stored and visible per the ratified visibility rule    |
+| T11 | Audit: every successful transition writes one `application.<to>` row in the same transaction                                           | rollback of the transition removes the audit row                                      |
+| T12 | RLS: technician reads own applications only; org reads applications of its requirements only; nobody deletes                           | 0 rows for others; `DELETE` refused                                                   |
+| T13 | Q5 uniqueness (shape depends on ratification): second active application for the same requirement                                      | 409 / unique violation mapped to `CONFLICT`                                           |
+
+Audit event names, canonical (supersede `document.shared`, `candidate_pack.shared` in `DATA_MODEL.md` and
+`document.accessed` in `04-target-architecture.md`): `application.received|shortlisted|proposed|accepted|
+confirmed|finished|rejected|withdrawn|cancelled`; pack: `pack.contact_viewed`, `pack.document_url_issued`
+(`CANDIDATE_PACK.md` §2), plus consent grant/revoke events to be named with D-07.
 
 ## 5. Not in this block
 

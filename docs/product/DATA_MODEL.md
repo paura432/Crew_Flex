@@ -165,8 +165,9 @@ review decision with previous/new status, `note_provided`, `request_id`; since `
 not account-deletion cascades) — the last three since `20261015120000`; `document.uploaded`,
 `document.updated` (with the changed field names) and `document.deleted` (owner delete only) since
 `20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path); `document.purged`
-(tombstone id, owner id, reason, `object_found`) since `20261019160200`. Reserved: `document.shared`,
-`candidate_pack.shared`, `organization.member_added`.
+(tombstone id, owner id, reason, `object_found`) since `20261019160200`. Reserved: `organization.member_added`; the hiring
+block uses `application.<status>` and `pack.contact_viewed` / `pack.document_url_issued`
+(`APPLICATIONS_STATE_MACHINE.md` §4.2 — `document.shared` and `candidate_pack.shared` are superseded).
 
 ## Database functions
 

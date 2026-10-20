@@ -132,7 +132,7 @@ Each item: current behaviour · V1.3 behaviour · impact · risk · alternatives
 ### R-08 — Application state machine
 
 - Demo allows re-proposal from Aceptada and no cancellation before confirmation; server allows accepted → cancelled.
-- **Recommendation:** server names; transitions: received→{shortlisted,rejected,withdrawn}; shortlisted→{proposed,rejected,withdrawn}; proposed→{accepted,rejected,withdrawn}; accepted→{confirmed,proposed (re-proposal clears acceptance),rejected,withdrawn}; confirmed→{finished,cancelled}. Reasons required for rejected/cancelled. **Decision:** PENDING — D-06 (only when block 3 is authorised).
+- **Recommendation:** server names; transitions: received→{shortlisted,rejected,withdrawn}; shortlisted→{proposed,rejected,withdrawn}; proposed→{accepted,rejected,withdrawn}; accepted→{confirmed,proposed (re-proposal clears acceptance),rejected,withdrawn}; confirmed→{finished,cancelled}. Reasons required for rejected/cancelled. **Decision:** versioning (re-proposal = new version, explicit acceptance, never retroactive) **DECIDED 2026-10-19**; the transition set follows `APPLICATIONS_STATE_MACHINE.md` §2 — Q2–Q6 pending ratification, and `accepted → rejected` (listed here, absent from the diagram) is open as **Q7**.
 
 ### R-09 — What unlocks identity documents
 

@@ -85,6 +85,10 @@ documents table: id, owner, qualification_id?, kind, mime, size, sha256, expires
 
 ## Contracting (block 3, planned — not started, needs explicit authorisation)
 
+> Superseded sketch (2026-10-20): consents are **not** columns on `applications`; the model is
+> `application_consents` + `candidate_pack_items` in `CANDIDATE_PACK.md` §2, and the audit name is
+> `pack.document_url_issued`, not `document.accessed`. The transition contract is `APPLICATIONS_STATE_MACHINE.md`.
+
 ```
 applications(id, requirement_id, technician_profile_id, status, consent_pack_at,
              consent_contact_at, pack_snapshot jsonb, created_at, …)
