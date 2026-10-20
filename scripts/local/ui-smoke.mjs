@@ -219,6 +219,12 @@ ok(
   /: Rest$/.test(nextMonthDay ?? ""),
   nextMonthDay,
 );
+// 2e (batch 11, V1.8 hides the progress when complete): Delta is at 100 % → list folded, one click away.
+ok(
+  "2e complete profile: checklist folded behind «Show the 7 profile items»",
+  (await page.getByText("Show the 7 profile items").isVisible()) &&
+    !(await checklist.first().isVisible()),
+);
 // 2d (batch 7, V1.8 colours): AOG legend swatch is orange (warn-bg), the partial day is hatched.
 const swatch = (label) =>
   page
@@ -864,6 +870,18 @@ ok(
 for (const width of [360, 390]) {
   await page.setViewportSize({ width, height: 900 });
   await page.waitForTimeout(300);
+  // 24c (batch 11, V1.8 ≤ 760 px drawer): the menu starts closed and opens on demand.
+  const menu = page.getByRole("button", { name: "Menu" });
+  const closedFirst =
+    (await menu.getAttribute("aria-expanded")) === "false" &&
+    !(await page.locator("aside nav a").first().isVisible());
+  await menu.click();
+  ok(
+    `24c nav @${width}: «Menu» starts closed, opens the sections`,
+    closedFirst &&
+      (await menu.getAttribute("aria-expanded")) === "true" &&
+      (await page.locator("aside nav a").first().isVisible()),
+  );
   const clipped = await page.evaluate((w) => {
     return [...document.querySelectorAll("aside nav a")]
       .map((a) => ({ text: a.textContent, box: a.getBoundingClientRect() }))
@@ -886,6 +904,7 @@ for (const width of [360, 390]) {
     spilling.join(" | "),
   );
   await shot(`23-overview-nav-${width}`);
+  await menu.click(); // close again for the next width
 }
 await page.setViewportSize({ width: 1440, height: 900 });
 await logout();
@@ -943,7 +962,7 @@ for (const path of [
   );
 }
 ok(
-  "22 touch targets ≥ 44 px on a touch screen (availability, passport, converter)",
+  "25 touch targets ≥ 44 px on a touch screen (availability, passport, converter)",
   small.length === 0,
   small.slice(0, 5).join(" | "),
 );

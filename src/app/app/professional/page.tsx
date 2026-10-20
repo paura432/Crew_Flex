@@ -127,27 +127,36 @@ export default async function ProfessionalOverviewPage({
         <div className="grid gap-6 lg:grid-cols-2">
           {/* V1.8 «Estado de mi perfil»: every BR-11 item with a direct link to complete it. */}
           <Panel title={t("overview.checklistTitle", { percent: completeness.percent })}>
-            <ul className="divide-y divide-line text-sm">
-              {COMPLETENESS_ITEMS.map((item) => {
-                const done = !completeness.missing.includes(item);
-                return (
-                  <li key={item} className="flex flex-wrap items-center justify-between gap-3 py-2">
-                    <span className="flex items-center gap-2">
-                      <span aria-hidden className={done ? "font-bold text-ok" : "text-muted"}>
-                        {done ? "✓" : "○"}
+            {/* V1.8 hides the progress once the profile is (nearly) complete; the list stays one click away. */}
+            <details open={completeness.percent < 100} className="group">
+              <summary className="cursor-pointer text-sm font-semibold text-blue group-open:hidden">
+                {t("overview.showChecklist")}
+              </summary>
+              <ul className="divide-y divide-line text-sm">
+                {COMPLETENESS_ITEMS.map((item) => {
+                  const done = !completeness.missing.includes(item);
+                  return (
+                    <li
+                      key={item}
+                      className="flex flex-wrap items-center justify-between gap-3 py-2"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span aria-hidden className={done ? "font-bold text-ok" : "text-muted"}>
+                          {done ? "✓" : "○"}
+                        </span>
+                        <span className={done ? "text-muted" : undefined}>{t(`item.${item}`)}</span>
+                        <span className="sr-only">
+                          {done ? t("overview.itemDone") : t("overview.itemPending")}
+                        </span>
                       </span>
-                      <span className={done ? "text-muted" : undefined}>{t(`item.${item}`)}</span>
-                      <span className="sr-only">
-                        {done ? t("overview.itemDone") : t("overview.itemPending")}
-                      </span>
-                    </span>
-                    {!done && (
-                      <ButtonLink href={NEXT_STEP_HREF[item]}>{t("overview.doIt")}</ButtonLink>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                      {!done && (
+                        <ButtonLink href={NEXT_STEP_HREF[item]}>{t("overview.doIt")}</ButtonLink>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
           </Panel>
           <Panel
             title={t("overview.calendarTitle")}

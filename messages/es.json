@@ -24,7 +24,8 @@
     "notFoundDescription": "Esta página no existe o no tienes acceso a ella.",
     "backToApp": "Volver a Crew Flex",
     "errorTitle": "No se ha podido mostrar esta página",
-    "errorHint": "Inténtalo de nuevo en un momento."
+    "errorHint": "Inténtalo de nuevo en un momento.",
+    "menu": "Menú"
   },
   "meta": {
     "description": "Convierte cualificaciones, disponibilidad y demanda operativa en capacidad técnica movilizable.",
@@ -454,7 +455,8 @@
       "itemDone": "hecho",
       "itemPending": "pendiente",
       "calendarTitle": "Mi disponibilidad este mes",
-      "openAvailability": "Editar disponibilidad"
+      "openAvailability": "Editar disponibilidad",
+      "showChecklist": "Ver los 7 apartados del perfil"
     },
     "hint": {
       "display_name": "Siguiente: añade tu nombre profesional",

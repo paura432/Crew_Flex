@@ -165,7 +165,9 @@ export function CyclePlanner({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
+        {/* V1.8: previewing is the main action of this form (orange CTA). */}
         <Button
+          variant="primary"
           disabled={disabled || (pattern === "custom" && !customLengthValid)}
           onClick={() => onPreview({ pattern, anchor, custom, publishRest, replace })}
         >

@@ -30,7 +30,11 @@ AOG-only day uses `warn` (V1.8 orange, never the error red) — second audit 202
 
 Touch targets (second audit 2026-10-20, V1.8 `v12.css` min-height 44): buttons, form controls, nav links
 and compact controls are **44 px on a coarse pointer** (`pointer-coarse:min-h-11`); desktop keeps 40 px
-density. Checked by `ui-smoke` 22 on a touch-emulated 390 px screen.
+density. Checked by `ui-smoke` 25 on a touch-emulated 390 px screen.
+
+Navigation below `lg`: sections fold behind a «Menu» disclosure (`NavDrawer`, V1.8 ≤ 760 px drawer); the
+5-item bottom dock of V1.8 is not ported (C-12). Buttons: `primary` (orange CTA), `secondary`, `ghost` and
+`danger` (irreversible actions, e.g. closing a requirement).
 
 Tools workbench sub-palette (`tool-*` tokens, used only under `/app/tools`): taken from the V1.3/V1.8
 prototype `styles/v13.css` (`.toolbox`, `.tb-*`) so the workbench keeps its own identity — teal

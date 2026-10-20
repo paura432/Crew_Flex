@@ -24,7 +24,8 @@
     "notFoundDescription": "This page does not exist or you do not have access to it.",
     "backToApp": "Back to Crew Flex",
     "errorTitle": "This page could not be displayed",
-    "errorHint": "Try again in a moment."
+    "errorHint": "Try again in a moment.",
+    "menu": "Menu"
   },
   "meta": {
     "description": "Turn qualifications, availability and operational demand into mobilisable technical capacity.",
@@ -454,7 +455,8 @@
       "itemDone": "done",
       "itemPending": "pending",
       "calendarTitle": "My availability this month",
-      "openAvailability": "Edit availability"
+      "openAvailability": "Edit availability",
+      "showChecklist": "Show the 7 profile items"
     },
     "hint": {
       "display_name": "Next: add your professional name",

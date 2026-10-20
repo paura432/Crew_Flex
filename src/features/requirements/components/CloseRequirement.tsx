@@ -32,7 +32,7 @@ export function CloseRequirement({ id }: { id: string }) {
         >
           <p className="text-sm">{t("explain")}</p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="primary" disabled={pending} onClick={close}>
+            <Button variant="danger" disabled={pending} onClick={close}>
               {t("confirm")}
             </Button>
             {/* Focus lands on the safe choice when the irreversible step opens. */}
