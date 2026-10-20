@@ -8,13 +8,13 @@ Re-verify with the commands at the bottom before relying on any line; update the
 
 ## Git
 
-| Ref                               | SHA                | Meaning                                                                                                                                                                                    |
-| --------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `origin/main` (GitHub)            | `65df3b9`          | Release 1, pushed 2026-10-19 18:56 CEST as `git push origin 65df3b9:main` (fast-forward from `ddf5c4b`, 9 commits, as paura432). What Vercel Production builds (main-only, OD-9)           |
-| `main` (local)                    | ahead of `65df3b9` | Local only, **not pushed**: wallet (release 2, not approved), D-06/D-07/D-12 designs, rollout docs. Never `git push origin main` without owner approval — it would publish the wallet code |
-| `fix/remediation-2026-10-15`      | `f158308`          | Fully merged into `main`; can be deleted when the owner wants                                                                                                                              |
-| `refs/baseline/remediation-start` | `bf3feb1`          | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                                                                                              |
-| other branches                    | —                  | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)                                                                          |
+| Ref                               | SHA                | Meaning                                                                                                                                                                                                                                                                                       |
+| --------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `origin/main` (GitHub)            | `65df3b9`          | Release 1, pushed 2026-10-19 18:56 CEST as `git push origin 65df3b9:main` (fast-forward from `ddf5c4b`, 9 commits, as paura432). What Vercel Production builds (main-only, OD-9)                                                                                                              |
+| `main` (local)                    | ahead of `65df3b9` | Local only, **not pushed** (2026-10-20; count with `git rev-list --count origin/main..HEAD`): wallet (release 2, not approved), D-06/D-07/D-12 designs, rollout docs, V1.8 batches 1–7 + second audit. Never `git push origin main` without owner approval — it would publish the wallet code |
+| `fix/remediation-2026-10-15`      | `f158308`          | Fully merged into `main`; can be deleted when the owner wants                                                                                                                                                                                                                                 |
+| `refs/baseline/remediation-start` | `bf3feb1`          | Stash-style snapshot of tracked changes before the remediation (untracked files not included)                                                                                                                                                                                                 |
+| other branches                    | —                  | `chore/tmp-material`, `feat/foundation-v0`, `feat/crewflex-parity-migration` (historical; not merged, not active)                                                                                                                                                                             |
 
 ## Production (`sbjkzrkmcekokkqiuvvh` + https://crew-flex.vercel.app) — the single environment (demo, OD-9)
 
@@ -41,7 +41,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 
 ## Local (Docker, ports 563xx — `docs/qa/LOCAL_ENVIRONMENT.md`)
 
-- All 10 migrations applied incrementally (+ `20261019120000`…`20261019160100` on 2026-10-19, **local only**), seed loaded, `qualification_review` flag row inserted **locally only**.
+- Local DB has every migration up to `20261020120100` (2026-10-20). Of these, production has the 15 up to `20261019150100`; **local only**: wallet `20261019160000`–`160200`, requirement close `20261020120000`, closed-frozen `20261020120100`. Seed loaded, `qualification_review` flag row **local only**.
 - The browser smoke now also needs `QUALIFICATION_REVIEW_ENABLED=true` in `.env.local` (it refuses otherwise).
 - 2026-10-16 ~20:52: the owner's `pnpm e2e:remote` failed 24/25 with **503** — a LOCAL problem: `.env.e2e`
   targets `127.0.0.1:56321` and `supabase functions serve` was not running (Kong answers 503 for every
@@ -51,20 +51,21 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 
 ## What works where (summary — matrix: `docs/audit/CREWFLEX_COMPLETENESS_AUDIT.md`)
 
-| Capability                                                                                     | Status                                                                                            |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Auth (sign up/in/out), protected `/app/**`                                                     | VERIFIED_LOCAL; production probes only                                                            |
-| Requirements, capacity, explained matching, availability                                       | VERIFIED_LOCAL; DB + functions deployed; UI not yet published                                     |
-| Passport edit (atomic), qualification declare/edit/withdraw                                    | VERIFIED_LOCAL; DB + functions deployed; UI not yet published                                     |
-| ES/EN UI + persisted language                                                                  | VERIFIED_LOCAL; DB + function deployed; UI not yet published                                      |
-| E-3 / I-1 / I-3 / eligible-first pool                                                          | VERIFIED_LOCAL; applied remotely 2026-10-16                                                       |
-| Availability cycle generator, «AOG only», tools (release 1)                                    | VERIFIED_LOCAL; deployed to production 2026-10-19; authenticated flows not verified in production |
-| Password recovery (forgot → e-mail → `/auth/confirm` → reset)                                  | VERIFIED_LOCAL 2026-10-19; not deployed (needs prod Auth redirect URL)                            |
-| Matches list: search, eligible-only, sort by experience, 20/page, compare ≤3 (V1.8 directory)  | VERIFIED_LOCAL 2026-10-19; not deployed                                                           |
-| Technician overview: 7-item profile-status checklist with links + read-only month calendar     | VERIFIED_LOCAL 2026-10-19; not deployed                                                           |
-| Wallet expiry chips (valid / expires soon ≤45 d / expired); custom cycle «use 7–3/7–4 as base» | VERIFIED_LOCAL 2026-10-19; not deployed (wallet = release 2)                                      |
-| Platform-admin qualification review                                                            | VERIFIED_LOCAL; NEEDS_DECISION (OD-3); off in production at all 3 layers                          |
-| Documents, Candidate Pack, applications, assignments, recruiter, tools, logbook, notifications | PLANNED / OUT_OF_SCOPE                                                                            |
+| Capability                                                                                                                                                                                           | Status                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Auth (sign up/in/out), protected `/app/**`                                                                                                                                                           | VERIFIED_LOCAL; production probes only                                                                   |
+| Requirements, capacity, explained matching, availability                                                                                                                                             | VERIFIED_LOCAL; DB + functions deployed; UI not yet published                                            |
+| Passport edit (atomic), qualification declare/edit/withdraw                                                                                                                                          | VERIFIED_LOCAL; DB + functions deployed; UI not yet published                                            |
+| ES/EN UI + persisted language                                                                                                                                                                        | VERIFIED_LOCAL; DB + function deployed; UI not yet published                                             |
+| E-3 / I-1 / I-3 / eligible-first pool                                                                                                                                                                | VERIFIED_LOCAL; applied remotely 2026-10-16                                                              |
+| Availability cycle generator, «AOG only», tools (release 1)                                                                                                                                          | VERIFIED_LOCAL; deployed to production 2026-10-19; authenticated flows not verified in production        |
+| Password recovery (forgot → e-mail → `/auth/confirm` → reset)                                                                                                                                        | VERIFIED_LOCAL 2026-10-19; not deployed (needs prod Auth redirect URL)                                   |
+| Matches list: search, eligible-only, sort by experience, 20/page, compare ≤3 (V1.8 directory)                                                                                                        | VERIFIED_LOCAL 2026-10-19; not deployed                                                                  |
+| Technician overview: 7-item profile-status checklist with links + read-only month calendar                                                                                                           | VERIFIED_LOCAL 2026-10-19; not deployed                                                                  |
+| Wallet expiry chips (valid / expires soon ≤45 d / expired); custom cycle «use 7–3/7–4 as base»                                                                                                       | VERIFIED_LOCAL 2026-10-19; not deployed (wallet = release 2)                                             |
+| Platform-admin qualification review                                                                                                                                                                  | VERIFIED_LOCAL; NEEDS_DECISION (OD-3); off in production at all 3 layers                                 |
+| Requirement close (V1.8 `job.status`: terminal, frozen, audited; capacity/matching 409 when closed); AOG orange + hatched partial day; reset only from a recovery session; compare kept across pages | VERIFIED_LOCAL 2026-10-20 (second audit batches 5–7); not deployed                                       |
+| Candidate Pack, applications, assignments, opportunities, recruiter, logbook, notifications (tools: units/torque/durations are in production — see above)                                            | NOT STARTED — blocked by D-06/D-07/D-12/scope (`docs/integration/crewflex-v13/12-completion-roadmap.md`) |
 
 ## Gates
 
