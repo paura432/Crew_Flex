@@ -193,6 +193,8 @@ export type ToolErrorCode =
   | "belowAbsoluteZero"
   | "resultOutOfRange"
   | "toleranceRange"
+  | "toleranceRequired"
+  | "toleranceInvalid"
   | "negativeAbsolutePressure"
   | "invalidClock";
 
@@ -269,13 +271,27 @@ export function convertRange(
   to: string,
 ): { nominal: number; low: number; high: number } {
   const n = parseNumber(value, { nonnegative: true });
-  const p = parseNumber(tolerancePercent, { nonnegative: true });
-  if (p > 100) throw new ToolError("toleranceRange");
+  const p = parseTolerance(tolerancePercent);
   return {
     nominal: convert(n, group, from, to),
     low: convert(n * (1 - p / 100), group, from, to),
     high: convert(n * (1 + p / 100), group, from, to),
   };
+}
+
+/** The tolerance field's own errors, so the message names it and never reads like the value's. */
+function parseTolerance(input: string | number): number {
+  let p: number;
+  try {
+    p = parseNumber(input);
+  } catch (error) {
+    if (error instanceof ToolError && error.code === "required") {
+      throw new ToolError("toleranceRequired");
+    }
+    throw new ToolError("toleranceInvalid");
+  }
+  if (p < 0 || p > 100) throw new ToolError("toleranceRange");
+  return p;
 }
 
 /** `H:MM` (1–5 digit hours, minutes 00–59) → decimal hours. */

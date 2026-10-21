@@ -971,6 +971,8 @@
       "belowAbsoluteZero": "La temperatura no puede ser inferior a 0 K.",
       "resultOutOfRange": "El resultado está fuera del rango.",
       "toleranceRange": "La tolerancia porcentual debe estar entre 0 y 100.",
+      "toleranceRequired": "Tolerancia: introduce un porcentaje.",
+      "toleranceInvalid": "Tolerancia: introduce un porcentaje válido, p. ej. 5 o 2,5.",
       "negativeAbsolutePressure": "La presión absoluta no puede ser negativa.",
       "invalidClock": "Usa HH:MM; los minutos van de 00 a 59."
     },

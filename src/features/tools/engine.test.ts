@@ -129,8 +129,16 @@ describe("convertRange (tolerance comes from the user's source)", () => {
 
   it("tolerance must be 0–100 %", () => {
     expect(code(() => convertRange(10, 101, "torque", "Nm", "lbf_in"))).toBe("toleranceRange");
-    expect(code(() => convertRange(10, -1, "torque", "Nm", "lbf_in"))).toBe("mustBeNonNegative");
-    expect(code(() => convertRange(10, "", "torque", "Nm", "lbf_in"))).toBe("required");
+    expect(code(() => convertRange(10, -1, "torque", "Nm", "lbf_in"))).toBe("toleranceRange");
+  });
+
+  it("tolerance errors name the tolerance field, value errors stay the value's", () => {
+    expect(code(() => convertRange(10, "", "torque", "Nm", "lbf_in"))).toBe("toleranceRequired");
+    expect(code(() => convertRange(10, "abc", "torque", "Nm", "lbf_in"))).toBe("toleranceInvalid");
+    expect(code(() => convertRange(10, "1.000,5", "torque", "Nm", "lbf_in"))).toBe(
+      "toleranceInvalid",
+    );
+    expect(code(() => convertRange("", 5, "torque", "Nm", "lbf_in"))).toBe("required");
   });
 });
 

@@ -65,7 +65,11 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
     }
     return r;
   });
-  const bounds = range ? outcome(() => convertRange(value, tolerance, group, from, to)) : null;
+  // Nothing to bound until there is a value: the main result already asks for it.
+  const bounds =
+    range && value.trim() !== ""
+      ? outcome(() => convertRange(value, tolerance, group, from, to))
+      : null;
   const formatted = result.value === null ? "—" : formatNumber(locale, result.value, digits);
 
   function changeGroup(next: MagnitudeId) {

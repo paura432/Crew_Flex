@@ -16,6 +16,8 @@ const ERROR_CODES: ToolErrorCode[] = [
   "belowAbsoluteZero",
   "resultOutOfRange",
   "toleranceRange",
+  "toleranceRequired",
+  "toleranceInvalid",
   "negativeAbsolutePressure",
   "invalidClock",
 ];
