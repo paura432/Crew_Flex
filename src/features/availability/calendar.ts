@@ -111,6 +111,12 @@ export function calendarDays(windows: CalendarWindow[], month: string): Calendar
   });
 }
 
+/**
+ * Past days are frozen (v1.8 parity; the batch `PUT` already refuses them): only today or later can
+ * be changed from the calendar, with or without a draft. Both are `YYYY-MM-DD` (UTC).
+ */
+export const isDayEditable = (date: string, today: string) => date >= today;
+
 /** Whole-day window boundaries for a calendar day (UTC). */
 export function dayWindow(date: string): { startsAt: string; endsAt: string } {
   const start = dayStart(date);

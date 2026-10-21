@@ -3,6 +3,7 @@ import {
   calendarDays,
   countDays,
   dayWindow,
+  isDayEditable,
   monthDays,
   monthOffset,
   parseMonth,
@@ -30,6 +31,15 @@ describe("month helpers", () => {
       startsAt: "2026-10-18T00:00:00.000Z",
       endsAt: "2026-10-19T00:00:00.000Z",
     });
+  });
+});
+
+describe("isDayEditable", () => {
+  it("freezes past days and leaves today and later editable (UTC dates)", () => {
+    expect(isDayEditable("2026-10-20", "2026-10-21")).toBe(false); // yesterday
+    expect(isDayEditable("2026-10-21", "2026-10-21")).toBe(true); // today
+    expect(isDayEditable("2026-10-22", "2026-10-21")).toBe(true); // tomorrow
+    expect(isDayEditable("2025-12-31", "2026-01-01")).toBe(false); // across a year boundary
   });
 });
 

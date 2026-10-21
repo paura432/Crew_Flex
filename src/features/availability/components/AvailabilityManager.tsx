@@ -28,6 +28,7 @@ import {
   countDays,
   DAY_STYLE,
   dayWindow,
+  isDayEditable,
   monthOffset,
   shiftMonth,
   WEEKDAYS,
@@ -194,19 +195,15 @@ export function AvailabilityManager({
 
   function onDayClick(date: string) {
     const day = days.find((d) => d.date === date);
-    if (!day) return;
+    if (!day || !isDayEditable(date, today)) return;
     const status = picker === "clear" ? null : picker;
     if (planned > 0) {
-      if (date >= today) changePlan((old) => ({ ...old, [date]: { status } }));
+      changePlan((old) => ({ ...old, [date]: { status } }));
       return;
     }
     if (day.windows.length > 0 && !day.singleDayWindow) {
       // Never split silently (BR-4.6): the day goes to the draft, the warning below names what saving
       // will cut, and nothing changes until the professional saves.
-      if (date < today) {
-        setNotice({ tone: "danger", text: t("pastDay", { date }) });
-        return;
-      }
       changePlan(() => ({ [date]: { status } }));
       setNotice(null);
       return;
@@ -353,10 +350,10 @@ export function AvailabilityManager({
               <button
                 key={key}
                 type="button"
-                disabled={pending || (planned > 0 && day.date < today)}
+                disabled={pending || !isDayEditable(day.date, today)}
                 onClick={() => onDayClick(day.date)}
                 aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}`}
-                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors hover:ring-2 hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
+                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
               >
                 <span className="text-base font-bold tabular-nums">
                   {Number(day.date.slice(-2))}

@@ -653,7 +653,6 @@
       "patternSaved": "Patrón guardado; ningún día necesitaba cambios.",
       "useAlternatingBase": "Usar 7–3 / 7–4 como base"
     },
-    "pastDay": "{date} ya ha pasado y no se puede cambiar desde el calendario.",
     "statusAogOnly": "Disponible solo para AOG",
     "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos.",
     "calendarLabel": "Disponibilidad por día"

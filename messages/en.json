@@ -653,7 +653,6 @@
       "patternSaved": "Pattern saved; no day needed changing.",
       "useAlternatingBase": "Use 7–3 / 7–4 as base"
     },
-    "pastDay": "{date} is in the past and cannot be changed from the calendar.",
     "statusAogOnly": "Available only for AOG",
     "aogHint": "“AOG only” days count only for needs declared as AOG; every other need sees them as not available. Blocked days override both.",
     "calendarLabel": "Availability by day"
