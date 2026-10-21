@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -42,5 +42,21 @@ describe("text contrast (WCAG AA, 4.5:1 for body-size text)", () => {
     const color = /text-\[(#[0-9a-f]{6})\]/i.exec(footnote ?? "")?.[1] ?? "";
     expect(contrast(color, "#ffffff")).toBeGreaterThanOrEqual(4.5);
     expect(contrast(color, token("--color-canvas"))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("reduced motion", () => {
+  it("no animation in src/ runs without `motion-safe:` (prefers-reduced-motion)", () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(join(root, dir))) {
+        const path = `${dir}/${name}`;
+        if (statSync(join(root, path)).isDirectory()) walk(path);
+        else if (path.endsWith(".tsx") && /(?<!motion-safe:)\banimate-(?!none)/.test(read(path)))
+          offenders.push(path);
+      }
+    };
+    walk("src");
+    expect(offenders).toEqual([]);
   });
 });

@@ -31,8 +31,8 @@ export function LoadingState({ label }: { label: string }) {
   return (
     <div role="status" aria-live="polite" className="space-y-3">
       <span className="sr-only">{label}</span>
-      <div className="h-24 animate-pulse rounded-xl bg-line/60" />
-      <div className="h-48 animate-pulse rounded-xl bg-line/40" />
+      <div className="h-24 rounded-xl bg-line/60 motion-safe:animate-pulse" />
+      <div className="h-48 rounded-xl bg-line/40 motion-safe:animate-pulse" />
     </div>
   );
 }
