@@ -53,7 +53,7 @@ export function SectionHead({
   return (
     <div className="flex items-center justify-between gap-4 text-tool">
       <div>
-        <p className="text-[10px] font-extrabold tracking-[0.17em] text-tool">{kicker}</p>
+        <p className="text-xs font-extrabold tracking-[0.17em] text-tool">{kicker}</p>
         <h2 className="mt-2 text-[23px] leading-tight font-bold tracking-tight text-[#122e43]">
           {title}
         </h2>
@@ -122,7 +122,7 @@ export function ResultCard({
 }) {
   return (
     <div className="rounded-[13px] bg-tool-result p-6 text-white [overflow-wrap:anywhere] sm:p-7">
-      <p className="text-[11px] tracking-[0.09em] text-tool-caption uppercase">{caption}</p>
+      <p className="text-xs tracking-[0.09em] text-tool-caption uppercase">{caption}</p>
       <p className="my-4 flex flex-wrap items-baseline gap-3" aria-live="polite">
         <strong className="text-[31px] font-semibold tracking-tight tabular-nums sm:text-[38px]">
           {value}
@@ -145,7 +145,7 @@ export function CopyResult({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#547e89] px-4 text-[11px] font-bold text-[#c7e9e6] hover:bg-white/5"
+      className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#547e89] px-4 text-xs font-bold text-[#c7e9e6] hover:bg-white/5"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);

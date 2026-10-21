@@ -69,9 +69,7 @@ export function ToolsHome() {
           className="pointer-events-none absolute -top-52 -right-44 size-[430px] rounded-full border border-tool-ring"
         />
         <div className="relative">
-          <p className="text-[10px] font-bold tracking-[0.2em] text-[#7bd5cc]">
-            {t("hero.kicker")}
-          </p>
+          <p className="text-xs font-bold tracking-[0.2em] text-[#7bd5cc]">{t("hero.kicker")}</p>
           <h2 className="mt-4 mb-4 max-w-md text-3xl leading-tight font-bold tracking-tight sm:text-[42px]">
             {t("hero.title")}
           </h2>
@@ -92,7 +90,7 @@ export function ToolsHome() {
           <strong className="text-[44px] font-normal tracking-tighter text-tool-glow">
             lbf·in
           </strong>
-          <small className="text-[11px] text-[#95b2c3]">{t("hero.artCaption")}</small>
+          <small className="text-xs text-[#95b2c3]">{t("hero.artCaption")}</small>
         </div>
       </div>
 

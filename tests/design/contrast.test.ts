@@ -60,3 +60,13 @@ describe("reduced motion", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+describe("type scale", () => {
+  it("tools text is never below 12 px (DESIGN_SYSTEM «never below 12px», NX-05)", () => {
+    const dir = "src/features/tools/components";
+    const offenders = readdirSync(join(root, dir))
+      .filter((name) => name.endsWith(".tsx"))
+      .filter((name) => /text-\[(?:[0-9]|1[01])px\]/.test(read(`${dir}/${name}`)));
+    expect(offenders).toEqual([]);
+  });
+});

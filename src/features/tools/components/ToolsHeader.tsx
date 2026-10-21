@@ -7,7 +7,7 @@ export async function ToolsHeader({ title, back = false }: { title: string; back
   return (
     <header className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-[#dae8ed] pb-4">
       <div className="min-w-0">
-        <p className="text-[10px] font-extrabold tracking-[0.17em] text-[#157877]">{t("kicker")}</p>
+        <p className="text-xs font-extrabold tracking-[0.17em] text-[#157877]">{t("kicker")}</p>
         <h1 className="mt-1.5 text-3xl leading-tight font-bold tracking-tight text-[#122e43] sm:text-[34px]">
           {title}
         </h1>
