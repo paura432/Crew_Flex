@@ -206,3 +206,30 @@ describe("ambiguousReading (W1-06: show how a number was read)", () => {
     expect(convert("1.200", "mass", "kg", "kg")).toBe(1.2);
   });
 });
+
+// W3-10: values the v1.8 HTML showed for the same inputs (runtime captures of `Toolbox.jsx`,
+// formatted as its Spanish UI does: 6 decimals max). The engine must keep giving them.
+describe("numeric parity with the v1.8 runtime (es, 6 decimals)", () => {
+  const es = (value: number) => formatNumber("es", value, 6);
+
+  it("torque", () => {
+    expect(es(convert(100, "torque", "Nm", "lbf_ft"))).toBe("73,756215");
+    expect(es(convert(100, "torque", "Nm", "ozfin"))).toBe("14.161,193266");
+  });
+
+  it("pressure, temperature, length with a mixed fraction, volume flow", () => {
+    expect(es(convert(1, "pressure", "bar", "psi"))).toBe("14,503774");
+    expect(es(convert(1, "temperature", "C", "F"))).toBe("33,8");
+    expect(es(convert("1 3/16", "length", "inch", "mm"))).toBe("30,1625");
+    expect(es(convert(1, "flowVolume", "Lmin", "Lh"))).toBe("60");
+  });
+
+  it("Spanish grouping starts at five digits, as in v1.8", () => {
+    expect(es(5200)).toBe("5200");
+    expect(es(11920)).toBe("11.920");
+  });
+
+  it("durations accept surrounding spaces (an improvement over v1.8, which rejected them)", () => {
+    expect(clockToHours(" 1:30")).toBe(1.5);
+  });
+});
