@@ -977,6 +977,8 @@
       "decimal": "Horas decimales → HH:MM",
       "inputClock": "Duración HH:MM",
       "inputDecimal": "Horas decimales",
+      "placeholderClock": "1:30",
+      "placeholderDecimal": "1,5",
       "result": "Resultado",
       "hours": "h",
       "formula": "Horas decimales = horas + minutos / 60. HH:MM se redondea al minuto más próximo."

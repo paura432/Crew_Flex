@@ -71,7 +71,7 @@ export function DurationTool() {
               value={text}
               autoComplete="off"
               inputMode={mode === "clock" ? "text" : "decimal"}
-              placeholder={mode === "clock" ? "1:30" : "1,5"}
+              placeholder={mode === "clock" ? t("placeholderClock") : t("placeholderDecimal")}
               aria-invalid={Boolean(result?.error)}
               aria-describedby="duration-input-reading"
               onChange={(e) => setText(e.target.value)}

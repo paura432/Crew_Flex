@@ -35,6 +35,12 @@ describe("tools catalog coverage", () => {
     });
   }
 
+  it("duration placeholders follow each language's decimal mark (no literals in TSX)", () => {
+    expect(es.tools.duration.placeholderDecimal).toBe("1,5");
+    expect(en.tools.duration.placeholderDecimal).toBe("1.5");
+    expect(es.tools.duration.placeholderClock).toBe(en.tools.duration.placeholderClock);
+  });
+
   it("the torque notice states that it is not an approved specification", () => {
     expect(en.tools.converter.torqueNotice).toMatch(/approved maintenance data/);
     expect(es.tools.converter.torqueNotice).toMatch(/datos de mantenimiento aprobados/);
