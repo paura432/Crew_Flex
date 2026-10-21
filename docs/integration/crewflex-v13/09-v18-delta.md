@@ -22,8 +22,29 @@ same day: `src/features/availability/rotation.ts` (same table as `planning.js`),
 migration `20261019120000_availability_days_replace.sql` (RPC `replace_availability_days`) and
 `PUT /professional-availability`. Verified locally only (PGlite, Deno, local E2E, browser); not
 deployed. Differences kept on purpose: the server accepts up to 62 days (V1.8: 31); working days are
-stored as `unavailable` windows (V1.8 kept them private in the profile); the chosen pattern is not
-persisted; no undo.
+stored as `unavailable` windows (V1.8 kept them private in the profile). **Corrected 2026-10-21:** the
+generator shipped with release 1 (`65df3b9`), the chosen pattern is persisted (`availability_rotations`,
+`20261019140000`) and the draft has undo — see «Corrections» below.
+
+**Corrections (2026-10-21, v1.8 HTML diff `16-html-v18-diff.md`, code at `51c835a`).** `10-master-matrix.md`
+already supersedes the statuses below; these rows of the table here are stale:
+
+| #   | Row       | Said                                     | Code now                                                                                   |
+| --- | --------- | ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| C1  | note      | chosen pattern not persisted             | `availability_rotations` (`20261019140000`), restored by `CyclePlanner`                    |
+| C2  | note      | no undo                                  | draft with «Deshacer último cambio» (`AvailabilityManager`)                                |
+| C3  | V18-03    | no mini calendar                         | `AvailabilityMonth` on `/app/professional`                                                 |
+| C4  | V18-05    | `NavLinks` scroll strip                  | «Menú» disclosure (`NavDrawer`) below `lg`                                                 |
+| C5  | V18-13    | no Storage bucket                        | private `professional-documents` bucket (`20261019160000`, local)                          |
+| C6  | V18-19/20 | no `aog_only`                            | `aog_only` status in domain, calendar and SQL (`20261019150000`)                           |
+| C7  | V18-16    | no batch preview                         | draft + save / undo / discard                                                              |
+| C8  | V18-22    | no comparison                            | compare ≤ 3 (`MatchList` `CompareTable`, `MAX_COMPARE = 3`)                                |
+| C9  | V18-29    | no documents table/bucket                | `professional_documents.qualification_id` (local); evidence line in Qualifications (W2-11) |
+| C10 | V18-39    | tools absent                             | `src/features/tools/engine.ts` (22 magnitudes) and `/app/tools/{torque,convert,duration}`  |
+| C11 | V18-43    | no 60-day warning list                   | «Documentos y cursos próximos a revisar» (`isDueForReview`)                                |
+| C12 | §visual   | teal tools palette not present           | `--color-tool-*` tokens in `globals.css`                                                   |
+| C13 | §visual   | `AvailabilityManager` uses ok/neutral    | AOG `warn`, partial day hatched (`calendar.ts`)                                            |
+| G7  | note      | generator verified locally, not deployed | in release 1 (`65df3b9`), in production since 2026-10-19                                   |
 
 **Classification:** `keep-original` (port the behaviour) · `current-improvement` (Next already does it
 better; keep ours) · `prototype-bug-or-demo-only` (do not port) · `open-decision` (needs the owner) ·
