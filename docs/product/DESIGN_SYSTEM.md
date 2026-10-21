@@ -41,7 +41,8 @@ Tools workbench sub-palette (`tool-*` tokens, used only under `/app/tools`): tak
 prototype `styles/v13.css` (`.toolbox`, `.tb-*`) so the workbench keeps its own identity — teal
 `tool` `#057f7d`, hero `#112e40`, result card `#103b49`, mint CTA `#b5f0dc`, soft icon tile
 `#e8f3f1`. Radii 13/18 px as in the prototype. Deviations kept on purpose: Inter instead of the
-system font, the global orange focus ring (one focus style for the whole app), and the Tools link in
+system font, the global focus ring (one style for the whole app: a 2 px navy ring inside a 3 px orange
+outline, ≥ 3:1 on white, canvas and the navy sidebar), and the Tools link in
 the shared "Account" nav section because both professional and organization accounts use it.
 
 Typography: Inter (via `next/font`). Body 15px/1.6, never below 12px. Headings tight tracking.

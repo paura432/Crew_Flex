@@ -48,8 +48,12 @@
     font-size: 15px;
     line-height: 1.6;
   }
+  /* Double ring (WCAG 2.4.11/1.4.11, ≥ 3:1 on every surface): navy fills the 2 px offset next to the
+     control (16.3:1 on white, 15.2:1 on canvas) and the orange outline sits outside it (7.6:1 on the
+     navy sidebar). The orange alone was 2.15:1 on white. */
   :focus-visible {
     outline: 3px solid var(--color-accent);
     outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-navy);
   }
 }
