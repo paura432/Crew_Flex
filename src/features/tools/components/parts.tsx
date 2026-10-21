@@ -183,5 +183,6 @@ export function References({ children }: { children: ReactNode }) {
 }
 
 export function Footnote({ children }: { children: ReactNode }) {
-  return <p className="text-[11px] leading-relaxed text-[#718492]">{children}</p>;
+  // 12 px and #587083 (5.2:1 on white, 4.8:1 on canvas); was 11 px #718492 at 3.6–3.9:1.
+  return <p className="text-xs leading-relaxed text-[#587083]">{children}</p>;
 }
