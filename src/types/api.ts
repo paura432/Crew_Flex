@@ -60,6 +60,8 @@ export interface WorkRequirementResponse {
 
 export interface WorkRequirementListResponse {
   requirements: WorkRequirement[];
+  /** Rows matching the filters across all pages (absent from functions older than W5-02). */
+  total?: number;
 }
 
 export interface CapacityResponse {

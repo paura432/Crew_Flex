@@ -697,6 +697,10 @@
     },
     "requirements": {
       "title": "Necesidades de personal",
+      "pagination": "Páginas de necesidades",
+      "pageInfo": "{total, plural, one {# necesidad} other {# necesidades}} · página {page} de {pages}",
+      "previous": "Anterior",
+      "next": "Siguiente",
       "description": "Necesidades operativas, sus cualificaciones y su periodo. Horas en UTC.",
       "caption": "Necesidades de personal",
       "columns": {

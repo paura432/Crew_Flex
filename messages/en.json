@@ -697,6 +697,10 @@
     },
     "requirements": {
       "title": "Work requirements",
+      "pagination": "Requirement pages",
+      "pageInfo": "{total, plural, one {# requirement} other {# requirements}} · page {page} of {pages}",
+      "previous": "Previous",
+      "next": "Next",
       "description": "Operational needs, their qualifications and period. Times in UTC.",
       "caption": "Work requirements",
       "columns": {

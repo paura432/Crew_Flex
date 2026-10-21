@@ -7,6 +7,13 @@ import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { listRequirements } from "@/features/requirements/api";
 import { RequirementsList } from "@/features/requirements/components/RequirementsList";
+import { RequirementsPager } from "@/features/requirements/components/RequirementsPager";
+import {
+  pageCount,
+  pageOffset,
+  parseRequirementsPage,
+  REQUIREMENTS_PAGE_SIZE,
+} from "@/features/requirements/pagination";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,13 +21,23 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("requirements") };
 }
 
-export default async function RequirementsPage() {
-  const [{ organization, canManage }, t, tDashboard] = await Promise.all([
+export default async function RequirementsPage({
+  searchParams,
+}: PageProps<"/app/organization/requirements">) {
+  const [{ page: pageParam }, { organization, canManage }, t, tDashboard] = await Promise.all([
+    searchParams,
     requireOrganizationContext(),
     getTranslations("organization.requirements"),
     getTranslations("organization.dashboard"),
   ]);
-  const result = await listRequirements(organization.id);
+  // Newest first, 20 per page: the old ascending 50-row read hid every need after the 50th.
+  const page = parseRequirementsPage(pageParam);
+  const result = await listRequirements(organization.id, {
+    order: "created_desc",
+    offset: pageOffset(page),
+    limit: REQUIREMENTS_PAGE_SIZE,
+  });
+  const total = result.ok ? (result.data.total ?? result.data.requirements.length) : 0;
   const newButton = canManage && (
     <ButtonLink href="/app/organization/requirements/new" variant="primary">
       {tDashboard("newRequirement")}
@@ -37,11 +54,12 @@ export default async function RequirementsPage() {
       />
       {!result.ok ? (
         <ApiErrorState error={result.error} requestId={result.requestId} />
-      ) : result.data.requirements.length === 0 ? (
+      ) : total === 0 ? (
         <StateMessage title={tDashboard("noRequirementsTitle")} action={newButton || undefined} />
       ) : (
         <Panel>
           <RequirementsList requirements={result.data.requirements} />
+          <RequirementsPager page={page} pages={pageCount(total)} total={total} />
         </Panel>
       )}
     </>

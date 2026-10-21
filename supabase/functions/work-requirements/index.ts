@@ -1,4 +1,5 @@
-// GET  /work-requirements           → requirements of the actor's organizations (RLS)
+// GET  /work-requirements           → requirements of the actor's organizations (RLS); `offset` +
+//                                      `order` (starts_asc · created_desc) page them, `total` counts all
 // GET  /work-requirements?id=<uuid> → one requirement
 // POST /work-requirements           → create (admin/manager), atomic RPC under RLS, audited,
 //                                      idempotent per `Idempotency-Key` (201 created · 200 replay)
@@ -32,17 +33,23 @@ export const handler = createHandler("work-requirements", {
 
     let request = actor.client
       .from("work_requirements")
-      .select(REQUIREMENT_SELECT)
-      .order("starts_at", { ascending: true })
-      .limit(query.limit);
+      .select(REQUIREMENT_SELECT, { count: "exact" });
     if (query.organizationId) request = request.eq("organization_id", query.organizationId);
     if (query.status) request = request.eq("status", query.status);
     if (query.endsAfter) request = request.gt("ends_at", query.endsAfter);
-    const { data, error } = await request;
+    const ordered =
+      query.order === "created_desc"
+        ? request.order("created_at", { ascending: false }).order("id", { ascending: true })
+        : request.order("starts_at", { ascending: true });
+    const { data, error, count } = await ordered.range(
+      query.offset,
+      query.offset + query.limit - 1,
+    );
     if (error) throw fromDatabaseError(error);
     return {
       data: {
         requirements: (data ?? []).map(toWorkRequirement),
+        total: count ?? undefined,
       } satisfies WorkRequirementListResponse,
     };
   },

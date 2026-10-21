@@ -80,6 +80,9 @@ export const createWorkRequirementInput = z
   });
 export type CreateWorkRequirementInput = z.infer<typeof createWorkRequirementInput>;
 
+export const REQUIREMENT_LIST_ORDERS = ["starts_asc", "created_desc"] as const;
+export type RequirementListOrder = (typeof REQUIREMENT_LIST_ORDERS)[number];
+
 /** Rows a list request returns when it does not ask for a limit. */
 export const DEFAULT_LIST_LIMIT = 50;
 
@@ -90,6 +93,10 @@ export const listWorkRequirementsQuery = z.strictObject({
   status: z.enum(REQUIREMENT_STATUSES).optional(),
   /** Only needs whose period ends after this instant (the dashboard focus: open and not expired). */
   endsAfter: z.iso.datetime({ offset: true }).optional(),
+  /** Rows to skip (pagination of the requirements page). */
+  offset: z.coerce.number().int().min(0).max(10000).default(0),
+  /** `starts_asc` (soonest first: dashboard, focus) or `created_desc` (newest first: the list page). */
+  order: z.enum(REQUIREMENT_LIST_ORDERS).default("starts_asc"),
 });
 export type ListWorkRequirementsQuery = z.infer<typeof listWorkRequirementsQuery>;
 
