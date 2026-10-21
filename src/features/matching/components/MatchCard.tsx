@@ -88,13 +88,15 @@ export async function MatchCard({
         </div>
       )}
 
-      <ul className="mt-4 divide-y divide-line text-sm">
+      {/* Subgrid: the label column fits its longest entry («Disponibilidad» is wider than a
+          fixed 96 px column, and overlapped the detail), and every row stays aligned. */}
+      <ul className="mt-4 grid grid-cols-[1rem_max-content_minmax(0,1fr)] gap-x-3 divide-y divide-line text-sm">
         {[...checks, availability].map((check) => (
-          <li key={check.label} className="flex items-baseline gap-3 py-1.5">
-            <span aria-hidden className={`w-4 font-bold ${markTone[check.tone]}`}>
+          <li key={check.label} className="col-span-3 grid grid-cols-subgrid items-baseline py-1.5">
+            <span aria-hidden className={`font-bold ${markTone[check.tone]}`}>
               {check.met ? "✓" : "✗"}
             </span>
-            <span className="w-24 shrink-0 font-mono font-semibold">
+            <span className={`font-semibold ${check.label === "availability" ? "" : "font-mono"}`}>
               {check.label === "availability" ? t("availabilityLabel") : check.label}
             </span>
             <span className="min-w-0 text-muted">
