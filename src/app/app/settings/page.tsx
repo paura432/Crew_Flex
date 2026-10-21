@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { LocaleSwitcher } from "@/features/preferences/components/LocaleSwitcher";
-import { requireSessionActor } from "@/server/session";
+import { primaryMembership, requireSessionActor } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
@@ -17,7 +17,8 @@ export default async function SettingsPage() {
     getTranslations("settings"),
     getTranslations("domain"),
   ]);
-  const membership = actor.memberships[0];
+  // Same organization and role as the shell's section header (not whichever row came first).
+  const membership = primaryMembership(actor);
   const facts: [string, string][] = [
     [t("name"), actor.profile.display_name],
     [t("accountType"), tDomain(`accountType.${actor.profile.account_type}`)],
