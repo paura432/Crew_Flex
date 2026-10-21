@@ -19,15 +19,15 @@ flag and restart `functions serve` (the wallet E2E fails 2/42 until the restart)
 
 ## State
 
-| Item         | State                                                                                                                                   |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Production   | `origin/main` `65df3b9` (release 1), unchanged; 15 migrations; 8 functions; Auth untouched                                              |
-| Local `main` | ahead of `65df3b9`, not pushed; local-only migrations `1602xx`, `20261020120000`, `20261020120100`; `work-requirements` fn changed      |
-| Gates        | HEAD: `pnpm check` 0 (418 pass, 32 SKIPPED = E2E without env), build 0, E2E 42/42, ui-smoke 105/105, RLS 115/115, release-2 drill 23/23 |
+| Item         | State                                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Production   | frontend `origin/main` `51c835a` (pushed 2026-10-20, Vercel success) on the release-1 backend (15 migrations, 8 functions): org dashboard focus 400 and close 405, latent with 0 orgs |
+| Local `main` | = `origin/main` `51c835a`; backend not deployed: migrations `1602xx`, `20261020120000`, `20261020120100`; `work-requirements` fn changed                                              |
+| Gates        | HEAD: `pnpm check` 0 (418 pass, 32 SKIPPED = E2E without env), build 0, E2E 42/42, ui-smoke 105/105, RLS 115/115, release-2 drill 23/23                                               |
 
 ## Risks
 
-1. Never `git push origin main`: it would publish the wallet and every local batch.
+1. `main` is already live as `51c835a` on the release-1 backend: deploy the release-2 backend or roll Vercel back (owner). Never push again without that decision.
 2. T22: production Auth accepts a password change from any session until «require current password» is on (owner).
 3. CSP is report-only: flip to enforcing only after a clean production report window (deploy plan).
 4. Release 2 has its own plan and drill (`docs/qa/ROLLOUT_PLAN_RELEASE2.md`, `release2.sh` 23/23); the release-1 harness (`run.sh`) stays for history. R2-core needs the close migrations renamed in a release checkout (not done).
