@@ -5,11 +5,12 @@ import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
-import { isExpired, type WorkRequirement } from "@/domain/work-requirement";
+import type { WorkRequirement } from "@/domain/work-requirement";
 import { evaluateRequirementCapacity } from "@/features/capacity/api";
 import { CapacityOverview } from "@/features/capacity/components/CapacityOverview";
 import { listRequirements } from "@/features/requirements/api";
 import { RequirementsList } from "@/features/requirements/components/RequirementsList";
+import { currentRequirements, dashboardRequirements } from "@/features/requirements/dashboard";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,11 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("organization") };
 }
 
-/** Next open requirement that has not ended yet (request time); expired ones are not a focus (V1.8). */
-function focusRequirement(requirements: WorkRequirement[]) {
-  const now = Date.now();
-  return requirements.find((r) => r.status === "open" && !isExpired(r, now));
-}
+/** Open and not ended at request time; expired ones are never the focus (V1.8). */
+const currentAtRequestTime = (requirements: WorkRequirement[]) =>
+  currentRequirements(requirements, Date.now());
 
 /** Open, not yet ended, soonest first — filtered by the API so the 50-row page cannot hide the focus. */
 const listFocusCandidates = (organizationId: string) =>
@@ -48,7 +47,8 @@ export default async function OrganizationDashboard() {
     listRequirements(organization.id),
     listFocusCandidates(organization.id),
   ]);
-  const focus = open.ok ? focusRequirement(open.data.requirements) : undefined;
+  const current = open.ok ? currentAtRequestTime(open.data.requirements) : [];
+  const focus = current[0];
 
   const newButton = canManage && (
     <ButtonLink href="/app/organization/requirements/new" variant="primary">
@@ -85,7 +85,9 @@ export default async function OrganizationDashboard() {
               </ButtonLink>
             }
           >
-            <RequirementsList requirements={result.data.requirements.slice(0, 5)} />
+            <RequirementsList
+              requirements={dashboardRequirements(result.data.requirements, current)}
+            />
           </Panel>
         </div>
       )}
