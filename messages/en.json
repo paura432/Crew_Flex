@@ -809,7 +809,7 @@
     "gap": "Gap",
     "gapDetail": "{count} × to source externally",
     "coveredInternally": "Covered internally",
-    "coverage": "Coverage",
+    "coverage": "Internal coverage",
     "viewEligible": "View eligible external professionals",
     "detail": "Requirement detail"
   },

@@ -33,7 +33,7 @@ if (!/^QUALIFICATION_REVIEW_ENABLED=true$/m.test(envLocal)) {
 const results = [];
 // Words that only exist in the English catalog. Seeing them while the UI is Spanish = untranslated text.
 const EN_SENTINELS =
-  /\b(Sign out|Sign in|Requirements|Availability|Qualifications|Workforce|Overview|Settings|Save changes|Declare|Passport|Dashboard|Create account|Not found|Eligible|Blockers|Pending review|Verified|Gap|Coverage)\b/;
+  /\b(Sign out|Sign in|Requirements|Availability|Qualifications|Workforce|Overview|Settings|Save changes|Declare|Passport|Dashboard|Create account|Not found|Eligible|Blockers|Pending review|Verified|Gap|Coverage|Internal coverage)\b/;
 async function expectSpanish(name) {
   const lang = await page.evaluate(() => document.documentElement.lang);
   const text = await page.locator("body").innerText();

@@ -809,7 +809,7 @@
     "gap": "Déficit",
     "gapDetail": "{count} × a cubrir externamente",
     "coveredInternally": "Cubierto internamente",
-    "coverage": "Cobertura",
+    "coverage": "Cobertura interna",
     "viewEligible": "Ver profesionales externos elegibles",
     "detail": "Detalle de la necesidad"
   },

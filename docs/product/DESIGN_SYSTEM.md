@@ -62,7 +62,7 @@ Numbers in metrics use tabular figures.
 
 ## Patterns
 
-- **Capacity strip:** Required · Internally eligible · Gap · Coverage. Gap uses `danger` only when
+- **Capacity strip:** Required · Internally eligible · Gap · Internal coverage. Gap uses `danger` only when
   > 0; otherwise `ok`.
 - **Match card:** verdict chip (ELIGIBLE / NOT ELIGIBLE) → checklist of qualifications (✓/✗ +
   verification) → availability → location → blockers.

@@ -6,7 +6,10 @@ import type { WorkRequirement } from "@/domain/work-requirement";
 import { formatPeriod } from "@/i18n/format";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
 
-/** The product thesis on one panel: Required · Internally eligible · Gap · Coverage. */
+/**
+ * The product thesis on one panel: Required · Internally eligible · Gap · Internal coverage (the
+ * workforce's share of the need, not confirmed staffing: that arrives with applications, D-06).
+ */
 export async function CapacityOverview({
   requirement,
   capacity,
