@@ -165,7 +165,9 @@ export function References({ children }: { children: ReactNode }) {
   const t = useTranslations("tools");
   return (
     <details className="mt-6 border-t border-[#dce5e8] pt-4 text-xs text-[#5f7788]">
-      <summary className="cursor-pointer font-bold text-[#226969]">{t("references")}</summary>
+      <summary className="flex cursor-pointer items-center font-bold text-[#226969] pointer-coarse:min-h-11">
+        {t("references")}
+      </summary>
       <div className="mt-3 space-y-3">
         {children}
         <p>{t("engineNote", { version: ENGINE_VERSION })}</p>

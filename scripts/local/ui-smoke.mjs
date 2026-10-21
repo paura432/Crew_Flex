@@ -1021,6 +1021,7 @@ for (const path of [
   "/app/professional/availability",
   "/app/professional/profile",
   "/app/tools/convert",
+  "/app/tools",
 ]) {
   await tp.goto(`${BASE}${path}`);
   await tp.waitForLoadState("networkidle");
@@ -1029,7 +1030,8 @@ for (const path of [
     ...(await tp.evaluate(() =>
       [
         ...document.querySelectorAll(
-          "button, select, input:not([type=checkbox]):not([type=radio]):not([type=hidden]), nav a",
+          // + month arrows (labelled links) and disclosure summaries (W3-04).
+          "button, select, input:not([type=checkbox]):not([type=radio]):not([type=hidden]), nav a, a[aria-label], summary",
         ),
       ]
         .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 43.5)
@@ -1041,7 +1043,7 @@ for (const path of [
   );
 }
 ok(
-  "25 touch targets ≥ 44 px on a touch screen (overview, availability, passport, converter, nav)",
+  "25 touch targets ≥ 44 px on a touch screen (overview, availability, passport, converter, tools home, nav)",
   small.length === 0,
   small.slice(0, 5).join(" | "),
 );

@@ -134,7 +134,7 @@ export function ToolsHome() {
                     : t("favoriteAdd", { tool: title })
                 }
                 onClick={() => toggle(id)}
-                className="absolute top-4 right-4 grid size-10 place-items-center rounded-lg text-[#78919e] hover:bg-canvas aria-[pressed=true]:text-[#bb7714]"
+                className="absolute top-4 right-4 grid size-10 place-items-center rounded-lg pointer-coarse:size-11 text-[#78919e] hover:bg-canvas aria-[pressed=true]:text-[#bb7714]"
               >
                 <StarIcon size={18} filled={favorite} />
               </button>

@@ -41,14 +41,14 @@ export async function AvailabilityMonth({
           <Link
             href={hrefFor(shiftMonth(month, -1))}
             aria-label={t("prevMonth")}
-            className="grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas"
+            className="grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas pointer-coarse:size-11"
           >
             ←
           </Link>
           <Link
             href={hrefFor(shiftMonth(month, 1))}
             aria-label={t("nextMonth")}
-            className="grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas"
+            className="grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas pointer-coarse:size-11"
           >
             →
           </Link>

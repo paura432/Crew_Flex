@@ -168,7 +168,10 @@ export async function CompareTable({
         <h2 id="compare-title" className="font-semibold">
           {t("compareTitle", { count: items.length })}
         </h2>
-        <Link href={clearHref} className="text-sm font-semibold text-blue hover:underline">
+        <Link
+          href={clearHref}
+          className="inline-flex items-center text-sm font-semibold text-blue hover:underline pointer-coarse:min-h-11"
+        >
           {t("compareClear")}
         </Link>
       </div>
