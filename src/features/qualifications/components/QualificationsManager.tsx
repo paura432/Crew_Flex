@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
@@ -337,17 +338,18 @@ export function QualificationsManager({
                       >
                         {tRoot("common.edit")}
                       </Button>
-                      <Button
-                        className="min-h-8 px-3 text-xs text-danger"
+                      <ConfirmButton
+                        className="min-h-8 px-3 text-xs"
                         disabled={pending}
-                        onClick={() =>
+                        label={tRoot("common.remove")}
+                        confirmLabel={t("confirmRemove")}
+                        cancelLabel={tRoot("common.cancel")}
+                        onConfirm={() =>
                           run(t("removed", { code: q.type.code }), () =>
                             deleteQualificationAction(q.id),
                           )
                         }
-                      >
-                        {tRoot("common.remove")}
-                      </Button>
+                      />
                     </div>
                   </li>
                 ))}

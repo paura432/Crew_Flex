@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { Metric } from "@/components/ui/Metric";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
@@ -462,13 +463,14 @@ export function AvailabilityManager({
                   >
                     {tRoot("common.edit")}
                   </Button>
-                  <Button
-                    className="min-h-8 px-3 text-xs text-danger"
+                  <ConfirmButton
+                    className="min-h-8 px-3 text-xs"
                     disabled={pending}
-                    onClick={() => run(t("windowDeleted"), () => deleteWindowAction(w.id))}
-                  >
-                    {tRoot("common.delete")}
-                  </Button>
+                    label={tRoot("common.delete")}
+                    confirmLabel={t("confirmDelete")}
+                    cancelLabel={tRoot("common.cancel")}
+                    onConfirm={() => run(t("windowDeleted"), () => deleteWindowAction(w.id))}
+                  />
                 </div>
               </li>
             ))}

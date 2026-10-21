@@ -34,7 +34,8 @@ density. Checked by `ui-smoke` 25 on a touch-emulated 390 px screen.
 
 Navigation below `lg`: sections fold behind a «Menu» disclosure (`NavDrawer`, V1.8 ≤ 760 px drawer); the
 5-item bottom dock of V1.8 is not ported (C-12). Buttons: `primary` (orange CTA), `secondary`, `ghost` and
-`danger` (irreversible actions, e.g. closing a requirement).
+`danger` (irreversible actions, e.g. closing a requirement). Removing a row (qualification, availability
+window) asks first with `ConfirmButton` (`src/components/ui/ConfirmButton.tsx`): confirm + cancel, focus on cancel.
 
 Tools workbench sub-palette (`tool-*` tokens, used only under `/app/tools`): taken from the V1.3/V1.8
 prototype `styles/v13.css` (`.toolbox`, `.tb-*`) so the workbench keeps its own identity — teal

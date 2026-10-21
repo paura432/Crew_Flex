@@ -514,6 +514,7 @@
     }
   },
   "qualifications": {
+    "confirmRemove": "Sí, quitarla",
     "title": "Cualificaciones",
     "eyebrow": "Mi pasaporte",
     "description": "Licencias, type ratings, formación y habilitaciones, con fechas de emisión y caducidad. Tú declaras; un revisor autorizado verifica. Un curso debe seguir vigente hasta el último día de una necesidad para superar su filtro obligatorio.",
@@ -548,6 +549,7 @@
     "reviewReason": "Revisor: {reason}"
   },
   "availability": {
+    "confirmDelete": "Sí, eliminarla",
     "eyebrow": "Mi tiempo",
     "title": "Disponibilidad elegida",
     "description": "Un día libre solo entra en el mercado cuando lo marcas como disponible. Las horas son UTC; las ventanas bloqueadas prevalecen sobre las disponibles.",

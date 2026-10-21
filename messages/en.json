@@ -514,6 +514,7 @@
     }
   },
   "qualifications": {
+    "confirmRemove": "Yes, remove it",
     "title": "Qualifications",
     "eyebrow": "My passport",
     "description": "Licences, type ratings, training and approvals, with issue and expiry dates. You declare; an authorized reviewer verifies. A course must stay valid through the last day of a requirement to pass its hard filter.",
@@ -548,6 +549,7 @@
     "reviewReason": "Reviewer: {reason}"
   },
   "availability": {
+    "confirmDelete": "Yes, delete it",
     "eyebrow": "My time",
     "title": "Chosen availability",
     "description": "A free day only enters the market when you mark it as available. Times are UTC; blocked windows override available ones.",
