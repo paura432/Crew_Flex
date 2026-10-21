@@ -244,7 +244,7 @@
       "afterStart": "El fin debe ser posterior al inicio"
     },
     "window": {
-      "status": "Elige disponible o no disponible",
+      "status": "Elige disponible, no disponible o solo AOG",
       "maxDays": "Una ventana puede abarcar como máximo 366 días",
       "id": "Se necesita un identificador de ventana válido"
     },
@@ -464,11 +464,11 @@
       "rejectedNext": "{count, plural, one {# cualificación ha sido rechazada por un revisor. Lee el motivo y corrígela.} other {# cualificaciones han sido rechazadas por un revisor. Lee los motivos y corrígelas.}}",
       "awaitingNext": "{count, plural, one {# cualificación espera a un revisor. Hasta que se verifique no cuenta para los requisitos obligatorios.} other {# cualificaciones esperan a un revisor. Hasta que se verifiquen no cuentan para los requisitos obligatorios.}}",
       "openQualifications": "Abrir cualificaciones",
-      "doIt": "Ir",
+      "doIt": "Completar",
       "checklistTitle": "Perfil completado · {percent}%",
       "itemDone": "hecho",
       "itemPending": "pendiente",
-      "calendarTitle": "Mi disponibilidad este mes",
+      "calendarTitle": "Tu disponibilidad",
       "openAvailability": "Editar disponibilidad",
       "showChecklist": "Los {count} apartados del perfil",
       "reviewTitle": "Documentos y cursos próximos a revisar",
@@ -564,7 +564,7 @@
   "availability": {
     "confirmDelete": "Sí, eliminarla",
     "eyebrow": "Mi tiempo",
-    "title": "Disponibilidad elegida",
+    "title": "Tu tiempo, a tu manera.",
     "description": "Un día libre solo entra en el mercado cuando lo marcas como disponible. Las horas son UTC; las ventanas bloqueadas prevalecen sobre las disponibles.",
     "noProfileDescription": "La disponibilidad pertenece a las cuentas profesionales.",
     "metrics": {
@@ -623,9 +623,11 @@
       "anchor": "Día 1 del ciclo (UTC)",
       "anchorHint": "El primer día de trabajo de tu rotación.",
       "customLength": "Días del ciclo",
+      "customHelp": "Pulsa cada casilla para alternar trabajo y descanso. Puedes dibujar cualquier distribución y repetirla, aunque no sea un bloque regular.",
       "customDays": "Días del ciclo personalizado (pulsa para alternar trabajo / descanso)",
       "customDay": "Día {n}: {state}",
       "publishRest": "Publicar descansos generados como disponibles",
+      "publishRestHint": "Si no lo activas, se quedan como descanso privado. No se envía nada a las organizaciones.",
       "replace": "Reemplazar también los días que ya he guardado en este mes",
       "preview": "Previsualizar ciclo en el mes",
       "hint": "7–3 / 7–4 alterna 7 de trabajo, 3 libres, 7 de trabajo y 4 libres. Se generan días completos UTC: revisa las horas si tu jornada usa otra zona. Los días de trabajo se guardan como bloqueados; los descansos son privados salvo que los publiques. Los intervalos parciales de los días que no reemplazas se conservan.",

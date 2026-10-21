@@ -244,7 +244,7 @@
       "afterStart": "End must be after start"
     },
     "window": {
-      "status": "Choose available or unavailable",
+      "status": "Choose available, unavailable or AOG only",
       "maxDays": "A window can span at most 366 days",
       "id": "A valid window id is required"
     },
@@ -464,11 +464,11 @@
       "rejectedNext": "{count, plural, one {# qualification was rejected by a reviewer. Read the reason and correct it.} other {# qualifications were rejected by a reviewer. Read the reasons and correct them.}}",
       "awaitingNext": "{count, plural, one {# qualification is waiting for a reviewer. Until it is verified it does not count for hard requirements.} other {# qualifications are waiting for a reviewer. Until they are verified they do not count for hard requirements.}}",
       "openQualifications": "Open qualifications",
-      "doIt": "Go",
+      "doIt": "Complete",
       "checklistTitle": "Profile completeness · {percent}%",
       "itemDone": "done",
       "itemPending": "pending",
-      "calendarTitle": "My availability this month",
+      "calendarTitle": "Your availability",
       "openAvailability": "Edit availability",
       "showChecklist": "The {count} profile items",
       "reviewTitle": "Documents and courses to review",
@@ -564,7 +564,7 @@
   "availability": {
     "confirmDelete": "Yes, delete it",
     "eyebrow": "My time",
-    "title": "Chosen availability",
+    "title": "Your time, your way.",
     "description": "A free day only enters the market when you mark it as available. Times are UTC; blocked windows override available ones.",
     "noProfileDescription": "Availability belongs to professional accounts.",
     "metrics": {
@@ -623,9 +623,11 @@
       "anchor": "Day 1 of the cycle (UTC)",
       "anchorHint": "The first working day of your rotation.",
       "customLength": "Days in the cycle",
+      "customHelp": "Tap each box to switch between work and rest. You can draw any pattern and repeat it, even if it is not a regular block.",
       "customDays": "Days of the custom cycle (press to switch work / rest)",
       "customDay": "Day {n}: {state}",
       "publishRest": "Publish generated rest days as available",
+      "publishRestHint": "If you leave it off, they stay as private rest. Nothing is sent to organizations.",
       "replace": "Also replace days I already saved this month",
       "preview": "Preview the cycle in this month",
       "hint": "7–3 / 7–4 alternates 7 working days, 3 off, 7 working and 4 off. Whole UTC days are generated: check the hours if your shifts follow another time zone. Working days are saved as blocked; rest days stay private unless you publish them. Partial windows on days you do not replace are kept.",
