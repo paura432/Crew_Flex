@@ -15,6 +15,7 @@ import {
 import { parseMonth } from "@/features/availability/calendar";
 import { AvailabilityMonth } from "@/features/availability/components/AvailabilityMonth";
 import { listOwnDocumentExpiries } from "@/features/documents/api";
+import { IdentityCard } from "@/features/professional/components/IdentityCard";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
 import { loadProfessionalContext } from "@/features/professional/load";
 import { formatDate } from "@/i18n/format";
@@ -40,12 +41,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ProfessionalOverviewPage({
   searchParams,
 }: PageProps<"/app/professional">) {
-  const [{ month: monthParam }, { actor, overview }, t, tDomain, locale, walletEnabled] =
+  const [{ month: monthParam }, { actor, overview }, t, tDomain, tNav, locale, walletEnabled] =
     await Promise.all([
       searchParams,
       loadProfessionalContext(),
       getTranslations("professional"),
       getTranslations("domain"),
+      getTranslations("nav"),
       getLocale() as Promise<Locale>,
       isDocumentWalletEnabled(),
     ]);
@@ -105,8 +107,18 @@ export default async function ProfessionalOverviewPage({
 
   return (
     <>
-      <PageHeader eyebrow={t("overview.eyebrow")} title={actor.profile.display_name} />
+      {/* V1.8 home: the promise as the heading, the person in the identity card below. */}
+      <PageHeader
+        eyebrow={t("overview.eyebrow")}
+        title={t.rich("overview.headline", { br: () => <br /> })}
+        actions={<ButtonLink href="/app/tools">{tNav("tools")}</ButtonLink>}
+      />
       <div className="space-y-6">
+        <IdentityCard
+          name={actor.profile.display_name}
+          baseLocation={overview.profile.base_location}
+          yearsExperience={overview.profile.years_experience}
+        />
         <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {/* Completeness of the profile items (BR-11) is not a verification status (8.2). */}
           <Metric
@@ -115,7 +127,8 @@ export default async function ProfessionalOverviewPage({
             detail={nextStep ? t(`hint.${nextStep}`) : t("overview.complete")}
             tone={completeness.percent === 100 ? "ok" : "neutral"}
           />
-          <Metric label={t("overview.qualifications")} value={overview.qualifications.length} />
+          {/* Held ones only: a withdrawn qualification is one the professional no longer has. */}
+          <Metric label={t("overview.qualifications")} value={active.length} />
           <Metric
             label={t("overview.verified")}
             value={t("overview.verifiedOf", { verified, total: active.length })}

@@ -433,10 +433,17 @@
     }
   },
   "professional": {
+    "identity": {
+      "label": "Your professional identity",
+      "noBase": "Base to be completed",
+      "experience": "{count, plural, one {# year} other {# years}} of declared experience",
+      "edit": "Edit profile"
+    },
     "noProfileTitle": "No professional profile",
     "noProfileDescription": "This account is an organization account.",
     "overview": {
-      "eyebrow": "Professional space",
+      "eyebrow": "My space",
+      "headline": "Your profile. Your time. <br></br>Your next opportunity.",
       "passport": "Profile completeness",
       "complete": "All profile items done. This is not a verification status.",
       "qualifications": "Qualifications",

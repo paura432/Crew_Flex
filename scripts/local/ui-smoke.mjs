@@ -527,7 +527,7 @@ await page.waitForLoadState("networkidle");
 ok(
   "5m English persists after sign out/in with cookies cleared (flow 7, DB preference)",
   (await page.evaluate(() => document.documentElement.lang)) === "en" &&
-    /professional space/i.test(await page.locator("main").innerText()),
+    /your profile\. your time\./i.test(await page.locator("main").innerText()),
   await page.evaluate(() => document.documentElement.lang),
 );
 
