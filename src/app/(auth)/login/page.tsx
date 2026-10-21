@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { LoginForm } from "@/features/auth/components/LoginForm";
+import { loginNotice } from "@/features/auth/state";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
@@ -9,17 +10,19 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const [{ next, reset }, t] = await Promise.all([searchParams, getTranslations("auth.signIn")]);
+  const [params, t] = await Promise.all([searchParams, getTranslations("auth.signIn")]);
+  const { next } = params;
+  const notice = loginNotice(params);
   return (
     <>
       <h1 className="mb-1 text-2xl font-bold tracking-tight">{t("title")}</h1>
       <p className="mb-6 text-muted">{t("lead")}</p>
-      {reset === "1" && (
+      {notice && (
         <p
           role="status"
           className="mb-4 rounded-lg border border-ok/30 bg-ok-bg px-4 py-3 text-sm text-ok"
         >
-          {t("passwordChanged")}
+          {t(notice)}
         </p>
       )}
       <LoginForm next={typeof next === "string" ? next : undefined} />

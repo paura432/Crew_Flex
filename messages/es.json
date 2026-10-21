@@ -97,7 +97,8 @@
       "email": "Correo electrónico",
       "password": "Contraseña",
       "forgot": "¿Has olvidado tu contraseña?",
-      "passwordChanged": "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña."
+      "passwordChanged": "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.",
+      "signedOut": "Sesión cerrada."
     },
     "register": {
       "title": "Crear cuenta",

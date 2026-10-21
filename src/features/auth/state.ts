@@ -61,3 +61,13 @@ export function isRecentRecovery(amr: unknown, nowSeconds: number): boolean {
     )
   );
 }
+
+/**
+ * Which outcome banner the login page shows, from its query: a finished password reset wins over a
+ * plain sign-out (both end the session; the reset one says why).
+ */
+export function loginNotice(params: { reset?: unknown; signedOut?: unknown }) {
+  if (params.reset === "1") return "passwordChanged" as const;
+  if (params.signedOut === "1") return "signedOut" as const;
+  return null;
+}

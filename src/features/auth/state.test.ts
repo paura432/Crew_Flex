@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isRecentRecovery, safeConfirmNext, safeNextPath } from "./state";
+import { isRecentRecovery, loginNotice, safeConfirmNext, safeNextPath } from "./state";
 
 describe("safeNextPath", () => {
   it.each([
@@ -48,5 +48,19 @@ describe("isRecentRecovery (reset-password gate)", () => {
     [null, false],
   ])("%j → %s", (amr, expected) => {
     expect(isRecentRecovery(amr, now)).toBe(expected);
+  });
+});
+
+describe("loginNotice", () => {
+  it("shows the sign-out banner, and the reset one wins over it", () => {
+    expect(loginNotice({ signedOut: "1" })).toBe("signedOut");
+    expect(loginNotice({ reset: "1" })).toBe("passwordChanged");
+    expect(loginNotice({ reset: "1", signedOut: "1" })).toBe("passwordChanged");
+  });
+
+  it("ignores anything else (no banner on a plain visit or with only ?next)", () => {
+    expect(loginNotice({})).toBeNull();
+    expect(loginNotice({ signedOut: "true" })).toBeNull();
+    expect(loginNotice({ signedOut: ["1"] })).toBeNull();
   });
 });
