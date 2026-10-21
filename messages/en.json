@@ -527,6 +527,11 @@
     }
   },
   "qualifications": {
+    "evidence": {
+      "linked": "Evidence: {titles}",
+      "none": "No linked document",
+      "open": "Open documents"
+    },
     "confirmRemove": "Yes, remove it",
     "title": "Qualifications",
     "eyebrow": "My passport",

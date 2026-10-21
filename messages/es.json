@@ -527,6 +527,11 @@
     }
   },
   "qualifications": {
+    "evidence": {
+      "linked": "Evidencia: {titles}",
+      "none": "Sin documento vinculado",
+      "open": "Abrir documentos"
+    },
     "confirmRemove": "Sí, quitarla",
     "title": "Cualificaciones",
     "eyebrow": "Mi pasaporte",

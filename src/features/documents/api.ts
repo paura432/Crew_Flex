@@ -52,3 +52,24 @@ export async function listOwnDocumentExpiries(): Promise<DocumentExpiry[] | null
   if (error) return null;
   return data.map((d) => ({ id: d.id, title: d.title, expiresAt: d.expires_at }));
 }
+
+export interface DocumentLink {
+  qualificationId: string;
+  title: string;
+}
+
+/**
+ * Own documents linked to a qualification, read under RLS (owner only), for the qualifications
+ * page. `null` when the query fails: the page then shows no evidence line rather than a wrong one.
+ */
+export async function listOwnDocumentLinks(): Promise<DocumentLink[] | null> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase
+    .from("professional_documents")
+    .select("title, qualification_id")
+    .not("qualification_id", "is", null)
+    .order("title")
+    .overrideTypes<{ title: string; qualification_id: string }[], { merge: false }>();
+  if (error) return null;
+  return data.map((d) => ({ qualificationId: d.qualification_id, title: d.title }));
+}

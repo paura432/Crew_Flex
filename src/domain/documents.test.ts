@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  evidenceByQualification,
   documentExpiryState,
   isDueForReview,
   canShareWithThirdParties,
@@ -119,5 +120,21 @@ describe("isDueForReview (V1.8 Badges «próximos a revisar», 60 days, expired 
   it("crosses the year boundary (2026-12-31 + 60 = 2027-03-01)", () => {
     expect(isDueForReview("2027-03-01", "2026-12-31")).toBe(true);
     expect(isDueForReview("2027-03-02", "2026-12-31")).toBe(false);
+  });
+});
+
+describe("evidenceByQualification", () => {
+  it("groups own document titles by linked qualification, in the given order", () => {
+    expect(
+      evidenceByQualification([
+        { qualificationId: "q1", title: "B1.1 licence.pdf" },
+        { qualificationId: "q2", title: "EWIS certificate" },
+        { qualificationId: "q1", title: "B1.1 renewal" },
+      ]),
+    ).toEqual({ q1: ["B1.1 licence.pdf", "B1.1 renewal"], q2: ["EWIS certificate"] });
+  });
+
+  it("is empty without links", () => {
+    expect(evidenceByQualification([])).toEqual({});
   });
 });

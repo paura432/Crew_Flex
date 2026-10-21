@@ -3,8 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
+import { evidenceByQualification } from "@/domain/documents";
+import { listOwnDocumentLinks } from "@/features/documents/api";
 import { listQualificationTypes, listQualifications } from "@/features/qualifications/api";
 import { QualificationsManager } from "@/features/qualifications/components/QualificationsManager";
+import { isDocumentWalletEnabled } from "@/server/feature-flags";
 import { requireSessionActor } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -26,7 +29,14 @@ export default async function ProfessionalQualificationsPage() {
       />
     );
   }
-  const [result, catalog] = await Promise.all([listQualifications(), listQualificationTypes()]);
+  const [result, catalog, walletEnabled] = await Promise.all([
+    listQualifications(),
+    listQualificationTypes(),
+    isDocumentWalletEnabled(),
+  ]);
+  // Evidence line only when the wallet is on; nothing is asked from it otherwise.
+  const links = walletEnabled ? await listOwnDocumentLinks() : null;
+  const evidence = links ? evidenceByQualification(links) : undefined;
 
   return (
     <>
@@ -44,6 +54,7 @@ export default async function ProfessionalQualificationsPage() {
           qualifications={result.data.qualifications}
           catalog={catalog}
           today={new Date().toISOString().slice(0, 10)}
+          evidence={evidence}
         />
       )}
     </>

@@ -30,6 +30,7 @@ import {
   deleteQualificationAction,
   updateQualificationAction,
 } from "../actions";
+import { EvidenceLine } from "./EvidenceLine";
 
 export const VERIFICATION_TONE: Record<VerificationStatus, Tone> = {
   verified: "ok",
@@ -51,11 +52,14 @@ export function QualificationsManager({
   qualifications,
   catalog,
   today,
+  evidence,
 }: {
   qualifications: Qualification[];
   catalog: QualificationType[];
   /** `YYYY-MM-DD` (UTC) from the server render, for the BR-12 expiry chip. */
   today: string;
+  /** Linked wallet documents per qualification id; undefined when the wallet is off. */
+  evidence?: Record<string, string[]>;
 }) {
   const t = useTranslations("qualifications");
   const tDocuments = useTranslations("documents");
@@ -314,6 +318,7 @@ export function QualificationsManager({
                           ) : null;
                         })()}
                       </span>
+                      {evidence && <EvidenceLine titles={evidence[q.id] ?? []} />}
                       {q.verificationStatus === "rejected" && q.reviewNote && (
                         <span className="mt-1 block text-xs text-danger">
                           {t("reviewReason", { reason: q.reviewNote })}
