@@ -18,6 +18,12 @@ export const requirementQualificationInput = z.strictObject({
   level: z.enum(REQUIREMENT_LEVELS, "v.qualification.level"),
 });
 
+/**
+ * How far in the past a new requirement may start: the time it takes to fill the form plus clock skew.
+ * Anything earlier is refused, as V1.8 did («La fecha de inicio no puede estar en el pasado.»).
+ */
+export const START_GRACE_MS = 15 * 60 * 1000;
+
 export const createWorkRequirementInput = z
   .strictObject({
     organizationId: z.uuid("v.organization.required"),
@@ -44,6 +50,9 @@ export const createWorkRequirementInput = z
   .superRefine((value, ctx) => {
     const start = Date.parse(value.startsAt);
     const end = Date.parse(value.endsAt);
+    if (start < Date.now() - START_GRACE_MS) {
+      ctx.addIssue({ code: "custom", path: ["startsAt"], message: "v.start.future" });
+    }
     if (end <= start) {
       ctx.addIssue({ code: "custom", path: ["endsAt"], message: "v.end.afterStart" });
     } else if (end - start > MAX_REQUIREMENT_DAYS * DAY_MS) {

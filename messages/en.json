@@ -237,7 +237,8 @@
       "invalid": "Use a 2-letter country code, e.g. ES"
     },
     "start": {
-      "required": "Start must be a date and time (UTC)"
+      "required": "Start must be a date and time (UTC)",
+      "future": "The start cannot be in the past"
     },
     "end": {
       "required": "End must be a date and time (UTC)",

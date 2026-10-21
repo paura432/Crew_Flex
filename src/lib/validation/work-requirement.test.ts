@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { toFieldErrors } from "./errors.ts";
 import {
   createWorkRequirementInput,
@@ -30,6 +30,26 @@ function errorsFor(input: unknown) {
 }
 
 describe("createWorkRequirementInput", () => {
+  // The fixture starts on 2026-10-18; «now» is pinned before it so the past-start rule stays out of the way.
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it("refuses a start in the past, with a 15 min grace for filling the form", () => {
+    expect(errorsFor({ ...valid, startsAt: "2026-10-14T12:00:00Z" })).toMatchObject({
+      startsAt: "v.start.future",
+    });
+    expect(errorsFor({ ...valid, startsAt: "2026-10-15T11:50:00Z" })).toEqual({});
+    expect(errorsFor({ ...valid, startsAt: "2026-10-15T11:40:00Z" })).toMatchObject({
+      startsAt: "v.start.future",
+    });
+    expect(errorsFor({ ...valid, startsAt: "2026-10-15T13:00:00Z" })).toEqual({});
+  });
+
   it("accepts a valid requirement and trims text", () => {
     const parsed = createWorkRequirementInput.parse({ ...valid, title: "  Night support  " });
     expect(parsed.title).toBe("Night support");
