@@ -21,15 +21,26 @@ export interface SessionActor {
 }
 
 /**
- * Current actor for rendering decisions, read once per request. Identity comes from the
+ * A verified JWT whose profile row cannot be read (missing row, RLS or a failed query). Sending
+ * the user to /login would loop: proxy.ts sends signed-in users straight back to /app.
+ */
+export class SessionProfileUnavailableError extends Error {
+  constructor() {
+    super("SESSION_PROFILE_UNAVAILABLE");
+    this.name = "SessionProfileUnavailableError";
+  }
+}
+
+/**
+ * Current session for rendering decisions, read once per request. Identity comes from the
  * verified JWT (getClaims); roles come from the database under RLS. UI decisions based on
  * this are convenience only — Edge Functions and RLS enforce authorization.
  */
-export const getSessionActor = cache(async (): Promise<SessionActor | null> => {
+const readSession = cache(async (): Promise<{ sub: string | null; actor: SessionActor | null }> => {
   const supabase = await createServerSupabase();
   const { data: claimsData } = await supabase.auth.getClaims();
   const sub = claimsData?.claims?.sub;
-  if (typeof sub !== "string") return null;
+  if (typeof sub !== "string") return { sub: null, actor: null };
 
   const [profileResult, membershipResult] = await Promise.all([
     supabase
@@ -44,22 +55,31 @@ export const getSessionActor = cache(async (): Promise<SessionActor | null> => {
       .eq("profile_id", sub)
       .overrideTypes<MembershipRow[], { merge: false }>(),
   ]);
-  if (profileResult.error || !profileResult.data) return null;
+  if (profileResult.error || !profileResult.data) return { sub, actor: null };
 
   return {
-    id: sub,
-    profile: profileResult.data,
-    memberships: (membershipResult.data ?? []).map((m) => ({
-      role: m.role,
-      organization: m.organizations,
-    })),
+    sub,
+    actor: {
+      id: sub,
+      profile: profileResult.data,
+      memberships: (membershipResult.data ?? []).map((m) => ({
+        role: m.role,
+        organization: m.organizations,
+      })),
+    },
   };
 });
 
+/** The actor, or null when signed out or when the profile cannot be read. */
+export const getSessionActor = async (): Promise<SessionActor | null> =>
+  (await readSession()).actor;
+
 export async function requireSessionActor(): Promise<SessionActor> {
-  const actor = await getSessionActor();
-  if (!actor) redirect("/login");
-  return actor;
+  const { sub, actor } = await readSession();
+  if (actor) return actor;
+  // Signed in without a readable profile: fail to the error boundary (src/app/error.tsx), not /login.
+  if (sub) throw new SessionProfileUnavailableError();
+  redirect("/login");
 }
 
 const ROLE_RANK: Record<OrganizationRole, number> = { admin: 0, manager: 1, member: 2 };

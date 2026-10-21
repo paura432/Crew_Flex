@@ -25,6 +25,7 @@
     "backToApp": "Volver a Crew Flex",
     "errorTitle": "No se ha podido mostrar esta página",
     "errorHint": "Inténtalo de nuevo en un momento.",
+    "signOutHint": "Si el problema continúa, cierra sesión y vuelve a entrar.",
     "menu": "Menú"
   },
   "meta": {
