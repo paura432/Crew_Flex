@@ -310,6 +310,29 @@ export function hoursToClock(value: string | number): string {
 }
 
 /** Presentation rounding only. */
+/** The locale's decimal mark («,» in es, «.» in en). */
+export function decimalSeparator(locale: string): string {
+  return (
+    new Intl.NumberFormat(locale).formatToParts(1.5).find((p) => p.type === "decimal")?.value ?? "."
+  );
+}
+
+/**
+ * What the engine reads when the input could be misread: a fraction, or a decimal mark that is not
+ * the locale's («1,200» under `en` is 1.2 here, not one thousand two hundred; «1.200» under `es`
+ * too). Null when nothing is ambiguous or the input is not a number (its error is shown elsewhere).
+ */
+export function ambiguousReading(input: string, locale: string): number | null {
+  const s = input.trim();
+  const foreignMark = decimalSeparator(locale) === "," ? "." : ",";
+  if (!s.includes("/") && !s.includes(foreignMark)) return null;
+  try {
+    return parseNumber(s);
+  } catch {
+    return null;
+  }
+}
+
 export function formatNumber(locale: string, n: number, maximumFractionDigits = 6): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits, minimumFractionDigits: 0 }).format(
     n,

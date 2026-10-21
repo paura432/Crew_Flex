@@ -878,6 +878,7 @@
     }
   },
   "tools": {
+    "readAs": "Read as {value}",
     "kicker": "YOUR TOOLBOX",
     "homeTitle": "For every shift.",
     "lead": "Clear calculations. Visible units. References at hand.",

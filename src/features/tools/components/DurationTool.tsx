@@ -3,7 +3,7 @@
 // Shift duration (prototype `Toolbox.jsx` → `TimeTool`): HH:MM ↔ decimal hours.
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
-import { clockToHours, formatNumber, hoursToClock } from "../engine";
+import { ambiguousReading, clockToHours, formatNumber, hoursToClock } from "../engine";
 import {
   Footnote,
   ResultCard,
@@ -18,6 +18,7 @@ type Mode = "clock" | "decimal";
 
 export function DurationTool() {
   const t = useTranslations("tools.duration");
+  const tTools = useTranslations("tools");
   const locale = useLocale();
   const outcome = useOutcome();
   const [mode, setMode] = useState<Mode>("clock");
@@ -29,6 +30,8 @@ export function DurationTool() {
       : outcome(() =>
           mode === "clock" ? formatNumber(locale, clockToHours(text), 6) : hoursToClock(text),
         );
+
+  const reading = mode === "decimal" ? ambiguousReading(text, locale) : null;
 
   // One panel with the result inside, as the prototype's TimeTool (no side column).
   return (
@@ -56,6 +59,11 @@ export function DurationTool() {
           <ToolField
             id="duration-input"
             label={mode === "clock" ? t("inputClock") : t("inputDecimal")}
+            reading={
+              reading === null
+                ? null
+                : tTools("readAs", { value: formatNumber(locale, reading, 10) })
+            }
           >
             <input
               id="duration-input"
@@ -65,6 +73,7 @@ export function DurationTool() {
               inputMode={mode === "clock" ? "text" : "decimal"}
               placeholder={mode === "clock" ? "1:30" : "1,5"}
               aria-invalid={Boolean(result?.error)}
+              aria-describedby="duration-input-reading"
               onChange={(e) => setText(e.target.value)}
             />
           </ToolField>

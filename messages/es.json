@@ -878,6 +878,7 @@
     }
   },
   "tools": {
+    "readAs": "Se lee como {value}",
     "kicker": "TU CAJA DE HERRAMIENTAS",
     "homeTitle": "Para cada jornada.",
     "lead": "Cálculos claros. Unidades visibles. Referencias a mano.",

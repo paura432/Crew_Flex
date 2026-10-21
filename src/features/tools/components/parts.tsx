@@ -67,11 +67,17 @@ export function ToolField({
   id,
   label,
   hint,
+  reading,
   children,
 }: {
   id: string;
   label: string;
   hint?: string;
+  /**
+   * How the input was read when it could be misread (`ambiguousReading`); `null` keeps the live
+   * region mounted but empty. Fields that never echo a reading leave it undefined.
+   */
+  reading?: string | null;
   children: ReactNode;
 }) {
   return (
@@ -83,6 +89,11 @@ export function ToolField({
       {hint && (
         <p id={`${id}-hint`} className="text-xs text-muted">
           {hint}
+        </p>
+      )}
+      {reading !== undefined && (
+        <p id={`${id}-reading`} aria-live="polite" className="text-xs font-semibold text-[#1d4458]">
+          {reading}
         </p>
       )}
     </div>

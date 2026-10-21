@@ -3,6 +3,8 @@ import {
   clockToHours,
   convert,
   convertRange,
+  ambiguousReading,
+  decimalSeparator,
   formatNumber,
   hoursToClock,
   MAGNITUDE_IDS,
@@ -171,5 +173,36 @@ describe("formatNumber (presentation only)", () => {
     expect(formatNumber("es", 1.23456789, 4)).toBe("1,2346");
     expect(formatNumber("en", 1.23456789, 2)).toBe("1.23");
     expect(formatNumber("en", 10, 6)).toBe("10");
+  });
+});
+
+describe("ambiguousReading (W1-06: show how a number was read)", () => {
+  it("knows each locale's decimal mark", () => {
+    expect(decimalSeparator("es")).toBe(",");
+    expect(decimalSeparator("en")).toBe(".");
+  });
+
+  it("echoes a decimal mark that is not the locale's: the ×1000 trap", () => {
+    expect(ambiguousReading("1,200", "en")).toBe(1.2);
+    expect(ambiguousReading("1.200", "es")).toBe(1.2);
+  });
+
+  it("echoes fractions in any locale", () => {
+    expect(ambiguousReading("3/16", "es")).toBe(0.1875);
+    expect(ambiguousReading(" 1 3/16 ", "en")).toBe(1.1875);
+  });
+
+  it("stays quiet for the locale's own mark, plain integers and invalid input", () => {
+    expect(ambiguousReading("1,5", "es")).toBeNull();
+    expect(ambiguousReading("1.5", "en")).toBeNull();
+    expect(ambiguousReading("1200", "en")).toBeNull();
+    expect(ambiguousReading("", "es")).toBeNull();
+    expect(ambiguousReading("abc,", "en")).toBeNull();
+    expect(ambiguousReading("1.000,5", "es")).toBeNull(); // thousandsSeparator error, shown elsewhere
+  });
+
+  it("never changes what the engine computes", () => {
+    expect(convert("1,200", "mass", "kg", "kg")).toBe(1.2);
+    expect(convert("1.200", "mass", "kg", "kg")).toBe(1.2);
   });
 });
