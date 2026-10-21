@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { useRovingRadio } from "@/components/ui/radio-group";
 import { LOCALES, type Locale } from "@/i18n/config";
 import { setLocaleAction } from "../actions";
 
@@ -25,7 +26,7 @@ export function LocaleSwitcher({ variant = "cards" }: { variant?: "cards" | "com
     error ?? (saved ? { tone: "ok", text: tSettings("saved") } : null);
 
   function choose(next: Locale) {
-    if (next === locale) return;
+    if (next === locale || pending) return;
     setError(null);
     setSaved(false);
     startTransition(async () => {
@@ -39,19 +40,25 @@ export function LocaleSwitcher({ variant = "cards" }: { variant?: "cards" | "com
     });
   }
 
+  const radio = useRovingRadio(LOCALES.length, LOCALES.indexOf(locale as Locale), (i) =>
+    choose(LOCALES[i]!),
+  );
+
   if (variant === "compact") {
     return (
       <div role="radiogroup" aria-label={t("switcherAria")} className="flex gap-1 text-xs">
-        {LOCALES.map((value) => (
+        {LOCALES.map((value, i) => (
           <button
             key={value}
+            {...radio(i)}
             type="button"
             role="radio"
             aria-checked={locale === value}
             lang={value}
-            disabled={pending}
+            // aria-disabled, not disabled: a disabled button drops keyboard focus mid-switch.
+            aria-disabled={pending}
             onClick={() => choose(value)}
-            className="min-h-8 pointer-coarse:min-h-11 rounded-md border border-line bg-white px-2 font-semibold text-muted uppercase aria-checked:border-navy aria-checked:bg-navy aria-checked:text-white disabled:opacity-60"
+            className="min-h-8 pointer-coarse:min-h-11 rounded-md border border-line bg-white px-2 font-semibold text-muted uppercase aria-checked:border-navy aria-checked:bg-navy aria-checked:text-white aria-disabled:opacity-60"
           >
             {value}
           </button>
@@ -67,19 +74,20 @@ export function LocaleSwitcher({ variant = "cards" }: { variant?: "cards" | "com
         referenceLabel={tRoot("common.reference", { id: notice?.requestId ?? "" })}
       />
       <div role="radiogroup" aria-label={t("label")} className="grid gap-3 sm:grid-cols-2">
-        {LOCALES.map((value) => {
+        {LOCALES.map((value, i) => {
           const selected = locale === value;
           return (
             <button
               key={value}
+              {...radio(i)}
               type="button"
               role="radio"
               aria-checked={selected}
               lang={value}
-              disabled={pending}
+              aria-disabled={pending}
               aria-busy={pending}
               onClick={() => choose(value)}
-              className={`rounded-xl border p-4 text-left transition-colors hover:bg-canvas disabled:opacity-60 ${
+              className={`rounded-xl border p-4 text-left transition-colors hover:bg-canvas aria-disabled:opacity-60 ${
                 selected ? "border-navy bg-info-bg ring-2 ring-navy" : "border-line bg-white"
               }`}
             >

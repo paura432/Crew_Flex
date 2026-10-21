@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
+import { useRovingRadio } from "@/components/ui/radio-group";
 import {
   MOBILITIES,
   PROFILE_VISIBILITIES,
@@ -27,6 +28,11 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile & { upda
   const tDomain = useTranslations("domain");
   const tRoot = useTranslations();
   const [visibility, setVisibility] = useState<ProfileVisibility>(profile.visibility);
+  const visibilityRadio = useRovingRadio(
+    PROFILE_VISIBILITIES.length,
+    PROFILE_VISIBILITIES.indexOf(visibility),
+    (i) => setVisibility(PROFILE_VISIBILITIES[i]!),
+  );
   const [rawErrors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [pending, startTransition] = useTransition();
@@ -147,11 +153,12 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile & { upda
           aria-describedby={errors.visibility ? "visibility-error" : undefined}
           className="grid gap-3 md:grid-cols-3"
         >
-          {PROFILE_VISIBILITIES.map((value) => {
+          {PROFILE_VISIBILITIES.map((value, i) => {
             const selected = visibility === value;
             return (
               <button
                 key={value}
+                {...visibilityRadio(i)}
                 type="button"
                 role="radio"
                 aria-checked={selected}
