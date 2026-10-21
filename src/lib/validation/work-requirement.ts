@@ -71,10 +71,13 @@ export const createWorkRequirementInput = z
   });
 export type CreateWorkRequirementInput = z.infer<typeof createWorkRequirementInput>;
 
+/** Rows a list request returns when it does not ask for a limit. */
+export const DEFAULT_LIST_LIMIT = 50;
+
 export const listWorkRequirementsQuery = z.strictObject({
   id: z.uuid().optional(),
   organizationId: z.uuid().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  limit: z.coerce.number().int().min(1).max(100).default(DEFAULT_LIST_LIMIT),
   status: z.enum(REQUIREMENT_STATUSES).optional(),
   /** Only needs whose period ends after this instant (the dashboard focus: open and not expired). */
   endsAfter: z.iso.datetime({ offset: true }).optional(),

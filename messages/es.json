@@ -674,6 +674,9 @@
   "organization": {
     "dashboard": {
       "title": "Operaciones",
+      "description": "De una necesidad concreta a un equipo disponible.",
+      "openRequirements": "Necesidades abiertas",
+      "openRequirementsDetail": "De tu organización",
       "noRequirementsTitle": "Aún no hay necesidades",
       "noRequirementsDescription": "Crea una necesidad para ver tu capacidad técnica y el déficit a cubrir.",
       "managersOnlyTitle": "El análisis de capacidad está disponible para managers y administradores",

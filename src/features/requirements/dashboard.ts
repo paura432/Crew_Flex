@@ -17,3 +17,11 @@ export function dashboardRequirements(
   const ids = new Set(current.map((r) => r.id));
   return [...current, ...all.filter((r) => !ids.has(r.id))].slice(0, limit);
 }
+
+/**
+ * «Necesidades abiertas» value: the current count, or «{limit}+» when the filtered request came back
+ * full (more may exist beyond the page).
+ */
+export function openRequirementsValue(current: number, returned: number, limit: number): string {
+  return returned >= limit ? `${limit}+` : String(current);
+}

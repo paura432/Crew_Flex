@@ -674,6 +674,9 @@
   "organization": {
     "dashboard": {
       "title": "Operations",
+      "description": "From a concrete need to an available team.",
+      "openRequirements": "Open requirements",
+      "openRequirementsDetail": "In your organization",
       "noRequirementsTitle": "No requirements yet",
       "noRequirementsDescription": "Create a requirement to see your technical capacity and the gap to cover.",
       "managersOnlyTitle": "Capacity analysis is available to managers and admins",

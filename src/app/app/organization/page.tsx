@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
+import { Metric } from "@/components/ui/Metric";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
@@ -10,7 +11,12 @@ import { evaluateRequirementCapacity } from "@/features/capacity/api";
 import { CapacityOverview } from "@/features/capacity/components/CapacityOverview";
 import { listRequirements } from "@/features/requirements/api";
 import { RequirementsList } from "@/features/requirements/components/RequirementsList";
-import { currentRequirements, dashboardRequirements } from "@/features/requirements/dashboard";
+import {
+  currentRequirements,
+  dashboardRequirements,
+  openRequirementsValue,
+} from "@/features/requirements/dashboard";
+import { DEFAULT_LIST_LIMIT } from "@/lib/validation/work-requirement";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -58,7 +64,12 @@ export default async function OrganizationDashboard() {
 
   return (
     <>
-      <PageHeader eyebrow={organization.name} title={t("title")} actions={newButton} />
+      <PageHeader
+        eyebrow={organization.name}
+        title={t("title")}
+        description={t("description")}
+        actions={newButton}
+      />
       {!result.ok ? (
         <ApiErrorState error={result.error} requestId={result.requestId} />
       ) : result.data.requirements.length === 0 ? (
@@ -69,7 +80,21 @@ export default async function OrganizationDashboard() {
         />
       ) : (
         <div className="space-y-6">
-          {!open.ok && <ApiErrorState error={open.error} requestId={open.requestId} />}
+          {open.ok ? (
+            <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Metric
+                label={t("openRequirements")}
+                value={openRequirementsValue(
+                  current.length,
+                  open.data.requirements.length,
+                  DEFAULT_LIST_LIMIT,
+                )}
+                detail={t("openRequirementsDetail")}
+              />
+            </dl>
+          ) : (
+            <ApiErrorState error={open.error} requestId={open.requestId} />
+          )}
           {focus && canManage && <FocusCapacity requirement={focus} />}
           {focus && !canManage && (
             <StateMessage

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RequirementStatus, WorkRequirement } from "@/domain/work-requirement";
-import { currentRequirements, dashboardRequirements } from "./dashboard";
+import { currentRequirements, dashboardRequirements, openRequirementsValue } from "./dashboard";
 
 const NOW = Date.parse("2026-10-21T12:00:00Z");
 
@@ -55,5 +55,13 @@ describe("dashboardRequirements", () => {
       "open-1",
       "open-2",
     ]);
+  });
+});
+
+describe("openRequirementsValue", () => {
+  it("shows the current count, or «limit+» when the page came back full", () => {
+    expect(openRequirementsValue(3, 3, 50)).toBe("3");
+    expect(openRequirementsValue(0, 0, 50)).toBe("0");
+    expect(openRequirementsValue(49, 50, 50)).toBe("50+");
   });
 });
