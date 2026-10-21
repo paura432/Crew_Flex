@@ -11,40 +11,7 @@ import {
 } from "@/lib/validation/auth";
 import { toFieldErrors } from "@/lib/validation/errors";
 import { hasRecentRecoverySession } from "./recovery";
-import { safeNextPath, type AuthErrorCode, type AuthFormState } from "./state";
-
-interface AuthErrorLike {
-  code?: string;
-  name?: string;
-  status?: number;
-}
-
-/** Maps provider errors to stable codes; the UI translates them (`auth.errors.*`). */
-function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode } {
-  if (error.name === "AuthRetryableFetchError" || error.status === 0) {
-    return { code: "NETWORK_ERROR" };
-  }
-  if (error.name === "AuthSessionMissingError") return { code: "RECOVERY_EXPIRED" };
-  switch (error.code) {
-    case "invalid_credentials":
-      return { code: "INVALID_CREDENTIALS" };
-    case "email_not_confirmed":
-      return { code: "EMAIL_NOT_CONFIRMED" };
-    case "user_already_exists":
-    case "email_exists":
-      return { code: "USER_EXISTS" };
-    case "weak_password":
-      return { code: "WEAK_PASSWORD" };
-    case "same_password":
-      return { code: "SAME_PASSWORD" };
-    // Provider refused a password change outside a recovery session (T22 settings).
-    case "current_password_required":
-    case "reauthentication_needed":
-      return { code: "RECOVERY_EXPIRED" };
-    default:
-      return { code: "UNKNOWN" };
-  }
-}
+import { mapAuthError, safeNextPath, type AuthFormState } from "./state";
 
 function echoValues(formData: FormData, keys: string[]): Record<string, string> {
   return Object.fromEntries(keys.map((key) => [key, String(formData.get(key) ?? "")]));

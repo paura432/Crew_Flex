@@ -132,7 +132,8 @@
       "NETWORK_ERROR": "Could not reach the authentication service. Retry.",
       "UNKNOWN": "Authentication failed. Try again.",
       "SAME_PASSWORD": "Choose a password different from the current one.",
-      "RECOVERY_EXPIRED": "Your reset session has expired. Request a new link."
+      "RECOVERY_EXPIRED": "Your reset session has expired. Request a new link.",
+      "RATE_LIMITED": "Too many attempts. Wait a few minutes and try again."
     },
     "orgType": {
       "mro": "MRO",

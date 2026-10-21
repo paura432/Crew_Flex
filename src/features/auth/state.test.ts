@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isRecentRecovery, loginNotice, safeConfirmNext, safeNextPath } from "./state";
+import {
+  isRecentRecovery,
+  loginNotice,
+  mapAuthError,
+  safeConfirmNext,
+  safeNextPath,
+} from "./state";
 
 describe("safeNextPath", () => {
   it.each([
@@ -62,5 +68,25 @@ describe("loginNotice", () => {
     expect(loginNotice({})).toBeNull();
     expect(loginNotice({ signedOut: "true" })).toBeNull();
     expect(loginNotice({ signedOut: ["1"] })).toBeNull();
+  });
+});
+
+describe("mapAuthError", () => {
+  it("names throttling as such (429 or Supabase rate-limit codes)", () => {
+    expect(mapAuthError({ status: 429 })).toEqual({ code: "RATE_LIMITED" });
+    expect(mapAuthError({ code: "over_request_rate_limit", status: 429 })).toEqual({
+      code: "RATE_LIMITED",
+    });
+    expect(mapAuthError({ code: "over_email_send_rate_limit" })).toEqual({ code: "RATE_LIMITED" });
+  });
+
+  it("keeps the other mappings", () => {
+    expect(mapAuthError({ name: "AuthRetryableFetchError" })).toEqual({ code: "NETWORK_ERROR" });
+    expect(mapAuthError({ code: "invalid_credentials", status: 400 })).toEqual({
+      code: "INVALID_CREDENTIALS",
+    });
+    expect(mapAuthError({ code: "email_exists" })).toEqual({ code: "USER_EXISTS" });
+    expect(mapAuthError({ name: "AuthSessionMissingError" })).toEqual({ code: "RECOVERY_EXPIRED" });
+    expect(mapAuthError({ code: "something_new", status: 500 })).toEqual({ code: "UNKNOWN" });
   });
 });

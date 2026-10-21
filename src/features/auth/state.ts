@@ -8,6 +8,7 @@ export type AuthErrorCode =
   | "WEAK_PASSWORD"
   | "SAME_PASSWORD"
   | "RECOVERY_EXPIRED"
+  | "RATE_LIMITED"
   | "NETWORK_ERROR"
   | "UNKNOWN";
 
@@ -70,4 +71,46 @@ export function loginNotice(params: { reset?: unknown; signedOut?: unknown }) {
   if (params.reset === "1") return "passwordChanged" as const;
   if (params.signedOut === "1") return "signedOut" as const;
   return null;
+}
+
+export interface AuthErrorLike {
+  code?: string;
+  name?: string;
+  status?: number;
+}
+
+/** Maps provider errors to stable codes; the UI translates them (`auth.errors.*`). */
+export function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode } {
+  if (error.name === "AuthRetryableFetchError" || error.status === 0) {
+    return { code: "NETWORK_ERROR" };
+  }
+  // Supabase Auth throttling (sign-in, sign-up, e-mail sends). Callers that must not reveal whether an
+  // account exists (password reset) keep their uniform answer and never surface this code.
+  if (
+    error.status === 429 ||
+    error.code === "over_request_rate_limit" ||
+    error.code === "over_email_send_rate_limit"
+  ) {
+    return { code: "RATE_LIMITED" };
+  }
+  if (error.name === "AuthSessionMissingError") return { code: "RECOVERY_EXPIRED" };
+  switch (error.code) {
+    case "invalid_credentials":
+      return { code: "INVALID_CREDENTIALS" };
+    case "email_not_confirmed":
+      return { code: "EMAIL_NOT_CONFIRMED" };
+    case "user_already_exists":
+    case "email_exists":
+      return { code: "USER_EXISTS" };
+    case "weak_password":
+      return { code: "WEAK_PASSWORD" };
+    case "same_password":
+      return { code: "SAME_PASSWORD" };
+    // Provider refused a password change outside a recovery session (T22 settings).
+    case "current_password_required":
+    case "reauthentication_needed":
+      return { code: "RECOVERY_EXPIRED" };
+    default:
+      return { code: "UNKNOWN" };
+  }
 }

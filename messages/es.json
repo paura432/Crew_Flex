@@ -132,7 +132,8 @@
       "NETWORK_ERROR": "No se ha podido contactar con el servicio de autenticación. Reintenta.",
       "UNKNOWN": "La autenticación ha fallado. Inténtalo de nuevo.",
       "SAME_PASSWORD": "Elige una contraseña distinta de la actual.",
-      "RECOVERY_EXPIRED": "La sesión de restablecimiento ha caducado. Solicita un enlace nuevo."
+      "RECOVERY_EXPIRED": "La sesión de restablecimiento ha caducado. Solicita un enlace nuevo.",
+      "RATE_LIMITED": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
     },
     "orgType": {
       "mro": "MRO",
