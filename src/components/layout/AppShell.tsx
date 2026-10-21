@@ -4,13 +4,15 @@ import type { ReactNode } from "react";
 import { signOutAction } from "@/features/auth/actions";
 import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/feature-flags";
 import { primaryMembership, type SessionActor } from "@/server/session";
+import { accountSummaryKeys } from "./account-summary";
 import { NavDrawer } from "./NavDrawer";
 import { NavLinks, type NavItem } from "./NavLinks";
 
 export async function AppShell({ actor, children }: { actor: SessionActor; children: ReactNode }) {
-  const [t, tNav, walletEnabled] = await Promise.all([
+  const [t, tNav, tDomain, walletEnabled] = await Promise.all([
     getTranslations("common"),
     getTranslations("nav"),
+    getTranslations("domain"),
     actor.profile.account_type === "professional" ? isDocumentWalletEnabled() : false,
   ]);
   const organization = primaryMembership(actor)?.organization;
@@ -98,6 +100,11 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
         </NavDrawer>
         <div className="hidden border-t border-white/10 px-5 py-4 lg:block">
           <p className="truncate text-sm font-semibold text-white">{actor.profile.display_name}</p>
+          <p className="truncate text-xs text-[#91aac1]">
+            {accountSummaryKeys(actor)
+              .map((key) => tDomain(key))
+              .join(" · ")}
+          </p>
           <form action={signOutAction}>
             <button
               type="submit"
