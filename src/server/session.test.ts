@@ -19,7 +19,11 @@ import {
 } from "./session";
 
 /** Supabase stub: `sub` in the verified claims, and what the profiles query returns. */
-function stubSupabase(sub: string | null, profile: { data: unknown; error: unknown }) {
+function stubSupabase(
+  sub: string | null,
+  profile: { data: unknown; error: unknown },
+  email: unknown = "delta@crewflex.test",
+) {
   const query = (result: unknown) => {
     const q = {
       select: () => q,
@@ -30,7 +34,7 @@ function stubSupabase(sub: string | null, profile: { data: unknown; error: unkno
     return q;
   };
   vi.mocked(createServerSupabase).mockResolvedValue({
-    auth: { getClaims: async () => ({ data: sub ? { claims: { sub } } : null }) },
+    auth: { getClaims: async () => ({ data: sub ? { claims: { sub, email } } : null }) },
     from: (table: string) =>
       table === "profiles" ? query(profile) : query({ data: [], error: null }),
   } as never);
@@ -51,7 +55,18 @@ describe("requireSessionActor", () => {
 
   it("returns the actor when the profile is readable", async () => {
     stubSupabase("u1", { data: profile, error: null });
-    await expect(requireSessionActor()).resolves.toMatchObject({ id: "u1", profile });
+    await expect(requireSessionActor()).resolves.toMatchObject({
+      id: "u1",
+      email: "delta@crewflex.test",
+      profile,
+    });
+  });
+
+  it("takes the e-mail from the verified claims only, null when missing or not a string", async () => {
+    stubSupabase("u1", { data: profile, error: null }, null);
+    await expect(requireSessionActor()).resolves.toMatchObject({ email: null });
+    stubSupabase("u1", { data: profile, error: null }, 42);
+    await expect(requireSessionActor()).resolves.toMatchObject({ email: null });
   });
 
   it("sends a signed-out visitor to /login", async () => {

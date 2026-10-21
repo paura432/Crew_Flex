@@ -855,6 +855,7 @@
     "saved": "Language updated.",
     "account": "Account",
     "name": "Name",
+    "email": "Email",
     "accountType": "Account type",
     "organization": "Organization",
     "role": "Role"

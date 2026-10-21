@@ -12,15 +12,17 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Account-level settings for every signed-in user (professional or organization). */
 export default async function SettingsPage() {
-  const [actor, t, tDomain] = await Promise.all([
+  const [actor, t, tDomain, tCommon] = await Promise.all([
     requireSessionActor(),
     getTranslations("settings"),
     getTranslations("domain"),
+    getTranslations("common"),
   ]);
   // Same organization and role as the shell's section header (not whichever row came first).
   const membership = primaryMembership(actor);
   const facts: [string, string][] = [
     [t("name"), actor.profile.display_name],
+    [t("email"), actor.email ?? tCommon("notSet")],
     [t("accountType"), tDomain(`accountType.${actor.profile.account_type}`)],
     ...(membership
       ? ([
@@ -45,7 +47,7 @@ export default async function SettingsPage() {
                 <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
                   {label}
                 </dt>
-                <dd className="font-medium">{value}</dd>
+                <dd className="font-medium break-words">{value}</dd>
               </div>
             ))}
           </dl>

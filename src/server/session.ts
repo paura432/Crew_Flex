@@ -16,6 +16,8 @@ export interface Membership {
 
 export interface SessionActor {
   id: string;
+  /** From the verified JWT claims (never the unverified cookie session); null if absent. */
+  email: string | null;
   profile: ProfileRow;
   memberships: Membership[];
 }
@@ -41,6 +43,7 @@ const readSession = cache(async (): Promise<{ sub: string | null; actor: Session
   const { data: claimsData } = await supabase.auth.getClaims();
   const sub = claimsData?.claims?.sub;
   if (typeof sub !== "string") return { sub: null, actor: null };
+  const email = claimsData?.claims?.email;
 
   const [profileResult, membershipResult] = await Promise.all([
     supabase
@@ -61,6 +64,7 @@ const readSession = cache(async (): Promise<{ sub: string | null; actor: Session
     sub,
     actor: {
       id: sub,
+      email: typeof email === "string" && email !== "" ? email : null,
       profile: profileResult.data,
       memberships: (membershipResult.data ?? []).map((m) => ({
         role: m.role,
