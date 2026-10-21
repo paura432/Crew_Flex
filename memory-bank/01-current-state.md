@@ -46,7 +46,7 @@ Nothing in this file may be marked `VERIFIED_PRODUCTION` beyond the probes and r
 
 ## Local (Docker, ports 563xx — `docs/qa/LOCAL_ENVIRONMENT.md`)
 
-- Local DB has every migration up to `20261020120100` (2026-10-20). Of these, production has the 15 up to `20261019150100`; **local only**: wallet `20261019160000`–`160200`, requirement close `20261020120000`, closed-frozen `20261020120100`. Seed loaded, `qualification_review` flag row **local only**.
+- Local DB has every migration up to `20261020120100` (2026-10-20); branch `feat/v18-html-parity` adds `20261021120000` (calendar version check, W5-03, local). Of these, production has the 15 up to `20261019150100`; **local only**: wallet `20261019160000`–`160200`, requirement close `20261020120000`, closed-frozen `20261020120100`. Seed loaded, `qualification_review` flag row **local only**.
 - 2026-10-20 (autonomous loop, `docs/integration/crewflex-v13/15-autonomous-migration-backlog.md`): batches 13–17 committed locally
   (`108a244` visual P2, `67fd62f` TD-44, `55bdb54` integration junctions + `work-requirements` list filters, `1c44c1f` hiring docs,
   then review fixes and the **report-only nonce CSP** in `src/proxy.ts` with zod `jitless`). No new migrations; the

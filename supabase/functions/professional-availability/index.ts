@@ -1,10 +1,11 @@
 // Professional availability windows — own data only.
-//   GET    /professional-availability?limit=        → list own windows (RLS)
+//   GET    /professional-availability?limit=        → list own windows (RLS) + calendar `version`
 //   POST   /professional-availability { startsAt, endsAt, status }   (Idempotency-Key: 201 · 200 replay)
 //   PATCH  /professional-availability?id=<uuid> { startsAt, endsAt, status }
 //   DELETE /professional-availability?id=<uuid>
-//   PUT    /professional-availability { days: [{ date, status|null }], rotation? }  (Idempotency-Key)
-//          → sets whole UTC days atomically (shift-cycle generator), RPC replace_availability_days
+//   PUT    /professional-availability { days: [{ date, status|null }], rotation?, expectedVersion? }
+//          (Idempotency-Key) → sets whole UTC days atomically (shift-cycle generator), RPC
+//          replace_availability_days; 409 CONFLICT when `expectedVersion` is stale (W5-03)
 // The technician id is ALWAYS the JWT subject: the body never carries ownership. RLS enforces
 // `technician_profile_id = auth.uid()` as a second layer.
 import { z } from "zod";
@@ -18,6 +19,7 @@ import {
   createAvailabilityWindowInput,
   listAvailabilityQuery,
   replaceAvailabilityDaysInput,
+  type ReplaceAvailabilityDaysInput,
   updateAvailabilityWindowInput,
 } from "../../../src/lib/validation/availability.ts";
 import type {
@@ -61,6 +63,14 @@ export function toWindow(raw: unknown): AvailabilityWindow {
   };
 }
 
+/** RPC arguments of the calendar save; no `expectedVersion` (older clients) means no check. */
+export const replaceDaysArgs = (input: ReplaceAvailabilityDaysInput, key: string) => ({
+  p_idempotency_key: key,
+  p_days: input.days,
+  p_rotation: input.rotation ?? null,
+  p_expected_version: input.expectedVersion ?? null,
+});
+
 /** Professionals only: the technician profile must exist for the actor. */
 async function requireTechnician(actor: Actor): Promise<void> {
   const { data, error } = await actor.client
@@ -76,6 +86,10 @@ export const handler = createHandler("professional-availability", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
     const { limit } = parseQuery(ctx.url, listAvailabilityQuery);
+    // Read before the rows: a write landing in between makes the next save conflict (safe side)
+    // instead of passing with rows the client never saw.
+    const version = await actor.client.rpc("availability_version");
+    if (version.error) throw fromDatabaseError(version.error);
     const [windows, rotation] = await Promise.all([
       actor.client
         .from("availability_windows")
@@ -95,6 +109,7 @@ export const handler = createHandler("professional-availability", {
       data: {
         windows: (windows.data ?? []).map(toWindow),
         rotation: rotation.data ? toRotation(rotation.data) : null,
+        version: z.string().parse(version.data),
       } satisfies AvailabilityListResponse,
     };
   },
@@ -145,11 +160,10 @@ export const handler = createHandler("professional-availability", {
     const actor = await requireActor(ctx);
     const input = await parseJsonBody(ctx.req, replaceAvailabilityDaysInput);
     await requireTechnician(actor);
-    const applied = await actor.client.rpc("replace_availability_days", {
-      p_idempotency_key: idempotencyKey(ctx.req),
-      p_days: input.days,
-      p_rotation: input.rotation ?? null,
-    });
+    const applied = await actor.client.rpc(
+      "replace_availability_days",
+      replaceDaysArgs(input, idempotencyKey(ctx.req)),
+    );
     if (applied.error) throw fromDatabaseError(applied.error);
     const { id, replayed } = createdRow(applied.data);
     return { data: { changeId: id, replayed } satisfies AvailabilityDaysResponse };

@@ -338,7 +338,8 @@
     "days": {
       "required": "Elige al menos un día",
       "tooMany": "Como máximo 62 días a la vez",
-      "duplicate": "Cada día solo puede aparecer una vez"
+      "duplicate": "Cada día solo puede aparecer una vez",
+      "version": "Recarga la página para guardar el calendario"
     },
     "rotation": {
       "pattern": "Elige un patrón válido",
@@ -675,7 +676,8 @@
       "splitWarning": "{count, plural, one {# día está} other {# días están}} dentro de un intervalo más largo o de horas parciales. Al guardar solo se recortan los días marcados y se conservan las horas del resto.",
       "undo": "Deshacer último cambio",
       "patternSaved": "Patrón guardado; ningún día necesitaba cambios.",
-      "useAlternatingBase": "Usar 7–3 / 7–4 como base"
+      "useAlternatingBase": "Usar 7–3 / 7–4 como base",
+      "conflict": "Tu calendario cambió en otra ventana o dispositivo. No se ha guardado nada: recarga para ver la versión más reciente."
     },
     "statusAogOnly": "Disponible solo para AOG",
     "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos.",

@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { handler, toRotation, toWindow } from "./index.ts";
+import { handler, replaceDaysArgs, toRotation, toWindow } from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -69,4 +69,19 @@ Deno.test("rotation rows map to the API contract (date only, cycle kept in order
     }),
     { pattern: "custom", anchor: "2026-11-01", customCycle: ["working", "off", "off"] },
   );
+});
+
+Deno.test("calendar save sends the expected version, or none for older clients (W5-03)", () => {
+  const days = [{ date: "2028-10-01", status: "available" as const }];
+  const key = "6a7b8c9d-0e1f-4a2b-8c3d-4e5f6a7b8c9d";
+  assertEquals(
+    replaceDaysArgs({ days, expectedVersion: "0123456789abcdef0123456789abcdef" }, key),
+    {
+      p_idempotency_key: key,
+      p_days: days,
+      p_rotation: null,
+      p_expected_version: "0123456789abcdef0123456789abcdef",
+    },
+  );
+  assertEquals(replaceDaysArgs({ days }, key).p_expected_version, null);
 });

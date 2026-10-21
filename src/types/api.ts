@@ -106,6 +106,11 @@ export interface AvailabilityListResponse {
   windows: AvailabilityWindow[];
   /** The generator's saved pattern; private to the owner. `null` until one is saved. */
   rotation: AvailabilityRotation | null;
+  /**
+   * Fingerprint of the caller's calendar; send it back as `expectedVersion` when saving days.
+   * Absent from backends older than migration 20261021120000 (then saves are not checked).
+   */
+  version?: string;
 }
 
 export interface AvailabilityWindowResponse {

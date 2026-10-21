@@ -531,6 +531,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      availability_version: { Args: Record<PropertyKey, never>; Returns: string };
       can_view_member: { Args: { p_profile_id: string }; Returns: boolean };
       create_availability_window: {
         Args: {
@@ -665,7 +666,12 @@ export type Database = {
         }[];
       };
       replace_availability_days: {
-        Args: { p_days: Json; p_idempotency_key: string; p_rotation?: Json };
+        Args: {
+          p_days: Json;
+          p_expected_version?: string;
+          p_idempotency_key: string;
+          p_rotation?: Json;
+        };
         Returns: {
           id: string;
           replayed: boolean;

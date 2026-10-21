@@ -2351,6 +2351,82 @@ describe("O. per-day availability replace (shift-cycle generator, migration 2026
     });
   });
 
+  it("refuses a save made from a stale calendar (W5-03, migration 20261021120000)", async () => {
+    const checked = "select * from public.replace_availability_days($1, $2::jsonb, null, $3)";
+    const version = async (tx: Transaction) =>
+      (await tx.query<{ v: string }>("select public.availability_version() as v")).rows[0]!.v;
+    const first = "6a7b8c9d-0e1f-4a2b-8c3d-4e5f6a7b8c9d";
+    await asUser(db, SEED.delta, async (tx) => {
+      const loaded = await version(tx);
+      expect(loaded).toMatch(/^[0-9a-f]{32}$/);
+      expect(await version(tx)).toBe(loaded); // stable while nothing changes
+      await tx.query(checked, [first, days(["2028-10-01", "available"]), loaded]);
+      const saved = await version(tx);
+      expect(saved).not.toBe(loaded);
+
+      // A second tab still holding `loaded`: CF412, nothing written, the version is unchanged.
+      expect(
+        await queryError(tx, checked, [
+          "7b8c9d0e-1f2a-4b3c-9d4e-5f6a7b8c9d0e",
+          days(["2028-10-02", "unavailable"]),
+          loaded,
+        ]),
+      ).toMatch(/changed since it was loaded/);
+      expect(await version(tx)).toBe(saved);
+      expect(await own(tx, SEED.delta, "2028-10-02T00:00Z", "2028-10-03T00:00Z")).toEqual([]);
+
+      // A retry of the applied request replays (its own write changed the version).
+      const replay = await tx.query<{ replayed: boolean }>(checked, [
+        first,
+        days(["2028-10-01", "available"]),
+        loaded,
+      ]);
+      expect(replay.rows[0]!.replayed).toBe(true);
+
+      // Single-window writes (PostgREST) change it too, so a draft loaded before them conflicts.
+      await tx.query(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+         values ($1, '2028-10-05 08:00Z', '2028-10-05 18:00Z', 'available')`,
+        [SEED.delta],
+      );
+      expect(await version(tx)).not.toBe(saved);
+      expect(
+        await queryError(tx, checked, [
+          "8c9d0e1f-2a3b-4c4d-8e5f-6a7b8c9d0e1f",
+          days(["2028-10-03", "available"]),
+          saved,
+        ]),
+      ).toMatch(/changed since it was loaded/);
+      // Without an expected version (older clients) there is no check.
+      await tx.query(checked, [
+        "9d0e1f2a-3b4c-4d5e-9f6a-7b8c9d0e1f2a",
+        days(["2028-10-03", "available"]),
+        null,
+      ]);
+    });
+    // Each technician has their own version: Delta's writes do not change Alpha's.
+    await asUser(db, SEED.alpha, async (tx) => {
+      const alpha = await version(tx);
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: SEED.delta, role: "authenticated" }),
+      ]);
+      await tx.query(checked, [
+        "0e1f2a3b-4c5d-4e6f-8a7b-8c9d0e1f2a3b",
+        days(["2028-10-04", "available"]),
+        null,
+      ]);
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: SEED.alpha, role: "authenticated" }),
+      ]);
+      expect(await version(tx)).toBe(alpha);
+    });
+    await asUser(db, null, async (tx) => {
+      expect(await queryError(tx, "select public.availability_version()")).toMatch(
+        /permission denied/,
+      );
+    });
+  });
+
   it("an organization account (no technician profile) cannot write windows through it", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       expect(

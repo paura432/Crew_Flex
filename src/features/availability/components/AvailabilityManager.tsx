@@ -60,10 +60,13 @@ export function AvailabilityManager({
   initialMonth,
   today,
   rotation,
+  version,
 }: {
   windows: AvailabilityWindow[];
   /** Saved generator pattern (private), or null. */
   rotation: AvailabilityRotation | null;
+  /** Calendar version from the last server render; a save from a stale one is refused (W5-03). */
+  version?: string;
   initialMonth: string;
   /** `YYYY-MM-DD` (UTC), from the server render. */
   today: string;
@@ -109,7 +112,12 @@ export function AvailabilityManager({
   const blockedDays = countDays(windows, "unavailable", monthStart, monthEnd);
   const aogDays = countDays(windows, "aog_only", monthStart, monthEnd);
 
-  function run(label: string, task: () => Promise<AvailabilityActionResult>, onOk?: () => void) {
+  function run(
+    label: string,
+    task: () => Promise<AvailabilityActionResult>,
+    onOk?: () => void,
+    conflict?: string,
+  ) {
     setNotice(null);
     startTransition(async () => {
       const result = await task();
@@ -121,7 +129,11 @@ export function AvailabilityManager({
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(actionErrorCopy(tRoot, result));
+        setNotice(
+          conflict && result.code === "CONFLICT"
+            ? { tone: "danger", text: conflict, requestId: result.requestId }
+            : actionErrorCopy(tRoot, result),
+        );
       }
     });
   }
@@ -138,10 +150,16 @@ export function AvailabilityManager({
       label,
       () =>
         replaceDaysAction(
-          { days: changes, ...(savedRotation ? { rotation: savedRotation } : {}) },
+          {
+            days: changes,
+            ...(savedRotation ? { rotation: savedRotation } : {}),
+            ...(version ? { expectedVersion: version } : {}),
+          },
           crypto.randomUUID(),
         ),
       clearDraft,
+      // The draft is kept (clearDraft runs on success only) so it can be re-applied after a reload.
+      t("cycle.conflict"),
     );
   }
 

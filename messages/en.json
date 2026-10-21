@@ -338,7 +338,8 @@
     "days": {
       "required": "Choose at least one day",
       "tooMany": "At most 62 days at once",
-      "duplicate": "Each day can appear only once"
+      "duplicate": "Each day can appear only once",
+      "version": "Reload the page to save your calendar"
     },
     "rotation": {
       "pattern": "Choose a valid pattern",
@@ -675,7 +676,8 @@
       "splitWarning": "{count, plural, one {# day is} other {# days are}} inside a longer or partial-hour window. Saving cuts only the marked days out of it and keeps the hours of every other day.",
       "undo": "Undo last change",
       "patternSaved": "Pattern saved; no day needed changing.",
-      "useAlternatingBase": "Use 7–3 / 7–4 as base"
+      "useAlternatingBase": "Use 7–3 / 7–4 as base",
+      "conflict": "Your calendar changed in another window or device. Nothing was saved: reload to see the latest version."
     },
     "statusAogOnly": "Available only for AOG",
     "aogHint": "“AOG only” days count only for needs declared as AOG; every other need sees them as not available. Blocked days override both.",
