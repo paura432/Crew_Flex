@@ -444,6 +444,10 @@
     "overview": {
       "eyebrow": "Mi espacio",
       "headline": "Tu perfil. Tu tiempo. <br></br>Tu próxima oportunidad.",
+      "progressLead": "Tu pasaporte está al {percent}%",
+      "progressLabel": "Perfil completado al {percent} por ciento",
+      "toComplete": "{count, plural, one {# apartado} other {# apartados}} por completar",
+      "progressNote": "Completar los datos te ayuda a encontrar oportunidades. El porcentaje no equivale a una revisión documental.",
       "passport": "Perfil completado",
       "complete": "Todos los elementos del perfil están completos. No es un estado de verificación.",
       "qualifications": "Cualificaciones",

@@ -215,6 +215,23 @@ export default async function ProfessionalOverviewPage({
           {/* V1.8 «Estado de mi perfil»: every BR-11 item with a direct link to complete it. */}
           <Panel title={t("overview.checklistTitle", { percent: completeness.percent })}>
             {/* V1.8 hides the progress from 95 %; with 7 items that is 100 %. The list stays one click away. */}
+            {completeness.percent < 100 && (
+              <div className="mb-3">
+                <p className="text-sm font-semibold">
+                  {t("overview.progressLead", { percent: completeness.percent })}
+                </p>
+                <progress
+                  max={100}
+                  value={completeness.percent}
+                  aria-label={t("overview.progressLabel", { percent: completeness.percent })}
+                  className="mt-2 h-2 w-full accent-accent"
+                />
+                <p className="mt-1 text-sm text-muted">
+                  {t("overview.toComplete", { count: completeness.missing.length })}
+                </p>
+              </div>
+            )}
+            <p className="mb-3 text-xs text-muted">{t("overview.progressNote")}</p>
             <details open={completeness.percent < 100} className="group">
               <summary className="flex cursor-pointer items-center text-sm font-semibold text-blue pointer-coarse:min-h-11">
                 {t("overview.showChecklist", { count: COMPLETENESS_ITEMS.length })}

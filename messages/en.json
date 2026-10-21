@@ -444,6 +444,10 @@
     "overview": {
       "eyebrow": "My space",
       "headline": "Your profile. Your time. <br></br>Your next opportunity.",
+      "progressLead": "Your passport is {percent}% complete",
+      "progressLabel": "Profile {percent} percent complete",
+      "toComplete": "{count, plural, one {# item} other {# items}} to complete",
+      "progressNote": "Completing your details helps you find opportunities. The percentage is not a document review.",
       "passport": "Profile completeness",
       "complete": "All profile items done. This is not a verification status.",
       "qualifications": "Qualifications",
