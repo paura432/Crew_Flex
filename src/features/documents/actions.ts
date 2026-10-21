@@ -38,7 +38,7 @@ function failure(
 const invalid = (fieldErrors: FieldErrors): DocumentActionResult<never> => ({
   ok: false,
   code: "VALIDATION_ERROR",
-  message: "Check the highlighted fields.",
+  message: "common.checkFields",
   fieldErrors,
 });
 

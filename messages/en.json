@@ -492,6 +492,7 @@
       "name": "Professional name",
       "base": "Base",
       "baseHint": "Airport or city, e.g. Madrid (MAD)",
+      "basePlaceholder": "Madrid (MAD)",
       "experience": "02 · Experience and mobility",
       "years": "Years of experience",
       "status": "Current status",

@@ -99,7 +99,7 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile & { upda
               {...input("baseLocation", t("baseHint"))}
               defaultValue={profile.baseLocation ?? ""}
               maxLength={80}
-              placeholder="Madrid (MAD)"
+              placeholder={t("basePlaceholder")}
             />
           </Field>
         </div>

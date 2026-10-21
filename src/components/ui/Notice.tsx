@@ -1,4 +1,17 @@
-import { resolveMessage, translateKey, type MessageResolver } from "@/i18n/validation";
+import { isValidationKey, translateKey, type MessageResolver } from "@/i18n/validation";
+
+// Codes with an `api.<CODE>.description` entry in the catalog.
+const API_CODES = new Set([
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "VALIDATION_ERROR",
+  "NOT_FOUND",
+  "METHOD_NOT_ALLOWED",
+  "CONFLICT",
+  "PAYLOAD_TOO_LARGE",
+  "NETWORK_ERROR",
+  "INTERNAL_ERROR",
+]);
 
 /** Inline outcome of a form action: success (status) or failure (alert) with the request reference. */
 export interface NoticeState {
@@ -32,7 +45,9 @@ export function Notice({
 
 /**
  * User-facing copy for the error codes a user can hit while saving their own data.
- * `t` is a root translator (full keys); server messages that are `v.*` keys are resolved too.
+ * `t` is a root translator (full keys); server messages that are `v.*` keys are resolved too. A raw
+ * server message (the Edge Functions' English defaults, e.g. «Some fields are invalid.») is never
+ * shown: it falls back to the catalog copy of its code.
  */
 export function actionErrorCopy(
   t: MessageResolver,
@@ -54,6 +69,12 @@ export function actionErrorCopy(
                 ? k("api.INTERNAL_ERROR.description")
                 : result.message === "common.checkFields"
                   ? k("common.checkFields")
-                  : resolveMessage(t, result.message);
+                  : isValidationKey(result.message)
+                    ? k(result.message)
+                    : result.code === "VALIDATION_ERROR"
+                      ? k("common.checkFields")
+                      : API_CODES.has(result.code)
+                        ? k(`api.${result.code}.description`)
+                        : k("common.errorHint");
   return { tone: "danger", text, requestId: result.requestId };
 }

@@ -51,7 +51,7 @@ function fromResponse(result: ApiResponse<unknown>): AvailabilityActionResult {
 const invalid = (fieldErrors: FieldErrors): AvailabilityActionResult => ({
   ok: false,
   code: "VALIDATION_ERROR",
-  message: "Check the highlighted fields.",
+  message: "common.checkFields",
   fieldErrors,
 });
 
@@ -72,7 +72,7 @@ export async function updateWindowAction(
   input: unknown,
 ): Promise<AvailabilityActionResult> {
   const idParsed = availabilityWindowIdQuery.safeParse({ id });
-  if (!idParsed.success) return invalid({ form: "Invalid window." });
+  if (!idParsed.success) return invalid({ form: "v.form.window" });
   const parsed = createAvailabilityWindowInput.safeParse(input);
   if (!parsed.success) return invalid(toFieldErrors(parsed.error));
   return fromResponse(await updateAvailabilityWindow(idParsed.data.id, parsed.data));
@@ -80,7 +80,7 @@ export async function updateWindowAction(
 
 export async function deleteWindowAction(id: unknown): Promise<AvailabilityActionResult> {
   const idParsed = availabilityWindowIdQuery.safeParse({ id });
-  if (!idParsed.success) return invalid({ form: "Invalid window." });
+  if (!idParsed.success) return invalid({ form: "v.form.window" });
   return fromResponse(await deleteAvailabilityWindow(idParsed.data.id));
 }
 
