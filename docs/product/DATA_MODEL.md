@@ -26,6 +26,7 @@ auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualific
 technician_profiles 1─* applications *──────────────────────────────────────────┘  (one per technician × requirement, except withdrawn)
                           ├─* application_proposals (immutable versions, R-08)
                           ├─* application_events (timeline)
+                          ├─0..1 application_packs (Candidate Pack copy frozen when applying, v2-15)
                           └─* notifications *─1 profiles (recipient; in-app notices, v2-18)
 
 audit_events (append-only, written by triggers)
@@ -270,6 +271,26 @@ application itself), `to_status`, `actor` (`technician` · `organization`, never
 (created or accepted by that step), `created_at`; append-only (UPDATE refused). Both are readable by whoever may
 read the application (RLS through the parent) and written only by the RPCs.
 
+### `application_packs` (`20261024300000`, LOCAL ONLY — Candidate Pack copy, v2-15 + v2-04, BR-25, T-110…T-116)
+
+One row per application, written by the AFTER INSERT trigger `applications_freeze_pack` in the transaction that
+creates the application (only when the JWT subject is the applicant, or there is no JWT: seed), from the private
+builder `app_private.candidate_pack_content(profile)` — one STABLE statement, so a copy never mixes two passport
+saves. Columns: `application_id` PK → `applications` on delete cascade, `created_at` (the copy date), the
+technician-profile declarations of that moment (`primary_category`, `categories`, `years_experience`,
+`english_level`, `base_location`, `base_country`, `aircraft`, `engines`, `skills`, `work_permits`,
+`general_restrictions`), `min_rate` + `rate_unit` (both or neither, CHECK) from the private details — **never** their
+phone or employer —, and three jsonb arrays with fixed keys: `type_ratings` (`aircraft`, `category`, `expiresAt`,
+`restrictions`), `qualifications` (active ones: `code`, `name`, `category`, `verificationStatus`, `expiresAt`; no
+review data) and `experience` (≤ 20, CHECK: `date`, `aircraft`, `ata`, `hours`, `category`, `environment`,
+`description` of the non-archived `cv_relevant` logbook entries, newest first; no ids). No name, contact, employer,
+blocks, documents or file metadata column exists. UPDATE refused (trigger, 55000). Deleted by trigger
+`applications_drop_pack` when the application becomes `withdrawn` or loses its technician (account closure: the
+application stays without the profile, T-42; its copy does not, T-113), and with its application. RLS on; **no
+grant** to any API role (owner-only select policy as a second layer); read through `get_application_pack`,
+`get_my_application_packs` and, for the preview, `get_my_candidate_pack_preview` (table below). No backfill for older
+applications.
+
 ### `notifications` (`20261023800000`, LOCAL ONLY — in-app notices «Avisos internos», v2-18, T-70…T-73)
 
 | Column               | Type                                                                                         |
@@ -342,12 +363,13 @@ The professional's personal, **self-declared** logbook (v1.8 «Logbook personal�
 | `category`                  | `logbook_category`: the 6 v1.8 categories, default `defect_rectification`                    | yes                     |
 | `environment`               | `logbook_environment`: the 5 v1.8 environments, default `line_maintenance`                   | yes                     |
 | `description`               | text 1–3000, not blank                                                                       | yes                     |
-| `cv_relevant`               | boolean, default false («Seleccionable para expediente»; read by nothing until D-07)         | yes                     |
+| `cv_relevant`               | boolean, default false («Seleccionable para expediente»; copied into a pack copy, BR-25)     | yes                     |
 | `archived`                  | boolean, default false (v1.8 «Archivar» / «Restaurar»)                                       | update only             |
 | `created_at` / `updated_at` | timestamptz (`set_updated_at`)                                                               | –                       |
 
 RLS: own rows only (select/insert/update/delete); **no organization, manager or platform-admin policy** — unlike the
-passport and availability (OD-4), the technician's own organization cannot read it. No status column: every entry is
+passport and availability (OD-4), the technician's own organization cannot read it. Only the professional's own act
+shares entries: applying copies the selected ones into that application's `application_packs` row (BR-25). No status column: every entry is
 self-declared (v1.8 `status: 'self-declared'`) and nothing can verify one. Creates go through
 `create_logbook_entry` (idempotent); direct PostgREST writes are held to the same CHECKs and date trigger.
 Account deletion cascades (auth user → profile → technician profile → entries; keys through the profile).
@@ -473,6 +495,7 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `review_organization(id, expected_updated_at, note, request_id)` (`20261023500100`, local only)                                                                                          | DEFINER         | Platform admin, never a current or former own organization (42501, `500400`), evidence 1–2000 (22023), row lock, pending + seen version + fiscal data complete (55000), P0002; sets `reviewed`, keeps the evidence, audit.                                                                                                                                                                                |
 | `get_platform_summary()` (`20261023500300`, local only)                                                                                                                                  | DEFINER, stable | Platform admin only (42501): professional accounts, organizations, active needs, working now, AOG with vacancies, seats to fill per hard licence (`demand`). Counts only, no money (T-53).                                                                                                                                                                                                                |
 | `get_my_notifications(id, offset, limit)` · `count_my_unread_notifications()` (`20261023800000`, local only)                                                                             | DEFINER, stable | The caller's notices (≤ 50 per page, newest first, `total`) and unread count, through `app_private.visible_notifications()`: retention and access re-checked at read time; 42501 without a session.                                                                                                                                                                                                       |
+| `get_application_pack(application_id)` · `get_my_application_packs()` · `get_my_candidate_pack_preview()` (`20261024300000`, local only)                                                 | DEFINER, stable | Candidate Pack copy (BR-25), fixed columns: one application's copy for the applicant or an admin/manager of its requirement's organization now (anyone else `P0002`, like a missing id; zero rows = no copy) · own copies (export) · own copy as it would be frozen now (professionals). 42501 without a session.                                                                                         |
 | `mark_notifications_read(id)` (`20261023800000`, local only)                                                                                                                             | DEFINER         | One notice (`id`) or every unread one (null) of the caller read at the database's clock, then prunes the caller's expired ones; returns the rows matched.                                                                                                                                                                                                                                                 |
 | `create_invitation(email, account_type, request_id)` · `finish_invitation_delivery(id, sent, request_id)` (`20261023400000`, local only)                                                 | DEFINER         | Platform admin only (re-checked in the body), flag required (`0A000`): create returns the code once to the caller (the `invitations` function), audit `invitation.created`; `23505` when the address already has an account. Finish deletes the address's delivery account(s) (no profile, `invitation_delivery` marker) and audits sent / revoked.                                                       |
 | `invitation_status(code, email)` · `invitation_signup_required()` (`20261023400000`, local only)                                                                                         | DEFINER, stable | **Anon-callable on purpose** (the sign-up page is public): a status (`valid` · `other_email` · `invalid` · `off`) and the account type, or one boolean. Never an address or an id; codes carry 244 random bits.                                                                                                                                                                                           |
@@ -491,7 +514,9 @@ professionals may see (also the proposal terms), no grant (`20261022130200`). `h
 — BR-2/BR-3/BR-4.8 for one professional, the same expressions as `ranked_external_pool` (rls suite W proves the
 three agree), used at apply and confirm. Notices (`20261023800000`): `notification_retention()` (180 days),
 `candidate_pseudonym(requirement, profile)` (the pool's `CF-…` expression; the notices suite proves they agree),
-`prune_notifications(recipients)`, `visible_notifications()` — no grants. Since `20261023600100` it delegates to
+`prune_notifications(recipients)`, `visible_notifications()` — no grants. `candidate_pack_content(profile)`
+(`20261024300000`) — the one builder of a Candidate Pack copy, used by the freezing trigger and the preview, no
+grant. Since `20261023600100` it delegates to
 `hard_eligibility_for(starts_at, ends_at, urgency, hard_type_ids, profile)` — the same expressions on explicit
 parameters, also used by the builder's live count — and the requirement builder's validators
 `requirement_shifts_valid`, `requirement_conditions_valid`, `normalize_requirement_shifts/conditions` live here

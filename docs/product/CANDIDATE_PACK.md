@@ -1,5 +1,16 @@
 # Candidate Pack and contact consent (D-07) · DESIGN — rules PREPARED, NOT ACTIVATED
 
+> **2026-10-24 (pack-view, local, PARTIAL):** the part of the Pack D-07 does not lock is IMPLEMENTED — the **dated
+> copy** of the professional's technical profile (v2-15 + v2-04, BUSINESS_RULES BR-25, defaults T-110…T-116):
+> frozen in `application_packs` by a trigger when they apply (migration `20261024300000`), previewed in the apply
+> panel («Qué compartes con {organización}», «Experiencia que compartes») before the consent, read through
+> `get_application_pack` by the applicant and the requirement organization's admins/managers («Ver expediente» on both
+> application pages), deleted on withdrawal and account closure, listed in the professional's own export. It carries
+> categories, years, English, base, aircraft, engines, declared type ratings, active qualifications and courses,
+> capabilities, work permits, restrictions, the declared minimum rate and the logbook entries marked «Seleccionable
+> para expediente»; never the real name, contact, employer, blocks or documents. Everything below — identity and
+> contact, documents, consents, revocation, audited access — stays as designed and **not activated**.
+
 > **2026-10-22 (M09, local):** the access rules of §1 are pure functions in `src/domain/candidate-pack.ts`
 > (`contactVisible`, `documentAccessible`, kill switch `PACK_ACTIVATION = { contact: false, documents: false }`),
 > tested in `candidate-pack.test.ts` (nothing unlocks while the switch is off; P1/P4 from `accepted`/`confirmed`
@@ -74,4 +85,5 @@ the approved scanner (D-10) and their controls exist. Earlier options and recomm
   downloadable by an organization before it exists.
 - The D-06 states the conditions refer to (`APPLICATIONS_STATE_MACHINE.md` §4.1).
 
-Nothing in this document is implemented; no table, function, policy or UI for sharing exists.
+Nothing in §1–§2 is implemented; no table, function, policy or UI for sharing identity, contact or documents exists
+(the dated technical copy of the 2026-10-24 note above is the only shared part).

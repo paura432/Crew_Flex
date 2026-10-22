@@ -277,8 +277,11 @@ official record, a certification of experience or a release to service, and nobo
    shows the active or the archived entries, newest first (date, then creation), at most 500 per view with the total.
    An archived entry can be deleted permanently by its owner (T-22; v1.8 had no delete).
 4. **Privacy:** owner only — no organization (not even the technician's own), manager or platform admin reads an
-   entry; the audit trail keeps ids and changed field names only, never a value. The selection flag is stored and
-   read by nothing until the Candidate Pack exists (D-07, T-21); it never reaches the audit trail.
+   entry; the audit trail keeps ids and changed field names only, never a value. **The one exception is the
+   professional's own act:** when they apply, the entries marked «Seleccionable para expediente» and not archived
+   (the newest 20) are copied into that application's Candidate Pack copy, listed under «Experiencia que compartes»
+   before the consent (BR-25, T-112; it supersedes T-21). Later edits do not change a copy already sent. The flag
+   never reaches the audit trail.
 
 IMPLEMENTED (local, 2026-10-22; migration `20261023200000`, `professional-logbook`, `/app/professional/logbook`).
 candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Availability edits after
@@ -310,7 +313,7 @@ transaction (`save_professional_passport`, version check I-3) and CHECK-constrai
 | General restrictions                  | Free text ≤ 2000; blank = none (T-31)                                                                                                                                                                |
 | English, engines, capabilities, tools | A1–C2; the 7 v1.8 engines; the 9 v1.8 capabilities; «own tools» yes/no (T-32)                                                                                                                        |
 | Base country, work permits            | The 27 EU member states; the base itself stays free text (T-34)                                                                                                                                      |
-| Minimum rate                          | ≥ 0.01, ≤ 100 000, EUR per hour or per day; **owner-only**, no money moves (T-33)                                                                                                                    |
+| Minimum rate                          | ≥ 0.01, ≤ 100 000, EUR per hour or per day; **owner-only**, no money moves (T-33) — except in the Candidate Pack copy of an application, previewed before the consent (BR-25, T-111)                 |
 | Phone, current employer               | **Owner-only**; never shared (D-07; no sharing path exists) (T-35)                                                                                                                                   |
 | Blocked organizations                 | **Owner-only**, ≤ 200. A blocked organization does not get the professional in its **external** pool or counts (BR-7); membership, the opportunities list and own applications are unaffected (T-35) |
 
@@ -321,7 +324,9 @@ are a separate package after the company-side diff; `src/domain/passport.ts` alr
 (`CandidatePassport`, `hasRestrictions`, `meetsEnglishLevel`). Organizations see — in the candidate card, with the
 pool's pseudonym and visibility rules — the main category, categories, aircraft, English, work permits and whether
 restrictions are declared (`get_requirement_candidate_passports`), never the restriction text, contact, employer,
-rate or blocks. IMPLEMENTED (local).
+rate or blocks. The professional's own act of applying is the one exception for the restriction texts and the
+minimum rate: the dated copy that organization receives carries them, shown to the professional before the consent
+(BR-25, T-111); contact, employer and blocks never. IMPLEMENTED (local).
 
 ## BR-22 In-app notices (v2-18, T-70…T-73) — `notifications` / `src/features/notices/view.ts`
 
@@ -346,9 +351,10 @@ only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) is not part
   `shortlisted` or `proposed` are withdrawn explicitly (an event and an audit row each), never silently; the others
   keep their status. An organization whose last admin closes the account closes its draft, open and paused
   requirements (T-12 still holds: their other applications do not move). Applications, requirements and audit rows
-  stay without the profile. The same rules apply whoever deletes the account. IMPLEMENTED (local).
-- **Export** (v1.8 «Exportar mis datos y archivos»): only the person's own records, never another person's data nor
-  the audit trail; wallet files embedded (base64) while their total is ≤ 3 MiB (`filesToEmbed`, oldest first, each
+  stay without the profile; the Candidate Pack copies of the person's applications do not (BR-25, T-113). The same
+  rules apply whoever deletes the account. IMPLEMENTED (local).
+- **Export** (v1.8 «Exportar mis datos y archivos»): only the person's own records (the Candidate Pack copies of
+  their applications included, BR-25), never another person's data nor the audit trail; wallet files embedded (base64) while their total is ≤ 3 MiB (`filesToEmbed`, oldest first, each
   file that still fits), the others listed. IMPLEMENTED (local).
 - **Sign-up by invitation** (owner flag `invitation_signup`, off by default): a code is valid 7 days, for one sign-up,
   by the invited address only; the invitation decides the account type (professional or organization, never platform
@@ -381,3 +387,32 @@ v1.8 demo «Archivar» / «Papelera» / «Restaurar» (`Professional2.jsx:210-21
 
 Display and storage only: no rule here changes eligibility (qualifications decide, BR-2/BR-3), and nothing is shared
 (D-07/D-10). IMPLEMENTED (local, `20261024200000`).
+
+## BR-25 Candidate Pack copy (v2-15 + v2-04; T-110…T-116) — `application_packs` / `src/domain/candidate-pack.ts`
+
+v1.8 «Candidate Pack» (`Workflow.jsx:17-33`, connected `server/app.mjs:110`) without what D-07 keeps locked.
+
+1. **Frozen when applying.** Every new application gets a copy of the professional's technical profile, in the
+   same transaction (a database trigger, so every path that creates an application — applying again after
+   `withdrawn` included — freezes its own). Later changes to the passport, the qualifications or the logbook never
+   alter it: «Copia del perfil: {fecha}. Los cambios del pasaporte y del logbook no alteran esta versión.» (T-115).
+2. **Content (T-110…T-112):** main category and categories, years, English, base and its country, aircraft,
+   engines, declared type ratings (validity, restrictions), active catalog qualifications with verification and
+   expiry («Cursos» = TRAINING, with the v1.8 state — Sin caducidad / Vigente / Caduca pronto / Caducado — read
+   when the copy is viewed), capabilities, work permits, general restrictions, the declared minimum rate and the
+   logbook entries marked «Seleccionable para expediente» and not archived (newest 20).
+3. **Never in it:** real name (the card keeps the pool's naming rule, T-04), e-mail, phone, current employer,
+   blocked organizations, documents, file names or their metadata. While `PACK_ACTIVATION` is off the copy says
+   «Los originales, nombres de archivos y metadatos identificativos permanecen protegidos.» and nothing unlocks
+   (D-07 P3 open).
+4. **Consent sees the content (T-111):** the apply panel shows «Qué compartes con {organización}» — the copy as it
+   would be frozen now, from the same builder, with «Experiencia que compartes» — above the consent; while that
+   preview cannot be loaded nothing can be sent.
+5. **Who reads it (T-113):** the applicant and the admins/managers of the requirement's organization at reading
+   time; nobody else (the same answer as a missing id). Withdrawing deletes it; closing the account deletes every
+   copy of the person (BR-19); rejected, cancelled and finished applications of a live account keep theirs.
+   Applications sent before the copies existed have none. Reads are not audited (T-114). The professional's own
+   copies are part of «Exportar mis datos» (BR-19).
+
+IMPLEMENTED (local, migration `20261024300000`, `applications` GET `view=pack` / `view=pack-preview`, «Ver
+expediente» on both application pages).

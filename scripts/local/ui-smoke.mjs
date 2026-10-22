@@ -2875,6 +2875,162 @@ ok(
 );
 await logout();
 
+// PKG pack-view (v2-15 + v2-04, migration 20261024300000, BR-25): the apply panel previews the Candidate Pack
+// copy (with «Experience you share») before the consent; the organization opens «View dossier» and reads the copy
+// of the moment of applying, not the later edit; never the name. Setup through the local API (need, Delta's window
+// and logbook entry); restores: withdraw (the copy goes), window, entry, need closed, notices read.
+{
+  const packTitle = `Local UI check · pack ${Date.now()}`;
+  const PACK_AIRCRAFT = "A320 EC-PCK (smoke)";
+  const packNeed = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: {
+      organizationId: mroOrg.id,
+      title: packTitle,
+      location: "Madrid (MAD)",
+      startsAt: "2026-12-27T06:00:00.000Z",
+      endsAt: "2026-12-28T18:00:00.000Z",
+      shift: "day",
+      headcount: 1,
+      urgency: "planned",
+      qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+    },
+  });
+  const packNeedId = packNeed.data.requirement.id;
+  const packWindow = await asSeedUser("delta@crewflex.test", "professional-availability", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: {
+      startsAt: "2026-12-27T00:00:00.000Z",
+      endsAt: "2026-12-29T00:00:00.000Z",
+      status: "available",
+    },
+  });
+  const madridToday = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(
+    new Date(),
+  );
+  const packEntry = await asSeedUser("delta@crewflex.test", "professional-logbook", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: {
+      entryDate: madridToday,
+      aircraft: PACK_AIRCRAFT,
+      ata: "32",
+      hours: 2,
+      category: "inspection",
+      environment: "line_maintenance",
+      description: "Pack smoke · original description.",
+      cvRelevant: true,
+    },
+  });
+  const packEntryId = packEntry.data?.entry?.id;
+
+  await login("delta@crewflex.test");
+  await page.goto(`${BASE}/app/professional/opportunities/${packNeedId}`);
+  await page.waitForLoadState("networkidle");
+  const share = page.locator("section", { hasText: "What you share with Demo MRO Madrid" }).last();
+  const shareText = (await share.innerText().catch(() => "")).replace(/\s+/g, " ");
+  ok(
+    "PKG pack-view a: «What you share» lists the copy before the consent (experience, rate, protection; no name)",
+    /Experience you share/.test(shareText) &&
+      shareText.includes(PACK_AIRCRAFT) &&
+      /Declared minimum: €45\.00 \/ hour/.test(shareText) &&
+      /Originals, file names and identifying metadata stay protected\./.test(shareText) &&
+      !/Technician Delta/.test(shareText),
+    shareText.slice(0, 200),
+  );
+  await page.getByLabel(/I authorise sharing this data with Demo MRO Madrid/).check();
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await page.waitForSelector("[role=status]:has-text('Application sent')", { timeout: 20000 });
+  await logout();
+  // The professional edits the entry afterwards: the copy already sent must not follow.
+  if (packEntryId)
+    await asSeedUser("delta@crewflex.test", "professional-logbook", {
+      method: "PATCH",
+      query: { id: packEntryId },
+      body: { description: "Pack smoke · edited later." },
+    });
+
+  const packOrgView = await asSeedUser("admin.mro@crewflex.test", "applications", {
+    query: { requirementId: packNeedId },
+  });
+  const packApplicationId = packOrgView.data?.applications?.[0]?.id;
+  await login("admin.mro@crewflex.test");
+  await page.goto(`${BASE}/app/organization/requirements/${packNeedId}/applications`);
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("link", { name: "View dossier" }).first().click();
+  await page.waitForURL((u) => u.searchParams.get("pack") === packApplicationId, {
+    timeout: 20000,
+  });
+  await page.waitForLoadState("networkidle");
+  const dossier = page.locator(`#pack-${packApplicationId}`);
+  const dossierText = (await dossier.innerText().catch(() => "")).replace(/\s+/g, " ");
+  ok(
+    "PKG pack-view b: «View dossier» shows the dated copy of the moment of applying, protected, pseudonymous",
+    /Shared dossier/.test(dossierText) &&
+      /Profile copy: .*Changes to the passport and the logbook do not alter this version\./.test(
+        dossierText,
+      ) &&
+      dossierText.includes("Pack smoke · original description.") &&
+      !dossierText.includes("edited later") &&
+      /Originals, file names and identifying metadata stay protected\./.test(dossierText) &&
+      !/Technician Delta|delta@crewflex\.test/.test(dossierText),
+    dossierText.slice(0, 200),
+  );
+  await responsiveShots("pkg-pack-view");
+  await page.getByRole("link", { name: "Close dossier" }).click();
+  await page.waitForURL((u) => !u.searchParams.has("pack"), { timeout: 20000 });
+  ok(
+    "PKG pack-view c: «Close dossier» folds it back",
+    (await page.locator(`#pack-${packApplicationId}`).count()) === 0,
+    "",
+  );
+  await logout();
+  const strangerPack = await asSeedUser("admin.airline@crewflex.test", "applications", {
+    query: { view: "pack", applicationId: packApplicationId ?? crypto.randomUUID() },
+  });
+  ok(
+    "PKG pack-view d: another organization's admin gets 404 for the copy",
+    strangerPack.error?.code === "NOT_FOUND",
+    JSON.stringify(strangerPack).slice(0, 100),
+  );
+
+  // Restore: withdrawing deletes the copy; then the window, the entry, the need and the notices.
+  const packMine = await asSeedUser("delta@crewflex.test", "applications");
+  const packOwn = packMine.data?.applications?.find((a) => a.id === packApplicationId);
+  if (packOwn)
+    await asSeedUser("delta@crewflex.test", "applications", {
+      method: "PATCH",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: { applicationId: packOwn.id, to: "withdrawn", expectedUpdatedAt: packOwn.updatedAt },
+    });
+  const packAfter = await asSeedUser("admin.mro@crewflex.test", "applications", {
+    query: { view: "pack", applicationId: packApplicationId ?? crypto.randomUUID() },
+  });
+  ok(
+    "PKG pack-view e: after withdrawing, the copy is gone (pack: null)",
+    packAfter.data?.pack === null,
+    JSON.stringify(packAfter).slice(0, 100),
+  );
+  await asSeedUser("delta@crewflex.test", "professional-availability", {
+    method: "DELETE",
+    query: { id: packWindow.data.window.id },
+  });
+  if (packEntryId)
+    await asSeedUser("delta@crewflex.test", "professional-logbook", {
+      method: "DELETE",
+      query: { id: packEntryId },
+    });
+  await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+    method: "PATCH",
+    body: { id: packNeedId, status: "closed" },
+  });
+  for (const email of ["delta@crewflex.test", "manager.mro@crewflex.test"]) {
+    await asSeedUser(email, "notifications", { method: "PATCH", body: { all: true } });
+  }
+}
+
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
 const touch = await browser.newContext({
