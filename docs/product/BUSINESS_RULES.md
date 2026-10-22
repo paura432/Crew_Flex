@@ -215,10 +215,14 @@ requirements of every organization: `open` and `endsAt` in the future (draft, pa
 cancelled and ended ones are not listed; a started one still is, but cannot be applied to). They see one fixed
 projection: title, base, period, shift, headcount, urgency, required qualifications and the organization's **name**
 — never who created it, the organization id, other applicants or counts. Order: soonest start first, then id.
-Filters: urgency, «Compatibles» (eligible now) and a literal text search on title, base or organization name.
-Eligibility is shown separately and computed with `evaluateMatch` on the professional's **own** data, every failed
-rule explained; publication never makes anyone eligible. The function considers at most 200 requirements per call
-and says so (`considered`, `cap`). IMPLEMENTED (local).
+Filters: urgency, «Compatibles» (eligible now) and a literal text search on title, base, organization name or a
+required qualification's code or name (T-91, LOCAL `20261024100000`). Eligibility is shown separately and computed
+with `evaluateMatch` on the professional's **own** data, every failed rule explained; publication never makes anyone
+eligible. The function considers at most 200 requirements per call and says so (`considered`, `cap`). **Never the
+caller's own organizations' requirements** (v2-27, T-90): a member — whatever their role — does not see them as
+opportunities. **«Ofertas en la red»** (v2-20, T-95): a member of any organization lists the same projection without
+any eligibility (no «Compatibles»), its own organization's requirements excluded; never a commission (`✗`).
+IMPLEMENTED (local).
 
 **BR-14.1 «Posible en descanso»** (N-17, v1.8 demo `homeModel.js:6-15`, T-17): an opportunity the professional could
 apply to but for availability — `applyBlocker` is `NOT_ELIGIBLE` and every blocker is `NOT_AVAILABLE` or
@@ -237,7 +241,9 @@ not `withdrawn` (an active one → `ALREADY_APPLIED`; one that ended `rejected`,
 qualifications and availability, T-08). One application covers the requirement's single period (Q6). Applying needs
 the explicit share consent of the form (required by the database too and recorded as a flag in the audit row); it reserves nothing in the calendar, and nothing is shared beyond the
 candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Once **confirmed**, the
-assignment's days are protected in the calendar and on the server (BR-4.9, T-15; T-13 superseded). IMPLEMENTED (local).
+assignment's days are protected in the calendar and on the server (BR-4.9, T-15; T-13 superseded). A member (any role)
+of the requirement's organization is refused last, after every other reason (`OWN_ORGANIZATION`, `CFA13`; v2-27,
+T-90, LOCAL `20261024100000`). IMPLEMENTED (local).
 
 ## BR-16 Daily learning challenge (SCOPE-2, v1.8 default) — `src/domain/learning.ts`
 
@@ -347,6 +353,18 @@ only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) is not part
 - **Sign-up by invitation** (owner flag `invitation_signup`, off by default): a code is valid 7 days, for one sign-up,
   by the invited address only; the invitation decides the account type (professional or organization, never platform
   admin); a code of another address is refused and not consumed. Without the flag, open sign-up. IMPLEMENTED (local).
+
+## BR-23 Confirmed coverage (v2-08, T-92, T-93) — `src/domain/coverage.ts` / `get_requirement_application_counts`
+
+A seat is taken by a `confirmed` or `finished` application — the rule of the confirm step and of `covered` (BR-13).
+**Confirmed coverage** of a requirement = `min(seats, headcount)` ÷ headcount, rounded to a whole percent (v1.8
+`business.js:121-132`, `Math.round(filled / max(1, total) × 100)`): «{p}% cobertura confirmada» + bar on the list and
+the detail (with «x / n plazas confirmadas»), «{p}% cubierto» on the dashboard rows. **«Jornadas cubiertas · Solo
+asignaciones confirmadas»** (dashboard) = Σ over the organization's requirements of filled seats × days, where days =
+its shifts (v2-09) or, without shifts, the started 24-hour blocks of its period (at least one); one application covers
+every shift (Q6). Counted from `get_requirement_application_counts` (admin/manager only, counts per status per
+requirement with headcount, period and shift count; a closed account's application still counts, T-42). Plain members
+see the status chips only. IMPLEMENTED (local).
 
 ## BR-24 Document wallet trash and type filter (N-19, N-20; T-100…T-102) — `walletList` (`src/features/documents/map.ts`)
 

@@ -671,7 +671,7 @@ ok(
   detail.match(/gap[^\n]*/i)?.[0] ?? detail.slice(0, 200),
 );
 await shot("06-requirement-capacity");
-await page.goto(`${madUrl}/matches`);
+await page.goto(`${madUrl}/matches?eligible=0`); // v2-25: «Solo elegibles» is on by default
 await page.waitForLoadState("networkidle");
 const matches = await page.locator("main").innerText();
 ok(
@@ -712,7 +712,7 @@ ok(
   (await cards().count()) === 3,
   `${await cards().count()} cards`,
 );
-await page.goto(`${madUrl}/matches`);
+await page.goto(`${madUrl}/matches?eligible=0`); // v2-25: «Solo elegibles» is on by default
 await page.selectOption('select[name="sort"]', "years");
 await Promise.all([
   page.waitForURL(/sort=years/),
@@ -726,14 +726,14 @@ ok(
   years.join(","),
 );
 const firstRef = /CF-[0-9A-F]{10}/.exec(await cards().first().innerText())?.[0];
-await page.goto(`${madUrl}/matches?q=${firstRef?.toLowerCase()}`);
+await page.goto(`${madUrl}/matches?eligible=0&q=${firstRef?.toLowerCase()}`);
 await listed();
 ok(
   "11j search by pseudonym (case-insensitive) finds exactly it",
   (await cards().count()) === 1,
   firstRef,
 );
-await page.goto(`${madUrl}/matches`);
+await page.goto(`${madUrl}/matches?eligible=0`); // v2-25: «Solo elegibles» is on by default
 await listed();
 await cards().nth(0).getByLabel("Compare").check();
 await cards().nth(1).getByLabel("Compare").check();
@@ -796,7 +796,7 @@ await page.goto(`${BASE}/app/organization`);
 await page.waitForLoadState("networkidle");
 await expectSpanish("11c organization dashboard in Spanish");
 await responsiveShots("18-organization-es");
-await page.goto(`${madUrl}/matches`);
+await page.goto(`${madUrl}/matches?eligible=0`); // v2-25: «Solo elegibles» is on by default
 await page.waitForLoadState("networkidle");
 await expectSpanish("11d matching results in Spanish");
 const matchesEs = await page.locator("main").innerText();
@@ -2450,6 +2450,229 @@ await logout();
   }
 }
 
+// PKG hiring-polish (v2-05, v2-08, v2-20, v2-21, v2-25, v2-26, v2-27; migrations 20261024100000/100100,
+// defaults T-90…T-95; English UI). Setup through the local API (a 2-seat need, Delta and Alpha windows,
+// Delta confirmed); every check after that is a page. Restores: the assignment is cancelled, the need
+// closed, both windows deleted.
+{
+  const hpTitle = `Local UI check · hiring polish ${Date.now()}`;
+  const hpPeriod = { startsAt: "2027-01-11T06:00:00.000Z", endsAt: "2027-01-12T18:00:00.000Z" };
+  const hpWindow = { startsAt: "2027-01-11T00:00:00.000Z", endsAt: "2027-01-13T00:00:00.000Z" };
+  const hpNeed = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: {
+      organizationId: mroOrg.id,
+      title: hpTitle,
+      location: "Madrid (MAD)",
+      ...hpPeriod,
+      shift: "day",
+      headcount: 2,
+      urgency: "planned",
+      qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+    },
+  });
+  const hpId = hpNeed.data?.requirement.id;
+  const hpWindows = [];
+  for (const email of ["delta@crewflex.test", "alpha@crewflex.test"]) {
+    const w = await asSeedUser(email, "professional-availability", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: { ...hpWindow, status: "available" },
+    });
+    hpWindows.push({ email, id: w.data?.window.id });
+  }
+  const hpApplied = await asSeedUser("delta@crewflex.test", "applications", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: { requirementId: hpId, shareConsent: true },
+  });
+  const hpApp = {
+    id: hpApplied.data?.application.id,
+    updatedAt: hpApplied.data?.application.updatedAt,
+  };
+  const hpMove = async (email, to, extra = {}) => {
+    const res = await asSeedUser(email, "applications", {
+      method: "PATCH",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: { applicationId: hpApp.id, to, expectedUpdatedAt: hpApp.updatedAt, ...extra },
+    });
+    if (res.data) hpApp.updatedAt = res.data.transition.updatedAt;
+    return res;
+  };
+  await hpMove("admin.mro@crewflex.test", "shortlisted");
+  const hpProposed = await hpMove("admin.mro@crewflex.test", "proposed");
+  await hpMove("delta@crewflex.test", "accepted", {
+    proposalId: hpProposed.data?.transition.proposalId,
+    acceptTerms: true,
+  });
+  const hpConfirmed = await hpMove("admin.mro@crewflex.test", "confirmed");
+  ok(
+    "PKG hiring-polish 0 setup (API): a 2-seat need with Delta confirmed",
+    hpConfirmed.data?.transition.status === "confirmed",
+    JSON.stringify(hpConfirmed.error ?? ""),
+  );
+
+  // v2-27 (T-90): a member never applies to its own organization's need (API), nor sees it listed.
+  const hpOwn = await asSeedUser("alpha@crewflex.test", "applications", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: { requirementId: hpId, shareConsent: true },
+  });
+  await login("alpha@crewflex.test");
+  await page.goto(`${BASE}/app/professional/opportunities?q=${encodeURIComponent(hpTitle)}`);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG hiring-polish 1 own organization: apply refused (409 OWN_ORGANIZATION), not in «Opportunities»",
+    hpOwn.error?.reason === "OWN_ORGANIZATION" &&
+      /No requirements for this filter/.test(await page.locator("main").innerText()),
+    JSON.stringify(hpOwn.error ?? hpOwn.data ?? ""),
+  );
+  await logout();
+
+  // v2-26: card buttons as v1.8 and the search by a required qualification's code.
+  await login("delta@crewflex.test");
+  await page.goto(`${BASE}/app/professional/opportunities?q=tr-a320`);
+  await page.waitForLoadState("networkidle");
+  const hpCard = page.locator("main article", { hasText: hpTitle }).first();
+  ok(
+    "PKG hiring-polish 2 «Opportunities»: found by «tr-a320»; «View details» + «Already applied» (disabled)",
+    (await hpCard.count()) === 1 &&
+      (await hpCard.getByRole("link", { name: "View details" }).count()) === 1 &&
+      (await hpCard.getByRole("button", { name: "Already applied" }).isDisabled()),
+    "",
+  );
+  await logout();
+
+  await login("admin.mro@crewflex.test");
+  // v2-05: «Applications» and «Offers in the network» in the organization menu, after «Requirements».
+  const hpNav = await page
+    .locator("aside a[href^='/app/organization']")
+    .evaluateAll((links) => [...new Set(links.map((a) => a.getAttribute("href")))]);
+  const at = (href) => hpNav.indexOf(href);
+  ok(
+    "PKG hiring-polish 3 menu: Requirements → Applications → Offers in the network",
+    at("/app/organization/requirements") >= 0 &&
+      at("/app/organization/applications") === at("/app/organization/requirements") + 1 &&
+      at("/app/organization/network") === at("/app/organization/applications") + 1,
+    hpNav.join(" "),
+  );
+  // v2-08: «{p}% confirmed coverage» + «Manage applications» on the list row.
+  await page.goto(`${BASE}/app/organization/requirements`);
+  await page.waitForLoadState("networkidle");
+  const hpRow = page.locator("main tr", { hasText: hpTitle }).first();
+  const hpRowText = await hpRow.innerText().catch(() => "");
+  ok(
+    "PKG hiring-polish 4 list: «50% confirmed coverage» and «Manage applications» on the row",
+    /50% confirmed coverage/.test(hpRowText) &&
+      (await hpRow.getByRole("link", { name: "Manage applications" }).getAttribute("href")) ===
+        `/app/organization/applications?requirementId=${hpId}`,
+    hpRowText.replace(/\s+/g, " ").slice(0, 200),
+  );
+  await page.goto(`${BASE}/app/organization/requirements/${hpId}`);
+  await page.waitForLoadState("networkidle");
+  const hpDetail = await page.locator("main").innerText();
+  ok(
+    "PKG hiring-polish 5 detail: «50% confirmed coverage» and «1 / 2 seats confirmed»",
+    /50% confirmed coverage/.test(hpDetail) && /1 \/ 2 seats confirmed/.test(hpDetail),
+    "",
+  );
+  // v2-05: the organization-wide list filtered by the offer, with the per-requirement actions.
+  await page.goto(`${BASE}/app/organization/applications?requirementId=${hpId}`);
+  await page.waitForLoadState("networkidle");
+  const hpApps = await page.locator("main").innerText();
+  const hpAppCard = page.locator(`main article#a-${hpApp.id}`);
+  ok(
+    "PKG hiring-polish 6 «Applications»: selected offer, View all, Back to offers, «All (1)», 9 tabs, the card",
+    hpApps.includes(`Selected offer: ${hpTitle}`) &&
+      (await page.getByRole("link", { name: "View all" }).count()) === 1 &&
+      (await page.getByRole("link", { name: "Back to offers" }).count()) === 1 &&
+      (await page.locator("main nav a").count()) === 10 &&
+      /All \(1\)/.test(hpApps) &&
+      /Confirmed/.test(await hpAppCard.innerText()) &&
+      (await hpAppCard.getByRole("link", { name: hpTitle }).count()) === 1,
+    hpApps.replace(/\s+/g, " ").slice(0, 200),
+  );
+  // v2-26: the cancel step explains what it does (opened, then backed out: nothing is sent).
+  await hpAppCard.getByRole("button", { name: "Cancel assignment" }).click();
+  const hpHint = await hpAppCard.getByRole("group").innerText();
+  await hpAppCard.getByRole("group").getByRole("button", { name: "Back" }).click();
+  ok(
+    "PKG hiring-polish 7 cancel assignment hint «Seats will be released…» (backed out)",
+    /Seats will be released and the technician's previous availability restored/.test(hpHint),
+    hpHint.slice(0, 120),
+  );
+  await page.goto(`${BASE}/app/organization/applications?status=withdrawn&requirementId=${hpId}`);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG hiring-polish 8 an empty tab: «No applications in this status»",
+    /No applications in this status/.test(await page.locator("main").innerText()),
+    "",
+  );
+  // v2-21 + v2-08: the dashboard guide, quick links, note and «Shifts covered».
+  await page.goto(`${BASE}/app/organization`);
+  await page.waitForLoadState("networkidle");
+  const hpDash = await page.locator("main").innerText();
+  ok(
+    "PKG hiring-polish 9 dashboard: «Shifts covered», «How to staff a requirement» (4 steps), quick links, note",
+    /Shifts covered/.test(hpDash) &&
+      /How to staff a requirement/.test(hpDash) &&
+      (await page.locator("main ol li").count()) >= 4 &&
+      (await page.getByRole("link", { name: /Builder/ }).count()) === 1 &&
+      (await page.getByRole("link", { name: /Candidate Packs/ }).count()) === 1 &&
+      /the contract between the parties is agreed outside the platform/.test(hpDash),
+    "",
+  );
+  // v2-20: the own offer is not in «Offers in the network»; another organization sees it, no eligibility.
+  await page.goto(`${BASE}/app/organization/network?q=${encodeURIComponent(hpTitle)}`);
+  await page.waitForLoadState("networkidle");
+  const hpOwnNetwork = await page.locator("main").innerText();
+  await logout();
+  await login("admin.other@crewflex.test");
+  await page.goto(`${BASE}/app/organization/network?q=${encodeURIComponent(hpTitle)}`);
+  await page.waitForLoadState("networkidle");
+  const hpNetCard = page.locator("main article", { hasText: hpTitle }).first();
+  const hpNetText = await hpNetCard.innerText().catch(() => "");
+  await hpNetCard.getByRole("link", { name: "View details" }).click();
+  await page.waitForURL(/\/app\/organization\/network\/[0-9a-f-]{36}$/);
+  const hpNetDetail = await page.locator("main").innerText();
+  ok(
+    "PKG hiring-polish 10 «Offers in the network»: own hidden; others see the card and detail, no eligibility or fee",
+    /No requirements for this filter/.test(hpOwnNetwork) &&
+      /Demo MRO Madrid/.test(hpNetText) &&
+      !/requirements and availability|mandatory requirement/i.test(hpNetText) &&
+      hpNetDetail.includes(hpTitle) &&
+      /Published by Demo MRO Madrid/.test(hpNetDetail) &&
+      !/commission|eligib/i.test(hpNetDetail),
+    hpNetText.replace(/\s+/g, " ").slice(0, 160),
+  );
+  await logout();
+  // v2-25: «Eligible only» is on by default (v1.8 «Solo elegibles con cobertura»).
+  await login("manager.mro@crewflex.test");
+  await page.goto(`${madUrl}/matches`);
+  await page.waitForLoadState("networkidle");
+  await page.locator("main article").first().waitFor({ timeout: 15_000 });
+  ok(
+    "PKG hiring-polish 11 matches: «Eligible only» ticked by default, 3 cards",
+    (await page.locator('input[type=checkbox][name="eligible"]').isChecked()) &&
+      (await page.locator("main article").count()) === 3,
+    `${await page.locator("main article").count()} cards`,
+  );
+  await logout();
+
+  // Restore: cancel the assignment (T-12 refuses closing it otherwise), close the need, drop windows.
+  await hpMove("admin.mro@crewflex.test", "cancelled", { reason: "Local UI check: restore" });
+  await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+    method: "PATCH",
+    body: { id: hpId, status: "closed" },
+  });
+  for (const w of hpWindows)
+    if (w.id)
+      await asSeedUser(w.email, "professional-availability", {
+        method: "DELETE",
+        query: { id: w.id },
+      });
+}
 // PKG wallet-extras (N-19 trash, N-20 type filter, N-21 in-app viewer, N-26 server floor; migrations
 // 20261024200000/200100, T-100…T-104): Delta uploads a PNG course and a PDF licence, filters by type,
 // views both in the app (an expired link is an error, Escape returns the focus), archives, restores and

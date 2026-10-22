@@ -54,7 +54,7 @@ both languages (codes, acronyms, regulatory names). Interface concepts are trans
 | Current status: employed / contractor / between contracts | En plantilla / Contractor / Entre contratos         | "Contractor" kept                                       |
 | Visibility: private / anonymous / open                    | Privado / Anónimo / Abierto                         |                                                         |
 | Shift: day / night / split / flexible                     | Turno: día / noche / partido / flexible             |                                                         |
-| Urgency: planned / urgent / AOG                           | Planificada / Urgente / AOG                         |                                                         |
+| Urgency: planned / urgent / AOG                           | Planificado / Urgente / AOG                         |                                                         |
 | Status: draft / open / covered / cancelled / closed       | Borrador / Abierta / Cubierta / Cancelada / Cerrada |                                                         |
 | Organization / Member / Manager / Admin                   | Organización / Miembro / Manager / Administrador    | "Manager" kept                                          |
 | Settings                                                  | Configuración                                       |                                                         |

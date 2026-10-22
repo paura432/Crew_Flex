@@ -150,6 +150,10 @@ cancelled, `REQUIREMENT_STARTED`, `QUALIFICATION_INVALID`, `AVAILABILITY_INCOMPL
 (no apply/shortlist/propose/accept; reject/withdraw still possible), closing refused with an accepted or confirmed
 application (`ACTIVE_COMMITMENTS`, T-12), covered ↔ open only through a transition, applicant visibility under the
 pool rules (private applicant → pseudonym), dashboard counts, cascades, the M05 edit freeze (`HAS_APPLICATIONS`).
+Package hiring-polish (LOCAL `20261024100000`/`100100`, `tests/db/hiring-polish.test.ts`): applying to a requirement of
+one's own organization is refused as the last check (`OWN_ORGANIZATION`, `CFA13`, T-90); the organization reads all its
+applications in one list (`get_organization_applications`, pool rules by calling `get_requirement_applications`; a
+closed account stays listed without an applicant) and per-requirement counts for the confirmed coverage (BR-23).
 Suite **W** proves `app_private.hard_eligibility` (apply/confirm) = `evaluateMatch().eligible` on the professional's
 own data = `ranked_external_pool.hard_eligible`, on 240 randomized profiles × 3 urgencies.
 

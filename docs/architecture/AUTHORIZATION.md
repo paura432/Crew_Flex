@@ -80,6 +80,16 @@ the published ones (`open`, not ended) only through `list_opportunities`, a fixe
 own act). The transition RPC decides the side from the database (applicant = technician; admin/manager of the
 requirement's organization who is not the applicant = organization; anyone else gets the same `P0002` as a random id).
 
+**Hiring polish (LOCAL `20261024100000`/`100100`, v2-05/v2-08/v2-20/v2-27).** `list_opportunities` also answers members
+of any organization (v2-20 «Ofertas en la red»: the same projection, no eligibility computed, never a commission) and
+never returns the caller's own organizations' requirements; a member (any role) applying to its own organization's
+requirement is refused (`CFA13`, T-90). The organization-wide «Candidaturas» reads through
+`get_organization_applications` (DEFINER, admin/manager of that organization in the body, 42501 otherwise), which
+**calls** `get_requirement_applications` for the applicant columns — so the pool rules are not re-implemented — and
+filters any other organization's requirement to nothing; `get_requirement_application_counts` (same role check)
+returns counts per status per requirement with headcount, period and shift count, no person. No new table grant or
+policy.
+
 **Protected assignment days (BR-4.9, LOCAL `20261023300000`).** The owner's availability writes stay "own", but a
 write that touches one of the owner's `confirmed` assignments is refused for everybody (`CFV01` → 409
 `ASSIGNMENT_PROTECTED`): the DEFINER trigger `protect_assignment_availability()` reads the owner's applications and
