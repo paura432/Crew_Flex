@@ -18,10 +18,13 @@ auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualific
                   │                        └──────────1─* logbook_entries (owner only, M14)
                   │                        ├──────────1─* technician_type_ratings (declared, package passport)
                   │                        ├──────────1─0..1 technician_private_details (owner only)
-                  │                        └──────────1─* technician_organization_blocks *─1 organizations (owner only)
+                  │                        ├──────────1─* technician_organization_blocks *─1 organizations (owner only)
+                  │                        └──────────1─0..1 technician_notice_preferences (owner only, PKG outreach)
                   │
                   └─* organization_members *─1 organizations 1─* work_requirements 1─* work_requirement_qualifications *─1 qualification_types
                                                        └─* organization_reviews (evidence, platform admins only)
+                                         work_requirements 1─0..1 outreach_distributions (count only, PKG outreach)
+                                         work_requirements 1─* notifications (kind `outreach`, PKG outreach)
                                                                                  │
 technician_profiles 1─* applications *──────────────────────────────────────────┘  (one per technician × requirement, except withdrawn)
                           ├─* application_proposals (immutable versions, R-08)
@@ -102,6 +105,23 @@ except `min_rate` / `rate_unit` inside the Candidate Pack copy of the profession
 PK (`technician_profile_id` → `technician_profiles`, `organization_id` → `organizations`), both on delete cascade,
 `created_at`; ≤ 200 per professional. RLS select: **owner only**; no write grant. Read server-side by
 `app_private.ranked_external_pool` to leave the professional out of that organization's external pool (T-35).
+
+### `technician_notice_preferences` (`20261024400100`, LOCAL ONLY — PKG outreach N-10, T-120…T-123) — owner only
+
+| Column                        | Type                                                                                                                                                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profile_id`                  | PK → `technician_profiles` on delete cascade (leaves with the account)                                                                                                                                |
+| `urgent_opt_in`, `aog_opt_in` | boolean, default false — «Quiero avisos internos de trabajos urgentes» / «… AOG»                                                                                                                      |
+| `mobilization_hours`          | integer 0–720, null = not declared (no outreach reaches the professional)                                                                                                                             |
+| `time_zone`                   | text ≤ 64, IANA shape, default `Europe/Madrid`; trigger `technician_notice_preferences_time_zone` keeps only names of `pg_timezone_names` (case-insensitive, stored in its spelling; 22023 otherwise) |
+| `quiet_start`, `quiet_end`    | time, both or neither, whole minutes, never equal; start > end spans midnight                                                                                                                         |
+| `created_at`, `updated_at`    | timestamptz                                                                                                                                                                                           |
+
+RLS: select / insert / update **own only** (`profile_id = auth.uid()`); column grants: insert of the form's columns
+and `profile_id`, update of the form's columns (never `profile_id`); no delete grant. Written by
+`save_notice_preferences` (SECURITY INVOKER, `auth.uid()`'s row) or directly under the same RLS and CHECKs. Read by
+`requirement_outreach` as its owner; nobody else (not the organization, not platform admins). Listed in the account
+export.
 
 ### `organizations`
 
@@ -317,8 +337,10 @@ applications.
 | -------------------- | -------------------------------------------------------------------------------------------- |
 | `id`                 | uuid PK                                                                                      |
 | `recipient_id`       | → `profiles` on delete cascade                                                               |
-| `kind`               | `notification_kind`: `application` (an application reached a status) · `requirement`         |
+| `kind`               | `notification_kind`: `application` (a status reached) · `requirement` · `outreach` (PKG)     |
 | `application_id`     | → `applications` on delete cascade; for `requirement`, the recipient's active application    |
+|                      | (null only for `outreach`, `20261024400200`)                                                 |
+| `requirement_id`     | → `work_requirements` on delete cascade; `outreach` only, one per recipient                  |
 | `application_status` | `application`: the status reached (`received` = a new application, told to the organization) |
 | `requirement_status` | `requirement`: `paused`, `open` (resumed from paused) or `closed`                            |
 | `created_at`         | timestamptz                                                                                  |
@@ -338,7 +360,19 @@ a new row; deleted with the application, the requirement or the recipient; an or
 that organization are deleted when they lose admin/manager
 (`organization_members_drop_notifications`; the event trigger share-locks the memberships it notifies, so a
 concurrent demotion waits and then deletes the new notice). No audit row of its own: the event that caused the
-notice is audited.
+notice is audited. **`outreach` (PKG outreach, `20261024400200`, BR-26):** written by `requirement_outreach()` only,
+one per recipient and requirement, read by its recipient as their own (technician side) while the need is `open` and
+not ended, with the urgency of its distribution (`outreach_urgency` of `get_my_notifications`); application notices of
+a technician who closed the account (technician → NULL) are neither listed nor counted.
+
+### `outreach_distributions` (`20261024400200`, LOCAL ONLY — PKG outreach v2-17, T-125…T-128)
+
+PK `requirement_id` → `work_requirements` on delete cascade (one distribution per need); `urgency` (`urgent` | `aog`,
+the declared one at distribution time); `notified_count` ≥ 0, **null** when fewer than 5 professionals of the external
+pool were eligible (T-128: the number is then neither shown nor stored); `created_at` (also counted for the limit of
+10 distributions per organization per 24 h). **No recipient and no actor** (the audit
+row `requirement.outreach_distributed` has the actor, the count and the urgency). RLS select: admin/manager of the
+requirement's organization · platform admin; no write grant — `requirement_outreach()` is its only writer.
 
 ### `professional_documents` (`20261019160000`, LOCAL ONLY — D-10, `DOCUMENT_WALLET.md`)
 
@@ -518,6 +552,8 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `get_platform_summary()` (`20261023500300`, local only)                                                                                                                                                                     | DEFINER, stable | Platform admin only (42501): professional accounts, organizations, active needs, working now, AOG with vacancies, seats to fill per hard licence (`demand`). Counts only, no money (T-53).                                                                                                                                                                                                                |
 | `get_my_notifications(id, offset, limit)` · `count_my_unread_notifications()` (`20261023800000`, local only)                                                                                                                | DEFINER, stable | The caller's notices (≤ 50 per page, newest first, `total`) and unread count, through `app_private.visible_notifications()`: retention and access re-checked at read time; 42501 without a session.                                                                                                                                                                                                       |
 | `get_application_pack(application_id)` · `get_my_application_packs()` · `get_my_candidate_pack_preview()` (`20261024300000`, local only)                                                                                    | DEFINER, stable | Candidate Pack copy (BR-25), fixed columns: one application's copy for the applicant or an admin/manager of its requirement's organization now (anyone else `P0002`, like a missing id; zero rows = no copy) · own copies (export) · own copy as it would be frozen now (professionals). 42501 without a session.                                                                                         |
+| `save_notice_preferences(urgent, aog, mobilization_hours, time_zone, quiet_start, quiet_end)` (`20261024400100`, local only)                                                                                                | INVOKER         | PKG outreach N-10: the caller's own notice preferences (`auth.uid()`, upsert under RLS; zone trigger and CHECKs apply); 42501 without a session, FK error without a technician profile.                                                                                                                                                                                                                   |
+| `requirement_outreach(requirement_id, request_id)` (`20261024400200`, local only)                                                                                                                                           | DEFINER         | PKG outreach v2-17: admin/manager of the need's organization (42501, also for a missing id), once per need, `urgent`/`aog`, `open`, not started, ≤ 10 a day (CFO01…CFO05); writes the BR-26 audience's notices, the distribution and the audit row (count only). `get_my_notifications` gains `outreach_urgency` (drop + create).                                                                         |
 | `mark_notifications_read(id)` (`20261023800000`, local only)                                                                                                                                                                | DEFINER         | One notice (`id`) or every unread one (null) of the caller read at the database's clock, then prunes the caller's expired ones; returns the rows matched.                                                                                                                                                                                                                                                 |
 | `create_invitation(email, account_type, request_id)` · `finish_invitation_delivery(id, sent, request_id)` (`20261023400000`, local only)                                                                                    | DEFINER         | Platform admin only (re-checked in the body), flag required (`0A000`): create returns the code once to the caller (the `invitations` function), audit `invitation.created`; `23505` when the address already has an account. Finish deletes the address's delivery account(s) (no profile, `invitation_delivery` marker) and audits sent / revoked.                                                       |
 | `invitation_status(code, email)` · `invitation_signup_required()` (`20261023400000`, local only)                                                                                                                            | DEFINER, stable | **Anon-callable on purpose** (the sign-up page is public): a status (`valid` · `other_email` · `invalid` · `off`) and the account type, or one boolean. Never an address or an id; codes carry 244 random bits.                                                                                                                                                                                           |
@@ -543,7 +579,8 @@ engines and capabilities it asks for, the ratings of its category on its aircraf
 and the mobility beyond the passport card's fields; for the own profile everything. EXECUTE for `authenticated` on it
 only (INVOKER, called by the INVOKER `own_candidate_profile`). Notices (`20261023800000`): `notification_retention()` (180 days),
 `candidate_pseudonym(requirement, profile)` (the pool's `CF-…` expression; the notices suite proves they agree),
-`prune_notifications(recipients)`, `visible_notifications()` — no grants. `candidate_pack_content(profile)`
+`prune_notifications(recipients)`, `visible_notifications()` (since `20261024400200` also the `outreach` kind, and
+without application notices whose technician closed the account) — no grants. `candidate_pack_content(profile)`
 (`20261024300000`) — the one builder of a Candidate Pack copy, used by the freezing trigger and the preview, no
 grant. Since `20261023600100` it delegates to
 `hard_eligibility_for(starts_at, ends_at, urgency, hard_type_ids, profile, …profile rules)` — the same expressions on

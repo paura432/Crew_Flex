@@ -49,7 +49,8 @@ Current phase: **Foundation + Prototype V0**. Milestone:
   `professional-availability`, `professional-profile`, `professional-qualifications`, `user-preferences`,
   then push `main`. A partial set breaks pages (e.g. matches needs `summary.pool`).
 - V1.3 integration plan and pending decisions: `docs/integration/crewflex-v13/` (D-01…D-12).
-- Availability: AOG opt-in / priority contact (not part of the C-8 decision).
+- Availability: AOG opt-in / priority contact (not part of the C-8 decision). The urgent/AOG opt-in for in-app
+  notices is IMPLEMENTED locally (PKG outreach N-10, «Avisos de oportunidades» in Configuración); priority contact PLANNED.
 - Organization member management (`organization-workforce` function): invite/add members.
 - Approve OD-3 / D-01, then deploy `qualification-reviews` with `QUALIFICATION_REVIEW_ENABLED=true` and
   insert the `qualification_review` flag row (the flow itself is implemented locally, 2026-10-15).
@@ -65,9 +66,11 @@ Current phase: **Foundation + Prototype V0**. Milestone:
   deployed) — the dated copy of the technical profile and the selected logbook entries, frozen when applying and
   shown as «Ver expediente» (BR-25, T-110…T-116); identity, contact and documents stay locked (D-07 P3 + D-10).
 - Partial coverage (several technicians covering one requirement period by day blocks).
-- Urgent / AOG outreach intensity, opt-in priority contact.
+- Urgent / AOG outreach intensity, opt-in priority contact. «Distribuir aviso Urgente / AOG» (once per need, in-app,
+  count only for the organization, BR-26): IMPLEMENTED locally (PKG outreach v2-17, migrations `20261024400000`…`400200`,
+  not deployed); intensity and priority contact PLANNED.
 - In-app notices («Avisos internos», v2-18): IMPLEMENTED locally 2026-10-23 (migration `20261023800000`, not
-  deployed); the Urgent/AOG distribution notices wait for the outreach item above. E-mail, SMS and push stay OUT.
+  deployed); the Urgent/AOG distribution notices come with the outreach item above (IMPLEMENTED locally). E-mail, SMS and push stay OUT.
 - Recruiter workspace and client representation (platform admins see a «Próximamente» placeholder since 2026-10-22, D-13).
 - Tools hub beyond D-11: fuel sheet (after a technical review of its wording), glossary/ATA, daily challenge, translator; logbook from the prototype. Contractor calculators stay OUT.
   Glossary/ATA («English and acronyms», `/app/tools/knowledge`), translator (`/app/tools/translator`) and the daily

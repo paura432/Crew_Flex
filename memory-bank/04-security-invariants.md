@@ -41,6 +41,12 @@ documented exception (EDGE_FUNCTIONS.md); the expiry re-checks its condition on 
 restored meanwhile is kept (`scripts/local/db-race-check.sh wallet-trash`). `document_trash_retention_days()` answers
 null without a JWT subject. Proof: `tests/db/wallet-extras.test.ts`.
 
+**Package outreach (LOCAL `20261024400000`…`400200`), extends S-7/S-9/S-10:** «Distribuir aviso Urgente / AOG» is
+one DEFINER function (`requirement_outreach`): admin/manager from the database (checked before the row lock), the
+audience read inside it (external pool rules: never `private`, never a member, never a blocker), and the organization
+learns **only the count** — no recipient in the answer, in `outreach_distributions` or in the audit metadata; notice
+preferences are owner-only. Proof: `tests/db/outreach.test.ts`, `db-race-check.sh outreach` (two clicks, one run).
+
 S-7 also binds the applicant label of organization-side notices (`get_my_notifications`, LOCAL `20261023800000`):
 the same pool rules as `get_requirement_applications`, applied at read time (`tests/db/notices.test.ts`).
 
@@ -74,6 +80,7 @@ authorization. Review every DEFINER for S-10 and test the "other organization" a
 | Logbook (M14, LOCAL ONLY)            | `logbook_entries`                                                  | owner only (no organization — not even the technician's own — manager or platform-admin policy); audit rows: ids + changed field names, never the selection flag                                                 |
 | Candidate Pack copy (LOCAL)          | `application_packs` (frozen when applying, incl. logbook)          | the applicant · admin/manager of the requirement's organization now, via `get_application_pack` (no grant); never name, contact, employer, blocks, documents                                                     |
 | In-app notices (v2-18, LOCAL ONLY)   | `notifications` (ids and enums, no text)                           | recipient only, through RPCs (no table grant) · access re-checked at read time, pool rules · written by DEFINER triggers                                                                                         |
+| Notice preferences (PKG outreach)    | `technician_notice_preferences`                                    | **owner only** (RLS on `auth.uid()`; no organization, colleague or platform-admin reader) · read inside `requirement_outreach` only                                                                              |
 | Documents (D-10, LOCAL ONLY)         | `professional_documents` + private bucket `professional-documents` | owner only (no org/admin policy; no third-party sharing without a scanner)                                                                                                                                       |
 | Invitations (LOCAL, owner flag)      | `account_invitations` (e-mail, type, SHA-256 of the code)          | platform admin (no hash) · every invitation of the address leaves with the account · the UI never shows a code (a platform admin's direct RPC call returns the one they create)                                  |
 

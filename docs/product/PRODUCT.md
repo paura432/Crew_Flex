@@ -97,7 +97,10 @@ requirement. **PARTIAL** (local only, 2026-10-24): the dated technical copy froz
 ## Planned / Urgent / AOG
 
 Urgency is stored on every requirement (`planned`, `urgent`, `aog`). In V0 it is displayed and
-filterable; differentiated outreach intensity and commercial logic are **PLANNED**.
+filterable. «Distribuir aviso Urgente / AOG» — one in-app notice per professional who opted in for that urgency,
+respecting visibility, blocks, restrictions, eligibility, availability, mobilization and quiet hours, the organization
+told only how many — is **IMPLEMENTED (local only)**, package outreach, BUSINESS_RULES BR-26. Differentiated outreach
+intensity, priority contact and commercial logic are **PLANNED**; e-mail, SMS and push stay OUT.
 
 ## Non-goals (now)
 
