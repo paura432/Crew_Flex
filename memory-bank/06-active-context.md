@@ -4,6 +4,13 @@ _Last updated 2026-10-22 CEST. Keep under ~60 lines; replace, don't append histo
 
 ## Current task
 
+2026-10-22 (backend, worktree branch off `feat/v18-html-parity` 984112f): **M07 opportunities (D-12) + M08
+applications (D-06) + M05 edit**, LOCAL ONLY, committed on the worktree branch, nothing applied or deployed:
+`supabase/migrations/20261022130200_opportunities.sql`, `supabase/migrations/20261022130300_applications.sql`,
+functions `opportunities` / `applications` + `work-requirements` PUT, CFA01…CFA12 → 409 `reason`. PGlite 154/154
+(suites U/V/W), Deno 98. NOT RUN: `scripts/local/db-race-check.sh applications`, E2E via `functions serve` (need the
+migrations applied to the local stack, then restart `functions serve`). Frontend wiring is the frontend engineer's.
+
 2026-10-22: **D-13** (owner) — platform admins get the four v1.8 views through a «Ver como» switcher over their
 OWN account (`src/components/layout/views.ts`, `ViewSwitcher.tsx`; `/app/admin` home, `/app/recruiter`
 placeholder; sidebar shows the active view's menu; seed gives `platform.admin` the org «CrewFlex Operaciones»).
