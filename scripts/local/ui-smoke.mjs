@@ -987,6 +987,7 @@ await page.goto(`${BASE}/app/admin`);
 await page.waitForLoadState("networkidle");
 await viewSwitcher.locator("a[href='/app/recruiter']").click();
 await page.waitForURL(/\/app\/recruiter$/);
+await page.waitForLoadState("networkidle"); // the /app loading skeleton streams first
 ok(
   "20b Recruiter view is the «coming later» placeholder",
   /Coming later/.test(await page.locator("main").innerText()),

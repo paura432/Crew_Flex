@@ -63,7 +63,9 @@ export default async function OpportunitiesPage({
     page,
   };
   const result = await listOpportunities({
-    ...filters,
+    urgency: filters.urgency,
+    eligible: filters.eligible,
+    q: filters.q,
     offset: (page - 1) * OPPORTUNITIES_PAGE_SIZE,
     limit: OPPORTUNITIES_PAGE_SIZE,
   });

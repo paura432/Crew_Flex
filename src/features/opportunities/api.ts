@@ -4,7 +4,7 @@ import { invokeEdgeFunction } from "@/server/edge-functions";
 import type { OpportunityListResponse, OpportunityResponse } from "@/types/api";
 
 /** Published, current requirements with the caller's own eligibility (M07, D-12). */
-export const listOpportunities = (query: Partial<ListOpportunitiesQuery>) =>
+export const listOpportunities = (query: Partial<Omit<ListOpportunitiesQuery, "id">>) =>
   invokeEdgeFunction<OpportunityListResponse>("opportunities", {
     query: Object.fromEntries(
       Object.entries(query)
