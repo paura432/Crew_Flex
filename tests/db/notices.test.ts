@@ -594,7 +594,20 @@ describe("notices: what each side reads (rendered at read time)", () => {
     await asUser(db, SEED.alpha, async (tx) => {
       const need = await createNeed(tx, mroId, SEED.adminMro);
       await makeAvailable(tx, [SEED.alpha]);
+      // A member no longer applies to its own organization (CFA13, 20261024100000): Alpha applies
+      // before joining it, then joins.
+      const membership = [mroId, SEED.alpha];
+      await asOwner(tx);
+      await tx.query(
+        "delete from public.organization_members where organization_id = $1 and profile_id = $2",
+        membership,
+      );
       const app = await applyAs(tx, SEED.alpha, need);
+      await asOwner(tx);
+      await tx.query(
+        "insert into public.organization_members (organization_id, profile_id, role) values ($1, $2, 'member')",
+        membership,
+      );
       const notice = (await listAs(tx, SEED.adminMro)).find((n) => n.application_id === app)!;
       expect([notice.candidate_name, notice.candidate_ref]).toEqual(["Technician Alpha", null]);
     });

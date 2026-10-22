@@ -4011,12 +4011,25 @@ describe("U. opportunities for every professional (M07, D-12, migration 20261022
         SEED.managerMro,
         SEED.platformAdmin,
       ]) {
+        // v2-27 (20261024100000, T-90): never the requirements of the caller's own organizations.
+        await tx.exec("reset role");
+        const own = new Set(
+          (
+            await tx.query<{ id: string }>(
+              `select wr.id from public.work_requirements wr
+               join public.organization_members m on m.organization_id = wr.organization_id
+               where m.profile_id = $1`,
+              [user],
+            )
+          ).rows.map((r) => r.id),
+        );
+        const expected = truth.filter((id) => !own.has(id));
         await actAs(tx, user);
         const { rows } = await tx.query<{ id: string; total: number }>(
           "select id, total from public.list_opportunities()",
         );
-        expect(rows.map((r) => r.id)).toEqual(truth); // deterministic: soonest first, then id
-        expect(Number(rows[0]?.total)).toBe(truth.length);
+        expect(rows.map((r) => r.id)).toEqual(expected); // deterministic: soonest first, then id
+        expect(Number(rows[0]?.total)).toBe(expected.length);
         for (const id of hidden) expect(rows.some((r) => r.id === id)).toBe(false);
       }
     });
@@ -4119,12 +4132,19 @@ describe("U. opportunities for every professional (M07, D-12, migration 20261022
     });
   });
 
-  it("organization accounts get 42501, anon is denied, and the projection view is private", async () => {
-    for (const user of [SEED.adminMro, SEED.adminOther, SEED.adminAirline]) {
+  it("organization accounts list the network minus their own (v2-20, 20261024100000), anon is denied, and the projection view is private", async () => {
+    for (const [user, org] of [
+      [SEED.adminMro, () => mroId],
+      [SEED.adminOther, () => otherOrgId],
+      [SEED.adminAirline, () => airlineId],
+    ] as const) {
       await asUser(db, user, async (tx) => {
-        expect((await sqlError(tx, "select * from public.list_opportunities()")).code).toBe(
-          "42501",
+        const own = await createNeed(tx, { org: org(), createdBy: user });
+        await actAs(tx, user);
+        const { rows } = await tx.query<{ id: string }>(
+          "select id from public.list_opportunities()",
         );
+        expect(rows.some((r) => r.id === own)).toBe(false);
       });
     }
     await asUser(db, null, async (tx) => {
@@ -4878,7 +4898,11 @@ describe("V. applications: the D-06 state machine in the database (migration 202
     await asUser(db, SEED.delta, async (tx) => {
       const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 4 });
       await makeAvailable(tx, TECHS);
-      for (const tech of TECHS) await applyAs(tx, tech, need);
+      // A member no longer applies to its own organization (CFA13, 20261024100000): Alpha's row stands
+      // for one made before joining it.
+      for (const tech of TECHS)
+        if (tech === SEED.alpha) await seedApplication(tx, need, tech, "received");
+        else await applyAs(tx, tech, need);
       await actAs(tx, SEED.managerMro);
       const { rows } = await tx.query<Record<string, unknown>>(
         "select * from public.get_requirement_applications($1)",

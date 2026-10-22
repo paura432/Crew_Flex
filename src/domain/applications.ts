@@ -76,7 +76,7 @@ export const availableTransitions = (from: ApplicationStatus, actor: Application
 
 /**
  * Stable reasons the API returns with a 409 (`reason` in the error body), one per server check.
- * The SQL functions raise them as SQLSTATE `CFA01`…`CFA12` (`_shared/errors.ts` maps them).
+ * The SQL functions raise them as SQLSTATE `CFA01`…`CFA13` (`_shared/errors.ts` maps them).
  */
 export const APPLICATION_CONFLICTS = [
   "REQUIREMENT_NOT_OPEN", // CFA01: paused, closed, covered or not published
@@ -91,6 +91,7 @@ export const APPLICATION_CONFLICTS = [
   "REAPPLY_NOT_ALLOWED", // CFA10: only after `withdrawn` (Q5, T-09)
   "ACTIVE_COMMITMENTS", // CFA11: closing with accepted/confirmed applications (T-12)
   "HAS_APPLICATIONS", // CFA12: editing a requirement that received applications (M05)
+  "OWN_ORGANIZATION", // CFA13: applying to a requirement of an own organization (v2-27, T-90)
 ] as const;
 export type ApplicationConflict = (typeof APPLICATION_CONFLICTS)[number];
 
