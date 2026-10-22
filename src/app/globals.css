@@ -57,13 +57,17 @@
     box-shadow: 0 0 0 2px var(--color-navy);
   }
   /* A flex <summary> (centred for 44 px touch targets) loses the native disclosure triangle (X-07):
-     draw it back, pointing down while the <details> is open. */
+     draw it back, pointing down while the <details> is open. The empty alternative text keeps the
+     glyph out of the accessible name (T-3: Chromium read «▸ Fórmula, fuentes y alcance»); a browser
+     without the `/ ""` syntax drops that declaration and keeps the first one. */
   summary.flex::before {
     content: "▸";
+    content: "▸" / "";
     margin-inline-end: 0.5rem;
   }
   details[open] > summary.flex::before {
     content: "▾";
+    content: "▾" / "";
   }
   /* Older WebKit still draws its own marker on a flex summary (R-X L4): one triangle only. */
   summary.flex::-webkit-details-marker {
