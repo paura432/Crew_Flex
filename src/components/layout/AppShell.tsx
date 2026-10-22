@@ -30,6 +30,9 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/profile", label: tNav("profile") },
     { href: "/app/professional/qualifications", label: tNav("qualifications") },
     { href: "/app/professional/availability", label: tNav("availability") },
+    // v1.8 order: … Disponibilidad, Oportunidades, Mis candidaturas, Wallet (M07/M08)
+    { href: "/app/professional/opportunities", label: tNav("opportunities") },
+    { href: "/app/professional/applications", label: tNav("applications") },
     ...(walletEnabled ? [{ href: "/app/professional/documents", label: tNav("documents") }] : []),
   ];
   const accountNav: NavItem[] = [

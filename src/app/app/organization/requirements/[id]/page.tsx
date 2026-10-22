@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
+import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
@@ -12,6 +13,7 @@ import { getRequirement } from "@/features/requirements/api";
 import { RequirementStatusActions } from "@/features/requirements/components/RequirementStatusActions";
 import { RequirementFacts } from "@/features/requirements/components/RequirementFacts";
 import { isEvaluable, isExpired, type WorkRequirement } from "@/domain/work-requirement";
+import { listRequirementApplications } from "@/features/applications/api";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,11 +27,12 @@ const expiredNow = (r: Pick<WorkRequirement, "status" | "endsAt">) => isExpired(
 export default async function RequirementDetailPage({
   params,
 }: PageProps<"/app/organization/requirements/[id]">) {
-  const [{ id }, { organization, canManage }, t, tDashboard] = await Promise.all([
+  const [{ id }, { organization, canManage }, t, tDashboard, tApplications] = await Promise.all([
     params,
     requireOrganizationContext(),
     getTranslations("organization.detail"),
     getTranslations("organization.dashboard"),
+    getTranslations("applications"),
   ]);
   const result = await getRequirement(id);
   if (!result.ok) {
@@ -42,8 +45,10 @@ export default async function RequirementDetailPage({
   const closed = requirement.status === "closed";
   // V1.8 evaluates published jobs only: a paused or closed need shows its facts, not the pool (M05).
   const evaluable = isEvaluable(requirement);
-  const capacity =
-    canManage && evaluable ? await evaluateRequirementCapacity(requirement.id) : null;
+  const [capacity, applications] = await Promise.all([
+    canManage && evaluable ? evaluateRequirementCapacity(requirement.id) : null,
+    canManage ? listRequirementApplications(requirement.id) : null,
+  ]);
 
   return (
     <>
@@ -52,13 +57,23 @@ export default async function RequirementDetailPage({
         <Panel>
           <RequirementFacts requirement={requirement} />
           {closed ? (
-            <p className="mt-4 border-t border-line pt-4 text-sm text-muted">
-              {t("close.closedNote")}
-            </p>
+            <div className="mt-4 space-y-3 border-t border-line pt-4">
+              <p className="text-sm text-muted">{t("close.closedNote")}</p>
+              {applications?.ok && applications.data.applications.length > 0 && (
+                <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
+                  {tApplications("view", { count: applications.data.applications.length })}
+                </ButtonLink>
+              )}
+            </div>
           ) : (
             <div className="mt-4 space-y-3 border-t border-line pt-4">
               {requirement.status === "paused" && (
                 <p className="text-sm text-muted">{t("status.pausedNote")}</p>
+              )}
+              {applications?.ok && (
+                <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
+                  {tApplications("view", { count: applications.data.applications.length })}
+                </ButtonLink>
               )}
               {canManage && (
                 <RequirementStatusActions

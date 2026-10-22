@@ -151,3 +151,17 @@ export function countDays(
   }
   return n;
 }
+
+/**
+ * UTC days touched by confirmed assignments (D-06 «Asignación», v1.8 «Asignado»): display only — a
+ * confirmation reserves nothing in the calendar and does not lock it (T-13).
+ */
+export function assignmentDays(assignments: readonly { startsAt: string; endsAt: string }[]) {
+  const days = new Set<string>();
+  for (const a of assignments) {
+    const end = Date.parse(a.endsAt);
+    for (let t = dayStart(a.startsAt.slice(0, 10)); t < end; t += 86_400_000)
+      days.add(new Date(t).toISOString().slice(0, 10));
+  }
+  return days;
+}

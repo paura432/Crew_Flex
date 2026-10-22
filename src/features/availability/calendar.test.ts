@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assignmentDays,
   calendarDays,
   countDays,
   dayWindow,
@@ -126,5 +127,16 @@ describe("refusesPastStart (X-19, form only)", () => {
   it("an ongoing window keeps its past start when only the end or status changes", () => {
     expect(refusesPastStart("2026-10-01T08:00", "2026-10-01T08:00", today)).toBe(false);
     expect(refusesPastStart("2026-10-02T08:00", "2026-10-01T08:00", today)).toBe(true);
+  });
+});
+
+describe("assignmentDays (confirmed assignments, display only)", () => {
+  it("every UTC day an assignment touches, end exclusive", () => {
+    expect([
+      ...assignmentDays([{ startsAt: "2026-12-01T06:00:00Z", endsAt: "2026-12-03T18:00:00Z" }]),
+    ]).toEqual(["2026-12-01", "2026-12-02", "2026-12-03"]);
+    expect([
+      ...assignmentDays([{ startsAt: "2026-12-01T00:00:00Z", endsAt: "2026-12-02T00:00:00Z" }]),
+    ]).toEqual(["2026-12-01"]);
   });
 });

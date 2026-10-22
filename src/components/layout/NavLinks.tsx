@@ -23,6 +23,9 @@ const ICON_PATHS: Record<string, string> = {
     "M12 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12M15.5 13 17 22l-5-3-5 3 1.5-9",
   "/app/professional/availability":
     "M3 4h18v18H3zM16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01",
+  "/app/professional/opportunities": BRIEFCASE,
+  "/app/professional/applications":
+    "M9 2h6v4H9zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 14l2 2 4-4",
   "/app/professional/documents":
     "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8",
   "/app/tools":

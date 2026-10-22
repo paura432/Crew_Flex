@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/i18n/format";
+import type { MatchResult } from "@/domain/matching";
 import type { EvaluatedCandidate } from "@/types/api";
 import {
   explainAvailability,
@@ -40,15 +41,9 @@ export async function MatchCard({
   item: EvaluatedCandidate;
   footer?: ReactNode;
 }) {
-  const [t, tDomain, locale] = await Promise.all([
-    getTranslations("matching"),
-    getTranslations("domain"),
-    getLocale(),
-  ]);
+  const t = await getTranslations("matching");
   const { candidate, match } = item;
   const title = candidate.displayName ?? t("anonymous", { ref: candidate.id });
-  const checks = match.qualificationChecks.map(explainCheck);
-  const availability = explainAvailability(match.availability.coveredPercent);
 
   return (
     <article
@@ -75,6 +70,26 @@ export async function MatchCard({
         )}
       </header>
 
+      <MatchExplanation match={match} />
+      {footer}
+    </article>
+  );
+}
+
+/**
+ * Blockers + per-qualification checklist with availability as its last row. Shared by the
+ * organization's candidate cards and the professional's own eligibility (D-12: failed rules explained).
+ */
+export async function MatchExplanation({ match }: { match: MatchResult }) {
+  const [t, tDomain, locale] = await Promise.all([
+    getTranslations("matching"),
+    getTranslations("domain"),
+    getLocale(),
+  ]);
+  const checks = match.qualificationChecks.map(explainCheck);
+  const availability = explainAvailability(match.availability.coveredPercent);
+  return (
+    <>
       {match.blockers.length > 0 && (
         <div className="mt-4 rounded-lg bg-danger-bg px-3 py-2">
           <p className="text-xs font-semibold tracking-wide text-danger uppercase">
@@ -106,7 +121,6 @@ export async function MatchCard({
           </li>
         ))}
       </ul>
-      {footer}
-    </article>
+    </>
   );
 }

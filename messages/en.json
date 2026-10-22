@@ -48,7 +48,11 @@
     "documents": "Documents",
     "recovery": "Reset password",
     "admin": "Administration",
-    "recruiter": "Recruiter"
+    "recruiter": "Recruiter",
+    "opportunities": "Opportunities",
+    "opportunity": "Opportunity",
+    "applications": "My applications",
+    "requirementApplications": "Applications"
   },
   "nav": {
     "organization": "Organization",
@@ -72,7 +76,9 @@
       "organization": "Company",
       "recruiter": "Recruiter",
       "admin": "Administration"
-    }
+    },
+    "opportunities": "Opportunities",
+    "applications": "My applications"
   },
   "landing": {
     "eyebrow": "Aircraft maintenance workforce",
@@ -458,6 +464,17 @@
     "accountType": {
       "professional": "Professional",
       "organization": "Organization"
+    },
+    "applicationStatus": {
+      "received": "Received",
+      "shortlisted": "Shortlisted",
+      "proposed": "Proposed",
+      "accepted": "Accepted",
+      "confirmed": "Confirmed",
+      "finished": "Finished",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn",
+      "cancelled": "Cancelled"
     }
   },
   "professional": {
@@ -550,6 +567,20 @@
       "verified_qualification": "At least one verified qualification",
       "availability": "Published available days",
       "visibility": "Visible to organizations (anonymous or open)"
+    },
+    "activity": {
+      "label": "Opportunities and applications",
+      "compatible": "Compatible opportunities",
+      "active": "Applications in progress",
+      "toAccept": "Proposals to accept",
+      "confirmed": "Confirmed assignments",
+      "opportunitiesTitle": "Opportunities for you",
+      "applicationsTitle": "My applications",
+      "viewAll": "See all",
+      "follow": "Follow up",
+      "noOpportunities": "No compatible opportunities yet.",
+      "noApplications": "Your next application starts here.",
+      "loadError": "Could not load right now. Reload to retry."
     }
   },
   "qualifications": {
@@ -707,7 +738,9 @@
     },
     "statusAogOnly": "Available only for AOG",
     "aogHint": "“AOG only” days count only for needs declared as AOG; every other need sees them as not available. Blocked days override both.",
-    "calendarLabel": "Availability by day"
+    "calendarLabel": "Availability by day",
+    "assigned": "confirmed assignment",
+    "assignedShort": "Assigned"
   },
   "organization": {
     "dashboard": {
@@ -721,7 +754,11 @@
       "managersOnlyDescription": "Ask an organization admin for the manager role.",
       "requirements": "Requirements",
       "viewAll": "View all",
-      "newRequirement": "New requirement"
+      "newRequirement": "New requirement",
+      "applications": "Applications in progress",
+      "toConfirm": "{count, plural, one {# awaiting confirmation} other {# awaiting confirmation}}",
+      "confirmedAssignments": "Confirmed assignments",
+      "confirmedOnly": "Confirmed assignments only"
     },
     "requirements": {
       "title": "Work requirements",
@@ -1197,5 +1234,139 @@
       "soon": "Expires soon",
       "expired": "Expired"
     }
+  },
+  "opportunities": {
+    "eyebrow": "Opportunities",
+    "title": "Work that fits you.",
+    "description": "Technical eligibility and availability are assessed separately. A percentage never replaces a mandatory requirement.",
+    "searchLabel": "Search opportunities",
+    "searchPlaceholder": "Aircraft, base or company…",
+    "searchSubmit": "Search",
+    "filtersLabel": "Filter opportunities",
+    "filter": {
+      "all": "All",
+      "eligible": "Compatible",
+      "planned": "Planned",
+      "urgent": "Urgent",
+      "aog": "AOG"
+    },
+    "emptyTitle": "No requirements for this filter",
+    "emptyDescription": "Try another search or review your profile and dates.",
+    "pagination": "Opportunity pages",
+    "pageInfo": "{total, plural, one {# opportunity} other {# opportunities}} · page {page} of {pages}",
+    "previous": "Previous",
+    "next": "Next",
+    "cappedNote": "The {cap} published requirements that start first were considered.",
+    "orgOnlyTitle": "Opportunities are for professionals",
+    "orgOnlyDescription": "This account has no professional passport.",
+    "card": {
+      "eligible": "You meet the requirements and availability",
+      "hardPending": "{count, plural, one {# mandatory requirement pending} other {# mandatory requirements pending}}",
+      "availability": "Not enough available dates for this coverage",
+      "people": "{count, plural, one {# person} other {# people}}",
+      "applied": "Application: {status}"
+    },
+    "detail": {
+      "eyebrow": "Opportunity",
+      "back": "Back to opportunities",
+      "eligibilityTitle": "Your eligibility",
+      "eligible": "You meet the mandatory requirements and the availability.",
+      "notEligible": "You are not eligible for this requirement yet.",
+      "eligibilityNote": "Computed from your passport and your availability. Publishing a requirement does not make you eligible.",
+      "applyTitle": "Application",
+      "publishedBy": "Published by {organization}"
+    },
+    "apply": {
+      "sharedTitle": "What {organization} will see",
+      "sharedQualifications": "Your qualifications relevant to this requirement, with their verification and expiry.",
+      "sharedAvailability": "Your availability during the requirement period.",
+      "sharedIdentity": "Your base and years of experience; your name only if your visibility is «Open» (otherwise an anonymous reference).",
+      "notShared": "Never your contact details or documents: they stay protected.",
+      "consent": "I authorise sharing this data with {organization} for this requirement.",
+      "submit": "Apply",
+      "sending": "Sending…",
+      "sent": "Application sent. The organization will see it in its list.",
+      "toApplications": "See my applications",
+      "blocker": {
+        "REQUIREMENT_NOT_OPEN": "This requirement no longer accepts applications.",
+        "REQUIREMENT_STARTED": "This requirement period has started: it accepts no applications.",
+        "ALREADY_APPLIED": "You already have an application in progress ({status}).",
+        "REAPPLY_NOT_ALLOWED": "Your previous application ended ({status}): you cannot apply to this requirement again.",
+        "NOT_ELIGIBLE": "You do not meet the mandatory requirements or the availability yet: review your eligibility."
+      }
+    }
+  },
+  "applications": {
+    "eyebrow": "My activity",
+    "title": "Your applications.",
+    "description": "The company reviews terms; the technician accepts; the company confirms.",
+    "emptyTitle": "Your next application starts here",
+    "emptyDescription": "Find an opportunity that fits you and apply.",
+    "emptyAction": "See opportunities",
+    "filtersLabel": "Filter by status",
+    "all": "All ({count})",
+    "orgEyebrow": "Applications",
+    "orgDescription": "Shortlist, propose and confirm. On confirmation the server checks qualifications, availability, seats and overlaps again.",
+    "orgEmptyTitle": "No applications yet",
+    "orgEmptyDescription": "When a professional applies to this requirement it will appear here.",
+    "back": "Back to the requirement",
+    "view": "Applications ({count})",
+    "card": {
+      "requirementPaused": "The requirement is paused: no proposals or confirmations.",
+      "requirementClosed": "The requirement is closed.",
+      "requirementCovered": "The requirement is covered.",
+      "reason": "Reason: {reason}",
+      "history": "History",
+      "event": "{status} · {date} · {actor}",
+      "actor": {
+        "technician": "professional",
+        "organization": "organization"
+      }
+    },
+    "proposal": {
+      "title": "Proposal · version {version}",
+      "accepted": "Accepted terms · version {version}",
+      "pending": "Awaiting acceptance",
+      "sent": "Sent on {date}",
+      "notice": "CrewFlex intermediates; the employment or service contract is agreed directly between the parties.",
+      "newVersion": "A new proposal needs a new acceptance; the accepted one stays in the history."
+    },
+    "action": {
+      "shortlisted": "Shortlist",
+      "propose": "Send proposal",
+      "repropose": "New proposal version",
+      "accepted": "Accept proposal",
+      "confirmed": "Confirm assignment",
+      "finished": "Finish",
+      "rejected": "Reject",
+      "withdrawn": "Withdraw application",
+      "cancelAccepted": "Cancel accepted application",
+      "cancelAssignment": "Cancel assignment",
+      "confirm": "Confirm",
+      "back": "Back",
+      "reasonLabel": "Reason (required)",
+      "reasonHint": "The other party will see it. At most 1000 characters.",
+      "acceptTerms": "I accept exactly these terms (version {version}).",
+      "confirmHint": "The server checks qualifications, availability, seats and overlaps again before confirming.",
+      "finishHint": "Available after the last day.",
+      "withdrawHint": "Your application will be withdrawn. You can apply again while the requirement stays open.",
+      "proposeHint": "A fixed copy of the published terms will be sent; the professional must accept it.",
+      "done": "Done: {status}."
+    },
+    "conflict": {
+      "REQUIREMENT_NOT_OPEN": "The requirement is not open (paused, covered or closed).",
+      "REQUIREMENT_STARTED": "The requirement period has started.",
+      "QUALIFICATION_INVALID": "A mandatory qualification is missing, unverified or not valid for the whole period.",
+      "AVAILABILITY_INCOMPLETE": "The availability does not cover the whole period.",
+      "OVERLAPPING_ASSIGNMENT": "The professional already has an overlapping confirmed assignment.",
+      "HEADCOUNT_REACHED": "All seats are already confirmed.",
+      "PROPOSAL_STALE": "The proposal changed: review the new version before accepting.",
+      "PERIOD_NOT_ENDED": "It can only be finished after the last day.",
+      "ALREADY_APPLIED": "There is already an application in progress.",
+      "REAPPLY_NOT_ALLOWED": "Cannot apply again: the previous application ended.",
+      "ACTIVE_COMMITMENTS": "Resolve the active assignments first (accepted or confirmed).",
+      "HAS_APPLICATIONS": "This requirement already received applications: it cannot be edited."
+    },
+    "stale": "The application changed in the meantime. Reload to see its current state."
   }
 }

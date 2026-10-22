@@ -68,8 +68,11 @@ export function AvailabilityManager({
   today,
   rotation,
   version,
+  assignedDays = [],
 }: {
   windows: AvailabilityWindow[];
+  /** UTC days of confirmed assignments (D-06): marked, never locked (T-13). */
+  assignedDays?: string[];
   /** Saved generator pattern (private), or null. */
   rotation: AvailabilityRotation | null;
   /** Calendar version from the last server render; a save from a stale one is refused (W5-03). */
@@ -78,6 +81,7 @@ export function AvailabilityManager({
   /** `YYYY-MM-DD` (UTC), from the server render. */
   today: string;
 }) {
+  const assigned = new Set(assignedDays);
   const t = useTranslations("availability");
   const tRoot = useTranslations();
   const locale = useLocale();
@@ -391,13 +395,18 @@ export function AvailabilityManager({
                 type="button"
                 disabled={pending || !isDayEditable(day.date, today)}
                 onClick={() => onDayClick(day.date)}
-                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}`}
+                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${assigned.has(day.date) ? `, ${t("assigned")}` : ""}`}
                 className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
               >
                 <span className="text-base font-bold tabular-nums">
                   {Number(day.date.slice(-2))}
                 </span>
                 <span className="hidden text-[11px] leading-none sm:block">{dayLabel(state)}</span>
+                {assigned.has(day.date) && (
+                  <span aria-hidden className="text-[11px] leading-none font-bold text-navy">
+                    ● {t("assignedShort")}
+                  </span>
+                )}
               </button>
             );
           })}

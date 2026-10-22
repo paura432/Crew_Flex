@@ -17,6 +17,7 @@ import { AvailabilityMonth } from "@/features/availability/components/Availabili
 import { listOwnDocumentExpiries } from "@/features/documents/api";
 import { IdentityCard } from "@/features/professional/components/IdentityCard";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
+import { ProfessionalActivity } from "@/features/applications/components/ProfessionalActivity";
 import { loadProfessionalContext } from "@/features/professional/load";
 import { formatDate, formatPercent } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
@@ -149,6 +150,7 @@ export default async function ProfessionalOverviewPage({
             detail={tDomain(`visibility.${overview.profile.visibility}.detail`)}
           />
         </dl>
+        <ProfessionalActivity />
         {(awaiting > 0 || rejected > 0) && (
           <Panel title={t("overview.nextTitle")}>
             <ul className="space-y-3 text-sm">

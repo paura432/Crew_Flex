@@ -17,6 +17,8 @@ import {
   openRequirementsValue,
 } from "@/features/requirements/dashboard";
 import { DEFAULT_LIST_LIMIT } from "@/lib/validation/work-requirement";
+import { TERMINAL_APPLICATION_STATUSES, type ApplicationStatus } from "@/domain/applications";
+import { getApplicationCounts } from "@/features/applications/api";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -44,15 +46,24 @@ async function FocusCapacity({ requirement }: { requirement: WorkRequirement }) 
   );
 }
 
+/** Applications still in progress (not finished, rejected, withdrawn or cancelled). */
+const activeApplications = (counts: Partial<Record<ApplicationStatus, number>>) =>
+  Object.entries(counts)
+    .filter(([status]) => !TERMINAL_APPLICATION_STATUSES.includes(status as ApplicationStatus))
+    .reduce((sum, [, n]) => sum + (n ?? 0), 0);
+
 export default async function OrganizationDashboard() {
   const [{ organization, canManage }, t] = await Promise.all([
     requireOrganizationContext(),
     getTranslations("organization.dashboard"),
   ]);
-  const [result, open] = await Promise.all([
+  const [result, open, counts] = await Promise.all([
     listRequirements(organization.id),
     listFocusCandidates(organization.id),
+    canManage ? getApplicationCounts(organization.id) : null,
   ]);
+  // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and confirmed assignments (D-06).
+  const applicationCounts = counts?.ok ? counts.data.counts : null;
   const current = open.ok ? currentAtRequestTime(open.data.requirements) : [];
   const focus = current[0];
 
@@ -92,6 +103,21 @@ export default async function OrganizationDashboard() {
                 )}
                 detail={t("openRequirementsDetail")}
               />
+              {applicationCounts && (
+                <>
+                  <Metric
+                    label={t("applications")}
+                    value={activeApplications(applicationCounts)}
+                    detail={t("toConfirm", { count: applicationCounts.accepted ?? 0 })}
+                    tone={(applicationCounts.accepted ?? 0) > 0 ? "warn" : "neutral"}
+                  />
+                  <Metric
+                    label={t("confirmedAssignments")}
+                    value={applicationCounts.confirmed ?? 0}
+                    detail={t("confirmedOnly")}
+                  />
+                </>
+              )}
             </dl>
           ) : (
             <ApiErrorState error={open.error} requestId={open.requestId} />

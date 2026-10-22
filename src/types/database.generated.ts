@@ -1,11 +1,159 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261022130100. Do not edit by hand.
+// migrations up to 20261022130300. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   public: {
     Tables: {
+      application_events: {
+        Row: {
+          actor: string;
+          application_id: string;
+          created_at: string;
+          from_status: Database["public"]["Enums"]["application_status"] | null;
+          id: string;
+          proposal_id: string | null;
+          seq: number;
+          to_status: Database["public"]["Enums"]["application_status"];
+        };
+        ComputedFields: never;
+        Insert: {
+          actor: string;
+          application_id: string;
+          created_at?: string;
+          from_status?: Database["public"]["Enums"]["application_status"] | null;
+          id?: string;
+          proposal_id?: string | null;
+          seq: number;
+          to_status: Database["public"]["Enums"]["application_status"];
+        };
+        Update: {
+          actor?: string;
+          application_id?: string;
+          created_at?: string;
+          from_status?: Database["public"]["Enums"]["application_status"] | null;
+          id?: string;
+          proposal_id?: string | null;
+          seq?: number;
+          to_status?: Database["public"]["Enums"]["application_status"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "application_events_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: false;
+            referencedRelation: "applications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "application_events_application_id_proposal_id_fkey";
+            columns: ["application_id", "proposal_id"];
+            isOneToOne: false;
+            referencedRelation: "application_proposals";
+            referencedColumns: ["application_id", "id"];
+          },
+        ];
+      };
+      application_proposals: {
+        Row: {
+          application_id: string;
+          created_at: string;
+          id: string;
+          terms: NonNullable<Json>;
+          version: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          application_id: string;
+          created_at?: string;
+          id?: string;
+          terms: NonNullable<Json>;
+          version: number;
+        };
+        Update: {
+          application_id?: string;
+          created_at?: string;
+          id?: string;
+          terms?: NonNullable<Json>;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "application_proposals_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: false;
+            referencedRelation: "applications";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      applications: {
+        Row: {
+          accepted_proposal_id: string | null;
+          created_at: string;
+          current_proposal_id: string | null;
+          id: string;
+          reason: string | null;
+          requirement_id: string;
+          status: Database["public"]["Enums"]["application_status"];
+          technician_profile_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          accepted_proposal_id?: string | null;
+          created_at?: string;
+          current_proposal_id?: string | null;
+          id?: string;
+          reason?: string | null;
+          requirement_id: string;
+          status?: Database["public"]["Enums"]["application_status"];
+          technician_profile_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          accepted_proposal_id?: string | null;
+          created_at?: string;
+          current_proposal_id?: string | null;
+          id?: string;
+          reason?: string | null;
+          requirement_id?: string;
+          status?: Database["public"]["Enums"]["application_status"];
+          technician_profile_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "applications_accepted_proposal_fk";
+            columns: ["id", "accepted_proposal_id"];
+            isOneToOne: false;
+            referencedRelation: "application_proposals";
+            referencedColumns: ["application_id", "id"];
+          },
+          {
+            foreignKeyName: "applications_current_proposal_fk";
+            columns: ["id", "current_proposal_id"];
+            isOneToOne: false;
+            referencedRelation: "application_proposals";
+            referencedColumns: ["application_id", "id"];
+          },
+          {
+            foreignKeyName: "applications_requirement_id_fkey";
+            columns: ["requirement_id"];
+            isOneToOne: false;
+            referencedRelation: "work_requirements";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "applications_technician_profile_id_fkey";
+            columns: ["technician_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
+          },
+        ];
+      };
       audit_events: {
         Row: {
           action: string;
@@ -531,6 +679,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      apply_to_requirement: {
+        Args: {
+          p_idempotency_key: string;
+          p_request_id?: string;
+          p_requirement_id: string;
+          p_share_consent: boolean;
+        };
+        Returns: {
+          id: string;
+          replayed: boolean;
+        }[];
+      };
       availability_version: { Args: Record<PropertyKey, never>; Returns: string };
       can_view_member: { Args: { p_profile_id: string }; Returns: boolean };
       create_availability_window: {
@@ -627,6 +787,48 @@ export type Database = {
         Args: { p_error: string; p_outcome: string; p_tombstone_id: string };
         Returns: undefined;
       };
+      get_application_counts: {
+        Args: { p_organization_id: string };
+        Returns: {
+          status: Database["public"]["Enums"]["application_status"];
+          total: number;
+        }[];
+      };
+      get_my_applications: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          accepted_proposal_id: string;
+          application_id: string;
+          created_at: string;
+          current_proposal: Json;
+          history: Json;
+          reason: string;
+          requirement: Json;
+          requirement_id: string;
+          status: Database["public"]["Enums"]["application_status"];
+          updated_at: string;
+        }[];
+      };
+      get_requirement_applications: {
+        Args: { p_requirement_id: string };
+        Returns: {
+          accepted_proposal_id: string;
+          application_id: string;
+          candidate_availability: Json;
+          candidate_base_location: string;
+          candidate_display_name: string;
+          candidate_pool: string;
+          candidate_qualifications: Json;
+          candidate_ref: string;
+          candidate_years_experience: number;
+          created_at: string;
+          current_proposal: Json;
+          history: Json;
+          reason: string;
+          status: Database["public"]["Enums"]["application_status"];
+          updated_at: string;
+        }[];
+      };
       get_requirement_candidate_pool: {
         Args: { p_requirement_id: string };
         Returns: {
@@ -657,6 +859,40 @@ export type Database = {
       is_feature_enabled: { Args: { p_name: string }; Returns: boolean };
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      list_opportunities: {
+        Args: {
+          p_id?: string;
+          p_limit?: number;
+          p_q?: string;
+          p_urgency?: Database["public"]["Enums"]["requirement_urgency"];
+        };
+        Returns: {
+          created_at: string;
+          ends_at: string;
+          headcount: number;
+          id: string;
+          location: string;
+          organization_name: string;
+          qualifications: Json;
+          shift: Database["public"]["Enums"]["shift_type"];
+          starts_at: string;
+          title: string;
+          total: number;
+          urgency: Database["public"]["Enums"]["requirement_urgency"];
+        }[];
+      };
+      own_candidate_profile: {
+        Args: { p_from?: string; p_to?: string };
+        Returns: {
+          candidate_availability: Json;
+          candidate_base_location: string;
+          candidate_display_name: string;
+          candidate_pool: string;
+          candidate_qualifications: Json;
+          candidate_ref: string;
+          candidate_years_experience: number;
+        }[];
+      };
       own_qualification_reviews: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -692,6 +928,25 @@ export type Database = {
           verification_status: Database["public"]["Enums"]["verification_status"];
         }[];
       };
+      transition_application: {
+        Args: {
+          p_application_id: string;
+          p_expected_updated_at: string;
+          p_idempotency_key: string;
+          p_proposal_id?: string;
+          p_reason?: string;
+          p_request_id?: string;
+          p_to: Database["public"]["Enums"]["application_status"];
+        };
+        Returns: {
+          application_id: string;
+          event_id: string;
+          proposal_id: string;
+          replayed: boolean;
+          status: Database["public"]["Enums"]["application_status"];
+          updated_at: string;
+        }[];
+      };
       update_professional_profile: {
         Args: {
           p_base_location: string;
@@ -704,9 +959,38 @@ export type Database = {
         };
         Returns: string;
       };
+      update_work_requirement: {
+        Args: {
+          p_ends_at: string;
+          p_expected_updated_at: string;
+          p_headcount: number;
+          p_id: string;
+          p_location: string;
+          p_qualifications: Json;
+          p_shift: Database["public"]["Enums"]["shift_type"];
+          p_starts_at: string;
+          p_title: string;
+          p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+        };
+        Returns: {
+          changed: string[];
+          id: string;
+          updated_at: string;
+        }[];
+      };
     };
     Enums: {
       account_type: "professional" | "organization";
+      application_status:
+        | "received"
+        | "shortlisted"
+        | "proposed"
+        | "accepted"
+        | "confirmed"
+        | "finished"
+        | "rejected"
+        | "withdrawn"
+        | "cancelled";
       availability_status: "available" | "unavailable" | "aog_only";
       document_kind: "license" | "course" | "other";
       document_scan_status: "not_scanned" | "clean" | "infected";
@@ -835,6 +1119,17 @@ export const Constants = {
   public: {
     Enums: {
       account_type: ["professional", "organization"],
+      application_status: [
+        "received",
+        "shortlisted",
+        "proposed",
+        "accepted",
+        "confirmed",
+        "finished",
+        "rejected",
+        "withdrawn",
+        "cancelled",
+      ],
       availability_status: ["available", "unavailable", "aog_only"],
       document_kind: ["license", "course", "other"],
       document_scan_status: ["not_scanned", "clean", "infected"],

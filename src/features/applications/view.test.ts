@@ -1,0 +1,40 @@
+import { describe, expect, it } from "vitest";
+import { APPLICATION_TRANSITIONS } from "@/domain/applications";
+import { applicationErrorCopy, transitionLabelKey } from "./view";
+
+describe("applications view helpers", () => {
+  it("one label per transition; re-proposal and the two cancellations are told apart", () => {
+    expect(
+      APPLICATION_TRANSITIONS.map((t) => `${t.actor}:${transitionLabelKey(t)}`).sort(),
+    ).toEqual(
+      [
+        "organization:shortlisted",
+        "organization:rejected",
+        "organization:propose",
+        "organization:rejected",
+        "organization:rejected",
+        "organization:repropose",
+        "organization:confirmed",
+        "organization:cancelAccepted",
+        "organization:finished",
+        "organization:cancelAssignment",
+        "technician:withdrawn",
+        "technician:withdrawn",
+        "technician:accepted",
+        "technician:withdrawn",
+        "technician:withdrawn",
+        "technician:cancelAssignment",
+      ].sort(),
+    );
+  });
+
+  it("a 409 with a reason names the server check; other errors keep the common copy", () => {
+    const t = (key: string) => `«${key}»`;
+    expect(
+      applicationErrorCopy(t, { code: "CONFLICT", message: "x", reason: "HEADCOUNT_REACHED" }).text,
+    ).toBe("«applications.conflict.HEADCOUNT_REACHED»");
+    expect(applicationErrorCopy(t, { code: "FORBIDDEN", message: "x" }).text).toBe(
+      "«api.FORBIDDEN.description»",
+    );
+  });
+});

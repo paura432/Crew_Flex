@@ -3,7 +3,16 @@ import type { WorkRequirement } from "@/domain/work-requirement";
 import { formatDateTime } from "@/i18n/format";
 import { QualificationChips, RequirementStatusChip, UrgencyChip } from "./RequirementBadges";
 
-export async function RequirementFacts({ requirement }: { requirement: WorkRequirement }) {
+/** Facts of a requirement; the status chip only when the status is known (an opportunity is open). */
+export async function RequirementFacts({
+  requirement,
+}: {
+  requirement: Pick<
+    WorkRequirement,
+    "location" | "startsAt" | "endsAt" | "shift" | "headcount" | "urgency" | "qualifications"
+  > &
+    Partial<Pick<WorkRequirement, "status">>;
+}) {
   const [t, tDomain, locale] = await Promise.all([
     getTranslations("organization.detail.facts"),
     getTranslations("domain"),
@@ -20,7 +29,11 @@ export async function RequirementFacts({ requirement }: { requirement: WorkRequi
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <UrgencyChip urgency={requirement.urgency} />
-        <RequirementStatusChip requirement={requirement} />
+        {requirement.status && (
+          <RequirementStatusChip
+            requirement={{ status: requirement.status, endsAt: requirement.endsAt }}
+          />
+        )}
       </div>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
         {facts.map(([label, value]) => (

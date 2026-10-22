@@ -48,7 +48,11 @@
     "documents": "Documentos",
     "recovery": "Restablecer contraseña",
     "admin": "Administración",
-    "recruiter": "Recruiter"
+    "recruiter": "Recruiter",
+    "opportunities": "Oportunidades",
+    "opportunity": "Oportunidad",
+    "applications": "Mis candidaturas",
+    "requirementApplications": "Candidaturas"
   },
   "nav": {
     "organization": "Organización",
@@ -72,7 +76,9 @@
       "organization": "Empresa",
       "recruiter": "Recruiter",
       "admin": "Administración"
-    }
+    },
+    "opportunities": "Oportunidades",
+    "applications": "Mis candidaturas"
   },
   "landing": {
     "eyebrow": "Personal de mantenimiento aeronáutico",
@@ -458,6 +464,17 @@
     "accountType": {
       "professional": "Profesional",
       "organization": "Organización"
+    },
+    "applicationStatus": {
+      "received": "Recibida",
+      "shortlisted": "Preseleccionada",
+      "proposed": "Propuesta",
+      "accepted": "Aceptada",
+      "confirmed": "Confirmada",
+      "finished": "Finalizada",
+      "rejected": "Rechazada",
+      "withdrawn": "Retirada",
+      "cancelled": "Cancelada"
     }
   },
   "professional": {
@@ -550,6 +567,20 @@
       "verified_qualification": "Al menos una cualificación verificada",
       "availability": "Días disponibles publicados",
       "visibility": "Visible para organizaciones (anónimo o abierto)"
+    },
+    "activity": {
+      "label": "Oportunidades y candidaturas",
+      "compatible": "Oportunidades compatibles",
+      "active": "Candidaturas en curso",
+      "toAccept": "Propuestas por aceptar",
+      "confirmed": "Asignaciones confirmadas",
+      "opportunitiesTitle": "Oportunidades para ti",
+      "applicationsTitle": "Mis candidaturas",
+      "viewAll": "Ver todas",
+      "follow": "Ver seguimiento",
+      "noOpportunities": "Todavía no hay oportunidades compatibles.",
+      "noApplications": "Tu próxima candidatura empieza aquí.",
+      "loadError": "No se ha podido cargar ahora. Recarga para reintentar."
     }
   },
   "qualifications": {
@@ -707,7 +738,9 @@
     },
     "statusAogOnly": "Disponible solo para AOG",
     "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos.",
-    "calendarLabel": "Disponibilidad por día"
+    "calendarLabel": "Disponibilidad por día",
+    "assigned": "asignación confirmada",
+    "assignedShort": "Asignada"
   },
   "organization": {
     "dashboard": {
@@ -721,7 +754,11 @@
       "managersOnlyDescription": "Pide el rol de manager a un administrador de la organización.",
       "requirements": "Necesidades",
       "viewAll": "Ver todas",
-      "newRequirement": "Nueva necesidad"
+      "newRequirement": "Nueva necesidad",
+      "applications": "Candidaturas en curso",
+      "toConfirm": "{count, plural, one {# pendiente de confirmar} other {# pendientes de confirmar}}",
+      "confirmedAssignments": "Asignaciones confirmadas",
+      "confirmedOnly": "Solo asignaciones confirmadas"
     },
     "requirements": {
       "title": "Necesidades de personal",
@@ -1197,5 +1234,139 @@
       "soon": "Caduca pronto",
       "expired": "Caducado"
     }
+  },
+  "opportunities": {
+    "eyebrow": "Oportunidades",
+    "title": "Trabajo que encaja contigo.",
+    "description": "Elegibilidad técnica y disponibilidad se evalúan por separado. Un porcentaje no sustituye un requisito obligatorio.",
+    "searchLabel": "Buscar oportunidad",
+    "searchPlaceholder": "Aeronave, base o empresa…",
+    "searchSubmit": "Buscar",
+    "filtersLabel": "Filtrar oportunidades",
+    "filter": {
+      "all": "Todas",
+      "eligible": "Compatibles",
+      "planned": "Planificado",
+      "urgent": "Urgente",
+      "aog": "AOG"
+    },
+    "emptyTitle": "Sin ofertas para este filtro",
+    "emptyDescription": "Prueba otra búsqueda o revisa tu perfil y fechas.",
+    "pagination": "Páginas de oportunidades",
+    "pageInfo": "{total, plural, one {# oportunidad} other {# oportunidades}} · página {page} de {pages}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "cappedNote": "Se han considerado las {cap} necesidades publicadas que empiezan antes.",
+    "orgOnlyTitle": "Las oportunidades son para profesionales",
+    "orgOnlyDescription": "Esta cuenta no tiene pasaporte profesional.",
+    "card": {
+      "eligible": "Cumples requisitos y disponibilidad",
+      "hardPending": "{count, plural, one {# requisito obligatorio pendiente} other {# requisitos obligatorios pendientes}}",
+      "availability": "Fechas insuficientes para esta cobertura",
+      "people": "{count, plural, one {# persona} other {# personas}}",
+      "applied": "Candidatura: {status}"
+    },
+    "detail": {
+      "eyebrow": "Oportunidad",
+      "back": "Volver a oportunidades",
+      "eligibilityTitle": "Tu elegibilidad",
+      "eligible": "Cumples los requisitos obligatorios y la disponibilidad.",
+      "notEligible": "Todavía no eres elegible para esta necesidad.",
+      "eligibilityNote": "Calculada con tu pasaporte y tu disponibilidad. Publicar una necesidad no te hace elegible.",
+      "applyTitle": "Candidatura",
+      "publishedBy": "Publicada por {organization}"
+    },
+    "apply": {
+      "sharedTitle": "Qué verá {organization}",
+      "sharedQualifications": "Tus cualificaciones relevantes para esta necesidad, con su verificación y caducidad.",
+      "sharedAvailability": "Tu disponibilidad durante el periodo de la necesidad.",
+      "sharedIdentity": "Tu base y tus años de experiencia; tu nombre solo si tu visibilidad es «Abierta» (si no, una referencia anónima).",
+      "notShared": "Nunca tu contacto ni tus documentos: siguen protegidos.",
+      "consent": "Autorizo compartir con {organization} estos datos para esta necesidad.",
+      "submit": "Presentar candidatura",
+      "sending": "Enviando…",
+      "sent": "Candidatura enviada. La organización la verá en su lista.",
+      "toApplications": "Ver mis candidaturas",
+      "blocker": {
+        "REQUIREMENT_NOT_OPEN": "Esta necesidad ya no admite candidaturas.",
+        "REQUIREMENT_STARTED": "El periodo de esta necesidad ya ha empezado: no admite candidaturas.",
+        "ALREADY_APPLIED": "Ya tienes una candidatura en curso ({status}).",
+        "REAPPLY_NOT_ALLOWED": "Tu candidatura anterior terminó ({status}): no puedes volver a presentarte a esta necesidad.",
+        "NOT_ELIGIBLE": "Todavía no cumples los requisitos obligatorios o la disponibilidad: revisa tu elegibilidad."
+      }
+    }
+  },
+  "applications": {
+    "eyebrow": "Mi actividad",
+    "title": "Tus candidaturas.",
+    "description": "La empresa revisa condiciones; el técnico acepta; la empresa confirma.",
+    "emptyTitle": "Tu próxima candidatura empieza aquí",
+    "emptyDescription": "Busca una oportunidad que encaje contigo y preséntate.",
+    "emptyAction": "Ver oportunidades",
+    "filtersLabel": "Filtrar por estado",
+    "all": "Todas ({count})",
+    "orgEyebrow": "Candidaturas",
+    "orgDescription": "Preselecciona, propón y confirma. Al confirmar, el servidor vuelve a comprobar cualificaciones, disponibilidad, plazas y solapes.",
+    "orgEmptyTitle": "Sin candidaturas todavía",
+    "orgEmptyDescription": "Cuando un profesional se presente a esta necesidad aparecerá aquí.",
+    "back": "Volver a la necesidad",
+    "view": "Candidaturas ({count})",
+    "card": {
+      "requirementPaused": "La necesidad está pausada: no admite propuestas ni confirmaciones.",
+      "requirementClosed": "La necesidad está cerrada.",
+      "requirementCovered": "La necesidad está cubierta.",
+      "reason": "Motivo: {reason}",
+      "history": "Historial",
+      "event": "{status} · {date} · {actor}",
+      "actor": {
+        "technician": "profesional",
+        "organization": "organización"
+      }
+    },
+    "proposal": {
+      "title": "Propuesta · versión {version}",
+      "accepted": "Condiciones aceptadas · versión {version}",
+      "pending": "Pendiente de aceptación",
+      "sent": "Enviada el {date}",
+      "notice": "CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
+      "newVersion": "Una propuesta nueva necesita otra aceptación; la aceptada se conserva en el historial."
+    },
+    "action": {
+      "shortlisted": "Preseleccionar",
+      "propose": "Enviar propuesta",
+      "repropose": "Nueva versión de la propuesta",
+      "accepted": "Aceptar propuesta",
+      "confirmed": "Confirmar asignación",
+      "finished": "Finalizar",
+      "rejected": "Rechazar",
+      "withdrawn": "Retirar candidatura",
+      "cancelAccepted": "Cancelar candidatura aceptada",
+      "cancelAssignment": "Cancelar asignación",
+      "confirm": "Confirmar",
+      "back": "Volver",
+      "reasonLabel": "Motivo (obligatorio)",
+      "reasonHint": "Lo verá la otra parte. Máximo 1000 caracteres.",
+      "acceptTerms": "Acepto exactamente estas condiciones (versión {version}).",
+      "confirmHint": "El servidor vuelve a comprobar cualificaciones, disponibilidad, plazas y solapes antes de confirmar.",
+      "finishHint": "Disponible después de la última jornada.",
+      "withdrawHint": "Se retirará tu candidatura. Podrás volver a presentarte mientras la necesidad siga abierta.",
+      "proposeHint": "Se enviará una copia fija de las condiciones publicadas; el profesional tendrá que aceptarla.",
+      "done": "Hecho: {status}."
+    },
+    "conflict": {
+      "REQUIREMENT_NOT_OPEN": "La necesidad no está abierta (pausada, cubierta o cerrada).",
+      "REQUIREMENT_STARTED": "El periodo de la necesidad ya ha empezado.",
+      "QUALIFICATION_INVALID": "Falta una cualificación obligatoria verificada y vigente durante todo el periodo.",
+      "AVAILABILITY_INCOMPLETE": "La disponibilidad no cubre todo el periodo.",
+      "OVERLAPPING_ASSIGNMENT": "El profesional ya tiene una asignación confirmada que se solapa.",
+      "HEADCOUNT_REACHED": "Ya están confirmadas todas las plazas.",
+      "PROPOSAL_STALE": "La propuesta ha cambiado: revisa la versión nueva antes de aceptar.",
+      "PERIOD_NOT_ENDED": "Solo se puede finalizar después de la última jornada.",
+      "ALREADY_APPLIED": "Ya hay una candidatura en curso.",
+      "REAPPLY_NOT_ALLOWED": "No se puede volver a presentar: la candidatura anterior terminó.",
+      "ACTIVE_COMMITMENTS": "Resuelve antes las asignaciones activas (aceptadas o confirmadas).",
+      "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar."
+    },
+    "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual."
   }
 }
