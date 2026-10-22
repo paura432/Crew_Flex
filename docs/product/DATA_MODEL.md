@@ -17,6 +17,10 @@ auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualific
                   │                        └──────────1─* availability_windows
                   │
                   └─* organization_members *─1 organizations 1─* work_requirements 1─* work_requirement_qualifications *─1 qualification_types
+                                                                                 │
+technician_profiles 1─* applications *──────────────────────────────────────────┘  (one per technician × requirement, except withdrawn)
+                          ├─* application_proposals (immutable versions, R-08)
+                          └─* application_events (timeline)
 
 audit_events (append-only, written by triggers)
 ```
@@ -118,10 +122,46 @@ Deferred constraint triggers `work_requirements_qualification_invariant` /
 has ≥ 1 `hard` and ≤ 20 qualifications (SQLSTATE 23514), whatever the write path; drafts may be
 incomplete and cancelling/closing is always possible.
 
+**Edit (M05, LOCAL `20261022130300`):** `update_work_requirement(...)` (DEFINER, admin/manager in the body) with
+the creation validations, an optimistic version (`updated_at`, ms, `CF412`) and an audit row `requirement.updated`
+`{fields: [...]}` (names only). Once a requirement **ever received an application** (withdrawn included) its
+business columns and qualifications are frozen for every write path (trigger `guard_requirement_with_applications`,
+SQLSTATE `CFA12`); status changes stay possible. `covered` ↔ `open` follow the confirmed seats and happen only
+inside `transition_application` (transaction-local flag read by `guard_requirement_status`); closing is refused
+while an application is `accepted` or `confirmed` (`CFA11`, T-12).
+
 ### `work_requirement_qualifications`
 
 `id`, `work_requirement_id`, `qualification_type_id` (unique per requirement), `requirement_level`
 (`hard` · `soft`).
+
+### `applications` (`20261022130300`, LOCAL ONLY — D-06, `APPLICATIONS_STATE_MACHINE.md`)
+
+| Column                      | Type                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| `id`                        | uuid PK                                                                                    |
+| `requirement_id`            | → `work_requirements` on delete cascade                                                    |
+| `technician_profile_id`     | → `technician_profiles(profile_id)` on delete cascade                                      |
+| `status`                    | `application_status`: the 9 states of the contract, default `received`                     |
+| `current_proposal_id`       | → own `application_proposals` (composite FK, deferred); required from `proposed` on        |
+| `accepted_proposal_id`      | the version the technician accepted (R-08: stays on v(n) while v(n+1) is `proposed`)       |
+| `reason`                    | text 1–1000, present **exactly** for `rejected` / `cancelled` (T-10: both parties read it) |
+| `created_at` / `updated_at` | timestamptz; `updated_at` (ms) is the optimistic version of every transition               |
+
+One period per application (Q6: the requirement's `[starts_at, ends_at)`). Unique partial index
+`(requirement_id, technician_profile_id) WHERE status <> 'withdrawn'` (Q5, T-09: re-applying only after
+`withdrawn`). An **assignment** is an application in `confirmed` — derived, never a separate table.
+RLS: select own (technician) or platform admin; **no write grant to any API role** (RPCs only); organizations
+read nothing directly.
+
+### `application_proposals` · `application_events` (`20261022130300`, LOCAL ONLY)
+
+Proposals: `id`, `application_id` (cascade), `version` (1, 2, … unique per application), `terms` jsonb = the frozen
+requirement card (`OpportunityRequirement` without id/createdAt; T-11, no free text), `created_at`. A trigger
+refuses every UPDATE (owner included). Events: `id`, `application_id`, `seq` (order), `from_status` (null for the
+application itself), `to_status`, `actor` (`technician` · `organization`, never a person id), `proposal_id`
+(created or accepted by that step), `created_at`; append-only (UPDATE refused). Both are readable by whoever may
+read the application (RLS through the parent) and written only by the RPCs.
 
 ### `professional_documents` (`20261019160000`, LOCAL ONLY — D-10, `DOCUMENT_WALLET.md`)
 
@@ -159,38 +199,54 @@ Both: RLS on, no policy, no grant — DEFINER functions only. Retention rules: `
 `metadata jsonb` (never secrets / documents), `created_at`. **Append-only**: no insert/update/delete
 grant for API roles; rows are written by SECURITY DEFINER triggers.
 
-Actions in use: `requirement.created`, `qualification.verified`, `qualification.reviewed` (platform
+Actions in use: `requirement.created`, `requirement.status_changed` (`{from,to}`; covered ↔ open set by an
+application carry `system: true` and no actor, since `20261022130300`), `requirement.updated` (`{fields}`, M05 edit),
+`application.<status>` (`received` … `cancelled`, one per successful apply/transition, metadata `from`, `to`,
+`actor` side, `requirement_id`, `proposal_version`, `reason_provided`, `request_id` — never the reason; rows whose
+actor is the technician have **no organization id**, so an organization's audit trail never carries an applicant's
+profile id, T-04), `qualification.verified`, `qualification.reviewed` (platform
 review decision with previous/new status, `note_provided`, `request_id`; since `20261015130400`), `qualification.created`,
 `qualification.updated` (type, status or dates changed), `qualification.removed` (owner delete only,
 not account-deletion cascades) — the last three since `20261015120000`; `document.uploaded`,
 `document.updated` (with the changed field names) and `document.deleted` (owner delete only) since
 `20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path); `document.purged`
 (tombstone id, owner id, reason, `object_found`) since `20261019160200`. Reserved: `organization.member_added`; the hiring
-block uses `application.<status>` and `pack.contact_viewed` / `pack.document_url_issued`
+block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / `pack.document_url_issued`
 (`APPLICATIONS_STATE_MACHINE.md` §4.2 — `document.shared` and `candidate_pack.shared` are superseded).
 
 ## Database functions
 
-| Function                                                                                                                                                                                 | Security        | Purpose                                                                                                                                                                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `is_org_member(org)` / `has_org_role(org, roles)` / `is_platform_admin()`                                                                                                                | DEFINER, stable | RLS helpers (avoid recursive policies).                                                                                                                                                                     |
-| `create_work_requirement(...)`                                                                                                                                                           | INVOKER         | Atomic create, RLS enforced.                                                                                                                                                                                |
-| `get_requirement_candidate_pool(requirement_id)`                                                                                                                                         | DEFINER         | Returns **matchable data only** for internal + external pools after checking the caller is admin/manager of the requirement's organization. External selection: hard-eligible first (`20261015130300`).     |
-| `get_requirement_external_pool_summary(requirement_id)`                                                                                                                                  | DEFINER         | Counts only (`prefiltered`, `hard_eligible`, `cap`), same authorization: tells the UI whether the external evaluation is complete.                                                                          |
-| `update_professional_profile(...)`                                                                                                                                                       | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`).                                                                                                          |
-| `create_work_requirement_idempotent` · `create_availability_window` · `declare_qualification` · `replace_availability_days` (`20261019120000`, 3-arg since `20261019140000`, local only) | INVOKER         | Idempotent creates (`Idempotency-Key`), key claimed in the same transaction (`app_private.idempotency_keys`).                                                                                               |
-| `create_professional_document(key, kind, title, storage_path, mime_type, size_bytes, sha256, expires_at, qualification_id)` (`20261019160000`, local only)                               | INVOKER         | Idempotent document create (`document.create`); path must be `<uid>/<key>-<sha256[0:16]>` (`22023` otherwise); `CF409` same key, other request.                                                             |
-| `is_feature_enabled(name)` (`20261019160200`, local only)                                                                                                                                | DEFINER, stable | Whitelisted owner flags (`document_wallet`) for the Next.js server; signed-in users only.                                                                                                                   |
-| `document_maintenance_batch(apply, limit)` · `document_purge_recheck(tombstone)` · `document_purge_record(tombstone, outcome, error)` (`20261019160200`, local only)                     | DEFINER         | Platform admin only (re-checked in the body): orphan reconciliation + due tombstones (≤ 100), per-object re-check under row lock, outcome + audit `document.purged`. Never delete objects themselves.       |
-| `review_qualification(id, decision, expected_updated_at, note, request_id)`                                                                                                              | DEFINER         | Requires `app_private.feature_flags('qualification_review')`; platform admin only, never own, `pending` → `verified`/`rejected` for the version the reviewer saw, row lock, audit `qualification.reviewed`. |
-| `own_qualification_reviews()`                                                                                                                                                            | DEFINER, stable | The caller's own review reasons (the column is not readable otherwise).                                                                                                                                     |
-| `enforce_requirement_qualifications()`                                                                                                                                                   | DEFINER trigger | BR-1.4 at commit (deferred).                                                                                                                                                                                |
-| `handle_new_user()`                                                                                                                                                                      | DEFINER trigger | Creates profile (+ technician profile or organization + admin membership).                                                                                                                                  |
-| `set_updated_at()`                                                                                                                                                                       | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                          |
+| Function                                                                                                                                                                                 | Security        | Purpose                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `is_org_member(org)` / `has_org_role(org, roles)` / `is_platform_admin()`                                                                                                                | DEFINER, stable | RLS helpers (avoid recursive policies).                                                                                                                                                                                   |
+| `create_work_requirement(...)`                                                                                                                                                           | INVOKER         | Atomic create, RLS enforced.                                                                                                                                                                                              |
+| `get_requirement_candidate_pool(requirement_id)`                                                                                                                                         | DEFINER         | Returns **matchable data only** for internal + external pools after checking the caller is admin/manager of the requirement's organization. External selection: hard-eligible first (`20261015130300`).                   |
+| `get_requirement_external_pool_summary(requirement_id)`                                                                                                                                  | DEFINER         | Counts only (`prefiltered`, `hard_eligible`, `cap`), same authorization: tells the UI whether the external evaluation is complete.                                                                                        |
+| `update_professional_profile(...)`                                                                                                                                                       | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`).                                                                                                                        |
+| `create_work_requirement_idempotent` · `create_availability_window` · `declare_qualification` · `replace_availability_days` (`20261019120000`, 3-arg since `20261019140000`, local only) | INVOKER         | Idempotent creates (`Idempotency-Key`), key claimed in the same transaction (`app_private.idempotency_keys`).                                                                                                             |
+| `create_professional_document(key, kind, title, storage_path, mime_type, size_bytes, sha256, expires_at, qualification_id)` (`20261019160000`, local only)                               | INVOKER         | Idempotent document create (`document.create`); path must be `<uid>/<key>-<sha256[0:16]>` (`22023` otherwise); `CF409` same key, other request.                                                                           |
+| `is_feature_enabled(name)` (`20261019160200`, local only)                                                                                                                                | DEFINER, stable | Whitelisted owner flags (`document_wallet`) for the Next.js server; signed-in users only.                                                                                                                                 |
+| `document_maintenance_batch(apply, limit)` · `document_purge_recheck(tombstone)` · `document_purge_record(tombstone, outcome, error)` (`20261019160200`, local only)                     | DEFINER         | Platform admin only (re-checked in the body): orphan reconciliation + due tombstones (≤ 100), per-object re-check under row lock, outcome + audit `document.purged`. Never delete objects themselves.                     |
+| `review_qualification(id, decision, expected_updated_at, note, request_id)`                                                                                                              | DEFINER         | Requires `app_private.feature_flags('qualification_review')`; platform admin only, never own, `pending` → `verified`/`rejected` for the version the reviewer saw, row lock, audit `qualification.reviewed`.               |
+| `own_qualification_reviews()`                                                                                                                                                            | DEFINER, stable | The caller's own review reasons (the column is not readable otherwise).                                                                                                                                                   |
+| `enforce_requirement_qualifications()`                                                                                                                                                   | DEFINER trigger | BR-1.4 at commit (deferred).                                                                                                                                                                                              |
+| `handle_new_user()`                                                                                                                                                                      | DEFINER trigger | Creates profile (+ technician profile or organization + admin membership).                                                                                                                                                |
+| `list_opportunities(id, urgency, q, limit)` (`20261022130200`, local only)                                                                                                               | DEFINER, stable | D-12: published, current requirements (`open`, `ends_at > now()`) for professional accounts only (42501 otherwise), fixed projection (organization name, no ids of people/organizations, no counts), ≤ 200 rows, `total`. |
+| `own_candidate_profile(from, to)` (`20261022130200`, local only)                                                                                                                         | INVOKER, stable | The caller's own matchable data in the candidate-pool column shape (`toCandidate`), for their own eligibility.                                                                                                            |
+| `update_work_requirement(id, expected_updated_at, …, qualifications)` (`20261022130300`, local only)                                                                                     | DEFINER         | M05 edit (see `work_requirements`): admin/manager, creation validations, `CF412`, `CFA12` after any application, `55000` closed, no-op when unchanged, audit `requirement.updated`.                                       |
+| `apply_to_requirement(requirement_id, key, request_id)` (`20261022130300`, local only)                                                                                                   | DEFINER         | ∅ → `received`: technician only, idempotent (`application.create`), open (`CFA01`), not started (`CFA02`), Q5/T-09 (`CFA09`/`CFA10`), eligible now (T-08: `CFA03`/`CFA04`); event + audit.                                |
+| `transition_application(id, to, expected_updated_at, key, reason, proposal_id, request_id)` (`20261022130300`, local only)                                                               | DEFINER         | Every other transition (`app_private.application_transitions`): locks, side from the DB, idempotent (`application.transition`), version `CF412`, proposals, confirm re-checks, covered ↔ open; event + audit.             |
+| `get_requirement_applications(requirement_id)` · `get_my_applications()` · `get_application_counts(org)` (`20261022130300`, local only)                                                  | DEFINER, stable | Org view (admin/manager, pool rules, 42501 otherwise) · own applications with the requirement card · counts per status (admin/manager).                                                                                   |
+| `set_updated_at()`                                                                                                                                                                       | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                                        |
 
 ### `app_private` schema (not exposed by PostgREST)
 
 `feature_flags(name, enabled)` — owner-only switches, no grant (`qualification_review` gates the review RPC).
+`application_transitions(from_status, to_status, actor, reason_required)` — the 16 rows of
+`APPLICATION_TRANSITIONS`, no grant (`20261022130300`). View `requirement_cards` — the one projection of a requirement
+professionals may see (also the proposal terms), no grant (`20261022130200`). `hard_eligibility(requirement, profile)`
+— BR-2/BR-3/BR-4.8 for one professional, the same expressions as `ranked_external_pool` (rls suite W proves the
+three agree), used at apply and confirm.
 `idempotency_keys(actor_id → profiles, operation, key uuid, request_hash, resource_id, created_at)`, PK
 (actor, operation, key), RLS own rows; `ranked_external_pool(requirement_id)` (ordering helper, no grant
 to API roles); `claim_idempotency_key` / `complete_idempotency_key`.

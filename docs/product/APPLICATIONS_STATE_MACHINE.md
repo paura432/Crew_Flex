@@ -1,6 +1,8 @@
-# Applications — state contract (D-06) · DRAFT FOR OWNER REVIEW
+# Applications — state contract (D-06)
 
-> Status: **RATIFIED 2026-10-22 for local implementation** (Q2–Q6 as proposed, **Q7: no `accepted → rejected`**; §4). Owner direction of 2026-10-19 (D-06): a server-controlled,
+> Status: **RATIFIED 2026-10-22 for local implementation** (Q2–Q6 as proposed, **Q7: no `accepted → rejected`**; §4).
+> **IMPLEMENTED locally 2026-10-22** (not deployed): migrations `20261022130200` (opportunities) and
+> `20261022130300` (applications), Edge Functions `opportunities` and `applications`; coverage per test row in §4.2. Owner direction of 2026-10-19 (D-06): a server-controlled,
 > transactional, authorised and audited state machine; the contract and every transition that creates
 > a real commitment between organization and technician are reviewed by the owner **before** any code.
 > Sources: V1.8 `server/app.mjs` `application.transition` (lines 112–125), V1.3 demo, conflict R-08
@@ -58,7 +60,8 @@ stateDiagram-v2
 | * → withdrawn                  | technician                                            | before `confirmed`                                                                                                                                                                                                                                                                                                                                                                                     | status; D-07 access ends for the future                                                  | `application.withdrawn`   |
 | accepted/confirmed → cancelled | org admin/manager; technician for `confirmed` (Q2/Q3) | reason 1–1000 chars                                                                                                                                                                                                                                                                                                                                                                                    | status, reason; assignment released                                                      | `application.cancelled`   |
 
-Every transition: one SQL function (`SECURITY INVOKER` where RLS suffices), `Idempotency-Key`
+Every transition: one SQL function (implemented as **one** `SECURITY DEFINER` RPC, `transition_application`: the
+organization has no SELECT on the row and confirmation reads another person's data, so RLS does not suffice), `Idempotency-Key`
 (replay returns the same result), optimistic version check (`updated_at`), `SELECT … FOR UPDATE` on the
 application and, for confirmation, on the requirement (headcount race, like E-3/review race checks).
 Invalid transition → 409; wrong actor → 403/404 without revealing existence; audit row in the same
@@ -95,8 +98,8 @@ original questions, options and recommendations are kept for the record.
 ### 4.1 Sensitive operations (ratified 2026-10-22; D-07 items still gated)
 
 These transitions create, change or end a real commitment between organization and technician, or
-touch personal data; none is implemented until the owner ratifies its row above **and** the D-07
-items it depends on (`CANDIDATE_PACK.md` §4.1):
+touch personal data. Q2–Q7 and R-08 were ratified on 2026-10-22 and are implemented locally; the items that
+depend on D-07 (identity, contact, documents) are **not** implemented (`CANDIDATE_PACK.md` §4.1):
 
 - `proposed → accepted` and the proposal versioning (R-08 is decided; its implementation follows the
   ratified contract as a whole).
@@ -108,17 +111,17 @@ items it depends on (`CANDIDATE_PACK.md` §4.1):
 - Anything that unlocks identity, contact or documents (D-07, separate consents).
 
 Not sensitive and not blocked by ratification: the pure transition table in `src/domain` with its
-tests, and documentation. **Done 2026-10-20:** `src/domain/applications.ts` (BR-13; rows depending on
-Q2–Q4 carry `pending`), 6 tests — still used by nothing. No migration, Edge Function or UI for applications is written before
-ratification. The `pending` flag marks only the rows whose _shape_ depends on Q2–Q4; rows without it
-(`proposed → accepted`, `accepted → confirmed`, …) are **not activatable either** until the contract as a
-whole is ratified (list above). Q5 (re-application) and Q6 (one period) are constraints, not rows, and are
-not encoded in the table.
+tests, and documentation. **Done 2026-10-20:** `src/domain/applications.ts` (BR-13); **2026-10-22:** the `pending`
+flags were removed with the ratification and the table is mirrored by `app_private.application_transitions`
+(suite V T1). Q5 (re-application) and Q6 (one period) are constraints, not rows: the partial unique index and
+`apply_to_requirement` enforce them.
 
 ### 4.2 Test design prepared before ratification (batch 16, 2026-10-20 — design only, no code)
 
-Each scenario becomes a PGlite case (`tests/db/rls.test.ts`, new suite) plus a local E2E once the SQL
-functions exist. Nothing below is written before §4.1 is ratified.
+Each scenario is a PGlite case in `tests/db/rls.test.ts` suite **V** (2026-10-22, all passing). Local E2E through
+`functions serve` is NOT RUN yet. T4's real race (two sessions) is the `applications` scenario of
+`scripts/local/db-race-check.sh` (NOT RUN by its author: needs the migrations applied to the local stack); PGlite
+proves the sequential case only (the second confirm of the last seat → `HEADCOUNT_REACHED`).
 
 | #   | Scenario                                                                                                                               | Expected                                                                              |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -135,6 +138,14 @@ functions exist. Nothing below is written before §4.1 is ratified.
 | T11 | Audit: every successful transition writes one `application.<to>` row in the same transaction                                           | rollback of the transition removes the audit row                                      |
 | T12 | RLS: technician reads own applications only; org reads applications of its requirements only; nobody deletes                           | 0 rows for others; `DELETE` refused                                                   |
 | T13 | Q5 uniqueness (shape depends on ratification): second active application for the same requirement                                      | 409 / unique violation mapped to `CONFLICT`                                           |
+
+Also in suite V: Q2/Q3/Q4/Q7 rows, apply rules (T-08/T-09: `ALREADY_APPLIED`, `REAPPLY_NOT_ALLOWED` after rejected and
+cancelled, `REQUIREMENT_STARTED`, `QUALIFICATION_INVALID`, `AVAILABILITY_INCOMPLETE`), paused/closed requirements
+(no apply/shortlist/propose/accept; reject/withdraw still possible), closing refused with an accepted or confirmed
+application (`ACTIVE_COMMITMENTS`, T-12), covered ↔ open only through a transition, applicant visibility under the
+pool rules (private applicant → pseudonym), dashboard counts, cascades, the M05 edit freeze (`HAS_APPLICATIONS`).
+Suite **W** proves `app_private.hard_eligibility` (apply/confirm) = `evaluateMatch().eligible` on the professional's
+own data = `ranked_external_pool.hard_eligible`, on 240 randomized profiles × 3 urgencies.
 
 Audit event names, canonical (supersede `document.shared`, `candidate_pack.shared` in `DATA_MODEL.md` and
 `document.accessed` in `04-target-architecture.md`): `application.received|shortlisted|proposed|accepted|
