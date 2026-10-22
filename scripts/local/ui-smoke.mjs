@@ -2438,7 +2438,7 @@ await logout();
     ok(
       "PKG account e: «Type CLOSE» refuses another word; closed → «Account closed.»; sign-in refused",
       closedNotice && /Email or password is incorrect/.test(await mainText()),
-      "",
+      `closed notice ${closedNotice} · alert «${await page.locator("[role=alert]").first().innerText()}»`,
     );
   } else {
     ok("PKG account e: account closure (skipped: no confirmation e-mail)", false, "");
