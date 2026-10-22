@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261023300000. Do not edit by hand.
+// migrations up to 20261023500400. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -369,12 +369,59 @@ export type Database = {
           },
         ];
       };
+      organization_reviews: {
+        Row: {
+          created_at: string;
+          id: string;
+          note: string;
+          organization_id: string;
+          organization_version: string;
+          reviewed_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          note: string;
+          organization_id: string;
+          organization_version: string;
+          reviewed_by?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          note?: string;
+          organization_id?: string;
+          organization_version?: string;
+          reviewed_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_reviews_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "organization_reviews_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       organizations: {
         Row: {
           country: string | null;
           created_at: string;
           id: string;
           name: string;
+          review_status: Database["public"]["Enums"]["organization_review_status"];
+          reviewed_at: string | null;
+          tax_address: string | null;
+          tax_id: string | null;
           type: Database["public"]["Enums"]["organization_type"];
           updated_at: string;
         };
@@ -384,6 +431,10 @@ export type Database = {
           created_at?: string;
           id?: string;
           name: string;
+          review_status?: Database["public"]["Enums"]["organization_review_status"];
+          reviewed_at?: string | null;
+          tax_address?: string | null;
+          tax_id?: string | null;
           type?: Database["public"]["Enums"]["organization_type"];
           updated_at?: string;
         };
@@ -392,6 +443,10 @@ export type Database = {
           created_at?: string;
           id?: string;
           name?: string;
+          review_status?: Database["public"]["Enums"]["organization_review_status"];
+          reviewed_at?: string | null;
+          tax_address?: string | null;
+          tax_id?: string | null;
           type?: Database["public"]["Enums"]["organization_type"];
           updated_at?: string;
         };
@@ -520,36 +575,146 @@ export type Database = {
         };
         Relationships: [];
       };
+      technician_organization_blocks: {
+        Row: {
+          created_at: string;
+          organization_id: string;
+          technician_profile_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          organization_id: string;
+          technician_profile_id: string;
+        };
+        Update: {
+          created_at?: string;
+          organization_id?: string;
+          technician_profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "technician_organization_blocks_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "technician_organization_blocks_technician_profile_id_fkey";
+            columns: ["technician_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
+          },
+        ];
+      };
+      technician_private_details: {
+        Row: {
+          created_at: string;
+          current_employer_id: string | null;
+          min_rate: number | null;
+          phone: string | null;
+          profile_id: string;
+          rate_unit: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          current_employer_id?: string | null;
+          min_rate?: number | null;
+          phone?: string | null;
+          profile_id: string;
+          rate_unit?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          current_employer_id?: string | null;
+          min_rate?: number | null;
+          phone?: string | null;
+          profile_id?: string;
+          rate_unit?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "technician_private_details_current_employer_id_fkey";
+            columns: ["current_employer_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "technician_private_details_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
+          },
+        ];
+      };
       technician_profiles: {
         Row: {
+          aircraft: string[];
+          base_country: string | null;
           base_location: string | null;
+          categories: string[];
           created_at: string;
           current_status: Database["public"]["Enums"]["technician_status"];
+          engines: string[];
+          english_level: string | null;
+          general_restrictions: string | null;
           mobility: Database["public"]["Enums"]["mobility"];
+          own_tools: boolean;
+          primary_category: string | null;
           profile_id: string;
+          skills: string[];
           updated_at: string;
           visibility: Database["public"]["Enums"]["profile_visibility"];
+          work_permits: string[];
           years_experience: number | null;
         };
         ComputedFields: never;
         Insert: {
+          aircraft?: string[];
+          base_country?: string | null;
           base_location?: string | null;
+          categories?: string[];
           created_at?: string;
           current_status?: Database["public"]["Enums"]["technician_status"];
+          engines?: string[];
+          english_level?: string | null;
+          general_restrictions?: string | null;
           mobility?: Database["public"]["Enums"]["mobility"];
+          own_tools?: boolean;
+          primary_category?: string | null;
           profile_id: string;
+          skills?: string[];
           updated_at?: string;
           visibility?: Database["public"]["Enums"]["profile_visibility"];
+          work_permits?: string[];
           years_experience?: number | null;
         };
         Update: {
+          aircraft?: string[];
+          base_country?: string | null;
           base_location?: string | null;
+          categories?: string[];
           created_at?: string;
           current_status?: Database["public"]["Enums"]["technician_status"];
+          engines?: string[];
+          english_level?: string | null;
+          general_restrictions?: string | null;
           mobility?: Database["public"]["Enums"]["mobility"];
+          own_tools?: boolean;
+          primary_category?: string | null;
           profile_id?: string;
+          skills?: string[];
           updated_at?: string;
           visibility?: Database["public"]["Enums"]["profile_visibility"];
+          work_permits?: string[];
           years_experience?: number | null;
         };
         Relationships: [
@@ -623,6 +788,48 @@ export type Database = {
           },
           {
             foreignKeyName: "technician_qualifications_technician_profile_id_fkey";
+            columns: ["technician_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
+          },
+        ];
+      };
+      technician_type_ratings: {
+        Row: {
+          aircraft: string;
+          category: string;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          restrictions: string | null;
+          technician_profile_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          aircraft: string;
+          category: string;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          restrictions?: string | null;
+          technician_profile_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          aircraft?: string;
+          category?: string;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          restrictions?: string | null;
+          technician_profile_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "technician_type_ratings_technician_profile_id_fkey";
             columns: ["technician_profile_id"];
             isOneToOne: false;
             referencedRelation: "technician_profiles";
@@ -883,6 +1090,17 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      get_platform_summary: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          active_requirements: number;
+          aog_with_vacancies: number;
+          demand: Json;
+          organizations: number;
+          technicians: number;
+          working_now: number;
+        }[];
+      };
       get_requirement_applications: {
         Args: { p_requirement_id: string };
         Returns: {
@@ -901,6 +1119,18 @@ export type Database = {
           reason: string;
           status: Database["public"]["Enums"]["application_status"];
           updated_at: string;
+        }[];
+      };
+      get_requirement_candidate_passports: {
+        Args: { p_requirement_id: string };
+        Returns: {
+          aircraft: string[];
+          candidate_ref: string;
+          categories: string[];
+          english_level: string;
+          has_restrictions: boolean;
+          primary_category: string;
+          work_permits: string[];
         }[];
       };
       get_requirement_candidate_pool: {
@@ -933,6 +1163,13 @@ export type Database = {
       is_feature_enabled: { Args: { p_name: string }; Returns: boolean };
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      list_blockable_organizations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          name: string;
+        }[];
+      };
       list_opportunities: {
         Args: {
           p_id?: string;
@@ -988,6 +1225,19 @@ export type Database = {
           windows_created: number;
         }[];
       };
+      review_organization: {
+        Args: {
+          p_expected_updated_at: string;
+          p_note: string;
+          p_organization_id: string;
+          p_request_id?: string;
+        };
+        Returns: {
+          id: string;
+          review_status: Database["public"]["Enums"]["organization_review_status"];
+          reviewed_at: string;
+        }[];
+      };
       review_qualification: {
         Args: {
           p_decision: Database["public"]["Enums"]["verification_status"];
@@ -1001,6 +1251,10 @@ export type Database = {
           reviewed_at: string;
           verification_status: Database["public"]["Enums"]["verification_status"];
         }[];
+      };
+      save_professional_passport: {
+        Args: { p_expected_updated_at?: string; p_passport: Json };
+        Returns: string;
       };
       transition_application: {
         Args: {
@@ -1020,6 +1274,18 @@ export type Database = {
           status: Database["public"]["Enums"]["application_status"];
           updated_at: string;
         }[];
+      };
+      update_organization_profile: {
+        Args: {
+          p_country: string;
+          p_expected_updated_at: string;
+          p_name: string;
+          p_organization_id: string;
+          p_tax_address: string;
+          p_tax_id: string;
+          p_type: Database["public"]["Enums"]["organization_type"];
+        };
+        Returns: string;
       };
       update_professional_profile: {
         Args: {
@@ -1082,10 +1348,11 @@ export type Database = {
         | "aog_intervention"
         | "workshop";
       mobility: "local" | "national" | "international";
+      organization_review_status: "pending" | "reviewed";
       organization_role: "member" | "manager" | "admin";
       organization_type: "mro" | "airline" | "operator" | "staffing_agency" | "other";
       platform_role: "user" | "platform_admin";
-      profile_visibility: "private" | "anonymous" | "open";
+      profile_visibility: "private" | "anonymous" | "verified_orgs" | "open";
       qualification_category: "LICENSE" | "TYPE_RATING" | "TRAINING" | "APPROVAL" | "SKILL";
       qualification_status: "active" | "withdrawn";
       requirement_level: "hard" | "soft";
@@ -1236,10 +1503,11 @@ export const Constants = {
         "workshop",
       ],
       mobility: ["local", "national", "international"],
+      organization_review_status: ["pending", "reviewed"],
       organization_role: ["member", "manager", "admin"],
       organization_type: ["mro", "airline", "operator", "staffing_agency", "other"],
       platform_role: ["user", "platform_admin"],
-      profile_visibility: ["private", "anonymous", "open"],
+      profile_visibility: ["private", "anonymous", "verified_orgs", "open"],
       qualification_category: ["LICENSE", "TYPE_RATING", "TRAINING", "APPROVAL", "SKILL"],
       qualification_status: ["active", "withdrawn"],
       requirement_level: ["hard", "soft"],
