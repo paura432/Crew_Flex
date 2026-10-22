@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261022130300. Do not edit by hand.
+// migrations up to 20261023300000. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
