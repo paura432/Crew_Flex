@@ -473,3 +473,9 @@ import_map = "./functions/deno.json"
 [functions.applications]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+# Local only, not deployed: the personal logbook (M14, N-12), owner-only. Deploy only after migration
+# 20261023200000.
+[functions.professional-logbook]
+verify_jwt = false
+import_map = "./functions/deno.json"
