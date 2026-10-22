@@ -967,7 +967,8 @@
         "starts": "Inicio",
         "ends": "Fin",
         "shift": "Turno",
-        "headcount": "Personas"
+        "headcount": "Personas",
+        "timeZone": "Zona horaria"
       },
       "close": {
         "action": "Cerrar necesidad",
@@ -982,9 +983,86 @@
         "pausedDone": "Necesidad pausada: ya no se publica ni se evalúa.",
         "resumedDone": "Necesidad reanudada: vuelve a publicarse.",
         "pausedNote": "Esta necesidad está pausada: no se publica como oportunidad ni se evalúan candidatos. Reanúdala para volver a publicarla.",
-        "conflict": "La necesidad cambió mientras tanto. Recarga para ver su estado actual."
+        "conflict": "La necesidad cambió mientras tanto. Recarga para ver su estado actual.",
+        "publish": "Publicar",
+        "publishedDone": "Necesidad publicada: ya aparece en «Oportunidades»."
       },
-      "edit": "Editar necesidad"
+      "edit": "Editar necesidad",
+      "terms": {
+        "rate": "Tarifa",
+        "rateHourly": "{hourly} / h",
+        "rateValue": "{hourly} / h · {daily} / día",
+        "shiftDuration": "Turno y duración",
+        "shiftDurationValue": "{shift} · {hours} h",
+        "contract": "Contrato",
+        "contractValue": "{contract} · EUR",
+        "contractType": {
+          "contractor": "Contractor",
+          "temporary": "Temporal",
+          "permanent": "Permanente",
+          "project": "Por proyecto"
+        },
+        "perDiemOvertime": "Dietas / horas extra",
+        "perDiemValue": "{amount} / día",
+        "overtimeValue": "{amount} / h extra",
+        "coverage": "Cobertura",
+        "coverageValue": "Bloque completo: una candidatura cubre todas las jornadas",
+        "arrival": "Incorporación",
+        "mobilization": "Movilización máxima",
+        "hoursValue": "{hours} h",
+        "budget": "Presupuesto",
+        "budgetMandatory": "requisito obligatorio",
+        "budgetNegotiable": "preferencia negociable",
+        "logisticsTitle": "Logística",
+        "logistics": {
+          "flights": {
+            "included": "Vuelos: incluido",
+            "excluded": "Vuelos: no incluido"
+          },
+          "accommodation": {
+            "included": "Alojamiento: incluido",
+            "excluded": "Alojamiento: no incluido"
+          },
+          "localTransport": {
+            "included": "Transporte local: incluido",
+            "excluded": "Transporte local: no incluido"
+          },
+          "meals": {
+            "included": "Comidas: incluidas",
+            "excluded": "Comidas: no incluidas"
+          },
+          "ownTools": "Herramientas propias requeridas",
+          "companyTools": "Herramientas de empresa"
+        },
+        "baseAmount": "{hours} h × {rate}/h = {amount} para el técnico",
+        "baseHoursSummary": "{hours} horas base en {count, plural, one {# jornada} other {# jornadas}}",
+        "shiftsTitle": "Jornadas ({count})",
+        "coverageTitle": "Cobertura por jornada",
+        "shiftLine": "{span} · {hours} h",
+        "shiftCoverage": "{date} · {filled}/{total} plazas confirmadas",
+        "notice": "Valores informativos de la organización: Crew Flex no gestiona cobros, comisiones ni pagos."
+      },
+      "archive": {
+        "action": "Archivar",
+        "explainClosed": "Archivar la quita de tu lista de necesidades. No se puede deshacer: seguirá en «Ver archivadas» y en el historial.",
+        "explainDraft": "Archivar un borrador lo cierra: ya no se podrá publicar. No se puede deshacer.",
+        "confirm": "Sí, archivarla",
+        "cancel": "Cancelar",
+        "done": "Necesidad archivada.",
+        "chip": "Archivada",
+        "note": "Esta necesidad está archivada.",
+        "listLink": "Ver archivadas",
+        "listBack": "Ver necesidades sin archivar",
+        "listTitle": "Necesidades archivadas",
+        "emptyTitle": "No hay necesidades archivadas"
+      },
+      "duplicate": "Duplicar",
+      "activeApplicationsNote": "Con candidaturas activas, duplica para cambiar la oferta. Puedes revisar la propuesta antes de confirmar.",
+      "draft": {
+        "note": "Este borrador no se publica ni se evalúa. Complétalo y publícalo cuando esté listo.",
+        "complete": "Completar y publicar",
+        "incomplete": "Faltan datos para publicar: completa el borrador con «Completar y publicar»."
+      }
     },
     "new": {
       "title": "Nueva necesidad de personal",
@@ -1002,21 +1080,88 @@
         "urgency": "Urgencia",
         "starts": "Inicio (UTC)",
         "ends": "Fin (UTC)",
-        "shift": "Turno"
+        "shift": "Turno",
+        "country": "País del trabajo",
+        "timeZone": "Zona IANA de la base",
+        "notStated": "Sin indicar",
+        "description": "Descripción y condiciones"
       },
       "titlePlaceholder": "B1.1 · Refuerzo de línea A320",
       "locationPlaceholder": "Madrid (MAD)",
       "qualificationsIntro": "Los requisitos <b>obligatorios</b> descartan candidatos; los <b>deseables</b> solo afectan a la puntuación. Hace falta al menos un requisito obligatorio.",
       "levelAria": "Nivel del requisito {code}",
-      "submit": "Crear necesidad",
-      "submitting": "Creando…",
+      "submit": "Publicar necesidad",
+      "submitting": "Publicando…",
       "forbidden": "Tu rol no puede crear necesidades en esta organización.",
       "unreachable": "No se ha podido contactar con el servicio. Tus datos siguen aquí; reintenta.",
       "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
       "editSubmit": "Guardar cambios",
       "editSubmitting": "Guardando…",
       "hasApplications": "Esta necesidad ya recibió candidaturas: no se puede editar.",
-      "stale": "La necesidad cambió mientras la editabas. Recarga para ver la versión actual; no se ha guardado nada."
+      "stale": "La necesidad cambió mientras la editabas. Recarga para ver la versión actual; no se ha guardado nada.",
+      "sectionTerms": "04 · Condiciones y logística",
+      "timeZoneHint": "Solo distingue las fechas locales de las jornadas; las horas se muestran en UTC.",
+      "descriptionHint": "Opcional, hasta 4000 caracteres. La verán los profesionales en la oportunidad.",
+      "defaults": {
+        "arrival": "Antes del inicio del turno"
+      },
+      "shifts": {
+        "title": "Jornadas",
+        "intro": "Sin jornadas, la necesidad es un periodo continuo. Para varios días, añade cada jornada (horas en UTC): el periodo pasa a ir del inicio de la primera al fin de la última. Una candidatura cubre todas las jornadas.",
+        "start": "Inicio de la jornada (UTC)",
+        "end": "Fin de la jornada (UTC)",
+        "hours": "Horas base",
+        "add": "Añadir jornada",
+        "row": "{span} · {hours} h",
+        "remove": "Quitar",
+        "removeAria": "Quitar la jornada {span}",
+        "summary": "<b>{hours} horas base</b> en {count, plural, one {# jornada} other {# jornadas}} de la lista. Solo se publican las jornadas añadidas.",
+        "periodFromShifts": "El periodo se calcula con las jornadas."
+      },
+      "terms": {
+        "hourlyRate": "EUR por hora",
+        "shiftHours": "Horas por jornada",
+        "overtimeRate": "EUR por hora extra",
+        "perDiem": "Dietas EUR por día",
+        "contractType": "Contrato",
+        "maxMobilizationHours": "Movilización máxima (horas)",
+        "arrival": "Incorporación",
+        "budgetMandatory": "Tratar presupuesto como requisito obligatorio",
+        "flights": "Vuelos incluidos",
+        "accommodation": "Alojamiento incluido",
+        "localTransport": "Transporte local incluido",
+        "meals": "Comidas incluidas",
+        "ownTools": "Herramientas propias requeridas"
+      },
+      "summary": {
+        "title": "Revisar antes de publicar",
+        "untitled": "Nueva necesidad",
+        "place": "{base} · {country}",
+        "dayRate": "{amount} / jornada de {hours} h",
+        "requiredShifts": "{count, plural, one {# jornada requerida} other {# jornadas requeridas}}",
+        "viable": "{count, plural, one {# candidato con requisitos y bloques viables} other {# candidatos con requisitos y bloques viables}}",
+        "viableNeedsHard": "Añade un requisito obligatorio y el periodo para estimar los candidatos viables.",
+        "viableLoading": "Calculando los candidatos viables…",
+        "viableUnavailable": "No se ha podido calcular el número de candidatos viables.",
+        "draftNote": "Un borrador puede estar incompleto: no se publica ni se evalúa. Al publicarlo se aplican todas las validaciones."
+      },
+      "preview": {
+        "open": "Previsualizar requisitos",
+        "title": "Vista previa",
+        "close": "Cerrar vista previa",
+        "noQualifications": "Todavía no hay cualificaciones."
+      },
+      "autosave": {
+        "found": "Tienes un borrador sin guardar en este navegador ({date}).",
+        "restore": "Recuperar",
+        "discard": "Descartar"
+      },
+      "saveDraft": "Guardar borrador",
+      "savingDraft": "Guardando borrador…",
+      "saveAndPublish": "Guardar y publicar",
+      "copyPrefix": "Copia · ",
+      "copyTitle": "Duplicar necesidad",
+      "copyDescription": "Copia de «{title}»: revisa las fechas (empiezan dentro de 45 días) y guárdala como borrador o publícala. Nada se guarda hasta entonces."
     },
     "matches": {
       "eyebrow": "Red externa · vista previa del matching",
@@ -1060,7 +1205,8 @@
       },
       "notEvaluablePaused": "Necesidad pausada",
       "notEvaluableClosed": "Necesidad cerrada",
-      "notEvaluableDescription": "Solo se evalúan candidatos para necesidades publicadas. Reanuda la necesidad para volver a verlos."
+      "notEvaluableDescription": "Solo se evalúan candidatos para necesidades publicadas. Reanuda la necesidad para volver a verlos.",
+      "notEvaluableDraft": "Este borrador no se evalúa"
     },
     "workforce": {
       "title": "Plantilla interna",
@@ -1666,7 +1812,11 @@
       "hardPending": "{count, plural, one {# requisito obligatorio pendiente} other {# requisitos obligatorios pendientes}}",
       "availability": "Fechas insuficientes para esta cobertura",
       "people": "{count, plural, one {# persona} other {# personas}}",
-      "applied": "Candidatura: {status}"
+      "applied": "Candidatura: {status}",
+      "rate": "{daily} / día · {hourly} / h",
+      "rateHourly": "{hourly} / h",
+      "shifts": "{count, plural, one {# jornada} other {# jornadas}} · {hours} horas base",
+      "fullBlock": "Bloque completo"
     },
     "detail": {
       "eyebrow": "Oportunidad",

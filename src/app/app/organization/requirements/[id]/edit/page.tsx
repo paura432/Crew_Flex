@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { listRequirementApplications } from "@/features/applications/api";
 import { listQualificationTypes } from "@/features/qualifications/api";
@@ -63,7 +62,11 @@ export default async function EditRequirementPage({
 
   return (
     <>
-      <PageHeader eyebrow={t("eyebrow")} title={t("edit")} description={requirement.title} />
+      <PageHeader
+        eyebrow={t("eyebrow")}
+        title={requirement.status === "draft" ? t("draft.complete") : t("edit")}
+        description={requirement.title}
+      />
       {locked ? (
         <StateMessage
           title={requirement.status === "closed" ? t("close.closedNote") : tNew("hasApplications")}
@@ -76,13 +79,11 @@ export default async function EditRequirementPage({
           description={tCommon("reload")}
         />
       ) : (
-        <Panel>
-          <RequirementForm
-            organizationId={organization.id}
-            qualificationTypes={qualificationTypes}
-            initial={requirement}
-          />
-        </Panel>
+        <RequirementForm
+          organizationId={organization.id}
+          qualificationTypes={qualificationTypes}
+          initial={requirement}
+        />
       )}
     </>
   );

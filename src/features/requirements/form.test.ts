@@ -1,0 +1,184 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import type { WorkRequirement } from "@/domain/work-requirement";
+import { createWorkRequirementInput } from "@/lib/validation/work-requirement";
+import {
+  autosaveKey,
+  draftFromRequirement,
+  draftPeriod,
+  draftToFields,
+  emptyDraft,
+  errorField,
+  mobilizationFor,
+  nextDayInputs,
+  readAutosave,
+  shiftFromInputs,
+  toBuilderErrors,
+} from "./form";
+
+const ORG = "22222222-2222-4222-8222-000000000001";
+const B11 = "11111111-1111-4111-8111-000000000001";
+
+describe("requirement builder form (v2-09/10/12/14)", () => {
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-22T12:00:00Z"));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it("a new requirement starts with the v1.8 defaults and they reach the payload", () => {
+    const draft = {
+      ...emptyDraft("Antes del inicio del turno"),
+      title: "B1.1 · A320 three days",
+      location: "Madrid (MAD)",
+      qualifications: [[B11, "hard"]] as [string, "hard"][],
+      shifts: [10, 11, 12].map((d) => ({
+        startsAt: `2026-11-${d}T08:00:00.000Z`,
+        endsAt: `2026-11-${d}T16:00:00.000Z`,
+        baseHours: 8,
+      })),
+    };
+    const fields = draftToFields(draft);
+    expect(fields).toMatchObject({
+      country: "ES",
+      timeZone: "Europe/Madrid",
+      startsAt: "2026-11-10T08:00:00.000Z",
+      endsAt: "2026-11-12T16:00:00.000Z",
+      conditions: {
+        hourlyRate: 50,
+        shiftHours: 8,
+        overtimeRate: 60,
+        perDiem: 30,
+        contractType: "contractor",
+        maxMobilizationHours: 48,
+        arrival: "Antes del inicio del turno",
+        budgetMandatory: false,
+        flights: true,
+        accommodation: true,
+        localTransport: true,
+        meals: false,
+        ownTools: false,
+      },
+    });
+    expect(createWorkRequirementInput.safeParse({ organizationId: ORG, ...fields }).success).toBe(
+      true,
+    );
+  });
+
+  it("the period is the envelope of the shifts, or the two period inputs without shifts", () => {
+    const draft = { ...emptyDraft(""), startsAt: "2026-12-01T08:00", endsAt: "2026-12-03T08:00" };
+    expect(draftPeriod(draft)).toEqual({
+      startsAt: "2026-12-01T08:00:00Z",
+      endsAt: "2026-12-03T08:00:00Z",
+    });
+    const withShifts = {
+      ...draft,
+      shifts: [
+        { startsAt: "2026-12-05T06:00:00.000Z", endsAt: "2026-12-05T14:00:00.000Z", baseHours: 8 },
+        { startsAt: "2026-12-04T06:00:00.000Z", endsAt: "2026-12-04T14:00:00.000Z", baseHours: 8 },
+      ],
+    };
+    expect(draftPeriod(withShifts)).toEqual({
+      startsAt: "2026-12-04T06:00:00.000Z",
+      endsAt: "2026-12-05T14:00:00.000Z",
+    });
+  });
+
+  it("empty and unstated terms are omitted; decimals accept a comma", () => {
+    const draft = emptyDraft("");
+    draft.conditions = { ...draft.conditions, hourlyRate: "52,5", perDiem: "", arrival: "  " };
+    draft.country = "";
+    const fields = draftToFields(draft);
+    expect(fields.conditions).toMatchObject({ hourlyRate: 52.5 });
+    expect(fields.conditions).not.toHaveProperty("perDiem");
+    expect(fields.conditions).not.toHaveProperty("arrival");
+    expect(fields).not.toHaveProperty("country");
+    expect(fields).not.toHaveProperty("shifts");
+    expect(fields).not.toHaveProperty("description");
+  });
+
+  it("v1.8 mobilisation: 12 h for AOG, 48 h otherwise, while the value is one of those defaults", () => {
+    expect(mobilizationFor("aog", "48")).toBe("12");
+    expect(mobilizationFor("planned", "12")).toBe("48");
+    expect(mobilizationFor("aog", "24")).toBe("24");
+  });
+
+  it("the shift inputs make a shift only when complete; the next one moves a day", () => {
+    expect(
+      shiftFromInputs({ startsAt: "2026-11-10T08:00", endsAt: "", baseHours: "8" }),
+    ).toBeNull();
+    const shift = shiftFromInputs({
+      startsAt: "2026-11-10T08:00",
+      endsAt: "2026-11-10T16:00",
+      baseHours: "7,5",
+    });
+    expect(shift).toEqual({
+      startsAt: "2026-11-10T08:00:00Z",
+      endsAt: "2026-11-10T16:00:00Z",
+      baseHours: 7.5,
+    });
+    expect(nextDayInputs(shift!, "7,5")).toEqual({
+      startsAt: "2026-11-11T08:00",
+      endsAt: "2026-11-11T16:00",
+      baseHours: "7,5",
+    });
+  });
+
+  it("a saved requirement round-trips; terms it never stated stay empty", () => {
+    const saved: WorkRequirement = {
+      id: "r1",
+      organizationId: ORG,
+      title: "Legacy need",
+      location: "Lisboa (LIS)",
+      startsAt: "2026-12-01T08:00:00.000Z",
+      endsAt: "2026-12-03T08:00:00.000Z",
+      shift: "day",
+      headcount: 2,
+      urgency: "planned",
+      status: "open",
+      createdAt: "2026-10-01T08:00:00.000Z",
+      qualifications: [{ qualificationTypeId: B11, code: "B1.1", name: "B1.1", level: "hard" }],
+      country: null,
+      conditions: null,
+    };
+    const draft = draftFromRequirement(saved);
+    expect([draft.country, draft.conditions.hourlyRate, draft.conditions.flights]).toEqual([
+      "",
+      "",
+      false,
+    ]);
+    expect(draftToFields(draft)).toMatchObject({
+      startsAt: "2026-12-01T08:00:00Z",
+      headcount: 2,
+      qualifications: [{ qualificationTypeId: B11, level: "hard" }],
+    });
+  });
+
+  it("condition errors keep their own field; other paths map to the top-level field", () => {
+    expect(errorField("conditions.hourlyRate")).toBe("conditions.hourlyRate");
+    expect(errorField("shifts.2")).toBe("shifts");
+    expect(errorField("title")).toBe("title");
+    const parsed = createWorkRequirementInput.safeParse({
+      organizationId: ORG,
+      ...draftToFields({
+        ...emptyDraft(""),
+        conditions: { ...emptyDraft("").conditions, hourlyRate: "0" },
+      }),
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success)
+      expect(toBuilderErrors(parsed.error)["conditions.hourlyRate"]).toBe(
+        "v.requirement.conditions.hourlyRate",
+      );
+  });
+
+  it("an autosave is per organization and requirement, and untrusted storage is refused", () => {
+    expect(autosaveKey(ORG)).toBe(`crewflex:requirement-draft:${ORG}:new`);
+    expect(autosaveKey(ORG, "r1")).toBe(`crewflex:requirement-draft:${ORG}:r1`);
+    const good = JSON.stringify({ savedAt: "2026-10-22T10:00:00.000Z", draft: emptyDraft("") });
+    expect(readAutosave(good)?.draft.country).toBe("ES");
+    for (const bad of [null, "", "{", "[]", '{"savedAt":1}', '{"savedAt":"x","draft":{}}'])
+      expect(readAutosave(bad)).toBeNull();
+  });
+});

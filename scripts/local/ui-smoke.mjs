@@ -2175,6 +2175,139 @@ for (const email of ["delta@crewflex.test", "manager.mro@crewflex.test"]) {
   await asSeedUser(email, "notifications", { method: "PATCH", body: { all: true } });
 }
 
+// PKG requirement-builder (v2-09/10/12/13/14, defaults T-60…T-66): shifts, country and zone, terms without real
+// money, «Review before publishing» with the live count and the preview, autosave, a draft saved then published,
+// the opportunity card, duplicate (nothing saved) and close + archive (one way). The need it creates ends closed
+// and archived (requirements are never deleted), so nothing published is left behind.
+const rbTitle = `Local UI check · builder ${Date.now()}`;
+const rbDay = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements/new`);
+await page.waitForLoadState("networkidle");
+await page.evaluate(() => localStorage.clear());
+await page.fill("#title", rbTitle);
+await page.waitForTimeout(800); // v1.8 `useDraft`: autosaved after 350 ms
+await page.reload();
+await page.waitForLoadState("networkidle");
+await page.getByRole("button", { name: "Restore" }).click();
+ok(
+  "prb1 autosave: a reload offers the unsaved draft and «Restore» brings it back",
+  (await page.locator("#title").inputValue()) === rbTitle,
+);
+await page.fill("#location", "Madrid (MAD)");
+for (const n of [40, 41, 42]) {
+  await page.fill("#nextShiftStart", `${rbDay(n)}T08:00`);
+  await page.fill("#nextShiftEnd", `${rbDay(n)}T16:00`);
+  await page.fill("#nextShiftHours", "8");
+  await page.getByRole("button", { name: "Add shift" }).click();
+}
+await page.locator("label:has-text('B1.1')").first().click();
+await page.locator("label:has-text('TR-A320')").first().click();
+const rbAside = page.getByRole("complementary", { name: "Review before publishing" });
+await rbAside
+  .getByText(/candidates? with viable requirements and blocks/)
+  .waitFor({ timeout: 15_000 })
+  .catch(() => {});
+const rbAsideText = await rbAside.innerText();
+ok(
+  "prb2 builder: 3 shifts, «24 base hours in 3 shifts», Spain, €400 / shift of 8 h and the live count",
+  /24 base hours/.test(await page.locator("main").innerText()) &&
+    /Madrid \(MAD\) · Spain/.test(rbAsideText) &&
+    /€400 \/ shift of 8 h/.test(rbAsideText) &&
+    /3 shifts required/.test(rbAsideText) &&
+    /\d+ candidates? with viable requirements and blocks/.test(rbAsideText),
+  rbAsideText.replace(/\n/g, " | ").slice(0, 200),
+);
+await page.getByRole("button", { name: "Preview requirements" }).click();
+const rbPreview = await page.locator("dialog[open]").innerText();
+await page.keyboard.press("Escape");
+ok(
+  "prb3 preview: the sheet as published (rate, logistics, full block), Escape closes it",
+  /€50 \/ h · €400 \/ day/.test(rbPreview) &&
+    /Flights: included/.test(rbPreview) &&
+    /Full block/.test(rbPreview) &&
+    (await page.locator("dialog[open]").count()) === 0,
+  rbPreview.replace(/\n/g, " | ").slice(0, 200),
+);
+await responsiveShots("pkg-requirement-builder-form");
+await page.getByRole("button", { name: "Save draft" }).click();
+await page.waitForURL((u) => /\/requirements\/[0-9a-f-]{36}$/.test(u.pathname), { timeout: 30000 });
+await page.waitForLoadState("networkidle");
+const rbId = page.url().split("/").pop();
+const rbDraftText = await page.locator("main").innerText();
+ok(
+  "prb4 «Save draft»: a draft, not published nor evaluated, with «Complete and publish»",
+  /This draft is neither published nor evaluated/.test(rbDraftText) &&
+    (await page.getByRole("link", { name: "Complete and publish" }).count()) === 1 &&
+    !/Internal workforce/.test(rbDraftText),
+);
+await page.getByRole("button", { name: "Publish", exact: true }).click();
+await page.getByText("Requirement published").waitFor({ timeout: 15_000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+await page.getByText("Coverage per shift").click();
+const rbOpenText = await page.locator("main").innerText();
+ok(
+  "prb5 published: terms, logistics and «Coverage per shift · 0/1 seats confirmed» on the detail",
+  /€50 \/ h · €400 \/ day/.test(rbOpenText) &&
+    /Contractor · EUR/.test(rbOpenText) &&
+    /0\/1 seats confirmed/.test(rbOpenText) &&
+    /Europe\/Madrid/.test(rbOpenText),
+  rbOpenText.slice(0, 160),
+);
+await shot("pkg-requirement-builder-detail");
+await logout();
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/professional/opportunities?q=${encodeURIComponent(rbTitle)}`);
+await page.waitForLoadState("networkidle");
+const rbCard = await page.locator("main article").first().innerText();
+ok(
+  "prb6 opportunity card: «{base} · {country}», «€400 / day · €50 / h», 3 shifts · 24 base hours, full block",
+  /Madrid \(MAD\) · Spain/.test(rbCard) &&
+    /€400 \/ day · €50 \/ h/.test(rbCard) &&
+    /3 shifts · 24 base hours/.test(rbCard) &&
+    /Full block/.test(rbCard),
+  rbCard.replace(/\n/g, " | ").slice(0, 200),
+);
+await logout();
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements/${rbId}`);
+await page.waitForLoadState("networkidle");
+await page.getByRole("link", { name: "Duplicate" }).click();
+await page.waitForURL(/\/requirements\/new\?from=/);
+await page.waitForLoadState("networkidle");
+ok(
+  "prb7 duplicate: the builder prefilled with «Copy · {title}», nothing saved",
+  (await page.locator("#title").inputValue()) === `Copy · ${rbTitle}`.slice(0, 120) &&
+    (await page.locator("main").innerText()).includes("Duplicate requirement"),
+);
+await page.evaluate(() => localStorage.clear());
+await page.goto(`${BASE}/app/organization/requirements/${rbId}`);
+await page.waitForLoadState("networkidle");
+await page.getByRole("button", { name: "Close requirement" }).click();
+await page.getByRole("button", { name: "Yes, close it" }).click();
+await page.getByText("can no longer be reopened").waitFor({ timeout: 15_000 });
+await page.getByRole("button", { name: "Archive" }).click();
+await page.getByRole("button", { name: "Yes, archive it" }).click();
+await page.getByText("Requirement archived").waitFor({ timeout: 15_000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+const rbArchivedNote = await page.locator("main").innerText();
+const rbArchiveButtons = await page.getByRole("button", { name: "Archive" }).count();
+await page.goto(`${BASE}/app/organization/requirements`);
+await page.waitForLoadState("networkidle");
+const rbActiveList = await page.locator("main").innerText();
+await page.goto(`${BASE}/app/organization/requirements?archived=1`);
+await page.waitForLoadState("networkidle");
+ok(
+  "prb8 archive (one way): closed then archived, gone from the list, under «View archived»",
+  /This requirement is archived/.test(rbArchivedNote) &&
+    rbArchiveButtons === 0 &&
+    !rbActiveList.includes(rbTitle) &&
+    (await page.locator("main").innerText()).includes(rbTitle),
+);
+await logout();
+
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
 const touch = await browser.newContext({

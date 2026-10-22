@@ -91,7 +91,13 @@ export default async function RequirementMatchesPage({
       {!isEvaluable(requirement) ? (
         // V1.8 evaluates published jobs only (M05): no pool for a paused or closed need.
         <StateMessage
-          title={t(requirement.status === "paused" ? "notEvaluablePaused" : "notEvaluableClosed")}
+          title={t(
+            requirement.status === "paused"
+              ? "notEvaluablePaused"
+              : requirement.status === "draft"
+                ? "notEvaluableDraft"
+                : "notEvaluableClosed",
+          )}
           description={t("notEvaluableDescription")}
           action={back}
         />

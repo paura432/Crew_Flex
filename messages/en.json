@@ -967,7 +967,8 @@
         "starts": "Starts",
         "ends": "Ends",
         "shift": "Shift",
-        "headcount": "Headcount"
+        "headcount": "Headcount",
+        "timeZone": "Time zone"
       },
       "close": {
         "action": "Close requirement",
@@ -982,9 +983,86 @@
         "pausedDone": "Requirement paused: no longer published or evaluated.",
         "resumedDone": "Requirement resumed: published again.",
         "pausedNote": "This requirement is paused: it is not published as an opportunity and no candidates are evaluated. Resume it to publish it again.",
-        "conflict": "The requirement changed in the meantime. Reload to see its current state."
+        "conflict": "The requirement changed in the meantime. Reload to see its current state.",
+        "publish": "Publish",
+        "publishedDone": "Requirement published: it now appears under «Opportunities»."
       },
-      "edit": "Edit requirement"
+      "edit": "Edit requirement",
+      "terms": {
+        "rate": "Rate",
+        "rateHourly": "{hourly} / h",
+        "rateValue": "{hourly} / h · {daily} / day",
+        "shiftDuration": "Shift and length",
+        "shiftDurationValue": "{shift} · {hours} h",
+        "contract": "Contract",
+        "contractValue": "{contract} · EUR",
+        "contractType": {
+          "contractor": "Contractor",
+          "temporary": "Temporary",
+          "permanent": "Permanent",
+          "project": "Per project"
+        },
+        "perDiemOvertime": "Per diem / overtime",
+        "perDiemValue": "{amount} / day",
+        "overtimeValue": "{amount} / overtime h",
+        "coverage": "Coverage",
+        "coverageValue": "Full block: one application covers every shift",
+        "arrival": "Incorporation",
+        "mobilization": "Maximum mobilisation",
+        "hoursValue": "{hours} h",
+        "budget": "Budget",
+        "budgetMandatory": "hard requirement",
+        "budgetNegotiable": "negotiable preference",
+        "logisticsTitle": "Logistics",
+        "logistics": {
+          "flights": {
+            "included": "Flights: included",
+            "excluded": "Flights: not included"
+          },
+          "accommodation": {
+            "included": "Accommodation: included",
+            "excluded": "Accommodation: not included"
+          },
+          "localTransport": {
+            "included": "Local transport: included",
+            "excluded": "Local transport: not included"
+          },
+          "meals": {
+            "included": "Meals: included",
+            "excluded": "Meals: not included"
+          },
+          "ownTools": "Own tools required",
+          "companyTools": "Company tools"
+        },
+        "baseAmount": "{hours} h × {rate}/h = {amount} for the technician",
+        "baseHoursSummary": "{hours} base hours in {count, plural, one {# shift} other {# shifts}}",
+        "shiftsTitle": "Shifts ({count})",
+        "coverageTitle": "Coverage per shift",
+        "shiftLine": "{span} · {hours} h",
+        "shiftCoverage": "{date} · {filled}/{total} seats confirmed",
+        "notice": "Informative values set by the organization: Crew Flex handles no charges, commissions or payments."
+      },
+      "archive": {
+        "action": "Archive",
+        "explainClosed": "Archiving removes it from your requirements list. It cannot be undone: it stays under «View archived» and in the history.",
+        "explainDraft": "Archiving a draft closes it: it can no longer be published. It cannot be undone.",
+        "confirm": "Yes, archive it",
+        "cancel": "Cancel",
+        "done": "Requirement archived.",
+        "chip": "Archived",
+        "note": "This requirement is archived.",
+        "listLink": "View archived",
+        "listBack": "View requirements not archived",
+        "listTitle": "Archived requirements",
+        "emptyTitle": "No archived requirements"
+      },
+      "duplicate": "Duplicate",
+      "activeApplicationsNote": "With active applications, duplicate it to change the offer. You can review the proposal before confirming.",
+      "draft": {
+        "note": "This draft is neither published nor evaluated. Complete it and publish it when it is ready.",
+        "complete": "Complete and publish",
+        "incomplete": "Some data is missing to publish it: complete the draft with «Complete and publish»."
+      }
     },
     "new": {
       "title": "New work requirement",
@@ -1002,21 +1080,88 @@
         "urgency": "Urgency",
         "starts": "Starts (UTC)",
         "ends": "Ends (UTC)",
-        "shift": "Shift"
+        "shift": "Shift",
+        "country": "Country of the job",
+        "timeZone": "IANA zone of the base",
+        "notStated": "Not stated",
+        "description": "Description and terms"
       },
       "titlePlaceholder": "B1.1 · A320 line maintenance reinforcement",
       "locationPlaceholder": "Madrid (MAD)",
       "qualificationsIntro": "<b>Hard</b> requirements filter candidates out; <b>soft</b> ones only affect the score. At least one hard requirement is needed.",
       "levelAria": "{code} requirement level",
-      "submit": "Create requirement",
-      "submitting": "Creating…",
+      "submit": "Publish requirement",
+      "submitting": "Publishing…",
       "forbidden": "Your role cannot create requirements in this organization.",
       "unreachable": "The service could not be reached. Your data is still here — retry.",
       "sessionExpired": "Your session expired. Sign in again.",
       "editSubmit": "Save changes",
       "editSubmitting": "Saving…",
       "hasApplications": "This requirement already received applications: it cannot be edited.",
-      "stale": "The requirement changed while you were editing it. Reload to see the current version; nothing was saved."
+      "stale": "The requirement changed while you were editing it. Reload to see the current version; nothing was saved.",
+      "sectionTerms": "04 · Terms and logistics",
+      "timeZoneHint": "It only tells the shifts' local dates apart; times are shown in UTC.",
+      "descriptionHint": "Optional, up to 4000 characters. Professionals see it on the opportunity.",
+      "defaults": {
+        "arrival": "Before the start of the shift"
+      },
+      "shifts": {
+        "title": "Shifts",
+        "intro": "Without shifts, the requirement is one continuous period. For several days, add each shift (UTC times): the period then runs from the start of the first one to the end of the last one. An application covers every shift.",
+        "start": "Shift start (UTC)",
+        "end": "Shift end (UTC)",
+        "hours": "Base hours",
+        "add": "Add shift",
+        "row": "{span} · {hours} h",
+        "remove": "Remove",
+        "removeAria": "Remove the shift {span}",
+        "summary": "<b>{hours} base hours</b> in {count, plural, one {# shift} other {# shifts}} on the list. Only the shifts added are published.",
+        "periodFromShifts": "The period is computed from the shifts."
+      },
+      "terms": {
+        "hourlyRate": "EUR per hour",
+        "shiftHours": "Hours per shift",
+        "overtimeRate": "EUR per overtime hour",
+        "perDiem": "Per diem EUR per day",
+        "contractType": "Contract",
+        "maxMobilizationHours": "Maximum mobilisation (hours)",
+        "arrival": "Incorporation",
+        "budgetMandatory": "Treat the budget as a hard requirement",
+        "flights": "Flights included",
+        "accommodation": "Accommodation included",
+        "localTransport": "Local transport included",
+        "meals": "Meals included",
+        "ownTools": "Own tools required"
+      },
+      "summary": {
+        "title": "Review before publishing",
+        "untitled": "New requirement",
+        "place": "{base} · {country}",
+        "dayRate": "{amount} / shift of {hours} h",
+        "requiredShifts": "{count, plural, one {# shift required} other {# shifts required}}",
+        "viable": "{count, plural, one {# candidate with viable requirements and blocks} other {# candidates with viable requirements and blocks}}",
+        "viableNeedsHard": "Add a hard requirement and the period to estimate the viable candidates.",
+        "viableLoading": "Counting the viable candidates…",
+        "viableUnavailable": "The number of viable candidates could not be computed.",
+        "draftNote": "A draft may be incomplete: it is neither published nor evaluated. Publishing it applies every validation."
+      },
+      "preview": {
+        "open": "Preview requirements",
+        "title": "Preview",
+        "close": "Close preview",
+        "noQualifications": "No qualifications yet."
+      },
+      "autosave": {
+        "found": "You have an unsaved draft in this browser ({date}).",
+        "restore": "Restore",
+        "discard": "Discard"
+      },
+      "saveDraft": "Save draft",
+      "savingDraft": "Saving draft…",
+      "saveAndPublish": "Save and publish",
+      "copyPrefix": "Copy · ",
+      "copyTitle": "Duplicate requirement",
+      "copyDescription": "Copy of «{title}»: check the dates (they start in 45 days) and save it as a draft or publish it. Nothing is saved until then."
     },
     "matches": {
       "eyebrow": "External network · matching preview",
@@ -1060,7 +1205,8 @@
       },
       "notEvaluablePaused": "Requirement paused",
       "notEvaluableClosed": "Requirement closed",
-      "notEvaluableDescription": "Candidates are evaluated for published requirements only. Resume the requirement to see them again."
+      "notEvaluableDescription": "Candidates are evaluated for published requirements only. Resume the requirement to see them again.",
+      "notEvaluableDraft": "This draft is not evaluated"
     },
     "workforce": {
       "title": "Internal workforce",
@@ -1666,7 +1812,11 @@
       "hardPending": "{count, plural, one {# mandatory requirement pending} other {# mandatory requirements pending}}",
       "availability": "Not enough available dates for this coverage",
       "people": "{count, plural, one {# person} other {# people}}",
-      "applied": "Application: {status}"
+      "applied": "Application: {status}",
+      "rate": "{daily} / day · {hourly} / h",
+      "rateHourly": "{hourly} / h",
+      "shifts": "{count, plural, one {# shift} other {# shifts}} · {hours} base hours",
+      "fullBlock": "Full block"
     },
     "detail": {
       "eyebrow": "Opportunity",

@@ -6,8 +6,9 @@ import {
   UrgencyChip,
 } from "@/features/requirements/components/RequirementBadges";
 import { APPLICATION_TONE } from "@/features/applications/view";
+import { dayRate, totalBaseHours } from "@/domain/work-requirement";
 import type { Locale } from "@/i18n/config";
-import { formatPeriod } from "@/i18n/format";
+import { formatCountry, formatEuro, formatNumber, formatPeriod } from "@/i18n/format";
 import type { Opportunity } from "@/types/api";
 import { opportunityVerdict } from "../view";
 
@@ -27,6 +28,9 @@ export async function OpportunityCard({ opportunity }: { opportunity: Opportunit
   const { requirement: r, match, myApplication } = opportunity;
   const verdict = opportunityVerdict(match);
   const href = `/app/professional/opportunities/${r.id}`;
+  // v1.8 card «{€/día} / día · {€} / h» (Marketplace.jsx:90), informative (OD-7).
+  const rate = r.conditions?.hourlyRate;
+  const daily = dayRate(r.conditions);
   return (
     <article className="rounded-xl border border-line bg-white p-5" aria-labelledby={`o-${r.id}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -44,10 +48,27 @@ export async function OpportunityCard({ opportunity }: { opportunity: Opportunit
       </h2>
       <p className="text-sm text-muted">
         {r.organizationName} · {r.location}
+        {r.country && ` · ${formatCountry(locale, r.country)}`}
       </p>
+      {rate !== undefined && (
+        <p className="mt-1 text-sm font-semibold tabular-nums">
+          {daily === null
+            ? t("rateHourly", { hourly: formatEuro(locale, rate) })
+            : t("rate", { daily: formatEuro(locale, daily), hourly: formatEuro(locale, rate) })}
+        </p>
+      )}
       <p className="mt-1 text-sm tabular-nums">
-        {formatPeriod(locale, r.startsAt, r.endsAt)} · {t("people", { count: r.headcount })}
+        {formatPeriod(locale, r.startsAt, r.endsAt)} · {t("people", { count: r.headcount })} ·{" "}
+        {t("fullBlock")}
       </p>
+      {r.shifts?.length ? (
+        <p className="text-sm text-muted tabular-nums">
+          {t("shifts", {
+            count: r.shifts.length,
+            hours: formatNumber(locale, totalBaseHours(r.shifts)),
+          })}
+        </p>
+      ) : null}
       <div className="mt-3">
         <QualificationChips qualifications={r.qualifications} />
       </div>

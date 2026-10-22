@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
+import { RequirementTerms } from "@/features/requirements/components/RequirementTerms";
 import type { Locale } from "@/i18n/config";
 import { formatDateTime, formatPeriod } from "@/i18n/format";
 import type { MyApplication, OrgApplication } from "@/types/api";
@@ -39,6 +40,10 @@ export async function ApplicationDetails({
           </p>
           <div className="mt-2">
             <QualificationChips qualifications={proposal.terms.qualifications} />
+          </div>
+          {/* v1.8 `Terms` (Workflow.jsx:8-16) without the commission: what this version froze (T-11, v2-12). */}
+          <div className="mt-3">
+            <RequirementTerms terms={proposal.terms} showAmount />
           </div>
           {/* R-08 / v1.8 «Una propuesta revisada requiere otra aceptación». */}
           {proposal.version > 1 && !accepted && (

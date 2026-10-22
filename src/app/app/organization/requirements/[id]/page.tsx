@@ -12,7 +12,12 @@ import { MatchCard } from "@/features/matching/components/MatchCard";
 import { getRequirement } from "@/features/requirements/api";
 import { RequirementStatusActions } from "@/features/requirements/components/RequirementStatusActions";
 import { RequirementFacts } from "@/features/requirements/components/RequirementFacts";
-import { isEvaluable, isExpired, type WorkRequirement } from "@/domain/work-requirement";
+import {
+  canArchive,
+  isEvaluable,
+  isExpired,
+  type WorkRequirement,
+} from "@/domain/work-requirement";
 import { listRequirementApplications } from "@/features/applications/api";
 import { requireOrganizationContext } from "@/server/session";
 
@@ -43,26 +48,54 @@ export default async function RequirementDetailPage({
   // RLS lets platform admins read every tenant; these pages show the acting organization only.
   if (requirement.organizationId !== organization.id) notFound();
   const closed = requirement.status === "closed";
-  // V1.8 evaluates published jobs only: a paused or closed need shows its facts, not the pool (M05).
+  const draft = requirement.status === "draft";
+  // V1.8 evaluates published jobs only: a draft, paused or closed need shows its facts, not the pool.
   const evaluable = isEvaluable(requirement);
   const [capacity, applications] = await Promise.all([
     canManage && evaluable ? evaluateRequirementCapacity(requirement.id) : null,
-    canManage ? listRequirementApplications(requirement.id) : null,
+    canManage && !draft ? listRequirementApplications(requirement.id) : null,
   ]);
+  const applicationCount = applications?.ok ? applications.data.applications.length : 0;
+  // «Cobertura por jornada»: seats taken (confirmed + finished), the same count that covers the requirement.
+  const confirmedSeats = applications?.ok
+    ? applications.data.applications.filter(
+        (a) => a.status === "confirmed" || a.status === "finished",
+      ).length
+    : null;
+  const applicationsLink = applications?.ok && (
+    <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
+      {tApplications("view", { count: applicationCount })}
+    </ButtonLink>
+  );
+  // v1.8 «Duplicar» (v2-14, T-65): the builder prefilled with a copy; nothing is saved until the user saves.
+  const duplicateLink = canManage && (
+    <ButtonLink href={`/app/organization/requirements/new?from=${requirement.id}`}>
+      {t("duplicate")}
+    </ButtonLink>
+  );
 
   return (
     <>
       <PageHeader eyebrow={t("eyebrow")} title={requirement.title} />
       <div className="space-y-6">
         <Panel>
-          <RequirementFacts requirement={requirement} />
+          <RequirementFacts requirement={requirement} confirmedSeats={confirmedSeats} />
           {closed ? (
             <div className="mt-4 space-y-3 border-t border-line pt-4">
-              <p className="text-sm text-muted">{t("close.closedNote")}</p>
-              {applications?.ok && applications.data.applications.length > 0 && (
-                <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
-                  {tApplications("view", { count: applications.data.applications.length })}
-                </ButtonLink>
+              <p className="text-sm text-muted">
+                {requirement.archivedAt ? t("archive.note") : t("close.closedNote")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {applicationCount > 0 && applicationsLink}
+                {duplicateLink}
+              </div>
+              {canManage && canArchive(requirement) && (
+                <RequirementStatusActions
+                  id={requirement.id}
+                  status={requirement.status}
+                  expired={false}
+                  archivedAt={requirement.archivedAt}
+                />
               )}
             </div>
           ) : (
@@ -70,24 +103,33 @@ export default async function RequirementDetailPage({
               {requirement.status === "paused" && (
                 <p className="text-sm text-muted">{t("status.pausedNote")}</p>
               )}
-              {/* M05: editable only while it never received an application (the server re-checks). */}
-              {applications?.ok &&
-                applications.data.applications.length === 0 &&
-                !expiredNow(requirement) && (
-                  <ButtonLink href={`/app/organization/requirements/${requirement.id}/edit`}>
-                    {t("edit")}
-                  </ButtonLink>
-                )}
-              {applications?.ok && (
-                <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
-                  {tApplications("view", { count: applications.data.applications.length })}
-                </ButtonLink>
+              {draft && <p className="text-sm text-muted">{t("draft.note")}</p>}
+              {/* ORG-05 #10: why «Editar» is gone once the requirement received applications. */}
+              {applicationCount > 0 && (
+                <p className="text-sm text-muted">{t("activeApplicationsNote")}</p>
               )}
+              <div className="flex flex-wrap gap-2">
+                {/* M05: editable only while it never received an application (the server re-checks). */}
+                {/* 7682e92: no edit once the period ended (an expired need is closed, not edited). */}
+                {canManage &&
+                  (draft ||
+                    (applications?.ok && applicationCount === 0 && !expiredNow(requirement))) && (
+                    <ButtonLink
+                      href={`/app/organization/requirements/${requirement.id}/edit`}
+                      variant={draft ? "primary" : "secondary"}
+                    >
+                      {draft ? t("draft.complete") : t("edit")}
+                    </ButtonLink>
+                  )}
+                {applicationsLink}
+                {duplicateLink}
+              </div>
               {canManage && (
                 <RequirementStatusActions
                   id={requirement.id}
                   status={requirement.status}
                   expired={expiredNow(requirement)}
+                  archivedAt={requirement.archivedAt}
                 />
               )}
             </div>
