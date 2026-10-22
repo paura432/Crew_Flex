@@ -1,4 +1,4 @@
-# 14 · Decision pack — what the owner has already answered and what is really open (2026-10-20)
+# 14 · Decision pack — what the owner has already answered and what is really open (2026-10-20, updated 2026-10-22)
 
 Built from the canonical texts (`08-product-decisions.md` «Owner decisions of 2026-10-19»,
 `docs/product/OPEN_DECISIONS.md`, `APPLICATIONS_STATE_MACHINE.md` §4, `CANDIDATE_PACK.md` §4,
@@ -22,6 +22,12 @@ Nothing here turns a proposal into an authorisation.
 | OD-3 direction    | A     | Manual verification by authorised platform admins; **activation not authorised** | 08              |
 | Migration target  | A     | v1.8 is the target; v1.1/v1.3 context only (2026-10-20)                          | owner message   |
 | Visual comparison | A     | Isolated local browser authorised (2026-10-20) — done, `13-visual-comparison.md` | owner message   |
+
+**2026-10-22 — answered by the owner (local implementation):** D-06 Q2–Q6 ratified as proposed and **Q7 = no
+`accepted → rejected`**; D-07 P1/P2/P4 ratified as direction (**P3 still open**, no third-party document access);
+D-12 visibility ratified; requirement lifecycle ratified (open ↔ paused, closed terminal, edit only without
+applications, no `cancelled`); Q-01 password 12. Text in `08-product-decisions.md` §2026-10-22. Those rows of §2
+below are kept for the record and are no longer open, except D-07 P3.
 
 ## 2. Needs a decision — only these
 
