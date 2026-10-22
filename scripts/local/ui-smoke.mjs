@@ -55,13 +55,14 @@ const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
 const page = await ctx.newPage();
 const errors = [];
 const expectedErrorUrls = new Set(); // pages whose 404 is the behaviour under test (cross-org)
+let expectOffline = false; // 2h aborts a request on purpose: its console error is the test
 const isExpected404 = (text, url) =>
   /status of 404/.test(text) && [...expectedErrorUrls].some((u) => url.startsWith(u));
 page.on("pageerror", (e) => errors.push(`${String(e)} @ ${page.url()}`));
 const cspViolations = [];
 page.on("console", (m) => {
   if (/Content Security Policy/.test(m.text())) cspViolations.push(`${m.text()} @ ${page.url()}`);
-  if (m.type() === "error" && !isExpected404(m.text(), page.url()))
+  if (m.type() === "error" && !isExpected404(m.text(), page.url()) && !expectOffline)
     errors.push(`${m.text()} @ ${page.url()}`);
 });
 const hosts = new Set();
@@ -298,6 +299,7 @@ const dropAction = (route) =>
   route.request().method() === "POST" && route.request().headers()["next-action"]
     ? route.abort("internetdisconnected")
     : route.continue();
+expectOffline = true;
 await page.route("**/app/professional/availability", dropAction);
 await page.click("form button[type=submit]:has-text('Add')");
 const offlineAlert = await page
@@ -314,6 +316,7 @@ ok(
   "",
 );
 await page.unroute("**/app/professional/availability", dropAction);
+expectOffline = false;
 await page.click("form button[type=submit]:has-text('Add')");
 await page.waitForTimeout(2500);
 let after = await page.locator("li:has(button:has-text('Delete'))").count();
@@ -1164,6 +1167,13 @@ const measureTouch = () =>
       ),
     ]
       .filter((el) => el.offsetParent !== null)
+      // a label is the target only for a checkbox (a text field's caption is not)
+      .filter(
+        (el) =>
+          el.tagName !== "LABEL" ||
+          el.querySelector("input[type=checkbox]") ||
+          document.getElementById(el.htmlFor)?.type === "checkbox",
+      )
       .filter(
         (el) => el.tagName !== "A" || el.parentElement.textContent.trim() === el.textContent.trim(),
       )
@@ -1221,7 +1231,7 @@ for (const path of ["/app/organization/requirements", "/app/organization/require
 ok(
   "25 touch targets ≥ 44 px on a touch screen (landing, auth, professional, tools, requirements, nav, 1024 sidebar)",
   small.length === 0,
-  small.slice(0, 6).join(" | "),
+  small.slice(0, 20).join(" | "),
 );
 await touch.close();
 
