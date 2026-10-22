@@ -86,6 +86,17 @@ write that touches one of the owner's `confirmed` assignments is refused for eve
 their requirement periods (which a professional cannot SELECT), and `app_private.confirmed_assignment_overlaps(from, to)`
 (DEFINER, `authenticated` only) answers only about `auth.uid()`'s own confirmed applications — no other person's data
 and no oracle beyond what the caller already reads through RLS. No new grant on a table.
+**Past-start floor (BR-4.6, N-26, LOCAL `20261024200100`).** Not an authorization change: the INVOKER trigger
+`refuse_past_availability_start()` refuses (22023) a Data API write that creates a window, or moves its start, before
+today (UTC), for the owner like anyone; grants and policies are unchanged.
+**Wallet trash and viewer (N-19/N-21, LOCAL `20261024200000`; `docs/product/DOCUMENT_WALLET.md`).** The owner's
+update grant on `professional_documents` gains `archived_at` (the database stamps its own clock); the row policies are
+unchanged (own rows only), so archiving, restoring and deleting from the trash stay owner-only, and an archived
+document is as private as any other. `document_trash_retention_days()` (DEFINER, `authenticated` only) returns one
+number, the retention setting. The trash expiry runs inside `document_maintenance_batch` (platform admin, re-checked
+in the body, S-10): the platform admin's sweep deletes expired rows of any owner — the same reach the purge already
+had over their objects — and every expiry is audited `document.trash_expired`. The in-app viewer uses the owner's own
+60-second signed URL; nobody else gains a path to a file (D-07/D-10 unchanged).
 **Organization review and «Empresas verificadas» (OD-5 default = v1.8, LOCAL `20261023500000`…`500300`).** An
 organization is `pending` until a platform admin registers its review (`review_organization`: platform role in
 the body, never an organization the admin belongs, belonged or acted for (removals audited `organization.member_removed`, `20261023500400`) — «La empresa no puede verificarse a sí misma» —, pending

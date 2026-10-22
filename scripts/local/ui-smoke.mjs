@@ -402,9 +402,14 @@ ok(
   "",
 );
 const row2 = page.locator("main li", { hasText: "Smoke expiry check" });
-await row2.getByRole("button", { name: "Delete" }).click();
-await row2.getByRole("button", { name: "Confirm delete" }).click();
+// N-19 (package wallet-extras): «Archive» moves it to the trash; it is deleted permanently from there.
+await row2.getByRole("button", { name: "Archive Smoke expiry check" }).click();
 await row2.waitFor({ state: "detached", timeout: 15_000 });
+await page.goto(`${BASE}/app/professional/documents?view=trash`);
+const trashed = page.locator("main li", { hasText: "Smoke expiry check" });
+await trashed.getByRole("button", { name: "Delete permanently" }).click();
+await trashed.getByRole("button", { name: "Confirm delete" }).click();
+await trashed.waitFor({ state: "detached", timeout: 15_000 });
 await page.goto(`${BASE}/app/professional/availability`); // back to where the next step continues
 await page.waitForLoadState("networkidle");
 await page
@@ -2444,6 +2449,198 @@ await logout();
     ok("PKG account e: account closure (skipped: no confirmation e-mail)", false, "");
   }
 }
+
+// PKG wallet-extras (N-19 trash, N-20 type filter, N-21 in-app viewer, N-26 server floor; migrations
+// 20261024200000/200100, T-100…T-104): Delta uploads a PNG course and a PDF licence, filters by type,
+// views both in the app (an expired link is an error, Escape returns the focus), archives, restores and
+// deletes permanently from the trash; the availability API refuses a start on a past day. Nothing is kept.
+await login("delta@crewflex.test");
+const WX = `${BASE}/app/professional/documents`;
+const PNG_1PX = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
+const wxUpload = async (title, kind, file) => {
+  await page.goto(WX);
+  await page.waitForLoadState("networkidle");
+  await page.setInputFiles("#file", file);
+  await page.fill("#title", title);
+  await page.selectOption("#kind", kind);
+  await page.getByRole("button", { name: "Upload document" }).click();
+  await page.locator("main li", { hasText: title }).waitFor({ timeout: 15_000 });
+};
+await wxUpload("Smoke viewer image", "course", {
+  name: "smoke.png",
+  mimeType: "image/png",
+  buffer: PNG_1PX,
+});
+await wxUpload("Smoke viewer pdf", "license", {
+  name: "smoke.pdf",
+  mimeType: "application/pdf",
+  buffer: Buffer.from("%PDF-1.4\n%smoke viewer\n%%EOF\n"),
+});
+const wxChips = page.getByRole("group", { name: "Filter by type" });
+const wxLabels = await wxChips.getByRole("button").allInnerTexts();
+await wxChips.getByRole("button", { name: "Courses" }).click();
+const wxCourses = {
+  pressed: await wxChips.getByRole("button", { name: "Courses" }).getAttribute("aria-pressed"),
+  heading: await page.locator("main h2", { hasText: "Your documents" }).innerText(),
+  rows: await page.locator("main li").allInnerTexts(),
+};
+ok(
+  "PKG wallet-extras 1 type filter: «All · Licences · Courses · Other» (aria-pressed), the counter follows it",
+  wxLabels.join("|") === "All|Licences|Courses|Other" &&
+    wxCourses.pressed === "true" &&
+    wxCourses.heading === "Your documents (1)" &&
+    wxCourses.rows.length === 1 &&
+    /Smoke viewer image/.test(wxCourses.rows[0] ?? ""),
+  `${wxLabels.join("|")} · ${wxCourses.heading}`,
+);
+await wxChips.getByRole("button", { name: "All" }).click();
+
+const wxImageRow = page.locator("main li", { hasText: "Smoke viewer image" });
+const wxCsp = cspViolations.length;
+await wxImageRow.getByRole("button", { name: "Open" }).click();
+const wxDialog = page.getByRole("dialog", { name: "Smoke viewer image" });
+await wxDialog.locator("img").waitFor({ timeout: 15_000 });
+const wxDecoded = await wxDialog
+  .locator("img")
+  .evaluate((img) => img.complete && img.naturalWidth === 1 && img.src.startsWith("blob:"));
+await page.keyboard.press("Escape");
+await wxDialog.waitFor({ state: "detached", timeout: 5_000 });
+const wxFocusBack = await wxImageRow
+  .getByRole("button", { name: "Open" })
+  .evaluate((el) => el === document.activeElement);
+ok(
+  "PKG wallet-extras 2 viewer: the PNG shows in a dialog from a blob; Escape closes it and the focus is back on «Open»",
+  wxDecoded && wxFocusBack,
+  `decoded=${wxDecoded} focus=${wxFocusBack}`,
+);
+
+// N-21: an expired signed link (Storage answers 400) is an error with «Try again», not an empty frame.
+const wxExpired = (route) =>
+  route.fulfill({
+    status: 400,
+    contentType: "application/json",
+    headers: { "access-control-allow-origin": "*" },
+    body: '{"statusCode":"400","error":"InvalidJWT","message":"jwt expired"}',
+  });
+await page.route("**/storage/v1/object/sign/**", wxExpired);
+const wxPdfRow = page.locator("main li", { hasText: "Smoke viewer pdf" });
+await wxPdfRow.getByRole("button", { name: "Open" }).click();
+const wxPdfDialog = page.getByRole("dialog", { name: "Smoke viewer pdf" });
+const wxAlert = wxPdfDialog.getByRole("alert");
+await wxAlert.waitFor({ timeout: 15_000 });
+const wxAlertText = await wxAlert.innerText();
+const wxNoFrame = (await wxPdfDialog.locator("iframe").count()) === 0;
+await page.unroute("**/storage/v1/object/sign/**", wxExpired);
+await wxPdfDialog.getByRole("button", { name: "Try again" }).click();
+await wxPdfDialog.locator("iframe").waitFor({ timeout: 15_000 });
+const wxFrame = await wxPdfDialog.locator("iframe").getAttribute("src");
+await wxPdfDialog.getByRole("button", { name: "Close" }).click();
+await wxPdfDialog.waitFor({ state: "detached", timeout: 5_000 });
+ok(
+  "PKG wallet-extras 3 viewer: an expired link → «The link has expired» + «Try again» (no frame); the retry shows the PDF in a blob frame; no CSP report",
+  /The link has expired/.test(wxAlertText) &&
+    wxNoFrame &&
+    (wxFrame ?? "").startsWith("blob:") &&
+    cspViolations.slice(wxCsp).every((v) => /Evaluating a string as JavaScript/.test(v)),
+  `${wxAlertText.slice(0, 60)} · frame=${(wxFrame ?? "").slice(0, 5)} · csp=${cspViolations.slice(wxCsp).length}`,
+);
+
+// N-19: archive → «Trash (1)» → restore; then archive both and delete them permanently (data restored).
+await wxImageRow.getByRole("button", { name: "Archive Smoke viewer image" }).click();
+await wxImageRow.waitFor({ state: "detached", timeout: 15_000 });
+const wxArchivedNotice = await page
+  .locator("main [role=status]")
+  .filter({ hasText: "Document archived. You can restore it from the trash." })
+  .count();
+await page.getByRole("link", { name: /^Trash \(\d+\)$/ }).click();
+await page.waitForURL((u) => u.search === "?view=trash");
+const wxTrashRow = page.locator("main li", { hasText: "Smoke viewer image" });
+await wxTrashRow.waitFor({ timeout: 15_000 });
+const wxTrashText = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+await wxTrashRow.getByRole("button", { name: "Restore Smoke viewer image" }).click();
+await wxTrashRow.waitFor({ state: "detached", timeout: 15_000 });
+await page.getByRole("link", { name: "View wallet" }).click();
+await page.waitForURL((u) => u.search === "");
+const wxBack = await page.locator("main li", { hasText: "Smoke viewer image" }).count();
+ok(
+  "PKG wallet-extras 4 trash: «Archive» → «Trash» row with its dates and the 30-day note → «Restore» → back in the wallet",
+  wxArchivedNotice === 1 &&
+    /You can restore an archived document for 30 days/.test(wxTrashText) &&
+    /archived \d{2} \w{3} \d{4} · deleted permanently from \d{2} \w{3} \d{4}/.test(wxTrashText) &&
+    wxBack === 1,
+  wxTrashText.slice(0, 120),
+);
+for (const title of ["Smoke viewer image", "Smoke viewer pdf"]) {
+  const row = page.locator("main li", { hasText: title });
+  await row.getByRole("button", { name: `Archive ${title}` }).click();
+  await row.waitFor({ state: "detached", timeout: 15_000 });
+}
+await page.goto(`${WX}?view=trash`);
+await page.waitForLoadState("networkidle");
+for (const title of ["Smoke viewer image", "Smoke viewer pdf"]) {
+  const row = page.locator("main li", { hasText: title });
+  await row.getByRole("button", { name: "Delete permanently" }).click();
+  await row.getByRole("button", { name: "Confirm delete" }).click();
+  await row.waitFor({ state: "detached", timeout: 15_000 });
+}
+const wxLeft = (
+  await asSeedUser("delta@crewflex.test", "professional-documents")
+).data.documents.filter((d) => /^Smoke viewer/.test(d.title)).length;
+ok(
+  "PKG wallet-extras 5 trash emptied permanently: «No documents. Archived documents can be restored.»; nothing of the smoke left",
+  wxLeft === 0 &&
+    (await page.getByText("No documents. Archived documents can be restored.").count()) === 1,
+  `${wxLeft} left`,
+);
+
+// N-26: the API refuses a single window that starts, or is moved, before today (UTC): 400 on startsAt.
+const wxDay = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+const wxPast = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    startsAt: `${wxDay(-1)}T08:00:00.000Z`,
+    endsAt: `${wxDay(1)}T08:00:00.000Z`,
+    status: "available",
+  },
+});
+const wxFuture = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    startsAt: "2032-03-01T00:00:00.000Z",
+    endsAt: "2032-03-02T00:00:00.000Z",
+    status: "available",
+  },
+});
+const wxWindowId = wxFuture.data?.window?.id;
+const wxMoved = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "PATCH",
+  query: { id: wxWindowId },
+  body: {
+    startsAt: `${wxDay(-2)}T00:00:00.000Z`,
+    endsAt: "2032-03-02T00:00:00.000Z",
+    status: "available",
+  },
+});
+const wxRemoved = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "DELETE",
+  query: { id: wxWindowId },
+});
+const wxIssue = (r) =>
+  `${r.error?.code}:${r.error?.issues?.[0]?.path}:${r.error?.issues?.[0]?.message}`;
+ok(
+  "PKG wallet-extras 6 N-26: POST and PATCH with a start before today → 400 startsAt «v.start.future»; the future window is created and removed",
+  wxIssue(wxPast) === "VALIDATION_ERROR:startsAt:v.start.future" &&
+    wxIssue(wxMoved) === "VALIDATION_ERROR:startsAt:v.start.future" &&
+    wxFuture.ok === true &&
+    wxRemoved.ok === true,
+  `${wxIssue(wxPast)} · ${wxIssue(wxMoved)}`,
+);
+await logout();
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).

@@ -175,6 +175,12 @@ assignment is then not covered 100 % (`app_private.hard_eligibility`); `replace_
 day that overlaps one (`app_private.confirmed_assignment_overlaps`) and splits a window tail-first so an adjacent
 assignment never looks uncovered mid-save. Skipped while the profile is being deleted (cascade).
 
+No single window starts on a past UTC day (BR-4.6, N-26, `20261024200100`, local only): trigger
+`availability_windows_refuse_past_start` (BEFORE INSERT/UPDATE OF `starts_at`, INVOKER
+`refuse_past_availability_start()`) raises `22023` (hint `past_start`) when a Data API write (`current_user =
+authenticated`) creates a window, or moves its start (to the minute), before today 00:00 UTC. Seeds and operators are
+not API writes; existing past windows stay.
+
 ### `availability_rotations` (`20261019140000`, local only)
 
 The cycle generator's saved pattern, one row per technician: `pattern` (14 values, BR-4.7), `anchor`
@@ -308,7 +314,13 @@ notice is audited.
 | `expires_at`                | date, nullable                                                                 | yes                      |
 | `qualification_id`          | → `technician_qualifications` on delete set null; trigger: must be the owner's | yes                      |
 | `scan_status`               | `document_scan_status`: `not_scanned` (default) · `clean` · `infected`         | **no** (no column grant) |
+| `archived_at`               | timestamptz, nullable: in the trash since (N-19, `20261024200000`)             | update only (BR-24)      |
 | `created_at` / `updated_at` | timestamptz (`set_updated_at`)                                                 | –                        |
+
+`archived_at` (trash, BR-24): trigger `professional_documents_archive_clock` (BEFORE UPDATE OF `archived_at`) stamps
+`now()` when a document enters the trash, keeps the first date while it stays there and clears it on restore, so no
+client can backdate or post-date it; partial index on the archived rows. The app's other reads (review list, document
+count, qualification evidence) skip archived rows (T-101).
 
 RLS: own rows only (select/insert/update/delete); **no organization, manager or platform-admin policy**.
 Inserts go through `create_professional_document` and require the owner-only flag
@@ -343,9 +355,11 @@ Account deletion cascades (auth user → profile → technician profile → entr
 ### `app_private.document_object_tombstones` · `app_private.document_retention_settings` (`20261019160200`, LOCAL ONLY)
 
 Tombstones (`id`, `storage_path`, `owner_id` (no FK), `reason` `owner_delete` · `account_deleted` · `operator_delete` ·
-`orphan_upload`, `deleted_at`, `purge_after`, `legal_hold` default false, `purged_at`, `attempts`, `last_error` ≤ 200;
+`orphan_upload` · `trash_expired` (since `20261024200000`: an archived document past `archive_retention`, due at
+once), `deleted_at`, `purge_after`, `legal_hold` default false, `purged_at`, `attempts`, `last_error` ≤ 200;
 one open tombstone per path) are written by the AFTER DELETE trigger on `professional_documents` and by
-reconciliation. Settings: one row (`account_deletion_grace` default 30 days, `orphan_upload_grace` default 24 h).
+reconciliation. Settings: one row (`account_deletion_grace` default 30 days, `orphan_upload_grace` default 24 h,
+`archive_retention` default 30 days, 1–3650 days, T-100, since `20261024200000`).
 Both: RLS on, no policy, no grant — DEFINER functions only. Retention rules: `DOCUMENT_WALLET.md` §6.
 
 ### `account_invitations` (`20261023400000`, LOCAL ONLY — OD-8 default T-40)
@@ -399,7 +413,9 @@ review decision with previous/new status, `note_provided`, `request_id`; since `
 not account-deletion cascades) — the last three since `20261015120000`; `document.uploaded`,
 `document.updated` (with the changed field names) and `document.deleted` (owner delete only) since
 `20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path); `document.purged`
-(tombstone id, owner id, reason, `object_found`) since `20261019160200`; `logbook.created`, `logbook.updated`
+(tombstone id, owner id, reason, `object_found`) since `20261019160200`; `document.archived`, `document.restored`
+(owner, `changed` includes `archived_at`) and `document.trash_expired` (the maintenance caller as actor; not on an
+account-deletion cascade) since `20261024200000` (LOCAL, same metadata as `document.deleted`); `logbook.created`, `logbook.updated`
 (`changed` field names) and `logbook.deleted` (owner delete only, not account-deletion cascades) since
 `20261023200000` (LOCAL ONLY; metadata: the technician profile id and the changed field names — never a value, and
 never the selection flag, not even as a changed name: an update that only toggles it is not audited, because platform
@@ -433,7 +449,10 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `create_professional_document(key, kind, title, storage_path, mime_type, size_bytes, sha256, expires_at, qualification_id)` (`20261019160000`, local only)                               | INVOKER         | Idempotent document create (`document.create`); path must be `<uid>/<key>-<sha256[0:16]>` (`22023` otherwise); `CF409` same key, other request.                                                                                                                                                                                                     |
 | `create_logbook_entry(key, entry_date, aircraft, ata, hours, category, environment, description, cv_relevant)` (`20261023200000`, local only)                                            | INVOKER         | Idempotent logbook create (`logbook_entry.create`), owner = JWT subject; `CF409` same key, other request. The operation CHECK is re-created from its current definition (values are added, never dropped).                                                                                                                                          |
 | `is_feature_enabled(name)` (`20261019160200`, local only)                                                                                                                                | DEFINER, stable | Whitelisted owner flags (`document_wallet`) for the Next.js server; signed-in users only.                                                                                                                                                                                                                                                           |
-| `document_maintenance_batch(apply, limit)` · `document_purge_recheck(tombstone)` · `document_purge_record(tombstone, outcome, error)` (`20261019160200`, local only)                     | DEFINER         | Platform admin only (re-checked in the body): orphan reconciliation + due tombstones (≤ 100), per-object re-check under row lock, outcome + audit `document.purged`. Never delete objects themselves.                                                                                                                                               |
+| `document_maintenance_batch(apply, limit)` · `document_purge_recheck(tombstone)` · `document_purge_record(tombstone, outcome, error)` (`20261019160200`, local only)                     | DEFINER         | Platform admin only (re-checked in the body): expired trash (N-19) + orphan reconciliation + due tombstones (≤ 100), per-object re-check under row lock, outcome + audit `document.purged`. Never delete objects themselves.                                                                                                                        |
+| `document_trash_retention_days()` (`20261024200000`, local only)                                                                                                                         | DEFINER, stable | Signed-in users only: the trash retention in whole days (`archive_retention`, rounded up) for «restorable for {n} days».                                                                                                                                                                                                                            |
+| `stamp_professional_document_archive()` · `app_private.document_trash_expired(archived_at)` (`20261024200000`, local only)                                                               | INVOKER trigger | The trash clock on `professional_documents.archived_at` · private helper «archived and past `archive_retention`» for the tombstone and audit triggers.                                                                                                                                                                                              |
+| `refuse_past_availability_start()` (`20261024200100`, local only)                                                                                                                        | INVOKER trigger | BR-4.6 / N-26: a Data API write cannot create a window, or move its start, before today (UTC): `22023`, hint `past_start`.                                                                                                                                                                                                                          |
 | `review_qualification(id, decision, expected_updated_at, note, request_id)`                                                                                                              | DEFINER         | Requires `app_private.feature_flags('qualification_review')`; platform admin only, never own, `pending` → `verified`/`rejected` for the version the reviewer saw, row lock, audit `qualification.reviewed`.                                                                                                                                         |
 | `own_qualification_reviews()`                                                                                                                                                            | DEFINER, stable | The caller's own review reasons (the column is not readable otherwise).                                                                                                                                                                                                                                                                             |
 | `enforce_requirement_qualifications()`                                                                                                                                                   | DEFINER trigger | BR-1.4 at commit (deferred).                                                                                                                                                                                                                                                                                                                        |
