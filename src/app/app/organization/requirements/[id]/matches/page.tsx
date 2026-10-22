@@ -31,7 +31,7 @@ export default async function RequirementMatchesPage({
   params,
   searchParams,
 }: PageProps<"/app/organization/requirements/[id]/matches">) {
-  const [{ id }, search, { canManage }, t, tDashboard, locale] = await Promise.all([
+  const [{ id }, search, { organization, canManage }, t, tDashboard, locale] = await Promise.all([
     params,
     searchParams,
     requireOrganizationContext(),
@@ -63,6 +63,8 @@ export default async function RequirementMatchesPage({
     );
   }
   const { requirement } = requirementResult.data;
+  // RLS lets platform admins read every tenant; these pages show the acting organization only.
+  if (requirement.organizationId !== organization.id) notFound();
   const base = `/app/organization/requirements/${requirement.id}/matches`;
   const query = parseMatchListQuery(search);
   const list = matchesResult.ok ? listMatches(matchesResult.data.candidates, query) : null;

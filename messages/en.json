@@ -46,7 +46,9 @@
     "verifications": "Verifications",
     "tools": "Tools",
     "documents": "Documents",
-    "recovery": "Reset password"
+    "recovery": "Reset password",
+    "admin": "Administration",
+    "recruiter": "Recruiter"
   },
   "nav": {
     "organization": "Organization",
@@ -63,7 +65,14 @@
     "platform": "Platform",
     "verifications": "Verifications",
     "tools": "Tools",
-    "documents": "Documents"
+    "documents": "Documents",
+    "viewAs": "View as",
+    "views": {
+      "professional": "Technician",
+      "organization": "Company",
+      "recruiter": "Recruiter",
+      "admin": "Administration"
+    }
   },
   "landing": {
     "eyebrow": "Aircraft maintenance workforce",
@@ -876,7 +885,23 @@
     "organization": "Organization",
     "role": "Role"
   },
+  "recruiter": {
+    "eyebrow": "Recruiter",
+    "title": "Recruiter workspace",
+    "soonTitle": "Coming later",
+    "soonBody": "The workspace for agencies that represent clients arrives in a later phase. Its model is still pending a decision."
+  },
   "admin": {
+    "home": {
+      "eyebrow": "Platform",
+      "title": "Administration",
+      "description": "Platform tools available to administrators.",
+      "reviewsTitle": "Qualification review",
+      "reviewsOpen": "Open the review queue",
+      "reviewsOff": "Qualification review is turned off in this environment.",
+      "toolsTitle": "Tools",
+      "toolsOpen": "Open tools"
+    },
     "reviews": {
       "eyebrow": "Platform",
       "title": "Qualification review",

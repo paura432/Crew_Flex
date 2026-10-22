@@ -9,6 +9,8 @@ const TITLE_FOR_NAV: Record<keyof typeof es.nav, keyof typeof es.meta | null> = 
   professional: null, // section heading, not a page
   account: null, // section heading, not a page
   platform: null, // section heading, not a page
+  viewAs: null, // switcher heading, not a page
+  views: null, // switcher labels: checked per view below
   dashboard: "organization",
   requirements: "requirements",
   workforce: "workforce",
@@ -34,6 +36,9 @@ describe("page titles match the menu", () => {
           catalog.nav[nav as keyof typeof catalog.nav],
         );
       }
+      // The two pages only the «View as» switcher opens
+      expect(catalog.meta.admin).toBe(catalog.nav.views.admin);
+      expect(catalog.meta.recruiter).toBe(catalog.nav.views.recruiter);
     });
   }
 });

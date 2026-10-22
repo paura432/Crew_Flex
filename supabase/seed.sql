@@ -66,6 +66,12 @@ select pg_temp.seed_user('00000000-0000-4000-8000-000000000031', 'platform.admin
 
 update public.profiles set platform_role = 'platform_admin' where id = '00000000-0000-4000-8000-000000000031';
 
+-- The platform admin's own organization, for the «Empresa» view of the switcher (owner 2026-10-22).
+-- Kept apart from the scenario organizations so their workforce and matching stay as designed.
+insert into public.organizations (name, type, country) values ('CrewFlex Operaciones', 'other', 'ES');
+insert into public.organization_members (organization_id, profile_id, role)
+select id, '00000000-0000-4000-8000-000000000031', 'admin' from public.organizations where name = 'CrewFlex Operaciones';
+
 -- Internal workforce of Demo MRO Madrid
 insert into public.organization_members (organization_id, profile_id, role)
 select o.id, m.profile_id::uuid, 'member'

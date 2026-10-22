@@ -93,7 +93,7 @@ async function login(email, { ensureEnglish = true } = {}) {
   await page.fill("#password", PW);
   await page.click("button[type=submit]");
   // `/app` itself redirects by account type; wait for the workspace route, not the redirect page.
-  await page.waitForURL((u) => /^\/app\/(professional|organization)/.test(u.pathname), {
+  await page.waitForURL((u) => /^\/app\/(professional|organization|admin)/.test(u.pathname), {
     timeout: 30000,
   });
   await page.waitForLoadState("networkidle");
@@ -131,22 +131,35 @@ async function logout() {
 
 const publishableKey = /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=(\S+)/.exec(envLocal)?.[1];
 const supabaseUrl = /NEXT_PUBLIC_SUPABASE_URL=(\S+)/.exec(envLocal)?.[1];
-/** Direct local API call as a seed account (used only to restore seed state after a UI change). */
-async function asSeedUser(email, fn, { method = "GET", query = {}, body } = {}) {
+const seedHeaders = async (email) => {
   const auth = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
     method: "POST",
     headers: { apikey: publishableKey, "Content-Type": "application/json" },
     body: JSON.stringify({ email, password: PW }),
   }).then((r) => r.json());
+  return {
+    Authorization: `Bearer ${auth.access_token}`,
+    apikey: publishableKey,
+    "Content-Type": "application/json",
+  };
+};
+
+/** Direct local API call as a seed account (used only to restore seed state after a UI change). */
+async function asSeedUser(email, fn, { method = "GET", query = {}, body } = {}) {
   const url = new URL(`/functions/v1/${fn}`, supabaseUrl);
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   return fetch(url, {
     method,
-    headers: {
-      Authorization: `Bearer ${auth.access_token}`,
-      apikey: publishableKey,
-      "Content-Type": "application/json",
-    },
+    headers: await seedHeaders(email),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }).then((r) => r.json());
+}
+
+/** Direct local PostgREST call as a seed account (RLS applies): GET without a body, POST with one. */
+async function seedRest(email, path, body) {
+  return fetch(new URL(`/rest/v1/${path}`, supabaseUrl), {
+    method: body === undefined ? "GET" : "POST",
+    headers: await seedHeaders(email),
     body: body === undefined ? undefined : JSON.stringify(body),
   }).then((r) => r.json());
 }
@@ -340,6 +353,7 @@ await page
   .first()
   .locator("button:has-text('Delete')")
   .click();
+await page.getByRole("button", { name: "Yes, delete it" }).click(); // W1-10 asks first
 await page.waitForTimeout(2500);
 after = await page.locator("li:has(button:has-text('Delete'))").filter({ hasText: "2031" }).count();
 ok("5 delete window", after === 0, `${after} rows with 2031 left`);
@@ -481,6 +495,7 @@ ok(
 await page.goto(`${BASE}/app/professional/qualifications`);
 await page.waitForLoadState("networkidle");
 await b2Row.locator("button:has-text('Remove')").click();
+await page.getByRole("button", { name: "Yes, remove it" }).click(); // W1-10 asks first
 await page.waitForSelector("[role=status]:has-text('B2 removed')", { timeout: 15000 });
 await page.reload();
 await page.waitForLoadState("networkidle");
@@ -763,17 +778,24 @@ ok(
     (await page.getByRole("button", { name: "Close requirement" }).count()) === 0,
 );
 // 12c (batch 9, V1.8 «Vencida»): an open need whose period ended shows «Expired» (derived, not stored)
-// and can still be closed.
-await page.goto(`${BASE}/app/organization/requirements/new`);
-await page.waitForLoadState("networkidle");
-await page.fill("#title", "Local UI check · expired");
-await page.fill("#location", "Madrid (MAD)");
-await page.fill("#headcount", "1");
-await page.fill("#startsAt", "2026-01-05T08:00");
-await page.fill("#endsAt", "2026-01-06T08:00");
-await page.locator("label:has-text('B2')").first().click();
-await page.click("main form button[type=submit]");
-await page.waitForURL((u) => /\/requirements\/[0-9a-f-]{36}$/.test(u.pathname), { timeout: 30000 });
+// and can still be closed. The form refuses a past start since W5-01, so the need is created through
+// the local API as admin.mro (the database lets an open need end; only the input rule is new).
+const [[madOrg], [b2Type]] = await Promise.all([
+  seedRest("admin.mro@crewflex.test", "organizations?select=id&name=eq.Demo%20MRO%20Madrid"),
+  seedRest("admin.mro@crewflex.test", "qualification_types?select=id&code=eq.B2"),
+]);
+const expiredId = await seedRest("admin.mro@crewflex.test", "rpc/create_work_requirement", {
+  p_organization_id: madOrg.id,
+  p_title: "Local UI check · expired",
+  p_location: "Madrid (MAD)",
+  p_starts_at: "2026-01-05T08:00:00Z",
+  p_ends_at: "2026-01-06T08:00:00Z",
+  p_shift: "day",
+  p_headcount: 1,
+  p_urgency: "planned",
+  p_qualifications: [{ qualification_type_id: b2Type.id, requirement_level: "hard" }],
+});
+await page.goto(`${BASE}/app/organization/requirements/${expiredId}`);
 await page.waitForLoadState("networkidle");
 const expiredChip = await page.locator("main").getByText("Expired", { exact: true }).count();
 await page.getByRole("button", { name: "Close requirement" }).click();
@@ -846,14 +868,62 @@ ok(
     (await page.locator("nav a[href='/app/admin/verifications']").count()) === 0,
   "",
 );
+// The «View as» switcher and its admin-only views are not there for organization roles
+const managerNoViews = (await page.getByRole("navigation", { name: "View as" }).count()) === 0;
+const managerAdminHome = await page
+  .goto(`${BASE}/app/admin`)
+  .then(() => page.locator("body").innerText());
+const managerRecruiter = await page
+  .goto(`${BASE}/app/recruiter`)
+  .then(() => page.locator("body").innerText());
+ok(
+  "19b manager: no view switcher; /app/admin and /app/recruiter are 404",
+  managerNoViews && /not found/i.test(managerAdminHome) && /not found/i.test(managerRecruiter),
+  "",
+);
 await logout();
 
 // 6c. Platform admin verifies Golf's pending B1.1 → matching changes → seed restored
 await login("platform.admin@crewflex.test");
+const viewSwitcher = page.getByRole("navigation", { name: "View as" });
+ok(
+  "20a platform admin lands on Administration with the four-view switcher (v1.8 «Probar como»)",
+  new URL(page.url()).pathname === "/app/admin" &&
+    (await viewSwitcher.locator("a").allInnerTexts()).join("|") ===
+      "Technician|Company|Recruiter|Administration" &&
+    (await viewSwitcher.locator("a[aria-current]").innerText()) === "Administration",
+  page.url(),
+);
 ok(
   "20 platform admin sees the Verifications entry",
   (await page.locator("a[href='/app/admin/verifications']").count()) > 0,
   "",
+);
+await viewSwitcher.locator("a[href='/app/recruiter']").click();
+await page.waitForURL(/\/app\/recruiter$/);
+ok(
+  "20b Recruiter view is the «coming later» placeholder",
+  /Coming later/.test(await page.locator("main").innerText()),
+  "",
+);
+await viewSwitcher.locator("a[href='/app/organization']").click();
+await page.waitForURL(/\/app\/organization$/);
+await page.waitForLoadState("networkidle");
+// The section label is uppercased by CSS, and innerText follows text-transform.
+ok(
+  "20c Company view is the admin's own organization",
+  /CrewFlex Operaciones/i.test(await page.locator("aside").innerText()) &&
+    (await viewSwitcher.locator("a[aria-current]").innerText()) === "Company" &&
+    // v1.8 swaps the menu with the role: the professional section is gone in this view
+    (await page.locator("aside a[href='/app/organization/requirements']").count()) === 1 &&
+    (await page.locator("aside a[href='/app/professional/profile']").count()) === 0,
+  "",
+);
+await page.goto(madUrl);
+ok(
+  "20d Company view: another organization's requirement is a 404, even for a platform admin",
+  /not found/i.test(await page.locator("body").innerText()),
+  madUrl,
 );
 await page.goto(`${BASE}/app/admin/verifications`);
 await page.waitForLoadState("networkidle");

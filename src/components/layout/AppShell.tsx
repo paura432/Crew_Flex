@@ -6,7 +6,9 @@ import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/fe
 import { primaryMembership, type SessionActor } from "@/server/session";
 import { accountSummaryKeys } from "./account-summary";
 import { NavDrawer } from "./NavDrawer";
-import { NavLinks, type NavItem } from "./NavLinks";
+import type { NavItem } from "./NavLinks";
+import { switcherViews } from "./views";
+import { ViewSections, ViewSwitcher, type NavSection } from "./ViewSwitcher";
 
 export async function AppShell({ actor, children }: { actor: SessionActor; children: ReactNode }) {
   const [t, tNav, tDomain, walletEnabled] = await Promise.all([
@@ -40,16 +42,25 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/admin/verifications", label: tNav("verifications") },
   ];
 
-  const sections = [
+  const sections: NavSection[] = [
     ...(actor.memberships.length > 0
-      ? [{ label: organization?.name ?? tNav("organization"), items: organizationNav }]
+      ? [
+          {
+            label: organization?.name ?? tNav("organization"),
+            view: "organization" as const,
+            items: organizationNav,
+          },
+        ]
       : []),
-    ...(isProfessional ? [{ label: tNav("professional"), items: professionalNav }] : []),
+    ...(isProfessional
+      ? [{ label: tNav("professional"), view: "professional" as const, items: professionalNav }]
+      : []),
     ...(canOpenQualificationReview(actor.profile)
-      ? [{ label: tNav("platform"), items: platformNav }]
+      ? [{ label: tNav("platform"), view: "admin" as const, items: platformNav }]
       : []),
     { label: tNav("account"), items: accountNav },
   ];
+  const views = switcherViews(actor);
 
   return (
     <div className="min-h-screen lg:flex">
@@ -89,14 +100,13 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
             </form>
           }
         >
-          {sections.map((section) => (
-            <div key={section.label}>
-              <p className="hidden px-3 pb-2 text-[11px] font-semibold tracking-[0.16em] text-[#91aac1] uppercase lg:block">
-                {section.label}
-              </p>
-              <NavLinks items={section.items} label={section.label} />
-            </div>
-          ))}
+          {views.length > 0 && (
+            <ViewSwitcher
+              label={tNav("viewAs")}
+              views={views.map((view) => ({ view, label: tNav(`views.${view}`) }))}
+            />
+          )}
+          <ViewSections sections={sections} byView={views.length > 0} />
         </NavDrawer>
         <div className="hidden border-t border-white/10 px-5 py-4 lg:block">
           <p className="truncate text-sm font-semibold text-white">{actor.profile.display_name}</p>

@@ -18,7 +18,10 @@ database, never from the client.
 | `organization_admin`   | `organization_members.role = admin`               | + update organization, manage members.                                                                                                                                                                                                                                          |
 | `platform_admin`       | `profiles.platform_role = platform_admin`         | Read access across tables for support; reviews pending qualifications through DEFINER `review_qualification` (never their own; audited) — IMPLEMENTED locally 2026-10-15, **OD-3 approval checkpoint** before any remote use. Never derived from metadata; no grant can set it. |
 
-`profiles.account_type` only chooses the default workspace route. It grants nothing.
+`profiles.account_type` only chooses the default workspace route. It grants nothing. Platform admins start at
+`/app/admin` and get a «Ver como» switcher (D-13: Técnico / Empresa / Recruiter / Administración) that only links
+to their own workspaces: it grants nothing and opens no new read path; `/app/admin` and `/app/recruiter` are 404
+for anyone else.
 
 ## Permission matrix (RLS)
 

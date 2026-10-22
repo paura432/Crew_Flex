@@ -46,7 +46,9 @@
     "verifications": "Verificaciones",
     "tools": "Herramientas",
     "documents": "Documentos",
-    "recovery": "Restablecer contraseña"
+    "recovery": "Restablecer contraseña",
+    "admin": "Administración",
+    "recruiter": "Recruiter"
   },
   "nav": {
     "organization": "Organización",
@@ -63,7 +65,14 @@
     "platform": "Plataforma",
     "verifications": "Verificaciones",
     "tools": "Herramientas",
-    "documents": "Documentos"
+    "documents": "Documentos",
+    "viewAs": "Ver como",
+    "views": {
+      "professional": "Técnico",
+      "organization": "Empresa",
+      "recruiter": "Recruiter",
+      "admin": "Administración"
+    }
   },
   "landing": {
     "eyebrow": "Personal de mantenimiento aeronáutico",
@@ -876,7 +885,23 @@
     "organization": "Organización",
     "role": "Rol"
   },
+  "recruiter": {
+    "eyebrow": "Recruiter",
+    "title": "Espacio recruiter",
+    "soonTitle": "Próximamente",
+    "soonBody": "El espacio para agencias que representan a clientes llegará en una fase posterior. Su modelo todavía está pendiente de decisión."
+  },
   "admin": {
+    "home": {
+      "eyebrow": "Plataforma",
+      "title": "Administración",
+      "description": "Herramientas de la plataforma disponibles para administradores.",
+      "reviewsTitle": "Revisión de cualificaciones",
+      "reviewsOpen": "Abrir la cola de revisión",
+      "reviewsOff": "La revisión de cualificaciones está desactivada en este entorno.",
+      "toolsTitle": "Herramientas",
+      "toolsOpen": "Abrir herramientas"
+    },
     "reviews": {
       "eyebrow": "Plataforma",
       "title": "Revisión de cualificaciones",

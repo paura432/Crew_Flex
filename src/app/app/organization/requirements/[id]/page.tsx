@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RequirementDetailPage({
   params,
 }: PageProps<"/app/organization/requirements/[id]">) {
-  const [{ id }, { canManage }, t, tDashboard] = await Promise.all([
+  const [{ id }, { organization, canManage }, t, tDashboard] = await Promise.all([
     params,
     requireOrganizationContext(),
     getTranslations("organization.detail"),
@@ -33,6 +33,8 @@ export default async function RequirementDetailPage({
     return <ApiErrorState error={result.error} requestId={result.requestId} />;
   }
   const { requirement } = result.data;
+  // RLS lets platform admins read every tenant; these pages show the acting organization only.
+  if (requirement.organizationId !== organization.id) notFound();
   const closed = requirement.status === "closed";
   // V1.8 evaluates published jobs only: a closed need shows its facts, not the candidate pool.
   const capacity = canManage && !closed ? await evaluateRequirementCapacity(requirement.id) : null;

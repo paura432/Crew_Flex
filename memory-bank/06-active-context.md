@@ -1,10 +1,19 @@
 # 06 · Active context
 
-_Last updated 2026-10-21 CEST. Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-22 CEST. Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
-None running. Last loop (2026-10-21): element-by-element diff of the v1.8 HTML bundle (`CrewFlex_v1.8.html`,
+2026-10-22: **D-13** (owner) — platform admins get the four v1.8 views through a «Ver como» switcher over their
+OWN account (`src/components/layout/views.ts`, `ViewSwitcher.tsx`; `/app/admin` home, `/app/recruiter`
+placeholder; sidebar shows the active view's menu; seed gives `platform.admin` the org «CrewFlex Operaciones»).
+Review fix: requirement detail/matches are 404 for another organization (platform admins read every tenant).
+**Uncommitted** on `feat/v18-html-parity`. Gates: `pnpm check` 0 (488 pass, 32 SKIPPED), build 0, E2E local 42/42,
+ui-smoke **110/110** — first smoke run on this branch: fixed W1-10 (confirm step), W5-01 (12c via RPC) drift; run
+`cleanup-test-rows.sh` before the smoke (the requirements list pages at 20 since W5-02). Local DB has the
+`20261021120000` migration and the D-13 seed rows applied in place (no reset).
+
+Previous loop (2026-10-21): element-by-element diff of the v1.8 HTML bundle (`CrewFlex_v1.8.html`,
 sha256 `0c4875ee…`) against `51c835a`, then its decision-free backlog, one task per commit, on the local branch
 **`feat/v18-html-parity`** (40 commits ahead of `main`, not pushed). Status, SHAs, gates and iteration log:
 `docs/integration/crewflex-v13/16-html-v18-diff.md` (37 VERIFIED, W2-10/W2-12 BLOCKED on AB-34/AB-28; Q-01…Q-03 are
@@ -13,7 +22,7 @@ Local gotchas: `pkill -f "next …"` kills the calling shell — kill the PID fr
 `next build && next start`; Playwright's `page.evaluate` trips the report-only CSP (eval) — the smoke has an
 uninstrumented pass (17c) for the real answer; after `release-compat/run.sh` or `release2.sh` re-insert the `qualification_review`
 flag and restart `functions serve` (the wallet E2E fails 2/42 until the restart). No Docker in this WSL today: E2E,
-ui-smoke and `functions serve` were BLOCKED for the whole v1.8 HTML loop (PGlite, Vitest and Deno ran).
+ui-smoke and `functions serve` were BLOCKED for the whole v1.8 HTML loop (PGlite, Vitest and Deno ran); Docker is back on 2026-10-22.
 
 ## State
 
