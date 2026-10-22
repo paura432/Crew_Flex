@@ -11,7 +11,8 @@ Browser ── untrusted ──────────────────�
   │ cookies (@supabase/ssr)                        11 "use client" components (forms, managers)
   ▼
 Next.js 16 App Router (Node, Vercel) ─────────────────────────────────────────────────────────
-  src/proxy.ts               session refresh + redirect of /app/** (UX only, not a security layer)
+  src/proxy.ts               session refresh + redirect of /app/**, report-only CSP nonce, real 404 for
+                             /app/admin*·/app/recruiter* without platform_admin (one profile read; UX only, not a security layer)
   src/app/**                 thin routes, Server Components; every /app page calls requireSessionActor()
   src/features/<d>/actions.ts  "use server": Zod parse → invokeEdgeFunction() → revalidatePath
   src/features/<d>/api.ts      server-only reads: invokeEdgeFunction() or PostgREST under RLS

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { calendarDays, type CalendarWindow } from "./calendar";
+import { calendarDays, type CalendarDay, type CalendarWindow } from "./calendar";
 import {
   cycleDay,
   cycleStates,
+  emptyPreviewReason,
   planChanges,
   planCycle,
   RotationError,
@@ -122,5 +123,17 @@ describe("planCycle", () => {
     expect(replaced["2026-11-08"]).toEqual({ cycle: O, status: null });
     // A rest day over an existing window clears it → it is a real change.
     expect(planChanges(days, replaced)).toContainEqual({ date: "2026-11-08", status: null });
+  });
+});
+
+describe("emptyPreviewReason (X-15)", () => {
+  const day = (date: string) => ({ date, windows: [] }) as unknown as CalendarDay;
+  it("a month entirely in the past says so; otherwise the days are already taken", () => {
+    expect(emptyPreviewReason([day("2026-09-29"), day("2026-09-30")], "2026-10-22")).toBe(
+      "pastMonth",
+    );
+    expect(emptyPreviewReason([day("2026-10-21"), day("2026-10-22")], "2026-10-22")).toBe(
+      "nothingGenerated",
+    );
   });
 });

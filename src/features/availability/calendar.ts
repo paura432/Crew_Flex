@@ -117,6 +117,14 @@ export function calendarDays(windows: CalendarWindow[], month: string): Calendar
  */
 export const isDayEditable = (date: string, today: string) => date >= today;
 
+/**
+ * X-19, form only: a new window, or one whose start moves, may not start on a past UTC day. Both
+ * starts are the form's minute-precision `YYYY-MM-DDTHH:mm` (R-X L2: a stored start can carry
+ * seconds); `editingStart` is null for a new window.
+ */
+export const refusesPastStart = (formStart: string, editingStart: string | null, today: string) =>
+  formStart !== editingStart && !isDayEditable(formStart.slice(0, 10), today);
+
 /** Whole-day window boundaries for a calendar day (UTC). */
 export function dayWindow(date: string): { startsAt: string; endsAt: string } {
   const start = dayStart(date);

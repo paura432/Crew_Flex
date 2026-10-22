@@ -214,6 +214,7 @@
       "sessionExpired": "Your session expired. Sign in again.",
       "unreachable": "The service could not be reached. Nothing was saved — retry.",
       "offline": "The connection was lost. Your changes are still here — check your connection and retry.",
+      "reload": "This page is from an earlier version of the app. Reload it and try again; your changes were not saved.",
       "gone": "This item no longer exists. Reload the page.",
       "conflict": "You already declared this qualification. Edit the existing one instead."
     }
@@ -689,7 +690,8 @@
         "customLength": "Choose between 1 and 31 days.",
         "cycleTooLong": "The cycle must fit in 31 days.",
         "invalidDate": "Choose a valid day 1.",
-        "nothingGenerated": "No days to generate: every day from today already has saved windows. Tick «Also replace…» or choose another month."
+        "nothingGenerated": "No days to generate: every day from today already has saved windows. Tick «Also replace…» or choose another month.",
+        "pastMonth": "This month is over: choose the current month or a later one."
       },
       "unsaved": "not saved",
       "pending": "{count, plural, one {# day changed} other {# days changed}} and not saved yet. Review the calendar, then save or discard to change month.",

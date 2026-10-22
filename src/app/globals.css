@@ -65,4 +65,8 @@
   details[open] > summary.flex::before {
     content: "▾";
   }
+  /* Older WebKit still draws its own marker on a flex summary (R-X L4): one triangle only. */
+  summary.flex::-webkit-details-marker {
+    display: none;
+  }
 }

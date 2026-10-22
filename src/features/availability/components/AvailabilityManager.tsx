@@ -30,12 +30,19 @@ import {
   DAY_STYLE,
   dayWindow,
   isDayEditable,
+  refusesPastStart,
   monthOffset,
   shiftMonth,
   WEEKDAYS,
   type DayState,
 } from "../calendar";
-import { planChanges, planCycle, RotationError, type PlannedDay } from "../rotation";
+import {
+  emptyPreviewReason,
+  planChanges,
+  planCycle,
+  RotationError,
+  type PlannedDay,
+} from "../rotation";
 import { CyclePlanner, type CycleSettings } from "./CyclePlanner";
 
 type Picker = AvailabilityStatus | "clear";
@@ -188,7 +195,7 @@ export function AvailabilityManager({
       const generated = planCycle(days, settings.pattern, { ...settings, today });
       // X-15: every day from today already has windows and «replace» is off → say so, not silence.
       if (Object.keys(generated).length === 0) {
-        setCycleError(t("cycle.error.nothingGenerated"));
+        setCycleError(t(`cycle.error.${emptyPreviewReason(days, today)}`));
         return;
       }
       changePlan((old) => ({ ...old, ...generated }));
@@ -266,9 +273,8 @@ export function AvailabilityManager({
     // X-19, FORM ONLY: a new window, or one whose start moves, cannot start on a past day (as the
     // calendar, W1-03). The shared schema, the Edge Function and the RPC still accept past windows,
     // as v1.8 connected did: no backend rule changes here (docs/product/BUSINESS_RULES.md BR-4.6).
-    const startMoved =
-      !editing || Date.parse(parsed.data.startsAt) !== Date.parse(editing.startsAt);
-    if (startMoved && !isDayEditable(parsed.data.startsAt.slice(0, 10), today)) {
+    const formStart = String(form.get("startsAt") ?? "");
+    if (refusesPastStart(formStart, editing ? toLocalInput(editing.startsAt) : null, today)) {
       setErrors({ startsAt: "v.start.future" });
       return;
     }

@@ -62,7 +62,11 @@ page.on("pageerror", (e) => errors.push(`${String(e)} @ ${page.url()}`));
 const cspViolations = [];
 page.on("console", (m) => {
   if (/Content Security Policy/.test(m.text())) cspViolations.push(`${m.text()} @ ${page.url()}`);
-  if (m.type() === "error" && !isExpected404(m.text(), page.url()) && !expectOffline)
+  if (
+    m.type() === "error" &&
+    !isExpected404(m.text(), page.url()) &&
+    !(expectOffline && /ERR_INTERNET_DISCONNECTED/.test(m.text()))
+  )
     errors.push(`${m.text()} @ ${page.url()}`);
 });
 const hosts = new Set();

@@ -111,6 +111,13 @@ export function planCycle(
   return plan;
 }
 
+/**
+ * Why a preview generated no day (X-15): the month is over (R-X L3), or every day from today already
+ * has windows and «replace» is off.
+ */
+export const emptyPreviewReason = (days: readonly CalendarDay[], today: string) =>
+  days.every((d) => d.date < today) ? ("pastMonth" as const) : ("nothingGenerated" as const);
+
 /** Days that change something when saved (rest days on empty days are preview only). */
 export function planChanges(
   days: readonly CalendarDay[],

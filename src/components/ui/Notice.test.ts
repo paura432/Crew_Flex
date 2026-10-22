@@ -40,6 +40,19 @@ describe("callAction (X-02)", () => {
     expect(actionErrorCopy(t, result).text).toBe("«api.action.offline»");
   });
 
+  it("a server-side throw is a server error, not «check your connection» (review R-X M2)", async () => {
+    const result = await callAction(() => Promise.reject(new Error("boom")));
+    expect(result).toMatchObject({ ok: false, code: "INTERNAL_ERROR" });
+    expect(actionErrorCopy(t, result).text).toBe("«api.INTERNAL_ERROR.description»");
+  });
+
+  it("an action unknown to the deployed server asks for a reload (open tab across a deploy)", async () => {
+    const { UnrecognizedActionError } =
+      await import("next/dist/client/components/unrecognized-action-error");
+    const result = await callAction(() => Promise.reject(new UnrecognizedActionError("gone")));
+    expect(actionErrorCopy(t, result).text).toBe("«api.action.reload»");
+  });
+
   it("passes results through and lets Next's redirect propagate", async () => {
     expect(await callAction(async () => ({ ok: true }))).toEqual({ ok: true });
     await expect(callAction(async () => redirect("/app"))).rejects.toThrow("NEXT_REDIRECT");

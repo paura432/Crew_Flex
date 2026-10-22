@@ -46,7 +46,9 @@ export async function getOwnProfessionalOverview(
       .overrideTypes<AvailabilityWindowRow[], { merge: false }>(),
   ]);
   if (profile.error || qualifications.error || availability.error) {
-    throw new Error("professional overview unavailable");
+    throw new Error("professional overview unavailable", {
+      cause: profile.error ?? qualifications.error ?? availability.error,
+    });
   }
   if (!profile.data) return null;
   return {

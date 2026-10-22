@@ -7,6 +7,7 @@ import {
   monthDays,
   monthOffset,
   parseMonth,
+  refusesPastStart,
   shiftMonth,
 } from "./calendar";
 
@@ -113,5 +114,17 @@ describe("parseMonth", () => {
     [undefined, null],
   ])("%s → %s", (input, expected) => {
     expect(parseMonth(input)).toBe(expected);
+  });
+});
+
+describe("refusesPastStart (X-19, form only)", () => {
+  const today = "2026-10-22";
+  it("a new window may not start on a past day; today and later are fine", () => {
+    expect(refusesPastStart("2026-10-21T23:59", null, today)).toBe(true);
+    expect(refusesPastStart("2026-10-22T00:00", null, today)).toBe(false);
+  });
+  it("an ongoing window keeps its past start when only the end or status changes", () => {
+    expect(refusesPastStart("2026-10-01T08:00", "2026-10-01T08:00", today)).toBe(false);
+    expect(refusesPastStart("2026-10-02T08:00", "2026-10-01T08:00", today)).toBe(true);
   });
 });

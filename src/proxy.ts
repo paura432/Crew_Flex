@@ -53,17 +53,20 @@ export async function proxy(request: NextRequest) {
   // X-11: platform-only pages answer a real 404. Their own notFound() runs after the /app loading
   // boundary has streamed a 200, with the requested page's title; this decides before the stream.
   if (userId && /^\/app\/(admin|recruiter)(\/|$)/.test(pathname)) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("platform_role")
       .eq("id", userId)
       .maybeSingle();
+    // A failed read fails closed (404); logged without the user id.
+    if (error) console.warn("proxy: profile read failed for a platform page", error.code);
     const allowed =
       data?.platform_role === "platform_admin" &&
       (!pathname.startsWith("/app/admin/verifications") || isQualificationReviewEnabled());
     if (!allowed) {
-      // An unmatched path renders the root not-found page with a 404 status.
-      const notFound = NextResponse.rewrite(new URL("/_not-found", request.url), {
+      // A path no route matches renders the root not-found page with a 404 status (R-X L1: not
+      // Next's internal `/_not-found` name).
+      const notFound = NextResponse.rewrite(new URL("/__denied", request.url), {
         request: { headers: requestHeaders },
       });
       for (const cookie of response.cookies.getAll()) notFound.cookies.set(cookie);

@@ -70,7 +70,9 @@ describe("buttons (X-01)", () => {
   });
 
   it("no caller overrides a variant's colour or size through className (stylesheet order wins)", () => {
-    const tag = /<(?:Button|ButtonLink|ConfirmButton)\b(?:[^<>]|=>)*?className=\{?["`]([^"`]*)/g;
+    // className as a string, a template or any `{…}` expression (R-X L7: `{cond ? "…" : "…"}`).
+    const tag =
+      /<(?:Button|ButtonLink|ConfirmButton)\b(?:[^<>]|=>)*?className=(\{[^}]*\}|"[^"]*")/g;
     const offenders = tsxFiles("src").flatMap((path) =>
       [...read(path).matchAll(tag)]
         .filter((m) => /(?:^|\s)(?:hover:)?(?:bg|text|border|min-h|px|py)-/.test(m[1]!))
