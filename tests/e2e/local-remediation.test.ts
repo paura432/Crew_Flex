@@ -173,7 +173,8 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
       headers: { "Idempotency-Key": "retry-1" },
     });
     expect(malformed.status).toBe(400);
-    await client(manager).from("work_requirements").update({ status: "cancelled" }).eq("id", id);
+    // M05: nothing moves into `cancelled` any more; closing ends a need.
+    await client(manager).from("work_requirements").update({ status: "closed" }).eq("id", id);
   });
 
   it("I-1: availability and declarations replay instead of duplicating / returning 409", async () => {
@@ -886,6 +887,10 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
     });
     expect(created.status).toBe(201);
     const id = (created.body.data?.requirement as { id: string }).id;
+    const ids0 = async (query: Record<string, string>) => {
+      const res = await call("work-requirements", { token: manager, query });
+      return (res.body.data?.requirements as { id: string }[]).map((r) => r.id);
+    };
     const close = (token: string) =>
       call("work-requirements", { method: "PATCH", token, body: { id, status: "closed" } });
     const [charlie, adminOther] = await Promise.all([
@@ -894,12 +899,25 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
     ]);
     expect((await close(charlie)).status).toBe(403);
     expect((await close(adminOther)).status).toBe(404);
-    const reopen = await call("work-requirements", {
-      method: "PATCH",
-      token: manager,
-      body: { id, status: "open" },
-    });
-    expect(reopen.status).toBe(400); // the API offers no other transition
+    // M05 (owner 2026-10-22): pause and resume; a paused need is not evaluated.
+    const setStatus = (status: string) =>
+      call("work-requirements", { method: "PATCH", token: manager, body: { id, status } });
+    expect((await setStatus("open")).status).toBe(200); // already open: no-op
+    const paused = await setStatus("paused");
+    expect([paused.status, (paused.body.data?.requirement as { status: string }).status]).toEqual([
+      200,
+      "paused",
+    ]);
+    for (const fn of ["capacity-evaluate", "matching-evaluate"]) {
+      const res = await call(fn, { method: "POST", token: manager, body: { requirementId: id } });
+      expect([fn, res.status]).toEqual([fn, 409]);
+    }
+    expect(
+      await ids0({ organizationId: mroId, status: "open", endsAfter: new Date().toISOString() }),
+    ).not.toContain(id);
+    expect((await setStatus("cancelled")).status).toBe(400); // not an API status
+    const resumed = await setStatus("open");
+    expect((resumed.body.data?.requirement as { status: string }).status).toBe("open");
     const first = await close(manager);
     const again = await close(manager);
     expect([first.status, again.status]).toEqual([200, 200]);
@@ -909,6 +927,7 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
       .update({ status: "open" })
       .eq("id", id);
     expect(direct.error?.code).toBe("55000");
+    expect((await setStatus("open")).status).toBe(409); // closed is terminal (lifecycle check)
     const edit = await client(manager)
       .from("work_requirements")
       .update({ title: "E2E rewritten after close" })

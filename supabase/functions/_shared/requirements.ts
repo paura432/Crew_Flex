@@ -3,6 +3,7 @@
 import { z } from "zod";
 import type { Candidate } from "../../../src/domain/matching.ts";
 import {
+  isEvaluable,
   REQUIREMENT_LEVELS,
   REQUIREMENT_STATUSES,
   SHIFTS,
@@ -72,10 +73,10 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
 }
 
 /** Loads a requirement visible to the actor (RLS). Hidden and missing look the same. */
-/** V1.8 evaluates published jobs only: a closed need no longer exposes the candidate pool (BR-1.9). */
+/** V1.8 evaluates published jobs only: a paused or closed need exposes no candidate pool (BR-1.9, M05). */
 export function assertEvaluableStatus(requirement: Pick<WorkRequirement, "status">): void {
-  if (requirement.status === "closed")
-    throw new ApiError("CONFLICT", "This requirement is closed.");
+  if (!isEvaluable(requirement))
+    throw new ApiError("CONFLICT", `This requirement is ${requirement.status}.`);
 }
 
 export async function loadRequirement(actor: Actor, id: string): Promise<WorkRequirement> {

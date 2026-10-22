@@ -1,5 +1,6 @@
 import "server-only";
 import type {
+  ChangeRequirementStatusInput,
   CreateWorkRequirementInput,
   RequirementListOrder,
 } from "@/lib/validation/work-requirement";
@@ -40,8 +41,9 @@ export const createRequirement = (input: CreateWorkRequirementInput, idempotency
     headers: { "Idempotency-Key": idempotencyKey },
   });
 
-export const closeRequirement = (id: string) =>
+/** Pause, resume (`open`) or close (terminal) — M05, V1.8 `job.status`. */
+export const setRequirementStatus = (input: ChangeRequirementStatusInput) =>
   invokeEdgeFunction<WorkRequirementResponse>("work-requirements", {
     method: "PATCH",
-    body: { id, status: "closed" },
+    body: input,
   });

@@ -20,6 +20,7 @@ import { PoolCoverageNote } from "@/features/matching/components/PoolCoverageNot
 import { getRequirement } from "@/features/requirements/api";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
 import { formatPeriod } from "@/i18n/format";
+import { isEvaluable } from "@/domain/work-requirement";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -87,7 +88,14 @@ export default async function RequirementMatchesPage({
       <div className="mb-6">
         <QualificationChips qualifications={requirement.qualifications} />
       </div>
-      {!matchesResult.ok ? (
+      {!isEvaluable(requirement) ? (
+        // V1.8 evaluates published jobs only (M05): no pool for a paused or closed need.
+        <StateMessage
+          title={t(requirement.status === "paused" ? "notEvaluablePaused" : "notEvaluableClosed")}
+          description={t("notEvaluableDescription")}
+          action={back}
+        />
+      ) : !matchesResult.ok ? (
         <ApiErrorState error={matchesResult.error} requestId={matchesResult.requestId} />
       ) : matchesResult.data.candidates.length === 0 ? (
         <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />

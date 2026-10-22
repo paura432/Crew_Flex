@@ -12,6 +12,7 @@ const URGENCY_TONE: Record<Urgency, Tone> = { planned: "info", urgent: "warn", a
 const STATUS_TONE: Record<RequirementStatus, Tone> = {
   draft: "neutral",
   open: "info",
+  paused: "warn",
   covered: "ok",
   cancelled: "neutral",
   closed: "neutral",

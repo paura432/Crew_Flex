@@ -76,7 +76,7 @@ describe("i18n catalogs (es/en)", () => {
     const expected = {
       "domain.shift": ["day", "night", "split", "flexible"],
       "domain.urgency": ["planned", "urgent", "aog"],
-      "domain.requirementStatus": ["draft", "open", "covered", "cancelled", "closed"],
+      "domain.requirementStatus": ["draft", "open", "paused", "covered", "cancelled", "closed"],
       "domain.verification": ["pending", "verified", "rejected", "expired"],
       "domain.held": ["active", "withdrawn"],
       "domain.mobility": ["local", "national", "international"],

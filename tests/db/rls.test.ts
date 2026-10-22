@@ -10,6 +10,10 @@ import {
   SEED,
 } from "./harness";
 import { evaluateMatch, type MatchableRequirement } from "../../src/domain/matching";
+import {
+  canChangeRequirementStatus,
+  REQUIREMENT_STATUSES,
+} from "../../src/domain/work-requirement";
 import { toCandidate } from "../../src/lib/candidate-pool";
 
 const MAD_REQUIREMENT = "B1.1 · A320 line maintenance reinforcement";
@@ -1047,7 +1051,8 @@ describe("J. BR-1.4 invariant in the database (E-3, migration 20261015130000)", 
   it("6. editing other fields of a valid requirement keeps working", async () => {
     await asUser(db, SEED.managerMro, async (tx) => {
       await tx.query(
-        "update public.work_requirements set title = 'Renamed need', status = 'covered' where id = $1",
+        // M05: `covered` is no longer set by hand (it comes with D-06 confirmations); pause instead.
+        "update public.work_requirements set title = 'Renamed need', status = 'paused' where id = $1",
         [madRequirementId],
       );
       await tx.exec(commitCheck);
@@ -1098,7 +1103,8 @@ describe("J. BR-1.4 invariant in the database (E-3, migration 20261015130000)", 
     });
   });
 
-  it("L1: a legacy requirement without hard qualifications can still be cancelled, but not reopened", async () => {
+  // M05 (owner 2026-10-22): nothing moves into `cancelled` any more; `closed` is how a need ends.
+  it("L1: a legacy requirement without hard qualifications can still be closed, and stays closed", async () => {
     await db.transaction(async (owner) => {
       // A row that predates the invariant: created as a draft, opened with the trigger disabled.
       const { rows } = await owner.query<{ id: string }>(
@@ -1119,15 +1125,17 @@ describe("J. BR-1.4 invariant in the database (E-3, migration 20261015130000)", 
       );
       await owner.exec(commitCheck);
       await owner.exec("set constraints all deferred");
-      await owner.query("update public.work_requirements set status = 'cancelled' where id = $1", [
+      await owner.query("update public.work_requirements set status = 'closed' where id = $1", [
         rows[0]!.id,
       ]);
-      await owner.exec(commitCheck); // cancelling is always possible
-      await owner.exec("set constraints all deferred");
-      await owner.query("update public.work_requirements set status = 'open' where id = $1", [
-        rows[0]!.id,
-      ]);
-      expect(await queryError(owner, commitCheck)).toMatch(HARD_MISSING);
+      await owner.exec(commitCheck); // closing is always possible
+      expect(
+        await queryError(
+          owner,
+          "update public.work_requirements set status = 'open' where id = $1",
+          [rows[0]!.id],
+        ),
+      ).toMatch(/cannot be (reopened|changed)/); // the frozen-closed trigger fires first
       await owner.rollback();
     });
   });
@@ -3606,6 +3614,115 @@ describe("R. closing a requirement (V1.8 job.status, migrations 20261020120000/1
       await asUser(db, user, async (tx) => {
         const { affectedRows } = await tx.query(
           "update public.work_requirements set status = 'closed' where id = $1",
+          [madRequirementId],
+        );
+        expect(affectedRows ?? 0).toBe(0);
+      });
+    }
+    expect(await status(db)).toBe("open");
+  });
+});
+
+describe("S. requirement lifecycle (M05, migrations 20261022130000/130100)", () => {
+  const status = async (tx: { query: PGlite["query"] }) =>
+    (
+      await tx.query<{ status: string }>(
+        "select status from public.work_requirements where id = $1",
+        [madRequirementId],
+      )
+    ).rows[0]?.status;
+
+  it("a manager pauses and resumes; each change is audited with from and to", async () => {
+    await asUser(db, SEED.managerMro, async (tx) => {
+      for (const next of ["paused", "open"]) {
+        await tx.query("update public.work_requirements set status = $2 where id = $1", [
+          madRequirementId,
+          next,
+        ]);
+      }
+      expect(await status(tx)).toBe("open");
+      await tx.exec("reset role");
+      // Same transaction → same created_at: compare as a set.
+      const { rows } = await tx.query<{ metadata: { from: string; to: string } }>(
+        `select metadata from public.audit_events
+         where entity_id = $1 and action = 'requirement.status_changed'`,
+        [madRequirementId],
+      );
+      expect(rows.map((r) => `${r.metadata.from}→${r.metadata.to}`).sort()).toEqual([
+        "open→paused",
+        "paused→open",
+      ]);
+    });
+  });
+
+  it("SQL allows exactly the status changes of the domain table (canChangeRequirementStatus)", async () => {
+    const mismatches: string[] = [];
+    await db.transaction(async (owner) => {
+      for (const from of REQUIREMENT_STATUSES) {
+        for (const to of REQUIREMENT_STATUSES) {
+          if (from === to) continue;
+          await owner.exec("savepoint pair");
+          const { rows } = await owner.query<{ id: string }>(
+            `insert into public.work_requirements (organization_id, title, location, starts_at, ends_at, headcount, status, created_by)
+             values ($1, 'Lifecycle pair', 'MAD', now() + interval '1 day', now() + interval '2 days', 1, $2, $3)
+             returning id`,
+            [mroId, from, SEED.adminMro],
+          );
+          let ok = true;
+          try {
+            await owner.query("update public.work_requirements set status = $2 where id = $1", [
+              rows[0]!.id,
+              to,
+            ]);
+          } catch {
+            ok = false;
+          }
+          await owner.exec("rollback to savepoint pair");
+          if (ok !== canChangeRequirementStatus(from, to))
+            mismatches.push(`${from}→${to}: SQL ${ok}`);
+        }
+      }
+      await owner.rollback();
+    });
+    expect(mismatches).toEqual([]);
+  });
+
+  it("nothing moves into cancelled or covered by hand, not even an admin", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      for (const next of ["cancelled", "covered", "draft"]) {
+        expect(
+          await queryError(
+            tx,
+            `update public.work_requirements set status = '${next}' where id = $1`,
+            [madRequirementId],
+          ),
+        ).toMatch(/is not allowed/);
+      }
+      expect(await status(tx)).toBe("open");
+    });
+  });
+
+  it("a paused requirement can be closed, and then never resumed", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      for (const next of ["paused", "closed"]) {
+        await tx.query("update public.work_requirements set status = $2 where id = $1", [
+          madRequirementId,
+          next,
+        ]);
+      }
+      expect(
+        await queryError(tx, "update public.work_requirements set status = 'open' where id = $1", [
+          madRequirementId,
+        ]),
+      ).toMatch(/cannot be (reopened|changed)/);
+    });
+  });
+
+  it("plain members and other organizations cannot pause it (no rows touched)", async () => {
+    for (const user of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+      await asUser(db, user, async (tx) => {
+        const { affectedRows } = await tx.query(
+          "update public.work_requirements set status = 'paused' where id = $1",
           [madRequirementId],
         );
         expect(affectedRows ?? 0).toBe(0);

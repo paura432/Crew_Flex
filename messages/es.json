@@ -386,6 +386,7 @@
     "requirementStatus": {
       "draft": "Borrador",
       "open": "Abierta",
+      "paused": "Pausada",
       "covered": "Cubierta",
       "cancelled": "Cancelada",
       "closed": "Cerrada",
@@ -749,6 +750,13 @@
         "confirm": "Sí, cerrarla",
         "cancel": "Mantenerla abierta",
         "closedNote": "Esta necesidad está cerrada. Ya no se puede reabrir."
+      },
+      "status": {
+        "pause": "Pausar",
+        "resume": "Reanudar",
+        "pausedDone": "Necesidad pausada: ya no se publica ni se evalúa.",
+        "resumedDone": "Necesidad reanudada: vuelve a publicarse.",
+        "pausedNote": "Esta necesidad está pausada: no se publica como oportunidad ni se evalúan candidatos. Reanúdala para volver a publicarla."
       }
     },
     "new": {
@@ -818,7 +826,10 @@
         "next": "Siguiente",
         "noResults": "Ningún profesional cumple estos filtros",
         "noResultsHint": "Limpia la búsqueda o incluye a los no elegibles para ver todo el grupo evaluado."
-      }
+      },
+      "notEvaluablePaused": "Necesidad pausada",
+      "notEvaluableClosed": "Necesidad cerrada",
+      "notEvaluableDescription": "Solo se evalúan candidatos para necesidades publicadas. Reanuda la necesidad para volver a verlos."
     },
     "workforce": {
       "title": "Plantilla interna",

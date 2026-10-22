@@ -5,11 +5,11 @@ import { redirect } from "next/navigation";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { idempotencyKeySchema } from "@/lib/validation/idempotency";
 import {
-  closeWorkRequirementInput,
+  changeRequirementStatusInput,
   createWorkRequirementInput,
 } from "@/lib/validation/work-requirement";
 import type { ApiErrorCode } from "@/types/api";
-import { closeRequirement, createRequirement } from "./api";
+import { createRequirement, setRequirementStatus } from "./api";
 
 export type CreateRequirementState =
   | { status: "idle" }
@@ -61,14 +61,20 @@ export async function createRequirementAction(
   redirect(`/app/organization/requirements/${result.data.requirement.id}`);
 }
 
-export type CloseRequirementResult =
+export type RequirementStatusResult =
   { ok: true } | { ok: false; code: ApiErrorCode; message: string; requestId?: string };
 
-/** V1.8 `job.status` → closed. Terminal: the database refuses any later status change. */
-export async function closeRequirementAction(id: unknown): Promise<CloseRequirementResult> {
-  const parsed = closeWorkRequirementInput.safeParse({ id, status: "closed" });
+/**
+ * Pause, resume or close (M05, V1.8 `job.status`). The Edge Function checks the lifecycle and the
+ * database enforces and audits it; closing is terminal.
+ */
+export async function changeRequirementStatusAction(
+  id: unknown,
+  status: unknown,
+): Promise<RequirementStatusResult> {
+  const parsed = changeRequirementStatusInput.safeParse({ id, status });
   if (!parsed.success) return { ok: false, code: "VALIDATION_ERROR", message: "v.requirement.id" };
-  const result = await closeRequirement(parsed.data.id);
+  const result = await setRequirementStatus(parsed.data);
   if (!result.ok) {
     return {
       ok: false,

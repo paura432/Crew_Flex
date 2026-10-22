@@ -100,12 +100,13 @@ export const listWorkRequirementsQuery = z.strictObject({
 });
 export type ListWorkRequirementsQuery = z.infer<typeof listWorkRequirementsQuery>;
 
-/** V1.8 `job.status` → closed (terminal). The only status change the API offers today. */
-export const closeWorkRequirementInput = z.strictObject({
+/** Status changes the API offers (M05): pause, resume (`open`), close (terminal). */
+export const REQUIREMENT_STATUS_ACTIONS = ["paused", "open", "closed"] as const;
+export const changeRequirementStatusInput = z.strictObject({
   id: z.uuid("v.requirement.id"),
-  status: z.literal("closed"),
+  status: z.enum(REQUIREMENT_STATUS_ACTIONS),
 });
-export type CloseWorkRequirementInput = z.infer<typeof closeWorkRequirementInput>;
+export type ChangeRequirementStatusInput = z.infer<typeof changeRequirementStatusInput>;
 
 export const evaluateRequirementInput = z.strictObject({
   requirementId: z.uuid("v.requirement.id"),

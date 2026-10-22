@@ -9,14 +9,18 @@ import { evaluateRequirementCapacity } from "@/features/capacity/api";
 import { CapacityOverview } from "@/features/capacity/components/CapacityOverview";
 import { MatchCard } from "@/features/matching/components/MatchCard";
 import { getRequirement } from "@/features/requirements/api";
-import { CloseRequirement } from "@/features/requirements/components/CloseRequirement";
+import { RequirementStatusActions } from "@/features/requirements/components/RequirementStatusActions";
 import { RequirementFacts } from "@/features/requirements/components/RequirementFacts";
+import { isEvaluable, isExpired, type WorkRequirement } from "@/domain/work-requirement";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
   return { title: t("requirement") };
 }
+
+/** Request time (dynamic page), as RequirementBadges: render must stay pure for React's lint. */
+const expiredNow = (r: Pick<WorkRequirement, "status" | "endsAt">) => isExpired(r, Date.now());
 
 export default async function RequirementDetailPage({
   params,
@@ -36,8 +40,10 @@ export default async function RequirementDetailPage({
   // RLS lets platform admins read every tenant; these pages show the acting organization only.
   if (requirement.organizationId !== organization.id) notFound();
   const closed = requirement.status === "closed";
-  // V1.8 evaluates published jobs only: a closed need shows its facts, not the candidate pool.
-  const capacity = canManage && !closed ? await evaluateRequirementCapacity(requirement.id) : null;
+  // V1.8 evaluates published jobs only: a paused or closed need shows its facts, not the pool (M05).
+  const evaluable = isEvaluable(requirement);
+  const capacity =
+    canManage && evaluable ? await evaluateRequirementCapacity(requirement.id) : null;
 
   return (
     <>
@@ -50,14 +56,21 @@ export default async function RequirementDetailPage({
               {t("close.closedNote")}
             </p>
           ) : (
-            canManage && (
-              <div className="mt-4 border-t border-line pt-4">
-                <CloseRequirement id={requirement.id} />
-              </div>
-            )
+            <div className="mt-4 space-y-3 border-t border-line pt-4">
+              {requirement.status === "paused" && (
+                <p className="text-sm text-muted">{t("status.pausedNote")}</p>
+              )}
+              {canManage && (
+                <RequirementStatusActions
+                  id={requirement.id}
+                  status={requirement.status}
+                  expired={expiredNow(requirement)}
+                />
+              )}
+            </div>
           )}
         </Panel>
-        {closed ? null : !capacity ? (
+        {!evaluable ? null : !capacity ? (
           <StateMessage
             title={tDashboard("managersOnlyTitle")}
             description={tDashboard("managersOnlyDescription")}

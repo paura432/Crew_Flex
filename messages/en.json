@@ -386,6 +386,7 @@
     "requirementStatus": {
       "draft": "Draft",
       "open": "Open",
+      "paused": "Paused",
       "covered": "Covered",
       "cancelled": "Cancelled",
       "closed": "Closed",
@@ -749,6 +750,13 @@
         "confirm": "Yes, close it",
         "cancel": "Keep it open",
         "closedNote": "This requirement is closed. It can no longer be reopened."
+      },
+      "status": {
+        "pause": "Pause",
+        "resume": "Resume",
+        "pausedDone": "Requirement paused: no longer published or evaluated.",
+        "resumedDone": "Requirement resumed: published again.",
+        "pausedNote": "This requirement is paused: it is not published as an opportunity and no candidates are evaluated. Resume it to publish it again."
       }
     },
     "new": {
@@ -818,7 +826,10 @@
         "next": "Next",
         "noResults": "No professional matches these filters",
         "noResultsHint": "Clear the search or include ineligible professionals to see the whole evaluated pool."
-      }
+      },
+      "notEvaluablePaused": "Requirement paused",
+      "notEvaluableClosed": "Requirement closed",
+      "notEvaluableDescription": "Candidates are evaluated for published requirements only. Resume the requirement to see them again."
     },
     "workforce": {
       "title": "Internal workforce",

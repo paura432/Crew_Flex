@@ -1,7 +1,8 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { evaluateCapacity } from "../../../src/domain/capacity.ts";
 import { evaluateMatch } from "../../../src/domain/matching.ts";
-import { toCandidate, toWorkRequirement } from "./requirements.ts";
+import { ApiError } from "./errors.ts";
+import { assertEvaluableStatus, toCandidate, toWorkRequirement } from "./requirements.ts";
 
 const requirementRow = {
   id: "r1",
@@ -62,4 +63,14 @@ Deno.test("rows map to domain objects that the shared engine evaluates", () => {
     evaluateMatch(requirement, internal[1]!).blockers[0]?.code,
     "HARD_QUALIFICATION_NOT_VERIFIED",
   );
+});
+
+Deno.test("paused and closed requirements are not evaluated (409), the others are (M05)", () => {
+  for (const status of ["paused", "closed"] as const) {
+    const error = assertThrows(() => assertEvaluableStatus({ status }), ApiError);
+    assertEquals(error.code, "CONFLICT");
+  }
+  for (const status of ["open", "covered", "draft", "cancelled"] as const) {
+    assertEvaluableStatus({ status });
+  }
 });

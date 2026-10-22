@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261019160200. Do not edit by hand.
+// migrations up to 20261022130100. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -718,7 +718,7 @@ export type Database = {
       qualification_category: "LICENSE" | "TYPE_RATING" | "TRAINING" | "APPROVAL" | "SKILL";
       qualification_status: "active" | "withdrawn";
       requirement_level: "hard" | "soft";
-      requirement_status: "draft" | "open" | "covered" | "cancelled" | "closed";
+      requirement_status: "draft" | "open" | "paused" | "covered" | "cancelled" | "closed";
       requirement_urgency: "planned" | "urgent" | "aog";
       shift_type: "day" | "night" | "split" | "flexible";
       technician_status: "employed" | "contractor" | "between_contracts";
@@ -846,7 +846,7 @@ export const Constants = {
       qualification_category: ["LICENSE", "TYPE_RATING", "TRAINING", "APPROVAL", "SKILL"],
       qualification_status: ["active", "withdrawn"],
       requirement_level: ["hard", "soft"],
-      requirement_status: ["draft", "open", "covered", "cancelled", "closed"],
+      requirement_status: ["draft", "open", "paused", "covered", "cancelled", "closed"],
       requirement_urgency: ["planned", "urgent", "aog"],
       shift_type: ["day", "night", "split", "flexible"],
       technician_status: ["employed", "contractor", "between_contracts"],
