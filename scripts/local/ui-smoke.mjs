@@ -926,16 +926,22 @@ ok(
 );
 // The «View as» switcher and its admin-only views are not there for organization roles
 const managerNoViews = (await page.getByRole("navigation", { name: "View as" }).count()) === 0;
-const managerAdminHome = await page
-  .goto(`${BASE}/app/admin`)
-  .then(() => page.locator("body").innerText());
-const managerRecruiter = await page
-  .goto(`${BASE}/app/recruiter`)
-  .then(() => page.locator("body").innerText());
+// X-11: a real HTTP 404 with a neutral title (was 200 after the /app loading boundary streamed)
+const denied = [];
+for (const path of ["/app/admin", "/app/recruiter", "/app/admin/verifications"]) {
+  expectedErrorUrls.add(`${BASE}${path}`);
+  const response = await page.goto(`${BASE}${path}`);
+  denied.push({
+    path,
+    status: response?.status(),
+    title: await page.title(),
+    notFound: /not found/i.test(await page.locator("body").innerText()),
+  });
+}
 ok(
-  "19b manager: no view switcher; /app/admin and /app/recruiter are 404",
-  managerNoViews && /not found/i.test(managerAdminHome) && /not found/i.test(managerRecruiter),
-  "",
+  "19b manager: no view switcher; admin, recruiter and verifications are HTTP 404, neutral title",
+  managerNoViews && denied.every((d) => d.status === 404 && d.notFound && d.title === "Crew Flex"),
+  JSON.stringify(denied),
 );
 await logout();
 
