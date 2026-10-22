@@ -56,4 +56,13 @@
     outline-offset: 2px;
     box-shadow: 0 0 0 2px var(--color-navy);
   }
+  /* A flex <summary> (centred for 44 px touch targets) loses the native disclosure triangle (X-07):
+     draw it back, pointing down while the <details> is open. */
+  summary.flex::before {
+    content: "▸";
+    margin-inline-end: 0.5rem;
+  }
+  details[open] > summary.flex::before {
+    content: "▾";
+  }
 }
