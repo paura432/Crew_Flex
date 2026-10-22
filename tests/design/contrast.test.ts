@@ -53,6 +53,16 @@ const tsxFiles = (dir: string): string[] =>
     return path.endsWith(".tsx") ? [path] : [];
   });
 
+describe("tools privacy note (X-10)", () => {
+  it("reads at ≥ 4.5:1 on canvas (the teal was 3.96:1; v1.8 used #587083)", () => {
+    const note = /className="([^"]+)">\{t\("privacyNote"\)\}/.exec(
+      read("src/features/tools/components/ToolsHome.tsx"),
+    )?.[1];
+    const color = /text-\[(#[0-9a-f]{6})\]/i.exec(note ?? "")?.[1] ?? "";
+    expect(contrast(color, token("--color-canvas"))).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe("buttons (X-01)", () => {
   it("white «Iniciar sesión» on the navy landing (was bg-white under text-white, 1:1)", () => {
     expect(contrast("#ffffff", token("--color-navy"))).toBeGreaterThanOrEqual(4.5);

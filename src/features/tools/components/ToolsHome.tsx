@@ -157,7 +157,8 @@ export function ToolsHome() {
 
       <div className="mt-6 flex items-center gap-3 text-[#4a857c]">
         <CheckIcon size={18} className="shrink-0" />
-        <p className="text-xs">{t("privacyNote")}</p>
+        {/* v1.8 `.toolbox p` sets the text in #587083 (4.8:1); the teal stays on the icon (X-10). */}
+        <p className="text-xs text-[#587083]">{t("privacyNote")}</p>
       </div>
     </>
   );
