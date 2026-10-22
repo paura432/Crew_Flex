@@ -1,28 +1,43 @@
 // GET  /work-requirements           → requirements of the actor's organizations (RLS); `offset` +
-//                                      `order` (starts_asc · created_desc) page them, `total` counts all
+//                                      `order` (starts_asc · created_desc) page them, `total` counts all;
+//                                      `archived` = include (default) · exclude · only (v1.8 «Archivada»)
 // GET  /work-requirements?id=<uuid> → one requirement
 // POST /work-requirements           → create (admin/manager), atomic RPC under RLS, audited,
-//                                      idempotent per `Idempotency-Key` (201 created · 200 replay)
-// PATCH /work-requirements { id, status: "paused" | "open" | "closed" } → pause, resume or close
-//                                      (admin/manager; M05, V1.8 `job.status`); `closed` is terminal.
+//                                      idempotent per `Idempotency-Key` (201 created · 200 replay);
+//                                      `intent: "draft"` saves a draft (R-D4: incomplete allowed), anything
+//                                      else publishes it (`open`) with every creation rule
+// PATCH /work-requirements { id, status: "paused" | "open" | "closed" } → pause, resume, publish a draft or
+//                                      close (admin/manager; M05, V1.8 `job.status`); `closed` is terminal.
 //                                      Enforced and audited by the database; the same status again is
 //                                      a no-op (200); a change the lifecycle does not allow is 409; closing
-//                                      with an accepted/confirmed application is 409 `ACTIVE_COMMITMENTS`
-// PUT /work-requirements { id, expectedUpdatedAt, title, location, startsAt, endsAt, shift, headcount,
-//                          urgency, qualifications } → edit (admin/manager; M05): only while the
+//                                      with an accepted/confirmed application is 409 `ACTIVE_COMMITMENTS`;
+//                                      publishing a draft (draft → open) applies the creation rules (400)
+// PATCH /work-requirements { id, archive: true } → v1.8 «Archivar» (one way, T-19): a closed requirement,
+//                                      or a draft (closed in the same step); anything else 409
+// PUT /work-requirements { id, expectedUpdatedAt, title, …, qualifications, country?, timeZone?, description?,
+//                          shifts?, conditions?, intent? } → edit (admin/manager; M05): only while the
 //                                      requirement never received an application (409 `HAS_APPLICATIONS`),
 //                                      409 when changed since `expectedUpdatedAt` or closed; nothing changed
-//                                      is a 200 no-op. RPC update_work_requirement (DEFINER), audited.
+//                                      is a 200 no-op; `intent: "draft"` saves a draft as a draft, `publish`
+//                                      publishes it. RPC update_work_requirement (DEFINER), audited.
 import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { loadRequirement, REQUIREMENT_SELECT, toWorkRequirement } from "../_shared/requirements.ts";
-import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_shared/validation.ts";
+import {
+  createdRow,
+  idempotencyKey,
+  MAX_REQUIREMENT_BODY_BYTES,
+  parseJsonBody,
+  parseQuery,
+} from "../_shared/validation.ts";
 import { canChangeRequirementStatus } from "../../../src/domain/work-requirement.ts";
 import {
-  changeRequirementStatusInput,
+  type CreateWorkRequirementInput,
   createWorkRequirementInput,
   listWorkRequirementsQuery,
+  patchRequirementInput,
+  publishIssues,
   type UpdateWorkRequirementInput,
   updateWorkRequirementInput,
 } from "../../../src/lib/validation/work-requirement.ts";
@@ -31,11 +46,11 @@ import type {
   WorkRequirementResponse,
 } from "../../../src/types/api.ts";
 
-/** RPC arguments of the edit (M05); the organization never changes and is not sent. */
-export function updateArgs(input: UpdateWorkRequirementInput) {
+type RequirementPayload = CreateWorkRequirementInput | UpdateWorkRequirementInput;
+
+/** The fields every create and edit sends (full replacement: an absent term is cleared). */
+function fieldArgs(input: RequirementPayload) {
   return {
-    p_id: input.id,
-    p_expected_updated_at: input.expectedUpdatedAt,
     p_title: input.title,
     p_location: input.location,
     p_starts_at: input.startsAt,
@@ -47,6 +62,32 @@ export function updateArgs(input: UpdateWorkRequirementInput) {
       qualification_type_id: q.qualificationTypeId,
       requirement_level: q.level,
     })),
+    p_country: input.country ?? null,
+    p_time_zone: input.timeZone ?? null,
+    p_description: input.description || null,
+    p_shifts: input.shifts?.length ? input.shifts : null,
+    p_conditions: input.conditions ?? null,
+  };
+}
+
+/** RPC arguments of the create: `intent: "draft"` → a draft, anything else → open (published). */
+export function createArgs(input: CreateWorkRequirementInput, key: string) {
+  return {
+    p_idempotency_key: key,
+    p_organization_id: input.organizationId,
+    ...fieldArgs(input),
+    p_status: input.intent === "draft" ? "draft" : "open",
+  };
+}
+
+/** RPC arguments of the edit (M05); the organization never changes and is not sent. */
+export function updateArgs(input: UpdateWorkRequirementInput) {
+  return {
+    p_id: input.id,
+    p_expected_updated_at: input.expectedUpdatedAt,
+    ...fieldArgs(input),
+    // null keeps the status; `draft` saves a draft as a draft; `open` publishes a draft.
+    p_status: input.intent === "draft" ? "draft" : input.intent === "publish" ? "open" : null,
   };
 }
 
@@ -67,6 +108,8 @@ export const handler = createHandler("work-requirements", {
       if (query.organizationId) request = request.eq("organization_id", query.organizationId);
       if (query.status) request = request.eq("status", query.status);
       if (query.endsAfter) request = request.gt("ends_at", query.endsAfter);
+      if (query.archived === "exclude") request = request.is("archived_at", null);
+      if (query.archived === "only") request = request.not("archived_at", "is", null);
       return request;
     };
     const request = filtered();
@@ -96,25 +139,18 @@ export const handler = createHandler("work-requirements", {
 
   POST: async (ctx) => {
     const actor = await requireActor(ctx);
-    const input = await parseJsonBody(ctx.req, createWorkRequirementInput);
+    const input = await parseJsonBody(
+      ctx.req,
+      createWorkRequirementInput,
+      { maxBytes: MAX_REQUIREMENT_BODY_BYTES },
+    );
     await requireOrganizationRole(actor, input.organizationId, ["admin", "manager"]);
 
     const key = idempotencyKey(ctx.req);
-    const { data, error } = await actor.client.rpc("create_work_requirement_idempotent", {
-      p_idempotency_key: key,
-      p_organization_id: input.organizationId,
-      p_title: input.title,
-      p_location: input.location,
-      p_starts_at: input.startsAt,
-      p_ends_at: input.endsAt,
-      p_shift: input.shift,
-      p_headcount: input.headcount,
-      p_urgency: input.urgency,
-      p_qualifications: input.qualifications.map((q) => ({
-        qualification_type_id: q.qualificationTypeId,
-        requirement_level: q.level,
-      })),
-    });
+    const { data, error } = await actor.client.rpc(
+      "create_work_requirement_idempotent",
+      createArgs(input, key),
+    );
     if (error) throw fromDatabaseError(error); // CF409 → CONFLICT (key reused, other payload)
     const { id, replayed } = createdRow(data);
 
@@ -127,12 +163,30 @@ export const handler = createHandler("work-requirements", {
 
   PATCH: async (ctx) => {
     const actor = await requireActor(ctx);
-    const input = await parseJsonBody(ctx.req, changeRequirementStatusInput);
+    const input = await parseJsonBody(ctx.req, patchRequirementInput);
     const current = await loadRequirement(actor, input.id); // hidden and missing → 404
     await requireOrganizationRole(actor, current.organizationId, ["admin", "manager"]);
-    if (current.status !== input.status) {
+
+    if ("archive" in input) {
+      const { error } = await actor.client.rpc("archive_work_requirement", { p_id: input.id });
+      if (error) throw fromDatabaseError(error); // 55000 (not closed nor a draft) → CONFLICT
+    } else if (current.status !== input.status) {
       if (!canChangeRequirementStatus(current.status, input.status)) {
         throw new ApiError("CONFLICT", "This status change is not allowed.");
+      }
+      if (current.status === "draft") {
+        // Publishing applies the creation rules to what the draft holds (R-D4, T-18).
+        const issues = publishIssues(current);
+        if (issues.length > 0) {
+          throw new ApiError(
+            "VALIDATION_ERROR",
+            undefined,
+            issues.slice(0, 20).map((issue) => ({
+              path: issue.path.map(String).join(".") || "body",
+              message: issue.message,
+            })),
+          );
+        }
       }
       const { data, error } = await actor.client
         .from("work_requirements")
@@ -148,11 +202,16 @@ export const handler = createHandler("work-requirements", {
 
   PUT: async (ctx) => {
     const actor = await requireActor(ctx);
-    const input = await parseJsonBody(ctx.req, updateWorkRequirementInput);
+    const input = await parseJsonBody(
+      ctx.req,
+      updateWorkRequirementInput,
+      { maxBytes: MAX_REQUIREMENT_BODY_BYTES },
+    );
     const current = await loadRequirement(actor, input.id); // hidden and missing → 404
     await requireOrganizationRole(actor, current.organizationId, ["admin", "manager"]);
     const { error } = await actor.client.rpc("update_work_requirement", updateArgs(input));
-    // CF412 (stale) · CFA12 (has applications, + reason) · 55000 (closed) → 409; 22023/23514 → 400
+    // CF412 (stale) · CFA12 (has applications, + reason) · 55000 (closed, or a draft save of a published one)
+    // → 409; 22023/23514 → 400
     if (error) throw fromDatabaseError(error);
     const requirement = await loadRequirement(actor, input.id);
     return { data: { requirement } satisfies WorkRequirementResponse };

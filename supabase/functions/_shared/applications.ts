@@ -29,7 +29,15 @@ import type {
 } from "../../../src/types/api.ts";
 import type { Actor } from "./auth.ts";
 import { ApiError, fromDatabaseError } from "./errors.ts";
-import { byLevelThenCode, toCandidate, toCandidateSummary, toIso } from "./requirements.ts";
+import {
+  byLevelThenCode,
+  termsColumns,
+  timeZoneColumn,
+  toCandidate,
+  toCandidateSummary,
+  toIso,
+  toTerms,
+} from "./requirements.ts";
 
 const qualification = z.object({
   qualificationTypeId: z.string(),
@@ -51,6 +59,8 @@ const opportunityRow = z.object({
   urgency: z.enum(URGENCIES),
   created_at: z.string(),
   qualifications: z.array(qualification),
+  ...termsColumns,
+  time_zone: timeZoneColumn,
   total: z.number(),
 });
 
@@ -68,6 +78,7 @@ export function toOpportunityRequirement(raw: unknown): OpportunityRequirement {
     urgency: row.urgency,
     createdAt: toIso(row.created_at),
     qualifications: [...row.qualifications].sort(byLevelThenCode),
+    ...toTerms(row, row.time_zone),
   };
 }
 
@@ -85,6 +96,9 @@ const card = z.object({
   createdAt: z.string(),
   status: z.enum(REQUIREMENT_STATUSES),
   qualifications: z.array(qualification),
+  // Requirement builder terms: on every card since 20261023600000, absent from older proposal versions.
+  ...termsColumns,
+  timeZone: timeZoneColumn,
 });
 const terms = card.omit({ id: true, createdAt: true, status: true });
 
@@ -123,6 +137,7 @@ function toProposal(raw: z.infer<typeof proposal>): ApplicationProposal | null {
       startsAt: toIso(raw.terms.startsAt),
       endsAt: toIso(raw.terms.endsAt),
       qualifications: [...raw.terms.qualifications].sort(byLevelThenCode),
+      ...toTerms(raw.terms, raw.terms.timeZone),
     },
   };
 }
@@ -156,6 +171,7 @@ export function toMyApplication(raw: unknown, own: Candidate): MyApplication {
     endsAt: toIso(row.requirement.endsAt),
     createdAt: toIso(row.requirement.createdAt),
     qualifications: [...row.requirement.qualifications].sort(byLevelThenCode),
+    ...toTerms(row.requirement, row.requirement.timeZone),
   };
   return {
     ...base(row, row.requirement_id),

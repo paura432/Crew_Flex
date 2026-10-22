@@ -80,7 +80,10 @@ const me = (
 Deno.test("rows map to the fixed projection: organization name only, ISO UTC, hard first", () => {
   const requirement = toOpportunityRequirement(row);
   assertEquals(Object.keys(requirement).sort(), [
+    "conditions",
+    "country",
     "createdAt",
+    "description",
     "endsAt",
     "headcount",
     "id",
@@ -88,10 +91,17 @@ Deno.test("rows map to the fixed projection: organization name only, ISO UTC, ha
     "organizationName",
     "qualifications",
     "shift",
+    "shifts",
     "startsAt",
+    "timeZone",
     "title",
     "urgency",
   ]);
+  // A row without the builder terms (older database): not stated.
+  assertEquals(
+    [requirement.country, requirement.timeZone, requirement.shifts, requirement.conditions],
+    [null, null, null, null],
+  );
   assertEquals(requirement.startsAt, "2031-01-10T06:00:00.000Z");
   assertEquals(
     requirement.qualifications.map((q) => q.code),

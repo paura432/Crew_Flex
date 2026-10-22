@@ -3,9 +3,13 @@
 import { z } from "zod";
 import type { Candidate } from "../../../src/domain/matching.ts";
 import {
+  EU_COUNTRIES,
   isEvaluable,
   REQUIREMENT_LEVELS,
+  REQUIREMENT_TIME_ZONES,
   type RequiredQualification,
+  type RequirementConditions,
+  type RequirementShift,
   REQUIREMENT_STATUSES,
   SHIFTS,
   URGENCIES,
@@ -13,6 +17,10 @@ import {
 } from "../../../src/domain/work-requirement.ts";
 import type { CandidatePassport } from "../../../src/domain/passport.ts";
 import { toCandidate, toCandidatePassport } from "../../../src/lib/candidate-pool.ts";
+import {
+  requirementConditionsInput,
+  requirementShiftInput,
+} from "../../../src/lib/validation/work-requirement.ts";
 
 export { toCandidate };
 import type { CandidateSummary, ExternalPoolCoverage } from "../../../src/types/api.ts";
@@ -21,8 +29,42 @@ import { ApiError, fromDatabaseError } from "./errors.ts";
 
 export const REQUIREMENT_SELECT = `
   id, organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_at,
-  updated_at, work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) )
+  updated_at, country, timezone, description, shifts, conditions, archived_at,
+  work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) )
 `;
+
+/**
+ * The requirement builder's terms as the database stores them (LOCAL 20261023600000; the CHECK constraints
+ * already validated them, the shared schemas parse them again so drift fails loudly). NULL = not stated.
+ */
+export const termsColumns = {
+  country: z.enum(EU_COUNTRIES).nullish(),
+  description: z.string().nullish(),
+  shifts: z.array(requirementShiftInput).nullish(),
+  conditions: requirementConditionsInput.nullish(),
+};
+export const timeZoneColumn = z.enum(REQUIREMENT_TIME_ZONES).nullish();
+
+/** Terms → API (`null` when not stated; instants as ISO UTC). */
+export function toTerms(
+  row: {
+    country?: (typeof EU_COUNTRIES)[number] | null;
+    description?: string | null;
+    shifts?: RequirementShift[] | null;
+    conditions?: RequirementConditions | null;
+  },
+  timeZone: (typeof REQUIREMENT_TIME_ZONES)[number] | null | undefined,
+) {
+  return {
+    country: row.country ?? null,
+    timeZone: timeZone ?? null,
+    description: row.description ?? null,
+    shifts:
+      row.shifts?.map((s) => ({ ...s, startsAt: toIso(s.startsAt), endsAt: toIso(s.endsAt) })) ??
+      null,
+    conditions: row.conditions ?? null,
+  };
+}
 
 const requirementRow = z.object({
   id: z.string(),
@@ -37,6 +79,9 @@ const requirementRow = z.object({
   status: z.enum(REQUIREMENT_STATUSES),
   created_at: z.string(),
   updated_at: z.string(),
+  ...termsColumns,
+  timezone: timeZoneColumn,
+  archived_at: z.string().nullish(),
   work_requirement_qualifications: z.array(
     z.object({
       requirement_level: z.enum(REQUIREMENT_LEVELS),
@@ -74,6 +119,8 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
         level: q.requirement_level,
       }))
       .sort(byLevelThenCode),
+    ...toTerms(row, row.timezone),
+    archivedAt: row.archived_at ? toIso(row.archived_at) : null,
   };
 }
 

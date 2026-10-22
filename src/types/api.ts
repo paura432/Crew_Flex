@@ -32,8 +32,12 @@ import type {
   VerificationStatus,
 } from "../domain/qualification.ts";
 import type {
+  EuCountry,
   RequiredQualification,
+  RequirementConditions,
+  RequirementShift,
   RequirementStatus,
+  RequirementTimeZone,
   Shift,
   Urgency,
   WorkRequirement,
@@ -120,6 +124,14 @@ export interface MatchingResponse {
   requirementId: string;
   summary: { evaluated: number; eligible: number; pool: ExternalPoolCoverage };
   candidates: EvaluatedCandidate[];
+}
+
+/**
+ * The builder's live count (v2-13, `POST /matching-evaluate` with `viableCandidatesInput`; T-21): internal members
+ * and visible professionals who pass the hard filters for the form's period. A count only, never identities.
+ */
+export interface ViableCandidatesResponse {
+  viable: number;
 }
 
 export interface AvailabilityWindow {
@@ -427,6 +439,13 @@ export interface OpportunityRequirement {
   urgency: Urgency;
   createdAt: string;
   qualifications: RequiredQualification[];
+  // Requirement builder terms (LOCAL 20261023600000), part of the fixed projection and of every proposal
+  // version written since (R-08). Optional: absent from older functions and older proposals; null = not stated.
+  country?: EuCountry | null;
+  timeZone?: RequirementTimeZone | null;
+  description?: string | null;
+  shifts?: RequirementShift[] | null;
+  conditions?: RequirementConditions | null;
 }
 
 export interface Opportunity {

@@ -15,6 +15,12 @@ function toApiError(error: z.ZodError): ApiError {
 }
 
 /**
+ * A requirement with its 366 shifts and a 4000-character description does not fit in 32 KB
+ * (`work-requirements` POST/PUT, requirement builder): that function passes this one.
+ */
+export const MAX_REQUIREMENT_BODY_BYTES = 128 * 1024;
+
+/**
  * Strict JSON body. `maxBytes` defaults to MAX_BODY_BYTES; a route whose largest VALID body is bigger
  * (the v1.8 passport: 40 ratings with restrictions) passes its own, proven by a test.
  */

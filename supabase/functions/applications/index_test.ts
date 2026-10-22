@@ -302,3 +302,68 @@ Deno.test(
     assertEquals(theirs.match.blockers[0]?.code, "HARD_QUALIFICATION_NOT_VERIFIED");
   },
 );
+
+Deno.test(
+  "proposal terms freeze the builder terms (T-11 widened); versions written before them read as not stated",
+  () => {
+    const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });
+    const builder = {
+      country: "ES",
+      timeZone: "Europe/Madrid",
+      description: "Line support",
+      shifts: [
+        {
+          startsAt: "2031-01-10T06:00:00.000Z",
+          endsAt: "2031-01-10T14:00:00.000Z",
+          baseHours: 8,
+        },
+        {
+          startsAt: "2031-01-12T10:00:00.000Z",
+          endsAt: "2031-01-12T18:00:00.000Z",
+          baseHours: 8,
+        },
+      ],
+      conditions: {
+        hourlyRate: 50,
+        perDiem: 30,
+        contractType: "contractor" as const,
+        flights: true,
+      },
+    };
+    const mine = toMyApplication(
+      {
+        ...applicationRow,
+        current_proposal: { ...applicationRow.current_proposal, terms: { ...terms, ...builder } },
+        requirement_id: "r1",
+        requirement: { ...card, ...builder },
+      },
+      own,
+    );
+    assertEquals(mine.currentProposal?.terms.conditions, builder.conditions);
+    assertEquals(mine.currentProposal?.terms.shifts?.length, 2);
+    assertEquals(mine.requirement.timeZone, "Europe/Madrid");
+    const older = toMyApplication(
+      { ...applicationRow, requirement_id: "r1", requirement: card },
+      own,
+    );
+    assertEquals(
+      [older.currentProposal?.terms.conditions, older.currentProposal?.terms.shifts],
+      [null, null],
+    );
+    // A term the database never writes (a commission) fails loudly instead of reaching the UI.
+    assertThrows(() =>
+      toMyApplication(
+        {
+          ...applicationRow,
+          current_proposal: {
+            ...applicationRow.current_proposal,
+            terms: { ...terms, conditions: { commissionRate: 0.1 } },
+          },
+          requirement_id: "r1",
+          requirement: card,
+        },
+        own,
+      ),
+    );
+  },
+);

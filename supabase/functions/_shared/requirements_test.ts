@@ -67,12 +67,15 @@ Deno.test("rows map to domain objects that the shared engine evaluates", () => {
   );
 });
 
-Deno.test("paused and closed requirements are not evaluated (409), the others are (M05)", () => {
-  for (const status of ["paused", "closed"] as const) {
-    const error = assertThrows(() => assertEvaluableStatus({ status }), ApiError);
-    assertEquals(error.code, "CONFLICT");
-  }
-  for (const status of ["open", "covered", "draft", "cancelled"] as const) {
-    assertEvaluableStatus({ status });
-  }
-});
+Deno.test(
+  "drafts, paused and closed requirements are not evaluated (409), the others are (M05, v2-14)",
+  () => {
+    for (const status of ["draft", "paused", "closed"] as const) {
+      const error = assertThrows(() => assertEvaluableStatus({ status }), ApiError);
+      assertEquals(error.code, "CONFLICT");
+    }
+    for (const status of ["open", "covered", "cancelled"] as const) {
+      assertEvaluableStatus({ status });
+    }
+  },
+);
