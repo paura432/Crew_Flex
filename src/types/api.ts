@@ -193,12 +193,17 @@ export interface ProfessionalDocument {
   /** One of the owner's own qualifications. */
   qualificationId: string | null;
   scanStatus: DocumentScanStatus;
+  /** In the trash since (ISO, database clock); null = in the wallet (N-19). */
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface DocumentListResponse {
+  /** Wallet and trash together, newest first; the UI splits them by `archivedAt`. */
   documents: ProfessionalDocument[];
+  /** How long an archived document stays restorable before it is purged (T-100, a database setting). */
+  trashRetentionDays: number;
 }
 
 export interface DocumentResponse {
@@ -412,6 +417,8 @@ export interface DocumentsMaintenanceResponse {
   mode: "dry-run" | "apply";
   /** Objects with no row and no tombstone, older than the orphan grace. */
   orphans: number;
+  /** Archived documents past the trash retention (N-19): listed (dry-run) or deleted (apply). */
+  expired: number;
   /** Tombstones due for purge (dry-run) or processed (apply). */
   due: { tombstoneId: string; reason: string }[];
   /** Apply only. */

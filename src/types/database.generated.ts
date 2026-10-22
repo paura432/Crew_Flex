@@ -558,6 +558,7 @@ export type Database = {
       };
       professional_documents: {
         Row: {
+          archived_at: string | null;
           created_at: string;
           expires_at: string | null;
           id: string;
@@ -574,6 +575,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          archived_at?: string | null;
           created_at?: string;
           expires_at?: string | null;
           id?: string;
@@ -589,6 +591,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          archived_at?: string | null;
           created_at?: string;
           expires_at?: string | null;
           id?: string;
@@ -1272,6 +1275,10 @@ export type Database = {
       document_purge_record: {
         Args: { p_error: string; p_outcome: string; p_tombstone_id: string };
         Returns: undefined;
+      };
+      document_trash_retention_days: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
       finish_invitation_delivery: {
         Args: { p_invitation_id: string; p_request_id?: string; p_sent: boolean };

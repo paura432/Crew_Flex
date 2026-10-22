@@ -1,6 +1,6 @@
 import "server-only";
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { UpdateDocumentInput } from "@/lib/validation/documents";
+import type { ArchiveDocumentInput, UpdateDocumentInput } from "@/lib/validation/documents";
 import { invokeEdgeFunction } from "@/server/edge-functions";
 import type {
   DocumentDeleteResponse,
@@ -25,6 +25,14 @@ export const updateDocument = (id: string, input: UpdateDocumentInput) =>
     body: input,
   });
 
+/** N-19: `{ archived: true }` moves a document to the trash, `false` restores it. */
+export const archiveDocument = (id: string, input: ArchiveDocumentInput) =>
+  invokeEdgeFunction<DocumentResponse>("professional-documents", {
+    method: "PATCH",
+    query: { id },
+    body: input,
+  });
+
 export const deleteDocument = (id: string) =>
   invokeEdgeFunction<DocumentDeleteResponse>("professional-documents", {
     method: "DELETE",
@@ -39,6 +47,7 @@ export interface DocumentExpiry {
 
 /**
  * Own documents with a declared expiry, read under RLS (owner only) for the review list (TD-44).
+ * Documents in the trash do not count here, nor in the two reads below (T-101).
  * `null` when the query fails: the caller shows an error line, never the «nothing expires» state.
  */
 export async function listOwnDocumentExpiries(): Promise<DocumentExpiry[] | null> {
@@ -46,6 +55,7 @@ export async function listOwnDocumentExpiries(): Promise<DocumentExpiry[] | null
   const { data, error } = await supabase
     .from("professional_documents")
     .select("id, title, expires_at")
+    .is("archived_at", null)
     .not("expires_at", "is", null)
     .order("expires_at")
     .overrideTypes<{ id: string; title: string; expires_at: string }[], { merge: false }>();
@@ -62,7 +72,8 @@ export async function countOwnDocuments(): Promise<number | null> {
   const supabase = await createServerSupabase();
   const { count, error } = await supabase
     .from("professional_documents")
-    .select("id", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true })
+    .is("archived_at", null);
   return error || count === null ? null : count;
 }
 
@@ -80,6 +91,7 @@ export async function listOwnDocumentLinks(): Promise<DocumentLink[] | null> {
   const { data, error } = await supabase
     .from("professional_documents")
     .select("title, qualification_id")
+    .is("archived_at", null)
     .not("qualification_id", "is", null)
     .order("title")
     .overrideTypes<{ title: string; qualification_id: string }[], { merge: false }>();

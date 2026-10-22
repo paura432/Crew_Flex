@@ -132,7 +132,9 @@ describe("/app/professional/documents", () => {
   it("off: 404 before reading the session or calling the Edge Function", async () => {
     rpc.mockResolvedValueOnce({ data: false, error: null });
     const { default: DocumentsPage } = await import("@/app/app/professional/documents/page");
-    await expect(DocumentsPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(
+      DocumentsPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(requireSessionActor).not.toHaveBeenCalled();
     expect(listDocuments).not.toHaveBeenCalled();
   });

@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { ApiError } from "../_shared/errors.ts";
 import {
+  documentPatch,
   handler,
   MULTIPART_OVERHEAD_BYTES,
   objectPath,
@@ -195,6 +196,7 @@ Deno.test(
         expires_at: "2030-01-31",
         qualification_id: null,
         scan_status: "not_scanned",
+        archived_at: null,
         created_at: "2026-10-19T10:00:00+00:00",
         updated_at: "2026-10-19T10:00:00+00:00",
       }),
@@ -208,9 +210,65 @@ Deno.test(
         expiresAt: "2030-01-31",
         qualificationId: null,
         scanStatus: "not_scanned",
+        archivedAt: null,
         createdAt: "2026-10-19T10:00:00.000Z",
         updatedAt: "2026-10-19T10:00:00.000Z",
       },
     );
+  },
+);
+
+Deno.test("N-19: an archived row maps its trash date to ISO", () => {
+  const doc = toDocument({
+    id: "d2",
+    kind: "other",
+    title: "CV",
+    mime_type: "application/pdf",
+    size_bytes: 10,
+    sha256: "b".repeat(64),
+    expires_at: null,
+    qualification_id: null,
+    scan_status: "not_scanned",
+    archived_at: "2026-10-22T08:30:00+00:00",
+    created_at: "2026-10-19T10:00:00+00:00",
+    updated_at: "2026-10-22T08:30:00+00:00",
+  });
+  assertEquals(doc.archivedAt, "2026-10-22T08:30:00.000Z");
+});
+
+Deno.test(
+  "N-19 PATCH: { archived } archives or restores (marker only); metadata bodies are unchanged; mixes are refused",
+  async () => {
+    const archived = documentPatch({ archived: true });
+    assertEquals(Object.keys(archived), ["archived_at"]);
+    assertEquals(typeof archived.archived_at, "string");
+    assertEquals(documentPatch({ archived: false }), { archived_at: null });
+    assertEquals(
+      documentPatch({
+        kind: "course",
+        title: "  Human\u202Efactors ",
+        expiresAt: null,
+        qualificationId: null,
+      }),
+      { kind: "course", title: "Human factors", expires_at: null, qualification_id: null },
+    );
+    // Strict both ways: archiving never carries metadata (or ownership), metadata never `archivedAt`.
+    for (const body of [
+      { archived: true, title: "x" },
+      { archived: "yes" },
+      { archived: true, ownerId: "x" },
+      { kind: "course", title: "x", expiresAt: null, qualificationId: null, archivedAt: null },
+      null,
+      [],
+    ]) {
+      const error = await (async () => {
+        try {
+          documentPatch(body);
+        } catch (e) {
+          return e;
+        }
+      })();
+      assertEquals((error as ApiError).code, "VALIDATION_ERROR", JSON.stringify(body));
+    }
   },
 );

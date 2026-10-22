@@ -1,6 +1,8 @@
 // Document wallet maintenance (D-10, review M-3) — LOCAL ONLY, not deployed, not scheduled.
-//   POST /documents-maintenance?limit=25          → dry-run: counts orphans and due tombstones, writes nothing
-//   POST /documents-maintenance?apply=1&limit=25  → records orphan tombstones, then purges due objects
+//   POST /documents-maintenance?limit=25          → dry-run: counts expired trash (N-19), orphans and due
+//                                                   tombstones, writes nothing
+//   POST /documents-maintenance?apply=1&limit=25  → deletes the expired trash and records orphan
+//                                                   tombstones, then purges due objects
 // Fails closed twice: 404 unless DOCUMENTS_MAINTENANCE_ENABLED=true (function env), and every RPC
 // re-checks `is_platform_admin()` in the database (42501 otherwise).
 //
@@ -72,6 +74,7 @@ export const handler = createHandler(FN, {
     const report: DocumentsMaintenanceResponse = {
       mode: applying ? "apply" : "dry-run",
       orphans: plan.orphans,
+      expired: plan.expired,
       due: plan.purge.map((p) => ({ tombstoneId: p.tombstoneId, reason: p.reason })),
       purged: 0,
       absent: 0,

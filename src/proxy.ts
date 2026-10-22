@@ -15,7 +15,11 @@ function contentSecurityPolicy(nonce: string) {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'nonce-${nonce}'`,
+    // The wallet viewer (N-21, T-103) fetches the owner's file with its 60-second signed URL
+    // (connect-src: the Supabase origin) and shows it as a blob: images need nothing new, the PDF
+    // frame needs `blob:` in frame-src. The Storage origin itself is never framed or embedded.
     "img-src 'self' blob: data:",
+    "frame-src 'self' blob:",
     "font-src 'self'",
     `connect-src 'self' ${publicEnv.NEXT_PUBLIC_SUPABASE_URL}`,
     "object-src 'none'",

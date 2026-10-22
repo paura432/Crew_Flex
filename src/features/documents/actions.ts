@@ -2,9 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
-import { documentIdQuery, updateDocumentInput } from "@/lib/validation/documents";
+import {
+  archiveDocumentInput,
+  documentIdQuery,
+  updateDocumentInput,
+} from "@/lib/validation/documents";
 import type { ApiErrorBody, ApiResponse } from "@/types/api";
-import { deleteDocument, documentUrl, updateDocument } from "./api";
+import { archiveDocument, deleteDocument, documentUrl, updateDocument } from "./api";
 
 export type DocumentActionResult<T = undefined> =
   | { ok: true; data?: T }
@@ -52,6 +56,21 @@ export async function updateDocumentAction(
   const parsed = updateDocumentInput.safeParse(input);
   if (!parsed.success) return invalid(toFieldErrors(parsed.error));
   const result = await updateDocument(idParsed.data.id, parsed.data);
+  if (!result.ok) return failure(result);
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+/** N-19: to the trash (`true`) or back to the wallet (`false`). */
+export async function archiveDocumentAction(
+  id: unknown,
+  archived: unknown,
+): Promise<DocumentActionResult> {
+  const idParsed = documentIdQuery.safeParse({ id });
+  if (!idParsed.success) return invalid({ form: "v.document.id" });
+  const parsed = archiveDocumentInput.safeParse({ archived });
+  if (!parsed.success) return invalid({ form: "v.invalid" });
+  const result = await archiveDocument(idParsed.data.id, parsed.data);
   if (!result.ok) return failure(result);
   revalidatePath(PATH);
   return { ok: true };

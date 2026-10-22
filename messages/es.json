@@ -1796,6 +1796,38 @@
       "valid": "Vigente",
       "soon": "Caduca pronto",
       "expired": "Caducado"
+    },
+    "archive": "Archivar",
+    "archiveNamed": "Archivar {title}",
+    "archived": "Documento archivado. Puedes restaurarlo desde la papelera.",
+    "restore": "Restaurar",
+    "restoreNamed": "Restaurar {title}",
+    "restored": "Documento restaurado.",
+    "deleteForever": "Eliminar definitivamente",
+    "showTrash": "Papelera ({count})",
+    "showWallet": "Ver wallet",
+    "trashTitle": "Papelera ({count})",
+    "trashNote": "Puedes restaurar un documento archivado durante {days, plural, one {# día} other {# días}}; después se elimina definitivamente, también su archivo. Ninguna empresa puede verlo.",
+    "emptyTrash": "Sin documentos. Los documentos archivados pueden restaurarse.",
+    "emptyFiltered": "No hay documentos de este tipo.",
+    "archivedOn": "archivado el {date}",
+    "purgeFrom": "se elimina definitivamente a partir del {date}",
+    "filterLabel": "Filtrar por tipo",
+    "filter": {
+      "all": "Todos",
+      "license": "Licencias",
+      "course": "Cursos",
+      "other": "Otros"
+    },
+    "viewer": {
+      "close": "Cerrar",
+      "loading": "Cargando el documento…",
+      "expired": "El enlace ha caducado. Vuelve a intentarlo para pedir uno nuevo.",
+      "failed": "No se ha podido cargar el documento. Vuelve a intentarlo o ábrelo en una pestaña nueva.",
+      "retry": "Reintentar",
+      "newTab": "Abrir en una pestaña nueva",
+      "pdfFrame": "Vista previa de {title}",
+      "pdfHint": "Si el PDF no se muestra, ábrelo en una pestaña nueva."
     }
   },
   "opportunities": {

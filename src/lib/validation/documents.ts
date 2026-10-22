@@ -40,6 +40,19 @@ export type UploadDocumentMetadata = z.infer<typeof uploadDocumentMetadata>;
 export const updateDocumentInput = z.strictObject(metadata);
 export type UpdateDocumentInput = z.infer<typeof updateDocumentInput>;
 
+/**
+ * N-19 trash (`PATCH ?id=` with this body instead of the metadata): `true` archives, `false` restores.
+ * The database stamps the date itself (migration 20261024200000).
+ */
+export const archiveDocumentInput = z.strictObject({
+  archived: z.boolean("v.invalid"),
+});
+export type ArchiveDocumentInput = z.infer<typeof archiveDocumentInput>;
+
+/** A PATCH body that names `archived` is an archive/restore, anything else a metadata update. */
+export const isArchivePatch = (raw: unknown): boolean =>
+  typeof raw === "object" && raw !== null && !Array.isArray(raw) && "archived" in raw;
+
 export const documentIdQuery = z.strictObject({
   id: z.uuid("v.document.id"),
 });

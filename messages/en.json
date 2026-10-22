@@ -1796,6 +1796,38 @@
       "valid": "Valid",
       "soon": "Expires soon",
       "expired": "Expired"
+    },
+    "archive": "Archive",
+    "archiveNamed": "Archive {title}",
+    "archived": "Document archived. You can restore it from the trash.",
+    "restore": "Restore",
+    "restoreNamed": "Restore {title}",
+    "restored": "Document restored.",
+    "deleteForever": "Delete permanently",
+    "showTrash": "Trash ({count})",
+    "showWallet": "View wallet",
+    "trashTitle": "Trash ({count})",
+    "trashNote": "You can restore an archived document for {days, plural, one {# day} other {# days}}; after that it is deleted permanently, file included. No organization can see it.",
+    "emptyTrash": "No documents. Archived documents can be restored.",
+    "emptyFiltered": "There are no documents of this type.",
+    "archivedOn": "archived {date}",
+    "purgeFrom": "deleted permanently from {date}",
+    "filterLabel": "Filter by type",
+    "filter": {
+      "all": "All",
+      "license": "Licences",
+      "course": "Courses",
+      "other": "Other"
+    },
+    "viewer": {
+      "close": "Close",
+      "loading": "Loading the document…",
+      "expired": "The link has expired. Try again to get a new one.",
+      "failed": "The document could not be loaded. Try again or open it in a new tab.",
+      "retry": "Try again",
+      "newTab": "Open in a new tab",
+      "pdfFrame": "Preview of {title}",
+      "pdfHint": "If the PDF does not show, open it in a new tab."
     }
   },
   "opportunities": {

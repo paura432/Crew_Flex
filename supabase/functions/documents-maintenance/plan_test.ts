@@ -19,9 +19,40 @@ Deno.test("planBatch: dry-run orphans are counted, never purged", () => {
   );
   assertEquals(plan, {
     orphans: 1,
+    expired: 0,
     purge: [{ tombstoneId: "t2", path: path(2), reason: "owner_delete" }],
   });
 });
+
+Deno.test(
+  "planBatch (N-19): expired trash is counted once — dry-run never purges it, apply purges its tombstone",
+  () => {
+    const dry = planBatch(
+      [
+        {
+          tombstone_id: null,
+          storage_path: path(6),
+          reason: "trash_expired",
+          action: "would_expire",
+        },
+      ],
+      10,
+    );
+    assertEquals(dry, { orphans: 0, expired: 1, purge: [] });
+    const apply = planBatch(
+      [
+        { tombstone_id: null, storage_path: path(6), reason: "trash_expired", action: "expired" },
+        { tombstone_id: "t6", storage_path: path(6), reason: "trash_expired", action: "purge" },
+      ],
+      10,
+    );
+    assertEquals(apply, {
+      orphans: 0,
+      expired: 1,
+      purge: [{ tombstoneId: "t6", path: path(6), reason: "trash_expired" }],
+    });
+  },
+);
 
 Deno.test("planBatch: drops malformed paths and duplicates, honours the limit", () => {
   const plan = planBatch(
