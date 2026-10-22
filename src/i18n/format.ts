@@ -3,7 +3,7 @@
 // never altered. Enum labels live in the message catalogs, not here.
 import type { Locale } from "./config";
 
-const INTL_LOCALE: Record<Locale, string> = { en: "en-GB", es: "es-ES" };
+export const INTL_LOCALE: Record<Locale, string> = { en: "en-GB", es: "es-ES" };
 
 const cache = new Map<string, Intl.DateTimeFormat>();
 function fmt(locale: Locale, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {

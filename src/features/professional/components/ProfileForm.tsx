@@ -151,7 +151,7 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile & { upda
           role="radiogroup"
           aria-label={t("visibilityAria")}
           aria-describedby={errors.visibility ? "visibility-error" : undefined}
-          className="grid gap-3 md:grid-cols-3"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
         >
           {PROFILE_VISIBILITIES.map((value, i) => {
             const selected = visibility === value;

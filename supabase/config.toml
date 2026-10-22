@@ -479,3 +479,13 @@ import_map = "./functions/deno.json"
 [functions.professional-logbook]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+# Local only, not deployed: the organization's own data and its review by a platform admin (OD-5
+# default, admin-org package). Deploy only after migration 20261023500100.
+[functions.organization-profile]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+[functions.organization-reviews]
+verify_jwt = false
+import_map = "./functions/deno.json"

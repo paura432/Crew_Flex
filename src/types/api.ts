@@ -16,6 +16,7 @@ import type { CapacityResult } from "../domain/capacity.ts";
 import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/documents.ts";
 import type { LogbookCategory, LogbookEnvironment } from "../domain/logbook.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
+import type { OrganizationReviewStatus, OrganizationType } from "../domain/organization.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { Locale } from "../i18n/config.ts";
 import type {
@@ -294,6 +295,76 @@ export interface ReviewQueueResponse {
 
 export interface ReviewDecisionResponse {
   qualification: { id: string; verificationStatus: VerificationStatus; reviewedAt: string };
+}
+
+/**
+ * The organization's own data («Organización», `organization-profile`; OD-5 default = v1.8, LOCAL
+ * `20261023500100`). Read by every member; written by its admin. The review evidence never leaves
+ * the platform side.
+ */
+export interface OrganizationProfile {
+  id: string;
+  name: string;
+  type: OrganizationType;
+  /** ISO 3166-1 alpha-2; the screen offers the 27 EU countries (OD-6 default). */
+  country: string | null;
+  taxId: string | null;
+  taxAddress: string | null;
+  reviewStatus: OrganizationReviewStatus;
+  reviewedAt: string | null;
+  /** Version the save is about (sent back as `expectedUpdatedAt`). */
+  updatedAt: string;
+}
+
+/** «Actividad de esta organización» (v1.8 ORG-07 #12): the action code and when. No ids, no metadata. */
+export interface OrganizationActivityItem {
+  action: string;
+  at: string;
+}
+
+export interface OrganizationProfileResponse {
+  organization: OrganizationProfile;
+  /** The caller is the organization's admin (role read from the database). */
+  canEdit: boolean;
+  /** Last 15 events of the organization's own audit trail; admins only (RLS), null otherwise. */
+  activity: OrganizationActivityItem[] | null;
+}
+
+/** Platform-admin list (`organization-reviews`): the data under review, never members or people. */
+export interface OrganizationReviewItem extends OrganizationProfile {
+  /** The reviewer belongs to this organization: they may not review it. */
+  ownOrganization: boolean;
+}
+
+export interface OrganizationReviewListResponse {
+  organizations: OrganizationReviewItem[];
+}
+
+export interface OrganizationReviewResponse {
+  organization: { id: string; reviewStatus: OrganizationReviewStatus; reviewedAt: string };
+}
+
+/** Platform figures (`get_platform_summary`, read by the Next.js server; counts only, no money). */
+export interface PlatformSummary {
+  technicians: number;
+  organizations: number;
+  activeRequirements: number;
+  workingNow: number;
+  aogWithVacancies: number;
+  /** Seats still to fill per hard licence code (null = no licence required), most first. */
+  demand: { code: string | null; seats: number }[];
+}
+
+/** One audit row as stored: ids, codes and flags only (S-9). */
+export interface AuditEventItem {
+  id: string;
+  at: string;
+  action: string;
+  actorId: string | null;
+  organizationId: string | null;
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown>;
 }
 
 /**

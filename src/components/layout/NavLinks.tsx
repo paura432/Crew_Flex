@@ -37,7 +37,17 @@ const ICON_PATHS: Record<string, string> = {
     "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.8H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.8-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1",
   "/app/admin/verifications":
     "M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1 1 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1zM9 12l2 2 4-4",
+  // admin-org package: «Organización», «Administración», «Organizaciones», «Auditoría»
+  "/app/organization/settings":
+    "M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4",
+  "/app/admin": DASHBOARD,
+  "/app/admin/organizations": "M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4",
+  "/app/admin/audit":
+    "M9 2h6v4H9zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M8 11h8M8 15h8M8 19h5",
 };
+
+/** Workspace homes: active only on their exact path, never for the pages under them. */
+const SECTION_ROOTS = new Set(["/app/organization", "/app/professional", "/app/admin"]);
 
 /**
  * Client only for `aria-current` on the active link. Below `lg` the items wrap onto as many rows as
@@ -51,9 +61,7 @@ export function NavLinks({ items, label }: { items: NavItem[]; label: string }) 
         {items.map((item) => {
           const active =
             item.href === pathname ||
-            (item.href !== "/app/organization" &&
-              item.href !== "/app/professional" &&
-              pathname.startsWith(`${item.href}/`));
+            (!SECTION_ROOTS.has(item.href) && pathname.startsWith(`${item.href}/`));
           return (
             <li key={item.href} className="shrink-0">
               <Link

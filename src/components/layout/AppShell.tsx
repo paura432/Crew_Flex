@@ -24,6 +24,8 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/organization", label: tNav("dashboard") },
     { href: "/app/organization/requirements", label: tNav("requirements") },
     { href: "/app/organization/workforce", label: tNav("workforce") },
+    // v1.8 «Organización» (SH-03 #22, OD-5 default): data and review state, every member reads it
+    { href: "/app/organization/settings", label: tNav("organizationProfile") },
   ];
   const professionalNav: NavItem[] = [
     { href: "/app/professional", label: tNav("overview") },
@@ -40,10 +42,16 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/tools", label: tNav("tools") },
     { href: "/app/settings", label: tNav("settings") },
   ];
-  // Shown only to platform admins while the review is enabled (OD-3, server-side flag). UI
-  // convenience: the page, function and RPC re-check both the flag and the role.
+  // Platform admins only (UI convenience: proxy, pages, functions and RPCs re-check the role).
+  // «Verificaciones» only while the qualification review is enabled (OD-3, server-side flag).
+  const isPlatformAdmin = actor.profile.platform_role === "platform_admin";
   const platformNav: NavItem[] = [
-    { href: "/app/admin/verifications", label: tNav("verifications") },
+    { href: "/app/admin", label: tNav("administration") },
+    ...(canOpenQualificationReview(actor.profile)
+      ? [{ href: "/app/admin/verifications", label: tNav("verifications") }]
+      : []),
+    { href: "/app/admin/organizations", label: tNav("adminOrganizations") },
+    { href: "/app/admin/audit", label: tNav("audit") },
   ];
 
   const sections: NavSection[] = [
@@ -59,7 +67,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     ...(isProfessional
       ? [{ label: tNav("professional"), view: "professional" as const, items: professionalNav }]
       : []),
-    ...(canOpenQualificationReview(actor.profile)
+    ...(isPlatformAdmin
       ? [{ label: tNav("platform"), view: "admin" as const, items: platformNav }]
       : []),
     { label: tNav("account"), items: accountNav },
