@@ -18,6 +18,7 @@ import { listOwnDocumentExpiries } from "@/features/documents/api";
 import { IdentityCard } from "@/features/professional/components/IdentityCard";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
 import { ProfessionalActivity } from "@/features/applications/components/ProfessionalActivity";
+import { LearningAchievements } from "@/features/tools/components/LearningAchievements";
 import { loadProfessionalContext } from "@/features/professional/load";
 import { formatDate, formatPercent } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
@@ -213,6 +214,8 @@ export default async function ProfessionalOverviewPage({
           )}
           <p className="mt-3 text-xs text-muted">{t("overview.reviewHint")}</p>
         </Panel>
+        {/* V1.8 Badges «Logros de aprendizaje» (L-3): read from this browser, after hydration. */}
+        <LearningAchievements userId={actor.id} />
         <div className="grid gap-6 lg:grid-cols-2">
           {/* V1.8 «Estado de mi perfil»: every BR-11 item with a direct link to complete it. */}
           <Panel title={t("overview.checklistTitle", { percent: completeness.percent })}>

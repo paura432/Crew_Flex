@@ -134,7 +134,57 @@ export function ResultCard({
   );
 }
 
-export function CopyResult({ text }: { text: string }) {
+/** v1.8 `.tb-button` (42 px, 44 on touch); `primary` is the teal CTA (white on #057f7d, 4.8:1). */
+export const toolButtonClass = (primary = false) =>
+  `inline-flex min-h-[42px] pointer-coarse:min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${
+    primary
+      ? "border-tool bg-tool text-white hover:brightness-95"
+      : "border-[#ccd9df] bg-white text-[#1d4458] hover:bg-canvas"
+  }`;
+
+/** v1.8 `.tb-tabs`: a row of toggle buttons, one pressed (sections, number of questions). */
+export function PressedGroup<T extends string | number>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex flex-wrap gap-1 rounded-[9px] bg-[#e8edf0] p-1"
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={o.value === value}
+          onClick={() => onChange(o.value)}
+          className="min-h-10 rounded-md px-3.5 text-xs text-[#546c7c] pointer-coarse:min-h-11 aria-[pressed=true]:bg-white aria-[pressed=true]:font-bold aria-[pressed=true]:text-[#116765] aria-[pressed=true]:shadow-sm"
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Copy button; dark by default (inside a result card), `light` on a white panel. */
+export function CopyResult({
+  text,
+  label,
+  light = false,
+}: {
+  text: string;
+  label?: string;
+  light?: boolean;
+}) {
   const t = useTranslations("tools");
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -145,7 +195,11 @@ export function CopyResult({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#547e89] px-4 text-xs font-bold text-[#c7e9e6] hover:bg-white/5"
+      className={`inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border px-4 text-xs font-bold ${
+        light
+          ? "border-[#ccd9df] bg-white text-[#1d4458] hover:bg-canvas"
+          : "border-[#547e89] text-[#c7e9e6] hover:bg-white/5"
+      }`}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
@@ -156,7 +210,7 @@ export function CopyResult({ text }: { text: string }) {
       }}
     >
       {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-      {copied ? t("copied") : t("copy")}
+      {copied ? t("copied") : (label ?? t("copy"))}
     </button>
   );
 }

@@ -1024,8 +1024,16 @@
     "favoriteAdd": "Add {tool} to favourites",
     "favoriteRemove": "Remove {tool} from favourites",
     "open": "Open tool",
-    "privacyNote": "Your use of the tools is private: calculations run in your browser and are never sent to a server. Favourites are stored in this browser.",
+    "privacyNote": "Your use of the tools is private: calculations run in your browser and are never sent to a server. Favourites and challenge progress are stored in this browser.",
     "tile": {
+      "daily": {
+        "title": "Daily challenge",
+        "sub": "5 or 10 questions · streaks"
+      },
+      "translator": {
+        "title": "Translator",
+        "sub": "Spanish · English · French"
+      },
       "torque": {
         "title": "Torque",
         "sub": "N·m · lbf·ft · lbf·in"
@@ -1033,6 +1041,10 @@
       "convert": {
         "title": "Conversions",
         "sub": "22 technical quantities"
+      },
+      "knowledge": {
+        "title": "English and acronyms",
+        "sub": "Dictionary · ATA · practice"
       },
       "duration": {
         "title": "Duration",
@@ -1086,6 +1098,110 @@
       "result": "Result",
       "hours": "h",
       "formula": "Decimal hours = hours + minutes / 60. HH:MM is rounded to the nearest minute."
+    },
+    "knowledge": {
+      "sections": "Sections",
+      "tab": {
+        "terms": "ES / EN dictionary",
+        "ata": "ATA index",
+        "practice": "Short practice"
+      },
+      "counts": "{entries} entries · {chapters} reference chapters",
+      "searchLabel": "Search term, acronym or ATA",
+      "placeholderTerms": "Term, acronym or meaning: torque, clearance, AMM…",
+      "placeholderAta": "Number or system (in Spanish): 28, combustible…",
+      "area": "Dictionary area",
+      "allAreas": "All",
+      "results": "Dictionary entries",
+      "empty": "No entries for this search. Try the English term or an acronym.",
+      "ataEmpty": "No chapter matches this search. Try the number or the system name.",
+      "entryStatus": "Initial editorial reference · {version}",
+      "copy": "Copy entry",
+      "copyText": "{term} — {translation}. {definition} · CrewFlex, editorial reference {version}",
+      "emptyTitle": "Meaning depends on context.",
+      "emptyBody": "Select an entry to see its definition and examples. An acronym can have more than one meaning.",
+      "ataNote": "The ATA index is reference navigation: it contains no tasks and does not replace the index of the applicable manual.",
+      "practiceKicker": "TECHNICAL ENGLISH · {current}/{total}",
+      "reveal": "Show meaning",
+      "next": "Next term",
+      "practiceNote": "Original language examples; they are not instructions for a specific task.",
+      "sourcesTitle": "Sources and editorial review",
+      "sourcesBody": "Short original definitions. Initial catalogue {version}, pending formal review by an operator before it is used in controlled documentation. It does not reproduce manuals or the full STE dictionary. It includes no reset procedures."
+    },
+    "translator": {
+      "kicker": "LANGUAGES · ES / EN / FR",
+      "title": "Support translator",
+      "lead": "Local technical repertoire and access to free translation when online.",
+      "from": "Source",
+      "to": "Target",
+      "lang": {
+        "es": "Spanish",
+        "en": "English",
+        "fr": "French"
+      },
+      "swap": "Swap languages",
+      "text": "Text or term",
+      "placeholder": "Torque, fuel, maintenance…",
+      "counter": "{count}/{max} characters · the text is not saved.",
+      "matchCaption": "Equivalent in the local repertoire",
+      "noMatch": "No exact local match. You can check the suggestions or open the free external translation.",
+      "externalTitle": "Translate free text with Google Translate",
+      "externalNote": "Needs Internet. Opening the link sends the text you typed to Google. Do not enter personal data, internal documents or manual content without authorisation.",
+      "consent": "I want to send this text to Google to translate it.",
+      "open": "Open external translation",
+      "newTab": "(opens in a new tab)",
+      "externalHint": "Enter text, choose different languages and confirm sending.",
+      "repertoireTitle": "Offline repertoire",
+      "repertoireBody": "{count} original support terms and phrases. It is not a complete automatic translator.",
+      "noSuggestions": "No local suggestions for this text.",
+      "footnote": "Meaning depends on context. Support translations pending editorial review; they do not replace controlled maintenance instructions."
+    },
+    "daily": {
+      "kicker": "LEARN A LITTLE EVERY DAY",
+      "title": "Your aviation challenge",
+      "lead": "Fundamentals, English, acronyms and ATA systems · {date} · reference day: Madrid",
+      "current": "Current streak",
+      "best": "Best streak",
+      "total": "Days completed",
+      "days": "{count, plural, one {# day} other {# days}}",
+      "introTitle": {
+        "5": "Five minutes for you",
+        "10": "Ten minutes for you"
+      },
+      "introBody": "Choose 5 or 10 questions. You get an explanation after each answer. The challenge changes every day.",
+      "size": "Number of questions",
+      "sizeOption": "{count} questions",
+      "start": "Start today's challenge",
+      "unfinished": "The challenge of {date} was left unfinished, so it does not count towards your streak. Today's challenge is ready (reference day: Madrid).",
+      "progress": "{group} · Question {current} of {total}",
+      "progressLabel": "Challenge progress",
+      "options": "Answers",
+      "confirm": "Confirm answer",
+      "previousRight": "Previous answer correct",
+      "previousReview": "Review of the previous answer",
+      "explained": "{answer}. {explanation}",
+      "doneTitle": "Challenge completed",
+      "score": "{score} of {total} correct answers",
+      "doneBody": "You have added a day of learning. Come back tomorrow to keep your streak going.",
+      "review": "Review answers and explanations",
+      "yourAnswer": "Your answer: {answer}",
+      "rightAnswer": "Answer: {answer}",
+      "saveError": "Progress could not be saved. Free up space or allow storage and try again.",
+      "medalsTitle": "Your consistency collection",
+      "medalsNote": "Completing the challenge adds a day, even with mistakes. Repeating or reloading adds no extra days. Progress is saved only for your account in this browser.",
+      "medal": {
+        "first": "First challenge",
+        "week": "A week of learning",
+        "month": "30-day consistency"
+      },
+      "medalEarned": "Unlocked",
+      "medalLocked": "To earn · {count, plural, one {# day} other {# days in a row}}",
+      "footnote": "Editorial training content, not a qualifying exam. Achievements do not certify any qualification or influence professional selection. It includes no procedures or extracts from AMM/TCM. Initial catalogue pending formal review.",
+      "achievementsTitle": "Learning achievements",
+      "achievementsNote": "Private to this browser · separate from qualifications.",
+      "achievementsStats": "Current streak: {current, plural, one {# day} other {# days}} · Best streak: {best, plural, one {# day} other {# days}} · Challenges completed: {total}",
+      "badgesNote": "Badges summarise declared data. They grant no signing authority and do not replace the review of licence, type or competence.",
+      "openChallenge": "Open the daily challenge"
     },
     "copy": "Copy with units",
     "copied": "Copied",

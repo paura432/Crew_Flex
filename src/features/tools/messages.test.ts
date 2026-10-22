@@ -53,4 +53,24 @@ describe("favourites parsing (untrusted localStorage)", () => {
     expect(parseFavorites("not json")).toEqual([]);
     expect(parseFavorites('{"torque":1}')).toEqual([]);
   });
+
+  it("accepts the learning tools (L-4); fuel and v1.8's «time» stay unknown", () => {
+    expect(parseFavorites('["knowledge","time","fuel","daily","translator","convert"]')).toEqual([
+      "daily",
+      "translator",
+      "convert",
+      "knowledge",
+    ]);
+  });
+});
+
+describe("tools home (L-4)", () => {
+  it("lists the tiles in v1.8's order, without fuel (D-11)", () => {
+    expect(TOOL_IDS).toEqual(["daily", "translator", "torque", "convert", "knowledge", "duration"]);
+  });
+
+  it("the privacy note mentions the challenge progress kept in this browser", () => {
+    expect(es.tools.privacyNote).toMatch(/progreso de los retos se guardan en este navegador/);
+    expect(en.tools.privacyNote).toMatch(/challenge progress are stored in this browser/);
+  });
 });

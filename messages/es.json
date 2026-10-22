@@ -1024,8 +1024,16 @@
     "favoriteAdd": "Añadir favorito {tool}",
     "favoriteRemove": "Quitar favorito {tool}",
     "open": "Abrir herramienta",
-    "privacyNote": "Tu uso de herramientas es privado: los cálculos se hacen en tu navegador y no se envían a ningún servidor. Tus favoritos se guardan en este navegador.",
+    "privacyNote": "Tu uso de herramientas es privado: los cálculos se hacen en tu navegador y no se envían a ningún servidor. Tus favoritos y el progreso de los retos se guardan en este navegador.",
     "tile": {
+      "daily": {
+        "title": "Reto diario",
+        "sub": "5 o 10 preguntas · rachas"
+      },
+      "translator": {
+        "title": "Traductor",
+        "sub": "Español · inglés · francés"
+      },
       "torque": {
         "title": "Par de apriete",
         "sub": "N·m · lbf·ft · lbf·in"
@@ -1033,6 +1041,10 @@
       "convert": {
         "title": "Conversiones",
         "sub": "22 magnitudes técnicas"
+      },
+      "knowledge": {
+        "title": "Inglés y siglas",
+        "sub": "Diccionario · ATA · práctica"
       },
       "duration": {
         "title": "Duración",
@@ -1086,6 +1098,110 @@
       "result": "Resultado",
       "hours": "h",
       "formula": "Horas decimales = horas + minutos / 60. HH:MM se redondea al minuto más próximo."
+    },
+    "knowledge": {
+      "sections": "Secciones",
+      "tab": {
+        "terms": "Diccionario ES / EN",
+        "ata": "Índice ATA",
+        "practice": "Práctica breve"
+      },
+      "counts": "{entries} entradas · {chapters} capítulos de referencia",
+      "searchLabel": "Buscar término, sigla o ATA",
+      "placeholderTerms": "Término, sigla o significado: torque, holgura, AMM…",
+      "placeholderAta": "Número o sistema: 28, combustible…",
+      "area": "Área del diccionario",
+      "allAreas": "Todos",
+      "results": "Entradas del diccionario",
+      "empty": "No hay entradas para esta búsqueda. Prueba el término inglés o una sigla.",
+      "ataEmpty": "Ningún capítulo coincide con esta búsqueda. Prueba el número o el nombre del sistema.",
+      "entryStatus": "Referencia editorial inicial · {version}",
+      "copy": "Copiar ficha",
+      "copyText": "{term} — {translation}. {definition} · CrewFlex, referencia editorial {version}",
+      "emptyTitle": "El significado depende del contexto.",
+      "emptyBody": "Selecciona una entrada para ver su definición y sus ejemplos. Las siglas pueden tener más de una acepción.",
+      "ataNote": "El índice ATA es navegación de referencia, no contiene tareas ni sustituye el índice del manual aplicable.",
+      "practiceKicker": "INGLÉS TÉCNICO · {current}/{total}",
+      "reveal": "Mostrar significado",
+      "next": "Siguiente término",
+      "practiceNote": "Ejemplos originales de lenguaje; no son instrucciones para una tarea concreta.",
+      "sourcesTitle": "Fuentes y revisión editorial",
+      "sourcesBody": "Definiciones breves originales. Catálogo inicial {version}; pendiente de revisión formal por operador antes de integrarlo en documentación controlada. No reproduce manuales ni el diccionario completo de STE. No incluye procedimientos de reset."
+    },
+    "translator": {
+      "kicker": "IDIOMAS · ES / EN / FR",
+      "title": "Traductor de apoyo",
+      "lead": "Repertorio técnico local y acceso a traducción libre con conexión.",
+      "from": "Origen",
+      "to": "Destino",
+      "lang": {
+        "es": "Español",
+        "en": "Inglés",
+        "fr": "Francés"
+      },
+      "swap": "Intercambiar idiomas",
+      "text": "Texto o término",
+      "placeholder": "Torque, fuel, maintenance…",
+      "counter": "{count}/{max} caracteres · no se guarda el texto.",
+      "matchCaption": "Equivalencia del repertorio local",
+      "noMatch": "Sin coincidencia exacta local. Puedes consultar las sugerencias o abrir la traducción libre externa.",
+      "externalTitle": "Traducir texto libre con Google Translate",
+      "externalNote": "Necesita Internet. Al abrir el enlace se enviará el texto escrito a Google. No introduzcas datos personales, documentos internos ni contenido de manuales sin autorización.",
+      "consent": "Quiero enviar este texto a Google para traducirlo.",
+      "open": "Abrir traducción externa",
+      "newTab": "(se abre en otra pestaña)",
+      "externalHint": "Introduce texto, elige idiomas distintos y confirma el envío.",
+      "repertoireTitle": "Repertorio sin conexión",
+      "repertoireBody": "{count} términos y frases originales de apoyo. No es un traductor automático completo.",
+      "noSuggestions": "No hay sugerencias locales para este texto.",
+      "footnote": "El significado depende del contexto. Traducciones de apoyo pendientes de revisión editorial; no sustituyen instrucciones de mantenimiento controladas."
+    },
+    "daily": {
+      "kicker": "APRENDE UN POCO CADA DÍA",
+      "title": "Tu reto aeronáutico",
+      "lead": "Fundamentos, inglés, siglas y sistemas ATA · {date} · día de referencia: Madrid",
+      "current": "Racha actual",
+      "best": "Mejor racha",
+      "total": "Días completados",
+      "days": "{count, plural, one {# día} other {# días}}",
+      "introTitle": {
+        "5": "Cinco minutos para ti",
+        "10": "Diez minutos para ti"
+      },
+      "introBody": "Elige 5 o 10 preguntas. Recibirás una explicación después de cada respuesta. El reto cambia cada día.",
+      "size": "Número de preguntas",
+      "sizeOption": "{count} preguntas",
+      "start": "Comenzar reto de hoy",
+      "unfinished": "El reto del {date} quedó sin terminar, así que no cuenta para tu racha. El de hoy ya está disponible (día de referencia: Madrid).",
+      "progress": "{group} · Pregunta {current} de {total}",
+      "progressLabel": "Progreso del reto",
+      "options": "Respuestas",
+      "confirm": "Confirmar respuesta",
+      "previousRight": "Respuesta anterior correcta",
+      "previousReview": "Repaso de la respuesta anterior",
+      "explained": "{answer}. {explanation}",
+      "doneTitle": "Reto completado",
+      "score": "{score} de {total} respuestas correctas",
+      "doneBody": "Has sumado un día de aprendizaje. Vuelve mañana para continuar tu racha.",
+      "review": "Revisar respuestas y explicaciones",
+      "yourAnswer": "Tu respuesta: {answer}",
+      "rightAnswer": "Respuesta: {answer}",
+      "saveError": "No se pudo guardar el progreso. Libera espacio o permite almacenamiento y vuelve a intentarlo.",
+      "medalsTitle": "Tu colección de constancia",
+      "medalsNote": "Completar el reto suma un día, aunque haya errores. Repetir o recargar no suma días extra. El progreso se guarda solo para tu cuenta en este navegador.",
+      "medal": {
+        "first": "Primer reto",
+        "week": "Una semana aprendiendo",
+        "month": "Constancia de 30 días"
+      },
+      "medalEarned": "Desbloqueado",
+      "medalLocked": "Por conseguir · {count, plural, one {# día} other {# días seguidos}}",
+      "footnote": "Contenido editorial de formación, no examen habilitante. Los logros no acreditan cualificación ni influyen en la selección profesional. No incluye procedimientos ni extractos de AMM/TCM. Catálogo inicial pendiente de revisión formal.",
+      "achievementsTitle": "Logros de aprendizaje",
+      "achievementsNote": "Privados en este navegador · separados de las cualificaciones.",
+      "achievementsStats": "Racha actual: {current, plural, one {# día} other {# días}} · Mejor racha: {best, plural, one {# día} other {# días}} · Retos completados: {total}",
+      "badgesNote": "Las insignias resumen datos declarados. No conceden autorización de firma ni sustituyen la revisión de licencia, tipo o competencia.",
+      "openChallenge": "Abrir el reto diario"
     },
     "copy": "Copiar con unidades",
     "copied": "Copiado",

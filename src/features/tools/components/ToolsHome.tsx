@@ -1,23 +1,44 @@
 "use client";
 
-// Workbench home (prototype `Toolbox.jsx` home): hero, favourites and one tile per tool. Only the
-// tools approved under D-11 (2026-10-19) are listed. Favourites are a per-browser convenience
-// (localStorage, like the prototype); losing them changes nothing else.
+// Workbench home (prototype `Toolbox.jsx` home): hero, favourites and one tile per tool, in v1.8's
+// order. Fuel stays out until its technical review (D-11); the learning tools came with SCOPE-2.
+// Favourites are a per-browser convenience (localStorage, like the prototype); losing them changes
+// nothing else.
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
-import { CheckIcon, ChevronIcon, ClockIcon, StarIcon, SwapIcon, WrenchIcon } from "./icons";
+import {
+  BookOpenIcon,
+  CheckIcon,
+  ChevronIcon,
+  ClockIcon,
+  GraduationCapIcon,
+  StarIcon,
+  SwapIcon,
+  WrenchIcon,
+} from "./icons";
 
-export const TOOL_IDS = ["torque", "convert", "duration"] as const;
+/** v1.8 order: daily, translator, torque, [fuel], convert, knowledge, duration (L-4). */
+export const TOOL_IDS = [
+  "daily",
+  "translator",
+  "torque",
+  "convert",
+  "knowledge",
+  "duration",
+] as const;
 export type ToolId = (typeof TOOL_IDS)[number];
 
 const FAVORITES_KEY = "crewflex-tool-favorites";
 const FAVORITES_EVENT = "crewflex-tool-favorites-change";
 
-const ICONS: Record<ToolId, ReactNode> = {
-  torque: <WrenchIcon size={26} />,
-  convert: <SwapIcon size={26} />,
-  duration: <ClockIcon size={26} />,
+const ICONS: Record<ToolId, (size: number) => ReactNode> = {
+  daily: (size) => <GraduationCapIcon size={size} />,
+  translator: (size) => <BookOpenIcon size={size} />,
+  torque: (size) => <WrenchIcon size={size} />,
+  convert: (size) => <SwapIcon size={size} />,
+  knowledge: (size) => <BookOpenIcon size={size} />,
+  duration: (size) => <ClockIcon size={size} />,
 };
 
 function readRaw(): string {
@@ -63,7 +84,7 @@ export function ToolsHome() {
 
   return (
     <>
-      <div className="relative mb-8 grid gap-9 overflow-hidden rounded-[18px] bg-tool-hero p-6 text-white sm:p-10 lg:grid-cols-[1.2fr_1fr] lg:px-12">
+      <div className="relative mb-8 grid gap-9 overflow-hidden rounded-[18px] bg-tool-hero p-6 text-white sm:p-10 min-[601px]:grid-cols-[1.2fr_1fr] lg:px-12">
         <span
           aria-hidden
           className="pointer-events-none absolute -top-52 -right-44 size-[430px] rounded-full border border-tool-ring"
@@ -81,9 +102,10 @@ export function ToolsHome() {
             {t("hero.cta")} <ChevronIcon size={17} />
           </Link>
         </div>
+        {/* v1.8 hides the art up to 600 px (T-1). */}
         <div
           aria-hidden
-          className="relative my-3 hidden flex-col items-center justify-center gap-3 border-l border-[#395768] lg:flex"
+          className="relative my-3 hidden flex-col items-center justify-center gap-3 border-l border-[#395768] min-[601px]:flex"
         >
           <span className="text-[40px] font-bold tracking-tight">N·m</span>
           <SwapIcon size={28} />
@@ -106,7 +128,8 @@ export function ToolsHome() {
                 href={`/app/tools/${id}`}
                 className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#ccd9df] bg-white px-4 text-xs font-bold text-[#1d4458] hover:bg-canvas"
               >
-                {ICONS[id]}
+                {/* 17 px in a chip, 26 px on a tile, as v1.8 (T-2) */}
+                {ICONS[id](17)}
                 {t(`tile.${id}.title`)}
               </Link>
             ))}
@@ -137,7 +160,7 @@ export function ToolsHome() {
                 <StarIcon size={18} filled={favorite} />
               </button>
               <span className="inline-flex w-fit rounded-xl bg-tool-soft p-3 text-[#12716f]">
-                {ICONS[id]}
+                {ICONS[id](26)}
               </span>
               <h2 className="mt-5 mb-2 text-[19px] font-bold tracking-tight text-[#122e43]">
                 {title}
