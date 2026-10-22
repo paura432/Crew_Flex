@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { actionErrorCopy, callAction } from "@/components/ui/Notice";
 import type { DocumentMime } from "@/domain/documents";
 import { documentUrlAction } from "../actions";
-import { viewerFailure, viewerKind } from "../map";
+import { viewerBytesMatch, viewerFailure, viewerKind } from "../map";
 
 export interface ViewerTarget {
   id: string;
@@ -50,7 +50,11 @@ export async function loadForViewer(target: ViewerTarget): Promise<ViewerResult>
   const failure = viewerFailure(response.status);
   if (failure) return { status: "error", reason: failure };
   const bytes = await response.arrayBuffer().catch(() => null);
-  if (!bytes) return { status: "error", reason: "failed" };
+  // Only bytes that really are the recorded type become a blob (review LOW-3); never `sandbox` the frame:
+  // Chrome refuses to run its PDF viewer in a sandboxed iframe.
+  if (!bytes || !viewerBytesMatch(new Uint8Array(bytes), target.mimeType)) {
+    return { status: "error", reason: "failed" };
+  }
   // Re-typed with the sniffed type: the browser never guesses from the bytes (PDF, PNG or JPEG only).
   return {
     status: "ready",

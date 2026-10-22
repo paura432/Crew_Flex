@@ -32,6 +32,15 @@ employer, rate and blocks are owner-only; a professional who blocked an organiza
 `get_requirement_candidate_passports`, which calls the pool function (same rows, pseudonyms, cap and role check).
 Proof: `tests/db/passport.test.ts`.
 
+**Package wallet-extras (LOCAL `20261024200000`), S-10 and the maintenance gate:** `document_maintenance_batch`
+checks `auth.uid()` and the platform role in its body (S-10 holds), but since N-19 its apply mode also **deletes
+document rows** of any owner — only archived ones past `archive_retention`, each audited `document.trash_expired` —
+and that deletion does **not** depend on `DOCUMENTS_MAINTENANCE_ENABLED` (a function env that guards only the
+service-role Storage delete): a platform admin calling the RPC through PostgREST expires the trash. Explicit,
+documented exception (EDGE_FUNCTIONS.md); the expiry re-checks its condition on the locked row, so a document
+restored meanwhile is kept (`scripts/local/db-race-check.sh wallet-trash`). `document_trash_retention_days()` answers
+null without a JWT subject. Proof: `tests/db/wallet-extras.test.ts`.
+
 S-7 also binds the applicant label of organization-side notices (`get_my_notifications`, LOCAL `20261023800000`):
 the same pool rules as `get_requirement_applications`, applied at read time (`tests/db/notices.test.ts`).
 

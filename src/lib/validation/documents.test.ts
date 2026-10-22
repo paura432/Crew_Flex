@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   documentIdQuery,
   documentUrlQuery,
+  listDocumentsQuery,
   updateDocumentInput,
   uploadDocumentMetadata,
 } from "./documents.ts";
@@ -79,5 +80,14 @@ describe("documentsMaintenanceQuery", () => {
     for (const bad of [{ apply: "true" }, { limit: "101" }, { limit: "0" }, { dryRun: "0" }]) {
       expect(documentsMaintenanceQuery.safeParse(bad).success).toBe(false);
     }
+  });
+});
+
+describe("list view (N-19, review LOW-4)", () => {
+  it("defaults to the wallet; only `active` or `trash`; nothing else is accepted", () => {
+    expect(listDocumentsQuery.parse({})).toEqual({ view: "active" });
+    expect(listDocumentsQuery.parse({ view: "trash" })).toEqual({ view: "trash" });
+    expect(listDocumentsQuery.safeParse({ view: "archived" }).success).toBe(false);
+    expect(listDocumentsQuery.safeParse({ view: "trash", ownerId: "x" }).success).toBe(false);
   });
 });

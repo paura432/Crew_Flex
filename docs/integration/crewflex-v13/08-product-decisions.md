@@ -146,4 +146,8 @@ With the account package (T-42/T-43): `close_my_account` deletes trashed documen
 `owner_delete`, due at once — no `trash_expired`, nothing can be restored afterwards), and the export includes them,
 marked by `archivedAt`: they are still the person's stored data until purged (T-101 «count for nothing else» is
 about the product's own lists and counts, not about data rights). The export reads the same column list as the
-wallet (`DOCUMENT_SELECT`).
+wallet (`DOCUMENT_SELECT`). Security review (2026-10-22): the trash sweep re-checks the expiry on the row it deletes
+(a document restored meanwhile is kept; `db-race-check.sh wallet-trash`); a platform admin's direct call of the batch
+expires the trash even with `DOCUMENTS_MAINTENANCE_ENABLED` off (documented exception, audited); the viewer shows only
+bytes whose magic bytes match the recorded type; each list view has its own 200-row cap and the page says when one
+was cut.

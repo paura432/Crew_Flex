@@ -94,7 +94,8 @@ as $$
 $$;
 revoke execute on function app_private.document_trash_expired(timestamptz) from public, anon, authenticated;
 
--- What the trash page shows: «restorable for {n} days». Integer days, rounded up; signed-in users only.
+-- What the trash page shows: «restorable for {n} days». Integer days, rounded up; signed-in users only
+-- (granted to `authenticated`, and the body answers null without a JWT subject, S-10).
 create function public.document_trash_retention_days()
 returns integer
 language sql
@@ -102,7 +103,8 @@ stable
 security definer
 set search_path = ''
 as $$
-  select ceil(extract(epoch from (app_private.document_retention()).archive_retention) / 86400)::integer;
+  select ceil(extract(epoch from (app_private.document_retention()).archive_retention) / 86400)::integer
+  where (select auth.uid()) is not null;
 $$;
 revoke execute on function public.document_trash_retention_days() from public, anon;
 grant execute on function public.document_trash_retention_days() to authenticated;
@@ -215,7 +217,13 @@ revoke execute on function public.audit_professional_document() from public, ano
 -- Body of 20261019160200; «N-19»: step 0 expires the trash before the reconciliation and the purge.
 -- Dry-run lists the expired documents (`would_expire`) and writes nothing; apply deletes them (bounded
 -- by the limit, oldest first): their tombstones are due at once, so the purge below returns their
--- objects in the same run. Platform admin only, re-checked here (S-10).
+-- objects in the same run. Platform admin only, re-checked here (S-10). This row deletion does NOT
+-- depend on the function's `DOCUMENTS_MAINTENANCE_ENABLED` (which guards the service-role Storage
+-- delete only): an explicit exception, bounded by the owner's own retention and audited
+-- `document.trash_expired` (EDGE_FUNCTIONS.md, memory-bank/04 S-10).
+-- Concurrency (security review MEDIUM-1): the expiry condition is repeated on the DELETE target, so a
+-- document restored between the sweep's snapshot and its row lock is re-checked by EvalPlanQual and
+-- kept; rows another transaction holds are skipped (`skip locked`) and left for the next sweep.
 -- ---------------------------------------------------------------------------------------------
 create or replace function public.document_maintenance_batch(p_apply boolean, p_limit integer)
 returns table (tombstone_id uuid, storage_path text, reason text, action text)
@@ -238,11 +246,13 @@ begin
     return query
     with expired as (
       delete from public.professional_documents d
-      where d.id in (
-        select x.id from public.professional_documents x
-        where x.archived_at is not null and x.archived_at <= now() - v_settings.archive_retention
-        order by x.archived_at
-        limit v_limit)
+      where d.archived_at is not null and d.archived_at <= now() - v_settings.archive_retention
+        and d.id in (
+          select x.id from public.professional_documents x
+          where x.archived_at is not null and x.archived_at <= now() - v_settings.archive_retention
+          order by x.archived_at
+          limit v_limit
+          for update skip locked)
       returning d.storage_path
     )
     select null::uuid, e.storage_path, 'trash_expired'::text, 'expired'::text from expired e;

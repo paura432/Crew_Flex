@@ -1,6 +1,6 @@
 // Professional document wallet (owner decision D-10) — own documents only. LOCAL ONLY.
-//   GET    /professional-documents                  → own documents, wallet and trash (RLS), and
-//          `trashRetentionDays` (N-19, T-100)
+//   GET    /professional-documents[?view=trash]     → own documents of one view (RLS, ≤ 200),
+//          `counts` of both views and `trashRetentionDays` (N-19, T-100)
 //   GET    /professional-documents?id=<uuid>&url=1  → { url, expiresInSeconds: 60 } signed URL (owner)
 //   POST   (only while app_private.feature_flags('document_wallet') is on, else 404)
 //          /professional-documents  multipart/form-data: file, kind, title?, expiresAt?, qualificationId?
@@ -40,6 +40,7 @@ import {
   documentIdQuery,
   documentUrlQuery,
   isArchivePatch,
+  listDocumentsQuery,
   updateDocumentInput,
   uploadDocumentMetadata,
 } from "../../../src/lib/validation/documents.ts";
@@ -278,22 +279,37 @@ async function removeObject(
 export const handler = createHandler(FN, {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
-    if (ctx.url.searchParams.size === 0) {
-      const [list, retention] = await Promise.all([
-        actor.client
+    if (!ctx.url.searchParams.has("id") && !ctx.url.searchParams.has("url")) {
+      const { view } = parseQuery(ctx.url, listDocumentsQuery);
+      const count = (archived: boolean) => {
+        const rows = actor.client
           .from("professional_documents")
-          .select(SELECT)
-          .eq("owner_id", actor.id)
-          .order("created_at", { ascending: false })
-          .limit(200),
+          .select("id", { count: "exact", head: true })
+          .eq("owner_id", actor.id);
+        return archived ? rows.not("archived_at", "is", null) : rows.is("archived_at", null);
+      };
+      const base = actor.client
+        .from("professional_documents")
+        .select(SELECT)
+        .eq("owner_id", actor.id);
+      const list =
+        view === "trash"
+          ? base.not("archived_at", "is", null).order("archived_at", { ascending: false })
+          : base.is("archived_at", null).order("created_at", { ascending: false });
+      const [rows, active, trash, retention] = await Promise.all([
+        list.limit(200),
+        count(false),
+        count(true),
         actor.client.rpc("document_trash_retention_days"),
       ]);
-      if (list.error) throw fromDatabaseError(list.error);
-      if (retention.error) throw fromDatabaseError(retention.error);
+      for (const r of [rows, active, trash, retention]) {
+        if (r.error) throw fromDatabaseError(r.error);
+      }
       return {
         data: {
-          documents: (list.data ?? []).map(toDocument),
+          documents: (rows.data ?? []).map(toDocument),
           trashRetentionDays: z.number().int().positive().parse(retention.data),
+          counts: { active: active.count ?? 0, trash: trash.count ?? 0 },
         } satisfies DocumentListResponse,
       };
     }

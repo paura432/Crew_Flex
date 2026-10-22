@@ -34,10 +34,13 @@ export default async function ProfessionalDocumentsPage({
       />
     );
   }
-  const [documents, qualifications] = await Promise.all([listDocuments(), listQualifications()]);
-  const today = new Date().toISOString().slice(0, 10);
   // v1.8 «Papelera» / «Ver wallet» (N-19); anything else is the wallet.
   const view = walletView(viewParam);
+  const [documents, qualifications] = await Promise.all([
+    listDocuments(view),
+    listQualifications(),
+  ]);
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -47,6 +50,7 @@ export default async function ProfessionalDocumentsPage({
           key={view}
           view={view}
           trashRetentionDays={documents.data.trashRetentionDays}
+          counts={documents.data.counts}
           documents={documents.data.documents}
           // Linking is optional: if the qualifications cannot be loaded, the wallet still works.
           qualifications={

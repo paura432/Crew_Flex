@@ -2586,9 +2586,11 @@ for (const title of ["Smoke viewer image", "Smoke viewer pdf"]) {
   await row.getByRole("button", { name: "Confirm delete" }).click();
   await row.waitFor({ state: "detached", timeout: 15_000 });
 }
-const wxLeft = (
-  await asSeedUser("delta@crewflex.test", "professional-documents")
-).data.documents.filter((d) => /^Smoke viewer/.test(d.title)).length;
+let wxLeft = 0;
+for (const query of [{}, { view: "trash" }]) {
+  const listed = await asSeedUser("delta@crewflex.test", "professional-documents", { query });
+  wxLeft += listed.data.documents.filter((d) => /^Smoke viewer/.test(d.title)).length;
+}
 ok(
   "PKG wallet-extras 5 trash emptied permanently: «No documents. Archived documents can be restored.»; nothing of the smoke left",
   wxLeft === 0 &&

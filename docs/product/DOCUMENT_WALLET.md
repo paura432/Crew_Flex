@@ -34,7 +34,9 @@ browser ──multipart──▶ Next.js server action ──invokeEdgeFunction(
 - **Endpoints** (`docs/architecture/EDGE_FUNCTIONS.md`): `GET` list · `GET ?id=&url=1` signed URL · `POST`
   multipart (`file`, `kind`, `title`, `expiresAt`, `qualificationId`; `Idempotency-Key` required; 201 / 200 replay
   / 409) · `PATCH ?id=` (`kind`, `title`, `expiresAt`, `qualificationId`, all required) or `{ archived }` (trash,
-  §9) · `DELETE ?id=`. The list carries `archivedAt` per document and `trashRetentionDays`.
+  §9) · `DELETE ?id=`. The list returns one view (`?view=trash`, default the wallet; 200 rows each) with `counts` of both
+  views, `archivedAt` per document and `trashRetentionDays`; the page says «Se muestran los 200 más recientes de
+  {n}» when a view was cut.
 - **No service role.** Every query, upload, signed URL and removal runs with the caller's JWT; RLS and Storage
   policies are the authorization. A signed URL for another user's document is a 404 (row invisible) and Storage
   refuses it anyway (object invisible).
@@ -205,7 +207,9 @@ v1.8 demo parity (`Professional2.jsx:159-219`) under the owner's DEFAULTS rule; 
   60-second signed URL, fetched once (`connect-src` already allows the Supabase origin), shown as a blob re-typed with
   the server-sniffed mime — an `<img>` for PNG/JPEG, an `<iframe>` for PDFs with «Si el PDF no se muestra, ábrelo en
   una pestaña nueva.». A 400/401/403 answer is «El enlace ha caducado…» and anything else «No se ha podido cargar…»,
-  both with «Reintentar», never an empty frame. «Abrir en una pestaña nueva» keeps the previous new-tab path. CSP
+  both with «Reintentar», never an empty frame. Bytes whose magic bytes are not the recorded type are refused the
+  same way (a direct Storage upload could hold anything; the frame is never `sandbox`ed, which would break
+  Chrome's PDF viewer). «Abrir en una pestaña nueva» keeps the previous new-tab path. CSP
   (`src/proxy.ts`, still report-only): only `frame-src 'self' blob:` is added; `object-src` stays `'none'`, and the
   Storage origin is neither framed nor an image source. Owner only, as before: nobody else gains a path to a file.
 - **Threat notes.** A blob frame shares the app's origin, but its content is a PDF rendered by the browser's viewer

@@ -3,7 +3,7 @@
 # LOCAL Docker stack only: talks to the container `supabase_db_crew-flex` with `docker exec psql`
 # (never a URL), after the same local-target check as scripts/local/sb-local.sh. Every scenario
 # restores the rows it changed, so the deterministic seed stays as it was.
-# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|all]   (default: all)
+# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|all]   (default: all)
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
 CONTAINER=supabase_db_crew-flex
@@ -384,6 +384,61 @@ notices_role_loss() {
   done
 }
 
+# --- Wallet trash expiry (migration 20261024200000, security review MEDIUM-1) -----------------------
+# Delta restores an archived document while a platform admin's sweep expires the trash. Whoever takes the
+# row first wins; a restored document is never deleted (the DELETE re-checks the expiry on its target),
+# and a deleted one cannot be restored. The document, its object, its tombstone and any orphan tombstone
+# recorded by the sweep during the scenario are removed afterwards (audit rows stay: append-only).
+wallet_trash_ready() {
+  [ "$(echo "select exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'professional_documents' and column_name = 'archived_at');" | psql_owner)" = t ] && return 0
+  fail "migration 20261024200000 is not applied to the local stack (wallet-trash scenario not run)"
+  return 1
+}
+wallet_trash() {
+  echo "== wallet trash: the owner restores while the sweep expires the same document (both orders)"
+  wallet_trash_ready || return 0
+  local first
+  for first in restore sweep; do
+    : >"$OUT_A"; : >"$OUT_B"
+    local key; key="$(new_uuid)"
+    local path="$DELTA/$key-0123456789abcdef"
+    local since; since="$(echo "select now();" | psql_owner)"
+    local doc
+    doc="$(psql_owner <<SQL | tail -1
+insert into storage.objects (bucket_id, name, owner, metadata)
+values ('professional-documents', '$path', '$DELTA', '{"size": 3, "mimetype": "application/pdf"}');
+insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256, archived_at)
+values ('$DELTA', 'other', 'Race trash', '$path', 'application/pdf', 3, repeat('a', 64), now() - interval '400 days')
+returning id;
+SQL
+)"
+    local restore="update public.professional_documents set archived_at = null where id = '$doc';"
+    local sweep="select count(*) from public.document_maintenance_batch(true, 100) where storage_path = '$path' and action = 'expired';"
+    local held_as="$DELTA" held="$restore" other_as="$PLATFORM_ADMIN" other="$sweep"
+    if [ "$first" = sweep ]; then held_as="$PLATFORM_ADMIN"; held="$sweep"; other_as="$DELTA"; other="$restore"; fi
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$held" | psql_as "$held_as" >"$OUT_A" &
+    local pa=$!
+    sleep 0.4
+    printf '%s\n' "$other" | psql_as "$other_as" >"$OUT_B" || true
+    wait "$pa" || true
+    local row tomb audit
+    row="$(echo "select coalesce((select (archived_at is null)::text from public.professional_documents where id = '$doc'), 'gone');" | psql_owner)"
+    tomb="$(echo "select coalesce(string_agg(reason, ','), 'none') from app_private.document_object_tombstones where storage_path = '$path';" | psql_owner)"
+    audit="$(echo "select count(*) from public.audit_events where action = 'document.trash_expired' and entity_id = '$doc';" | psql_owner)"
+    if [ "$first" = restore ] && [ "$row" = true ] && [ "$tomb" = none ] && [ "$audit" = 0 ]; then
+      pass "restore first: the document is back in the wallet; the sweep neither deleted, tombstoned nor audited it"
+    elif [ "$first" = sweep ] && [ "$row" = gone ] && [ "$tomb" = trash_expired ] && [ "$audit" = 1 ]; then
+      pass "sweep first: expired once (trash_expired tombstone, audited); the late restore found nothing"
+    else fail "$first first: row=$row tombstone=$tomb audit=$audit"; cat "$OUT_A" "$OUT_B"; fi
+    psql_owner >/dev/null <<SQL
+delete from public.professional_documents where id = '$doc';
+delete from app_private.document_object_tombstones
+  where storage_path = '$path' or (reason = 'orphan_upload' and deleted_at >= '$since');
+delete from storage.objects where bucket_id = 'professional-documents' and name = '$path';
+SQL
+  done
+}
+
 case "${1:-all}" in
   e3) e3; e3_simultaneous ;;
   idempotency) idempotency ;;
@@ -391,8 +446,9 @@ case "${1:-all}" in
   availability) availability ;;
   applications) applications; pause_vs_confirm; double_booking; apply_vs_edit ;;
   notices) notices_role_loss ;;
+  wallet-trash) wallet_trash ;;
   all) e3; e3_simultaneous; idempotency; review; availability
-       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss ;;
+       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"

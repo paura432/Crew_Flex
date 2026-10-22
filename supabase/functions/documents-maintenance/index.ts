@@ -4,7 +4,9 @@
 //   POST /documents-maintenance?apply=1&limit=25  → deletes the expired trash and records orphan
 //                                                   tombstones, then purges due objects
 // Fails closed twice: 404 unless DOCUMENTS_MAINTENANCE_ENABLED=true (function env), and every RPC
-// re-checks `is_platform_admin()` in the database (42501 otherwise).
+// re-checks `is_platform_admin()` in the database (42501 otherwise). The env flag guards the service-role
+// Storage delete only: a platform admin calling `document_maintenance_batch(true, …)` directly also
+// expires the trash (N-19, archived rows past the retention, audited) — a documented exception.
 //
 // SERVICE ROLE — written justification (AGENTS.md, docs/architecture/EDGE_FUNCTIONS.md):
 // Storage objects can only be removed through the Storage API, and the objects to purge belong to

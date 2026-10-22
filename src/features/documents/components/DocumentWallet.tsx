@@ -27,7 +27,7 @@ import { resolveFieldErrors } from "@/i18n/validation";
 import { useIdempotencyKey } from "@/lib/idempotency";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { updateDocumentInput } from "@/lib/validation/documents";
-import type { ProfessionalDocument } from "@/types/api";
+import type { DocumentListResponse, ProfessionalDocument } from "@/types/api";
 import {
   archiveDocumentAction,
   deleteDocumentAction,
@@ -66,6 +66,7 @@ export function DocumentWallet({
   today,
   view,
   trashRetentionDays,
+  counts,
 }: {
   /** Wallet and trash together (the list endpoint returns both). */
   documents: ProfessionalDocument[];
@@ -76,6 +77,8 @@ export function DocumentWallet({
   view: WalletView;
   /** T-100: how long an archived document stays restorable (database setting). */
   trashRetentionDays: number;
+  /** Both views in full (server counts): the trash size and whether the list was cut at 200. */
+  counts: DocumentListResponse["counts"] | undefined;
 }) {
   const t = useTranslations("documents");
   const tRoot = useTranslations();
@@ -97,7 +100,7 @@ export function DocumentWallet({
   } | null>(null);
   const viewTrigger = useRef<HTMLButtonElement | null>(null);
   const trash = view === "trash";
-  const list = walletList(documents, view, filter);
+  const list = walletList(documents, view, filter, counts);
 
   function onUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -362,6 +365,11 @@ export function DocumentWallet({
         {(!trash || Number.isInteger(trashRetentionDays)) && (
           <p className="mb-4 rounded-lg border border-info-bg bg-info-bg p-3 text-sm text-ink">
             {trash ? t("trashNote", { days: trashRetentionDays }) : t("sharingNote")}
+          </p>
+        )}
+        {list.total > list.inView && (
+          <p className="mb-2 text-sm text-muted">
+            {t("truncated", { shown: list.inView, total: list.total })}
           </p>
         )}
         {list.shown.length === 0 ? (

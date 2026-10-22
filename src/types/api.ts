@@ -200,10 +200,15 @@ export interface ProfessionalDocument {
 }
 
 export interface DocumentListResponse {
-  /** Wallet and trash together, newest first; the UI splits them by `archivedAt`. */
+  /**
+   * One view (`?view=`, default the wallet), at most 200: the wallet newest first, the trash most
+   * recently archived first.
+   */
   documents: ProfessionalDocument[];
   /** How long an archived document stays restorable before it is purged (T-100, a database setting). */
   trashRetentionDays: number;
+  /** Both views in full: tells the UI the trash size and when a list was cut at 200. */
+  counts: { active: number; trash: number };
 }
 
 export interface DocumentResponse {

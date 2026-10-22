@@ -199,6 +199,12 @@ describe("N-19 wallet trash (migration 20261024200000)", () => {
       expect(await queryError(tx, "select public.document_trash_retention_days()")).toMatch(
         /permission denied/,
       );
+      // S-10 (review LOW-2): even a caller with the grant but no JWT subject gets nothing.
+      await tx.exec("reset role");
+      await tx.exec("set local role authenticated");
+      expect((await tx.query("select public.document_trash_retention_days() as d")).rows).toEqual([
+        { d: null },
+      ]);
     });
   });
 

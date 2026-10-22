@@ -1,6 +1,10 @@
 import "server-only";
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { ArchiveDocumentInput, UpdateDocumentInput } from "@/lib/validation/documents";
+import type {
+  ArchiveDocumentInput,
+  DocumentView,
+  UpdateDocumentInput,
+} from "@/lib/validation/documents";
 import { invokeEdgeFunction } from "@/server/edge-functions";
 import type {
   DocumentDeleteResponse,
@@ -9,8 +13,15 @@ import type {
   DocumentUrlResponse,
 } from "@/types/api";
 
-export const listDocuments = () =>
-  invokeEdgeFunction<DocumentListResponse>("professional-documents");
+/**
+ * One view of the wallet (N-19, at most 200 rows) with the counts of both. The wallet sends no query,
+ * so a function older than N-19 still answers it (its whole list, no counts).
+ */
+export const listDocuments = (view: DocumentView = "active") =>
+  invokeEdgeFunction<DocumentListResponse>(
+    "professional-documents",
+    view === "trash" ? { query: { view } } : undefined,
+  );
 
 /** Signed URL valid for 60 seconds; only the owner gets one (Storage RLS). */
 export const documentUrl = (id: string) =>

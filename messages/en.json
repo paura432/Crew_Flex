@@ -1828,7 +1828,8 @@
       "newTab": "Open in a new tab",
       "pdfFrame": "Preview of {title}",
       "pdfHint": "If the PDF does not show, open it in a new tab."
-    }
+    },
+    "truncated": "Showing the {shown} most recent of {total}."
   },
   "opportunities": {
     "eyebrow": "Opportunities",

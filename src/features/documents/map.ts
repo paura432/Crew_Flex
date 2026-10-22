@@ -1,12 +1,12 @@
 // Pure view model of the document wallet page (no I/O; `map.test.ts`): the trash (N-19, T-100/T-101),
 // the filter by type (N-20, T-102) and the in-app viewer's decisions (N-21, T-103). Rules about the
 // documents themselves stay in `src/domain/documents.ts`.
-import { DOCUMENT_KINDS, type DocumentMime } from "@/domain/documents";
-import type { ProfessionalDocument } from "@/types/api";
+import { DOCUMENT_KINDS, sniffDocumentMime, type DocumentMime } from "@/domain/documents";
+import type { DocumentView } from "@/lib/validation/documents";
+import type { DocumentListResponse, ProfessionalDocument } from "@/types/api";
 
 /** v1.8 «Papelera» / «Ver wallet»: `?view=trash`, anything else is the wallet. */
-export const WALLET_VIEWS = ["active", "trash"] as const;
-export type WalletView = (typeof WALLET_VIEWS)[number];
+export type WalletView = DocumentView;
 export const walletView = (raw: unknown): WalletView => (raw === "trash" ? "trash" : "active");
 
 /**
@@ -21,23 +21,27 @@ export interface WalletList {
   shown: ProfessionalDocument[];
   /** Documents of the view before the filter (tells «nothing of this type» from «nothing at all»). */
   inView: number;
-  /** Documents in the trash, whatever the view. */
+  /** Documents in the trash (the server's count), whatever the view. */
   inTrash: number;
+  /** Documents of the view in total: more than `inView` when the server cut the list at 200. */
+  total: number;
 }
 
 export function walletList(
   documents: ProfessionalDocument[],
   view: WalletView,
   filter: WalletFilter,
+  counts: DocumentListResponse["counts"] | undefined,
 ): WalletList {
-  // Truthiness, not `!== null`: a list from a function older than N-19 has no `archivedAt` at all, and
-  // those documents are in the wallet (deploy order: migration → function → frontend).
-  const trash = documents.filter((d) => Boolean(d.archivedAt));
-  const inView = view === "trash" ? trash : documents.filter((d) => !d.archivedAt);
+  // The server sends one view. Truthiness, not `!== null`, and optional counts: a function older than
+  // N-19 sends neither `archivedAt` nor `counts`, and all its documents are in the wallet.
+  const inView = documents.filter((d) => Boolean(d.archivedAt) === (view === "trash"));
+  const counted = counts ? counts[view] : 0;
   return {
     shown: filter === "all" ? inView : inView.filter((d) => d.kind === filter),
     inView: inView.length,
-    inTrash: trash.length,
+    inTrash: counts ? counts.trash : 0,
+    total: Math.max(counted, inView.length),
   };
 }
 
@@ -62,3 +66,11 @@ export function viewerFailure(status: number | null): "expired" | "failed" | nul
   if (status !== null && status >= 200 && status < 300) return null;
   return status === 400 || status === 401 || status === 403 ? "expired" : "failed";
 }
+
+/**
+ * The viewer shows bytes only when their magic bytes are the type the server recorded (security review
+ * LOW-3): a direct Storage upload could hold anything under an allowed name, so the blob is never typed
+ * from a claim alone. Otherwise the dialog shows its error and the new-tab fallback.
+ */
+export const viewerBytesMatch = (bytes: Uint8Array, mime: DocumentMime): boolean =>
+  sniffDocumentMime(bytes) === mime;
