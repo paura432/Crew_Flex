@@ -25,7 +25,8 @@ export async function IdentityCard({
       >
         {initials(name)}
       </span>
-      <div className="min-w-0 flex-1">
+      {/* X-17: a 12rem basis wraps «Editar perfil» under the text on phones instead of squeezing it. */}
+      <div className="min-w-0 flex-1 basis-48">
         <p className="text-lg font-semibold break-words">{name}</p>
         <p className="text-sm text-muted">
           {base}
