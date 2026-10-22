@@ -159,6 +159,8 @@ export async function updatePasswordAction(
 
 export async function signOutAction() {
   const supabase = await createServerSupabase();
-  await supabase.auth.signOut();
+  // This device only, as v1.8 (X-12): auth-js defaults to `global`, which also ended the account's
+  // sessions on every other device. The password reset above stays global on purpose.
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/login?signedOut=1");
 }
