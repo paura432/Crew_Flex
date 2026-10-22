@@ -1373,6 +1373,9 @@
       "ACTIVE_COMMITMENTS": "Resolve the active assignments first (accepted or confirmed).",
       "HAS_APPLICATIONS": "This requirement already received applications: it cannot be edited."
     },
-    "stale": "The application changed in the meantime. Reload to see its current state."
+    "stale": "The application changed in the meantime. Reload to see its current state.",
+    "orgOnlyTitle": "«My applications» is for professionals",
+    "orgOnlyDescription": "The applications your organization receives are on each requirement.",
+    "orgOnlyAction": "See requirements"
   }
 }

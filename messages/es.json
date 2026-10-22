@@ -1373,6 +1373,9 @@
       "ACTIVE_COMMITMENTS": "Resuelve antes las asignaciones activas (aceptadas o confirmadas).",
       "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar."
     },
-    "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual."
+    "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual.",
+    "orgOnlyTitle": "«Mis candidaturas» es para profesionales",
+    "orgOnlyDescription": "Las candidaturas que recibe tu organización están en cada necesidad.",
+    "orgOnlyAction": "Ver necesidades"
   }
 }
