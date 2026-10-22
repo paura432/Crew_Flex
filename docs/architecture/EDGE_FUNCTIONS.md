@@ -44,7 +44,7 @@ No directories are created for PLANNED functions (no ghost code). `createHandler
   every requirement carries `country`, `timeZone`, `description`, `shifts`, `conditions`, `archivedAt` (null = not
   stated). Drafts are not evaluable: `capacity-evaluate` / `matching-evaluate` answer 409 for them.
 - **`matching-evaluate`** — POST `{ organizationId, startsAt, endsAt, urgency, hardQualificationTypeIds }` (strict,
-  `viableCandidatesInput`) → `ViableCandidatesResponse { viable }`: the builder's live count (T-66) from RPC
+  `viableCandidatesInput`, a period that has not started) → `ViableCandidatesResponse { viable }`: the live count (T-66) from RPC
   `count_viable_candidates` (DEFINER, admin/manager of that organization, a number only, never `private`
   professionals). `{ requirementId }` keeps its meaning; a body with both is 400.
 - **`opportunities` / `applications`** — the requirement projection (`list_opportunities`, the card of

@@ -12,7 +12,10 @@ import {
   shiftIssues,
   type RequirementShift,
 } from "../../src/domain/work-requirement";
-import { requirementConditionsInput } from "../../src/lib/validation/work-requirement";
+import {
+  requirementConditionsInput,
+  requirementConditionsRow,
+} from "../../src/lib/validation/work-requirement";
 
 let db: PGlite;
 let mroId: string;
@@ -372,6 +375,23 @@ describe("requirement terms: columns and CHECK constraints (20261023600000)", ()
     });
   });
 
+  it("conditions text: the CHECK refuses what JavaScript's trim() changes, and the read schema parses whatever it stores", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      for (const arrival of ["\t", " ", " x", "x\n", "　x", "x﻿", " "]) {
+        expect(await rawError(tx, { conditions: { arrival } }), JSON.stringify(arrival)).toBe(
+          "23514",
+        );
+      }
+      for (const arrival of ["x y", "Antes del inicio del turno", "a\tb"]) {
+        expect(await rawError(tx, { conditions: { arrival } }), arrival).toBe("ok");
+        expect(requirementConditionsRow.safeParse({ arrival }).success, arrival).toBe(true);
+      }
+      // The input schema trims, so what the API sends is always storable.
+      const sent = requirementConditionsInput.parse({ arrival: "  x " });
+      expect(await rawError(tx, { conditions: sent })).toBe("ok");
+    });
+  });
+
   it("description is 1–4000 characters; archived_at only on a closed requirement", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       expect(await rawError(tx, { description: "x".repeat(4000) })).toBe("ok");
@@ -644,6 +664,61 @@ describe("edit with terms; save and publish a draft", () => {
   });
 });
 
+describe("the new edit overload refuses everyone but the organization's admins/managers (security review MEDIUM-2)", () => {
+  it("a member, another organization, a professional, a platform admin, anon and a random id get 42501; the row is unchanged", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const { id } = await create(tx, SEED.adminMro);
+      const before = await row(tx, id);
+      const args = await updateArgs(tx, id, {
+        title: "Hijacked terms",
+        conditions: { ...V18_CONDITIONS, hourlyRate: 1 },
+      });
+      for (const user of [
+        SEED.charlieMember,
+        SEED.adminOther,
+        SEED.delta,
+        SEED.platformAdmin,
+        null,
+      ]) {
+        await actAs(tx, user);
+        const error = await sqlError(tx, UPDATE, args);
+        // anon has no EXECUTE at all (42501 too).
+        expect(error.code, String(user)).toBe("42501");
+      }
+      await actAs(tx, SEED.adminMro);
+      const missing = [...args];
+      missing[0] = randomUUID();
+      expect((await sqlError(tx, UPDATE, missing)).code).toBe("42501");
+      expect(await row(tx, id)).toEqual(before);
+    });
+  });
+
+  it("a closed requirement is refused through the RPC too (55000)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const { id } = await create(tx, SEED.adminMro);
+      await tx.exec("reset role");
+      await tx.query("update public.work_requirements set status = 'closed' where id = $1", [id]);
+      const args = await updateArgs(tx, id, { description: "After closing" });
+      await actAs(tx, SEED.managerMro);
+      expect((await sqlError(tx, UPDATE, args)).code).toBe("55000");
+    });
+  });
+
+  it("every SECURITY DEFINER function of public and app_private pins search_path = '' and is not executable by anon", async () => {
+    const { rows } = await db.query<{ name: string; config: string[] | null; anon: boolean }>(
+      `select n.nspname || '.' || p.proname as name, p.proconfig as config,
+              has_function_privilege('anon', p.oid, 'execute') as anon
+       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where p.prosecdef and n.nspname in ('public', 'app_private')`,
+    );
+    expect(rows.length).toBeGreaterThan(20);
+    for (const fn of rows) {
+      expect(fn.config ?? [], fn.name).toContain('search_path=""');
+      expect(fn.anon, fn.name).toBe(false);
+    }
+  });
+});
+
 describe("archive (v1.8 «Archivar», one way; T-64)", () => {
   const ARCHIVE = "select * from public.archive_work_requirement($1)";
 
@@ -815,9 +890,29 @@ describe("live count of viable candidates (v2-13, T-66)", () => {
       const counted = truth.filter((t) => t.member || t.visibility !== "private");
       expect(n).toBe(counted.length);
       expect(n).toBeGreaterThan(0);
-      // A private professional who is eligible is never counted from outside.
-      const hotel = truth.find((t) => t.profile_id === SEED.hotelPrivate);
-      if (hotel) expect(hotel.member).toBe(false);
+      // Hotel (private, not a member) is eligible here and still not counted; made visible, it is.
+      expect(truth.find((t) => t.profile_id === SEED.hotelPrivate)).toMatchObject({
+        visibility: "private",
+        member: false,
+      });
+      await tx.query(
+        "update public.technician_profiles set visibility = 'anonymous' where profile_id = $1",
+        [SEED.hotelPrivate],
+      );
+      await actAs(tx, SEED.managerMro);
+      const visible = (
+        await tx.query<{ n: number }>(COUNT, [mroId, at(20, 8), at(22, 16), "planned", [b11, a320]])
+      ).rows[0]!.n;
+      expect(visible).toBe(n + 1);
+    });
+  });
+
+  it("only for a period that has not started (no probing of the past)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await actAs(tx, SEED.adminMro);
+      expect(
+        (await sqlError(tx, COUNT, [mroId, at(-5, 8), at(-3, 16), "planned", [b11]])).code,
+      ).toBe("22023");
     });
   });
 

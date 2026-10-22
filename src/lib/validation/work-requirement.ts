@@ -83,6 +83,14 @@ export const requirementConditionsInput = z.strictObject({
 });
 export type RequirementConditionsInput = z.infer<typeof requirementConditionsInput>;
 
+/**
+ * The same keys and ranges for rows read back from the database (Edge Functions): no trimming transform, so a
+ * stored value is parsed as it is — the CHECK already refuses what `trim()` would change (security review MEDIUM-1).
+ */
+export const requirementConditionsRow = requirementConditionsInput.extend({
+  arrival: z.string().min(1).max(160).optional(),
+});
+
 const requirementFields = {
   title: z.string("v.title.required").trim().min(3, "v.title.min").max(120, "v.title.max"),
   location: z
@@ -309,6 +317,9 @@ export const viableCandidatesInput = z
   .superRefine((value, ctx) => {
     const start = Date.parse(value.startsAt);
     const end = Date.parse(value.endsAt);
+    // A period that has not started only (as the database; security review LOW-2).
+    if (start < Date.now() - START_GRACE_MS)
+      ctx.addIssue({ code: "custom", path: ["startsAt"], message: "v.start.future" });
     if (end <= start)
       ctx.addIssue({ code: "custom", path: ["endsAt"], message: "v.end.afterStart" });
     else if (end - start > MAX_REQUIREMENT_DAYS * DAY_MS)

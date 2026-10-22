@@ -1,8 +1,8 @@
 -- Crew Flex — requirement terms: shifts, country, IANA zone, conditions, description, archive flag
 -- (v2 diff area 30: v2-09, v2-10, v2-12, v2-14; SCOPE-2 + DEFAULTS of 2026-10-22, technical defaults T-60…T-64 in
 -- docs/integration/crewflex-v13/08-product-decisions.md).
--- NON-DESTRUCTIVE: adds six nullable columns, their CHECK constraints, four private validators, one INSERT column
--- grant; `create or replace` of guard_closed_requirement / guard_requirement_with_applications (same rules, the
+-- NON-DESTRUCTIVE: adds six nullable columns, their CHECK constraints and one validation trigger, five private
+-- functions, one INSERT column grant; `create or replace` of guard_closed_requirement / guard_requirement_with_applications (same rules, the
 -- new columns frozen too) and of the private view app_private.requirement_cards (columns appended). The return
 -- type of list_opportunities grows, which PostgreSQL only allows through drop + create of that function (no data,
 -- same signature, same grants re-applied in this transaction). No table, column, policy or data is removed.
@@ -24,11 +24,12 @@
 --   * archived_at — v1.8 «Archivar» (one way): only on a closed requirement (T-64); written by the archive RPC only.
 -- Who writes them: the create RPC (SECURITY INVOKER, so `authenticated` gets INSERT on the five business columns)
 -- and the edit RPC (DEFINER). There is no UPDATE grant: direct PostgREST writes cannot change them, and the CHECK
--- constraints hold for every write path, the table owner included.
+-- constraints and the shifts trigger hold for every write path, the table owner included.
 
 -- ---------------------------------------------------------------------------------------------
--- Validators. Immutable (they read only their arguments) so CHECK constraints can use them. They run with the
--- privileges of whoever writes the row, hence EXECUTE for `authenticated` (app_private is not exposed by PostgREST).
+-- Validators. They read only their arguments (the shifts one also the time-zone database), for a CHECK or a
+-- trigger. They run with the privileges of whoever writes the row, hence EXECUTE for `authenticated`
+-- (app_private is not exposed by PostgREST).
 -- ---------------------------------------------------------------------------------------------
 
 -- 1–366 shifts {startsAt, endsAt, baseHours}, canonical ISO UTC with milliseconds (the RPCs normalise them),
@@ -43,7 +44,7 @@ create function app_private.requirement_shifts_valid(
 )
 returns boolean
 language plpgsql
-immutable
+stable
 set search_path = ''
 as $$
 declare
@@ -100,7 +101,10 @@ end;
 $$;
 
 -- Known keys only, each with its v1.8 range (Company2.jsx:114-125; connected rules.mjs `amount`): money in EUR with
--- two decimals and no real payment (OD-7), hours, a contract type, booleans and one short text.
+-- two decimals and no real payment (OD-7), hours, a contract type, booleans and one short text. The text may not
+-- start or end with any character JavaScript's `trim()` removes (enumerated: `btrim` strips spaces only and
+-- `[[:space:]]` depends on the locale), so every value stored here also passes the shared schema the Edge Functions
+-- parse rows with (security review MEDIUM-1: a tab-only value made the opportunity list fail for everyone).
 create function app_private.requirement_conditions_valid(p_conditions jsonb)
 returns boolean
 language plpgsql
@@ -111,6 +115,8 @@ declare
   v_key text;
   v_value jsonb;
   v_number numeric;
+  v_ws constant text := '[' || chr(9) || '-' || chr(13) || chr(32) || chr(160) || chr(5760) || chr(8192) || '-'
+    || chr(8202) || chr(8232) || chr(8233) || chr(8239) || chr(8287) || chr(12288) || chr(65279) || ']';
 begin
   if p_conditions is null then
     return true;
@@ -143,7 +149,8 @@ begin
     elsif v_key = 'arrival' then
       if jsonb_typeof(v_value) <> 'string'
          or char_length(v_value #>> '{}') not between 1 and 160
-         or (v_value #>> '{}') <> btrim(v_value #>> '{}') then
+         or (v_value #>> '{}') ~ ('^' || v_ws)
+         or (v_value #>> '{}') ~ (v_ws || '$') then
         return false;
       end if;
     else
@@ -155,7 +162,7 @@ end;
 $$;
 
 -- Canonical shifts for storage and request hashes: ISO UTC with milliseconds, base hours rounded to 2 decimals,
--- sorted by start. NULL or an empty list = no shifts. Anything unreadable is 22023 (→ 400); the CHECK above then
+-- sorted by start. NULL or an empty list = no shifts. Anything unreadable is 22023 (→ 400); the shifts trigger then
 -- applies the rules. Stable (reading an instant without an offset would depend on the session zone).
 create function app_private.normalize_requirement_shifts(p_shifts jsonb)
 returns jsonb
@@ -252,11 +259,31 @@ alter table public.work_requirements
       'Europe/Ljubljana', 'Europe/Madrid', 'Atlantic/Canary', 'Africa/Ceuta', 'Europe/Stockholm')),
   add constraint work_requirements_description_length check (
     description is null or char_length(description) between 1 and 4000),
-  add constraint work_requirements_shifts_valid check (
-    app_private.requirement_shifts_valid(shifts, timezone, starts_at, ends_at)),
   add constraint work_requirements_conditions_valid check (
     app_private.requirement_conditions_valid(conditions)),
   add constraint work_requirements_archived_closed check (archived_at is null or status = 'closed');
+
+-- Shifts are checked by a trigger, not a CHECK: the local-date rule depends on the time-zone database, and a CHECK
+-- re-runs on every UPDATE of the row — after a tzdata change a stored list could then block a status change
+-- (close, archive, covered ↔ open in a confirmation). The trigger runs only when the shifts, the zone or the period
+-- are written (security review INFO-2), for every write path, the table owner included (SQLSTATE 23514).
+create function app_private.check_requirement_shifts()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if not app_private.requirement_shifts_valid(new.shifts, new.timezone, new.starts_at, new.ends_at) then
+    raise exception 'the shifts do not match this requirement' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function app_private.check_requirement_shifts() from public, anon, authenticated;
+
+create trigger work_requirements_shifts_valid
+  before insert or update of shifts, timezone, starts_at, ends_at on public.work_requirements
+  for each row execute function app_private.check_requirement_shifts();
 
 -- The create RPC is SECURITY INVOKER (RLS insert policy applies): it needs these columns. No UPDATE grant.
 grant insert (country, timezone, description, shifts, conditions) on public.work_requirements to authenticated;

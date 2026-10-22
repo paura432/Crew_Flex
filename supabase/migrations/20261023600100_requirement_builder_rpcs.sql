@@ -211,9 +211,15 @@ begin
   v_shifts := app_private.normalize_requirement_shifts(p_shifts);
   v_conditions := app_private.normalize_requirement_conditions(p_conditions);
 
+  -- The role first, then the lock (security review LOW-1): a stranger who knows a published id never locks the
+  -- row. organization_id never changes, so the check stays true once locked.
+  if not public.has_org_role(
+       (select wr.organization_id from public.work_requirements wr where wr.id = p_id),
+       array['admin', 'manager']::public.organization_role[]) then
+    raise exception using errcode = '42501', message = 'not authorized';
+  end if;
   select * into v_req from public.work_requirements wr where wr.id = p_id for update;
-  if not found
-     or not public.has_org_role(v_req.organization_id, array['admin', 'manager']::public.organization_role[]) then
+  if not found then -- deleted meanwhile (organization deletion cascade)
     raise exception using errcode = '42501', message = 'not authorized';
   end if;
   if v_req.status = 'closed' then
@@ -318,9 +324,15 @@ begin
   if v_uid is null then
     raise exception using errcode = '42501', message = 'not authorized';
   end if;
+  -- The role first, then the lock (security review LOW-1): a stranger who knows a published id never locks the
+  -- row. organization_id never changes, so the check stays true once locked.
+  if not public.has_org_role(
+       (select wr.organization_id from public.work_requirements wr where wr.id = p_id),
+       array['admin', 'manager']::public.organization_role[]) then
+    raise exception using errcode = '42501', message = 'not authorized';
+  end if;
   select * into v_req from public.work_requirements wr where wr.id = p_id for update;
-  if not found
-     or not public.has_org_role(v_req.organization_id, array['admin', 'manager']::public.organization_role[]) then
+  if not found then -- deleted meanwhile (organization deletion cascade)
     raise exception using errcode = '42501', message = 'not authorized';
   end if;
   if v_req.archived_at is not null then
@@ -434,7 +446,10 @@ begin
      or not public.has_org_role(p_organization_id, array['admin', 'manager']::public.organization_role[]) then
     raise exception using errcode = '42501', message = 'not authorized';
   end if;
+  -- Only a period that has not started (the builder's own rule, 15 min grace): past periods would only serve to
+  -- probe people's history (security review LOW-2).
   if p_starts_at is null or p_ends_at is null or p_urgency is null
+     or p_starts_at < now() - interval '15 minutes'
      or p_ends_at <= p_starts_at or p_ends_at > p_starts_at + interval '366 days'
      or coalesce(cardinality(p_hard_type_ids), 0) not between 1 and 20 then
     raise exception using errcode = '22023', message = 'invalid period or qualifications';

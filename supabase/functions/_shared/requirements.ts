@@ -18,7 +18,7 @@ import {
 import type { CandidatePassport } from "../../../src/domain/passport.ts";
 import { toCandidate, toCandidatePassport } from "../../../src/lib/candidate-pool.ts";
 import {
-  requirementConditionsInput,
+  requirementConditionsRow,
   requirementShiftInput,
 } from "../../../src/lib/validation/work-requirement.ts";
 
@@ -41,7 +41,7 @@ export const termsColumns = {
   country: z.enum(EU_COUNTRIES).nullish(),
   description: z.string().nullish(),
   shifts: z.array(requirementShiftInput).nullish(),
-  conditions: requirementConditionsInput.nullish(),
+  conditions: requirementConditionsRow.nullish(),
 };
 export const timeZoneColumn = z.enum(REQUIREMENT_TIME_ZONES).nullish();
 
