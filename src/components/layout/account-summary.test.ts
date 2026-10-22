@@ -9,9 +9,10 @@ import { accountSummaryKeys } from "./account-summary";
 const actor = (
   account_type: "professional" | "organization",
   roles: ("admin" | "manager" | "member")[],
+  platform_role = "none",
 ) =>
   ({
-    profile: { account_type },
+    profile: { account_type, platform_role },
     memberships: roles.map((role, i) => ({
       role,
       organization: { id: `org-${i}`, name: `Org ${i}`, type: "mro", country: "ES" },
@@ -31,6 +32,13 @@ describe("accountSummaryKeys", () => {
     expect(accountSummaryKeys(actor("professional", ["member"]))).toEqual([
       "accountType.professional",
       "role.member",
+    ]);
+  });
+
+  it("a platform admin reads the platform role, not the role in their own organization (X-13)", () => {
+    expect(accountSummaryKeys(actor("professional", ["admin"], "platform_admin"))).toEqual([
+      "accountType.professional",
+      "platformRole.platform_admin",
     ]);
   });
 });

@@ -441,6 +441,9 @@
       "manager": "Manager",
       "admin": "Admin"
     },
+    "platformRole": {
+      "platform_admin": "Platform admin"
+    },
     "accountType": {
       "professional": "Professional",
       "organization": "Organization"
