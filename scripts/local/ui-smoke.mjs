@@ -150,12 +150,12 @@ const seedHeaders = async (email) => {
 };
 
 /** Direct local API call as a seed account (used only to restore seed state after a UI change). */
-async function asSeedUser(email, fn, { method = "GET", query = {}, body } = {}) {
+async function asSeedUser(email, fn, { method = "GET", query = {}, body, headers = {} } = {}) {
   const url = new URL(`/functions/v1/${fn}`, supabaseUrl);
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   return fetch(url, {
     method,
-    headers: await seedHeaders(email),
+    headers: { ...(await seedHeaders(email)), ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   }).then((r) => r.json());
 }
@@ -1158,6 +1158,144 @@ ok(
 await shot("21-login-es");
 await page.locator("[role=radio][lang=en]").first().click();
 await page.waitForTimeout(1500);
+
+// 26 (M07/M08, owner 2026-10-22): the hiring journey in the browser, both sides. The need is created
+// and Delta's availability added through the local API (setup only); every step after that is a click.
+const hiringTitle = `Local UI check · hiring ${Date.now()}`;
+const [mroOrg] = await seedRest(
+  "admin.mro@crewflex.test",
+  "organizations?select=id&name=eq.Demo%20MRO%20Madrid",
+);
+const hiringTypes = await seedRest(
+  "admin.mro@crewflex.test",
+  "qualification_types?select=id&code=in.(B1.1,TR-A320)",
+);
+const hiringCreated = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: mroOrg.id,
+    title: hiringTitle,
+    location: "Madrid (MAD)",
+    startsAt: "2026-12-07T06:00:00.000Z",
+    endsAt: "2026-12-08T18:00:00.000Z",
+    shift: "day",
+    headcount: 1,
+    urgency: "planned",
+    qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const hiringId = hiringCreated.data.requirement.id;
+const deltaWindow = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    startsAt: "2026-12-07T00:00:00.000Z",
+    endsAt: "2026-12-09T00:00:00.000Z",
+    status: "available",
+  },
+});
+await login("delta@crewflex.test");
+await page.goto(
+  `${BASE}/app/professional/opportunities?eligible=1&q=${encodeURIComponent(hiringTitle)}`,
+);
+await page.waitForLoadState("networkidle");
+ok(
+  "26a technician: the published need is listed as compatible, with the organization's name",
+  /You meet the requirements and availability/.test(await page.locator("main").innerText()) &&
+    /Demo MRO Madrid/.test(await page.locator("main").innerText()),
+  "",
+);
+await page.locator("main a", { hasText: hiringTitle }).first().click();
+await page.waitForURL(/\/app\/professional\/opportunities\/[0-9a-f-]{36}$/);
+await page.getByRole("checkbox", { name: /I authorise sharing this data/ }).check();
+await page.getByRole("button", { name: "Apply" }).click();
+ok(
+  "26b technician applies with the explicit consent",
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Application sent" })
+    .waitFor({ timeout: 15000 })
+    .then(() => true)
+    .catch(() => false),
+  "",
+);
+await logout();
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements/${hiringId}/applications`);
+await page.waitForLoadState("networkidle");
+const orgStep = async (button, confirm) => {
+  await page.getByRole("button", { name: button }).first().click();
+  if (confirm) await page.getByRole("group").getByRole("button", { name: confirm }).click();
+  await page.getByRole("status").filter({ hasText: "Done" }).first().waitFor({ timeout: 15000 });
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+};
+await orgStep("Shortlist");
+await orgStep("Send proposal", "Send proposal");
+ok(
+  "26c organization shortlists and sends proposal v1 (the applicant is a pseudonym)",
+  /Proposal · version 1/.test(await page.locator("main").innerText()) &&
+    /CF-/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/professional/applications`);
+await page.waitForLoadState("networkidle");
+const mineCard = page.locator("article", { hasText: hiringTitle });
+await mineCard.getByRole("button", { name: "Accept proposal" }).click();
+const acceptButton = mineCard.getByRole("group").getByRole("button", { name: "Accept proposal" });
+const disabledBeforeTick = await acceptButton.isDisabled();
+await mineCard
+  .getByRole("checkbox", { name: /I accept exactly these terms \(version 1\)/ })
+  .check();
+await acceptButton.click();
+await page.getByRole("status").filter({ hasText: "Done" }).first().waitFor({ timeout: 15000 });
+ok("26d technician accepts version 1 only after ticking it (R-08)", disabledBeforeTick, "");
+await logout();
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements/${hiringId}/applications`);
+await page.waitForLoadState("networkidle");
+await orgStep("Confirm assignment", "Confirm assignment");
+ok(
+  "26e organization confirms: the server re-checks and the need is covered (headcount 1)",
+  /Confirmed/.test(await page.locator("main article").first().innerText()) &&
+    /Covered/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/professional/availability?month=2026-12`);
+await page.waitForLoadState("networkidle");
+ok(
+  "26f the confirmed assignment is marked on its days in the calendar",
+  (await page.locator("button[aria-label*='confirmed assignment']").count()) >= 2,
+  "",
+);
+await page.goto(`${BASE}/app/professional/applications`);
+await page.waitForLoadState("networkidle");
+await mineCard.getByRole("button", { name: "Cancel assignment" }).click();
+await mineCard.getByRole("textbox").fill("Local UI check: cancelled by the technician");
+await mineCard.getByRole("group").getByRole("button", { name: "Cancel assignment" }).click();
+await page.getByRole("status").filter({ hasText: "Done" }).first().waitFor({ timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "26g technician cancels the confirmed assignment with a reason (Q3), visible on the card",
+  /Cancelled/.test(await mineCard.innerText()) &&
+    /cancelled by the technician/.test(await mineCard.innerText()),
+  "",
+);
+await logout();
+await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "DELETE",
+  query: { id: deltaWindow.data.window.id },
+});
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: hiringId, status: "closed" },
+});
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
