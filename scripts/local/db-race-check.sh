@@ -3,7 +3,7 @@
 # LOCAL Docker stack only: talks to the container `supabase_db_crew-flex` with `docker exec psql`
 # (never a URL), after the same local-target check as scripts/local/sb-local.sh. Every scenario
 # restores the rows it changed, so the deterministic seed stays as it was.
-# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|all]   (default: all)
+# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|all]   (default: all)
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
 CONTAINER=supabase_db_crew-flex
@@ -342,14 +342,57 @@ SQL
   race_cleanup "$req"
 }
 
+# --- In-app notices (migration 20261023800000) ----------------------------------------------------
+# Lima (a member of Lisbon) is promoted to manager for the scenario and set back to member at the end.
+LIMA=00000000-0000-4000-8000-000000000042
+LISBON_ORG="(select id from public.organizations where name = 'Demo Aero Services Lisbon')"
+notices_ready() {
+  [ "$(echo "select to_regclass('public.notifications') is not null;" | psql_owner)" = t ] && return 0
+  fail "migration 20261023800000 is not applied to the local stack (notices scenario not run)"
+  return 1
+}
+notices_role_loss() {
+  echo "== notices: a manager demoted while an application is written keeps no notice of it (both orders)"
+  applications_ready || return 0
+  notices_ready || return 0
+  local first
+  for first in apply demote; do
+    : >"$OUT_A"; : >"$OUT_B"
+    race_available "$DELTA"
+    echo "update public.organization_members set role = 'manager'
+            where profile_id = '$LIMA' and organization_id = $LISBON_ORG;" | psql_owner >/dev/null
+    local req; req="$(race_need 'Demo Aero Services Lisbon' 1)"
+    local apply="select replayed from public.apply_to_requirement('$req', gen_random_uuid(), true);"
+    local demote="update public.organization_members set role = 'member' where profile_id = '$LIMA' and organization_id = $LISBON_ORG;"
+    local held_as="$DELTA" held="$apply" other_as="$ADMIN_OTHER" other="$demote"
+    if [ "$first" = demote ]; then held_as="$ADMIN_OTHER"; held="$demote"; other_as="$DELTA"; other="$apply"; fi
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$held" | psql_as "$held_as" >"$OUT_A" &
+    local pa=$!
+    sleep 0.4
+    printf '%s\n' "$other" | psql_as "$other_as" >"$OUT_B" || true
+    wait "$pa" || true
+    local count_of="select count(*) from public.notifications n join public.applications a on a.id = n.application_id where a.requirement_id = '$req' and n.recipient_id ="
+    local lima admin
+    lima="$(echo "$count_of '$LIMA';" | psql_owner)"
+    admin="$(echo "$count_of '$ADMIN_OTHER';" | psql_owner)"
+    if [ "$lima" = 0 ] && [ "$admin" = 1 ]; then
+      pass "$first first: the membership lock ordered both; the demoted manager has no notice, the admin has one"
+    else fail "$first first: demoted manager notices=$lima admin notices=$admin"; cat "$OUT_A" "$OUT_B"; fi
+    echo "update public.organization_members set role = 'member'
+            where profile_id = '$LIMA' and organization_id = $LISBON_ORG;" | psql_owner >/dev/null
+    race_cleanup "$req"
+  done
+}
+
 case "${1:-all}" in
   e3) e3; e3_simultaneous ;;
   idempotency) idempotency ;;
   review) review ;;
   availability) availability ;;
   applications) applications; pause_vs_confirm; double_booking; apply_vs_edit ;;
+  notices) notices_role_loss ;;
   all) e3; e3_simultaneous; idempotency; review; availability
-       applications; pause_vs_confirm; double_booking; apply_vs_edit ;;
+       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"

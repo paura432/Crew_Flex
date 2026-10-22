@@ -1847,5 +1847,38 @@
       "permits": "Permisos: {countries}",
       "restrictions": "Restricciones declaradas"
     }
+  },
+  "notices": {
+    "nav": "Avisos",
+    "eyebrow": "Actividad",
+    "title": "Avisos internos",
+    "intro": {
+      "technician": "Los cambios de tus candidaturas y de las necesidades a las que te has presentado. No se envían correos ni notificaciones push.",
+      "organization": "Los cambios de las candidaturas a las necesidades de tu organización. No se envían correos ni notificaciones push.",
+      "both": "Los cambios de tus candidaturas y de las candidaturas a las necesidades de tu organización. No se envían correos ni notificaciones push."
+    },
+    "bell": "Avisos: {count, plural, one {# sin leer} other {# sin leer}}",
+    "unread": "{count, plural, one {# sin leer} other {# sin leer}}",
+    "new": "Nuevo",
+    "markAll": "Marcar todas como leídas",
+    "markAllDone": "Todos tus avisos están leídos.",
+    "emptyTitle": "No tienes avisos.",
+    "emptyDescription": "Aquí aparecerá cada cambio de una candidatura en cuanto ocurra.",
+    "listLabel": "Avisos",
+    "kind": {
+      "newApplication": "Nueva candidatura",
+      "applicationUpdate": "Actualización de candidatura",
+      "requirementPaused": "Necesidad pausada",
+      "requirementResumed": "Necesidad reanudada",
+      "requirementClosed": "Necesidad cerrada"
+    },
+    "open": {
+      "technician": "Ver candidatura",
+      "organization": "Ver candidaturas"
+    },
+    "pagination": "Páginas de avisos",
+    "pageInfo": "{total, plural, one {# aviso} other {# avisos}} · página {page} de {pages}",
+    "previous": "Anteriores",
+    "next": "Siguientes"
   }
 }

@@ -18,7 +18,8 @@ export type EdgeFunctionName =
   | "applications"
   | "professional-logbook"
   | "organization-profile"
-  | "organization-reviews";
+  | "organization-reviews"
+  | "notifications";
 
 interface InvokeOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";

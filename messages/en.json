@@ -1847,5 +1847,38 @@
       "permits": "Work permits: {countries}",
       "restrictions": "Restrictions declared"
     }
+  },
+  "notices": {
+    "nav": "Notices",
+    "eyebrow": "Activity",
+    "title": "In-app notices",
+    "intro": {
+      "technician": "Changes to your applications and to the requirements you applied to. No e-mails or push notifications are sent.",
+      "organization": "Changes to the applications to your organization's requirements. No e-mails or push notifications are sent.",
+      "both": "Changes to your applications and to the applications to your organization's requirements. No e-mails or push notifications are sent."
+    },
+    "bell": "Notices: {count, plural, one {# unread} other {# unread}}",
+    "unread": "{count, plural, one {# unread} other {# unread}}",
+    "new": "New",
+    "markAll": "Mark all as read",
+    "markAllDone": "All your notices are read.",
+    "emptyTitle": "You have no notices.",
+    "emptyDescription": "Every change to an application will appear here as soon as it happens.",
+    "listLabel": "Notices",
+    "kind": {
+      "newApplication": "New application",
+      "applicationUpdate": "Application update",
+      "requirementPaused": "Requirement paused",
+      "requirementResumed": "Requirement resumed",
+      "requirementClosed": "Requirement closed"
+    },
+    "open": {
+      "technician": "View application",
+      "organization": "View applications"
+    },
+    "pagination": "Notice pages",
+    "pageInfo": "{total, plural, one {# notice} other {# notices}} · page {page} of {pages}",
+    "previous": "Previous",
+    "next": "Next"
   }
 }

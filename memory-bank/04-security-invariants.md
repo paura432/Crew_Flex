@@ -32,6 +32,9 @@ employer, rate and blocks are owner-only; a professional who blocked an organiza
 `get_requirement_candidate_passports`, which calls the pool function (same rows, pseudonyms, cap and role check).
 Proof: `tests/db/passport.test.ts`.
 
+S-7 also binds the applicant label of organization-side notices (`get_my_notifications`, LOCAL `20261023800000`):
+the same pool rules as `get_requirement_applications`, applied at read time (`tests/db/notices.test.ts`).
+
 **RLS does not protect a SECURITY DEFINER function.** Inside one, the function body is the only
 authorization. Review every DEFINER for S-10 and test the "other organization" and "other user" cases.
 
@@ -52,6 +55,7 @@ authorization. Review every DEFINER for S-10 and test the "other organization" a
 | Passport declarations (LOCAL)        | `technician_profiles` v1.8 columns, `technician_type_ratings`      | like qualifications; organizations via `get_requirement_candidate_passports` (pool rows; no restriction text)                                                       |
 | Applications (D-06, LOCAL ONLY)      | `applications`, `application_proposals`, `application_events`      | technician: own rows · organization admin/manager: only via `get_requirement_applications` (pool rules) · platform admin: read · nobody writes directly (RPCs only) |
 | Logbook (M14, LOCAL ONLY)            | `logbook_entries`                                                  | owner only (no organization — not even the technician's own — manager or platform-admin policy); audit rows: ids + changed field names, never the selection flag    |
+| In-app notices (v2-18, LOCAL ONLY)   | `notifications` (ids and enums, no text)                           | recipient only, through RPCs (no table grant) · access re-checked at read time, pool rules · written by DEFINER triggers                                            |
 | Documents (D-10, LOCAL ONLY)         | `professional_documents` + private bucket `professional-documents` | owner only (no org/admin policy; no third-party sharing without a scanner)                                                                                          |
 
 ## Multi-tenancy
@@ -76,5 +80,5 @@ User B edits user A's passport/qualification/window → 403/404 · member of org
 → 404 · plain `member` runs matching → 403 · professional sets `verification_status` → rejected ·
 organization reads `review_note` → permission denied · platform admin reviews own qualification → 403 ·
 review with stale version → 409 · `private` professional appears in external pool → never · same
-`Idempotency-Key` with another payload → 409 · direct PostgREST delete of last hard qualification → rejected at commit · organization reads `applications` directly → 0 rows · technician shortlists own application → 403 · another organization transitions an application → same 404 as a random id · confirm the last seat twice → one wins (`db-race-check.sh applications`) · edit a requirement that received an application → 409 `HAS_APPLICATIONS` · close with an accepted/confirmed application → 409 `ACTIVE_COMMITMENTS` · a stranger inserts a qualification on a published requirement → 42501 whatever its applications or closure (no oracle).
+`Idempotency-Key` with another payload → 409 · direct PostgREST delete of last hard qualification → rejected at commit · organization reads `applications` directly → 0 rows · technician shortlists own application → 403 · another organization transitions an application → same 404 as a random id · confirm the last seat twice → one wins (`db-race-check.sh applications`) · edit a requirement that received an application → 409 `HAS_APPLICATIONS` · close with an accepted/confirmed application → 409 `ACTIVE_COMMITMENTS` · a stranger inserts a qualification on a published requirement → 42501 whatever its applications or closure (no oracle) · another user (other organization, plain member, platform admin) reads or marks someone's notice → 0 rows · a demoted or removed manager keeps no notice of that organization (`tests/db/notices.test.ts`).
 All automated in `tests/db/rls.test.ts`, `tests/e2e/*` and `scripts/local/db-race-check.sh`.

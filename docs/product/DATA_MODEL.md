@@ -25,7 +25,8 @@ auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualific
                                                                                  │
 technician_profiles 1─* applications *──────────────────────────────────────────┘  (one per technician × requirement, except withdrawn)
                           ├─* application_proposals (immutable versions, R-08)
-                          └─* application_events (timeline)
+                          ├─* application_events (timeline)
+                          └─* notifications *─1 profiles (recipient; in-app notices, v2-18)
 
 audit_events (append-only, written by triggers)
 ```
@@ -235,6 +236,35 @@ application itself), `to_status`, `actor` (`technician` · `organization`, never
 (created or accepted by that step), `created_at`; append-only (UPDATE refused). Both are readable by whoever may
 read the application (RLS through the parent) and written only by the RPCs.
 
+### `notifications` (`20261023800000`, LOCAL ONLY — in-app notices «Avisos internos», v2-18, T-70…T-73)
+
+| Column               | Type                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------- |
+| `id`                 | uuid PK                                                                                      |
+| `recipient_id`       | → `profiles` on delete cascade                                                               |
+| `kind`               | `notification_kind`: `application` (an application reached a status) · `requirement`         |
+| `application_id`     | → `applications` on delete cascade; for `requirement`, the recipient's active application    |
+| `application_status` | `application`: the status reached (`received` = a new application, told to the organization) |
+| `requirement_status` | `requirement`: `paused`, `open` (resumed from paused) or `closed`                            |
+| `created_at`         | timestamptz                                                                                  |
+| `read_at`            | timestamptz, null = unread; set only by `mark_notifications_read`, never before creation     |
+
+**Ids and enums only — no text, no other person's id** (an organization's row names the application, never the
+applicant). Written only by DEFINER triggers in the transaction of the event: `application_events_notify` (AFTER
+INSERT on `application_events`: the other party of the actor — the applicant when the organization acts, every
+admin/manager of the requirement's organization except the applicant when the technician acts) and
+`work_requirements_notify_status` (pause, resume, close → each active application's technician); the actor is never
+notified. Rendered at read time by `get_my_notifications` (requirement title; technician side the organization name;
+organization side the applicant under the pool rules of **today**). No grant to any API role (RLS owner-only policies
+as a second layer). Retention and volume (T-71, T-73): 180 days and the newest 200 per recipient — never listed
+beyond that, pruned when the recipient gets a notice or marks one read; while unread, a notice takes the next event
+of its kind about the same technician and requirement (a status, a pause/resume/close, a re-application) instead of
+a new row; deleted with the application, the requirement or the recipient; an organization recipient's notices of
+that organization are deleted when they lose admin/manager
+(`organization_members_drop_notifications`; the event trigger share-locks the memberships it notifies, so a
+concurrent demotion waits and then deletes the new notice). No audit row of its own: the event that caused the
+notice is audited.
+
 ### `professional_documents` (`20261019160000`, LOCAL ONLY — D-10, `DOCUMENT_WALLET.md`)
 
 | Column                      | Type                                                                           | Writable by owner        |
@@ -352,6 +382,8 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `update_organization_profile(id, expected_updated_at, name, type, country, tax_id, tax_address)` (`20261023500100`, local only)                                                          | INVOKER         | «Organización» save: RLS decides (admin only; anyone else 42501), input checks (22023), version `CF412`, no write when nothing changed. Returns the new version.                                                                                         |
 | `review_organization(id, expected_updated_at, note, request_id)` (`20261023500100`, local only)                                                                                          | DEFINER         | Platform admin, never a current or former own organization (42501, `500400`), evidence 1–2000 (22023), row lock, pending + seen version + fiscal data complete (55000), P0002; sets `reviewed`, keeps the evidence, audit.                               |
 | `get_platform_summary()` (`20261023500300`, local only)                                                                                                                                  | DEFINER, stable | Platform admin only (42501): professional accounts, organizations, active needs, working now, AOG with vacancies, seats to fill per hard licence (`demand`). Counts only, no money (T-53).                                                               |
+| `get_my_notifications(id, offset, limit)` · `count_my_unread_notifications()` (`20261023800000`, local only)                                                                             | DEFINER, stable | The caller's notices (≤ 50 per page, newest first, `total`) and unread count, through `app_private.visible_notifications()`: retention and access re-checked at read time; 42501 without a session.                                                      |
+| `mark_notifications_read(id)` (`20261023800000`, local only)                                                                                                                             | DEFINER         | One notice (`id`) or every unread one (null) of the caller read at the database's clock, then prunes the caller's expired ones; returns the rows matched.                                                                                                |
 | `set_updated_at()`                                                                                                                                                                       | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                                                                       |
 
 ### `app_private` schema (not exposed by PostgREST)
@@ -361,7 +393,9 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 `APPLICATION_TRANSITIONS`, no grant (`20261022130300`). View `requirement_cards` — the one projection of a requirement
 professionals may see (also the proposal terms), no grant (`20261022130200`). `hard_eligibility(requirement, profile)`
 — BR-2/BR-3/BR-4.8 for one professional, the same expressions as `ranked_external_pool` (rls suite W proves the
-three agree), used at apply and confirm.
+three agree), used at apply and confirm. Notices (`20261023800000`): `notification_retention()` (180 days),
+`candidate_pseudonym(requirement, profile)` (the pool's `CF-…` expression; the notices suite proves they agree),
+`prune_notifications(recipients)`, `visible_notifications()` — no grants.
 `idempotency_keys(actor_id → profiles, operation, key uuid, request_hash, resource_id, created_at)`, PK
 (actor, operation, key), RLS own rows; `ranked_external_pool(requirement_id)` (ordering helper, no grant
 to API roles; since `20261023500200` (LOCAL) it admits `verified_orgs` professionals only when the requirement's

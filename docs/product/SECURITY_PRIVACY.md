@@ -72,6 +72,22 @@ flag — still no contact, employer, rate, blocks or restriction text.
 - Application audit rows whose actor is the technician carry no organization id, and covered ↔ open status
   changes made by an application carry no actor, so an organization's audit trail never holds an applicant's
   profile id (T-04).
+- In-app notices (v2-18, LOCAL `20261023800000`, T-70…T-73) reveal **nothing the reader could not already see**: the
+  row stores ids and enums only (recipient, kind, application, status reached) — no free text, no reason, no other
+  person's id. The text is rendered when read: a technician sees the requirement title, its organization's name and
+  the new status (what «Mis candidaturas» shows); an organization admin/manager sees the requirement title, the status
+  and the applicant under the candidate-pool rules of **today** (`CF-…` pseudonym unless internal; name only for
+  internal or `open`), and only while they still hold that role. Plain members never receive them; nobody reads
+  another person's notices (no platform-admin path either). In-app only: no e-mail, SMS, push or WhatsApp (OUT).
+  No API role can read or write the table: only the two read RPCs and `mark_notifications_read` (own rows).
+  **Retention and volume (T-71, T-73):** 180 days and the newest 200 per recipient, never listed beyond that and
+  pruned when the recipient gets a notice or marks one read (no scheduler: an older row of an inactive recipient
+  stays stored, unreadable, until then); while unread, a notice takes the next event about the same technician and
+  requirement (pause/resume toggles and apply/withdraw loops update one row), so a loop by the other party cannot
+  push a recipient's other notices out; only many distinct events (other applicants or requirements) reach the cap,
+  which then drops the oldest. Deleted with the application, the requirement or the
+  account; an organization recipient's notices are deleted when they lose admin/manager (the event trigger locks
+  the memberships, so a concurrent demotion cannot leave one behind). Marking read is the only write a user makes.
 - Internal workforce data visible to own organization admins/managers only (OD-4).
 - Contact and economic data of the passport (LOCAL, package passport `20261023100100`): phone, current employer,
   minimum rate and blocked organizations live in owner-only tables (`technician_private_details`,

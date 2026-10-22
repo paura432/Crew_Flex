@@ -111,3 +111,7 @@ is not told it was blocked (it can still infer it from its own pool: residual ri
 to a blocked organization stays possible (the professional's own act, S-7 exception) where v1.8 refuses it; the
 passport PATCH accepts bodies up to 128 KB (its largest valid body is ~80 KB); the C-10 matching defaults that read
 these fields are a separate package.
+| T-70 | In-app notices (v2-18): the other party of each application event (v1.8 `app.mjs:135`), also a new application, and pause/resume/close for active applicants; never the actor | v1.8 told only the other party of a transition; resume pairs with pause |
+| T-71 | Organization side = every admin/manager of the requirement's organization (plain members get none); notices kept 180 days, pruned with the next one; role loss deletes them | v1.8 kept notices forever and had no organization roles |
+| T-72 | Ids and enums only; text rendered at read time (translated status, applicant under today's pool rules); each leads to the application («Ver candidatura(s)», not «Ver oportunidades») | No free text from others; never a raw code (v1.8 ✗ SH-06 #14) |
+| T-73 | At most the newest 200 notices per recipient; while unread, a notice takes the next event about the same technician and requirement (pause/resume, apply/withdraw) instead of a new row | Bounds a flood by the other party (security review MEDIUM-1, LOW-4) |

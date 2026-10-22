@@ -63,6 +63,8 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 - Candidate Pack (consent-based, per requirement).
 - Partial coverage (several technicians covering one requirement period by day blocks).
 - Urgent / AOG outreach intensity, opt-in priority contact.
+- In-app notices («Avisos internos», v2-18): IMPLEMENTED locally 2026-10-23 (migration `20261023800000`, not
+  deployed); the Urgent/AOG distribution notices wait for the outreach item above. E-mail, SMS and push stay OUT.
 - Recruiter workspace and client representation (platform admins see a «Próximamente» placeholder since 2026-10-22, D-13).
 - Tools hub beyond D-11: fuel sheet (after a technical review of its wording), glossary/ATA, daily challenge, translator; logbook from the prototype. Contractor calculators stay OUT.
   Glossary/ATA («English and acronyms», `/app/tools/knowledge`), translator (`/app/tools/translator`) and the daily

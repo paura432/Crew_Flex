@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261023500400. Do not edit by hand.
+// migrations up to 20261023800000. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -329,6 +329,55 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "technician_profiles";
             referencedColumns: ["profile_id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          application_id: string;
+          application_status: Database["public"]["Enums"]["application_status"] | null;
+          created_at: string;
+          id: string;
+          kind: Database["public"]["Enums"]["notification_kind"];
+          read_at: string | null;
+          recipient_id: string;
+          requirement_status: Database["public"]["Enums"]["requirement_status"] | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          application_id: string;
+          application_status?: Database["public"]["Enums"]["application_status"] | null;
+          created_at?: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["notification_kind"];
+          read_at?: string | null;
+          recipient_id: string;
+          requirement_status?: Database["public"]["Enums"]["requirement_status"] | null;
+        };
+        Update: {
+          application_id?: string;
+          application_status?: Database["public"]["Enums"]["application_status"] | null;
+          created_at?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["notification_kind"];
+          read_at?: string | null;
+          recipient_id?: string;
+          requirement_status?: Database["public"]["Enums"]["requirement_status"] | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: false;
+            referencedRelation: "applications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -957,6 +1006,7 @@ export type Database = {
       };
       availability_version: { Args: Record<PropertyKey, never>; Returns: string };
       can_view_member: { Args: { p_profile_id: string }; Returns: boolean };
+      count_my_unread_notifications: { Args: Record<PropertyKey, never>; Returns: number };
       create_availability_window: {
         Args: {
           p_ends_at: string;
@@ -1090,6 +1140,25 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      get_my_notifications: {
+        Args: { p_id?: string; p_limit?: number; p_offset?: number };
+        Returns: {
+          application_id: string;
+          application_status: Database["public"]["Enums"]["application_status"];
+          audience: string;
+          candidate_name: string;
+          candidate_ref: string;
+          created_at: string;
+          id: string;
+          kind: Database["public"]["Enums"]["notification_kind"];
+          organization_name: string;
+          read_at: string;
+          requirement_id: string;
+          requirement_status: Database["public"]["Enums"]["requirement_status"];
+          requirement_title: string;
+          total: number;
+        }[];
+      };
       get_platform_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1192,6 +1261,7 @@ export type Database = {
           urgency: Database["public"]["Enums"]["requirement_urgency"];
         }[];
       };
+      mark_notifications_read: { Args: { p_id?: string }; Returns: number };
       own_candidate_profile: {
         Args: { p_from?: string; p_to?: string };
         Returns: {
@@ -1348,6 +1418,7 @@ export type Database = {
         | "aog_intervention"
         | "workshop";
       mobility: "local" | "national" | "international";
+      notification_kind: "application" | "requirement";
       organization_review_status: "pending" | "reviewed";
       organization_role: "member" | "manager" | "admin";
       organization_type: "mro" | "airline" | "operator" | "staffing_agency" | "other";
@@ -1503,6 +1574,7 @@ export const Constants = {
         "workshop",
       ],
       mobility: ["local", "national", "international"],
+      notification_kind: ["application", "requirement"],
       organization_review_status: ["pending", "reviewed"],
       organization_role: ["member", "manager", "admin"],
       organization_type: ["mro", "airline", "operator", "staffing_agency", "other"],

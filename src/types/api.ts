@@ -22,6 +22,7 @@ import type {
   PassportDeclarations,
   PassportPrivate,
 } from "../domain/passport.ts";
+import type { NoticeAudience, NoticeKind, NoticeRequirementStatus } from "../domain/notices.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { Locale } from "../i18n/config.ts";
 import type {
@@ -527,4 +528,51 @@ export interface ApplicationTransitionResponse {
     proposalId: string | null;
   };
   replayed: boolean;
+}
+
+// --- In-app notices («Avisos internos», v2-18; SCOPE-2 LATER, migration 20261023800000) -------------
+
+/**
+ * One notice as its recipient reads it, rendered by the database at read time from the kind and the
+ * ids (no stored text). Technician side: the requirement and its organization's name, as «Mis
+ * candidaturas» shows them. Organization side: the applicant under the candidate pool's rules (T-04):
+ * `candidate.name` for internal members or `open` visibility, otherwise `candidate.ref` = `CF-…`.
+ */
+export interface Notice {
+  id: string;
+  kind: NoticeKind;
+  audience: NoticeAudience;
+  createdAt: string;
+  readAt: string | null;
+  applicationId: string;
+  requirementId: string;
+  requirementTitle: string;
+  /** Technician side only. */
+  organizationName: string | null;
+  /** `application`: the status the application reached (`received` = a new application). */
+  applicationStatus: ApplicationStatus | null;
+  /** `requirement`: paused, resumed (open) or closed. */
+  requirementStatus: NoticeRequirementStatus | null;
+  /** Organization side only. */
+  candidate: { name: string | null; ref: string | null } | null;
+}
+
+export interface NoticeListResponse {
+  notices: Notice[];
+  /** The caller's notices across pages (retention: 180 days, T-71). */
+  total: number;
+  unread: number;
+}
+
+/** The shell's bell. */
+export interface NoticeCountResponse {
+  unread: number;
+}
+
+export interface NoticeReadResponse {
+  /** Notices matched: one id → 1 (already read included); all → how many were unread. */
+  marked: number;
+  unread: number;
+  /** `{ id }`: the notice as the list shows it (the server derives its link from it). */
+  notice: Notice | null;
 }

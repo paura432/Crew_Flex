@@ -489,3 +489,8 @@ import_map = "./functions/deno.json"
 [functions.organization-reviews]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+# Local only, not deployed: in-app notices (v2-18). Deploy only after migration 20261023800000.
+[functions.notifications]
+verify_jwt = false
+import_map = "./functions/deno.json"

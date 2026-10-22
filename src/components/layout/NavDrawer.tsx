@@ -10,11 +10,14 @@ import { useId, useState, type ReactNode } from "react";
  */
 export function NavDrawer({
   brand,
+  bell,
   toolbar,
   label,
   children,
 }: {
   brand: ReactNode;
+  /** Always visible next to the brand (desktop sidebar and the mobile bar): the notices bell. */
+  bell?: ReactNode;
   toolbar: ReactNode;
   label: string;
   children: ReactNode;
@@ -28,15 +31,16 @@ export function NavDrawer({
     <>
       <div className="flex items-center justify-between gap-4 px-4 py-4 lg:px-5 lg:py-6">
         {brand}
-        <div className="flex items-center gap-1 lg:hidden">
-          {toolbar}
+        <div className="flex items-center gap-1">
+          {bell}
+          <div className="contents lg:hidden">{toolbar}</div>
           <button
             type="button"
             aria-expanded={open}
             aria-controls={id}
             onClick={() => setState({ path: pathname, open: !open })}
             onKeyDown={(e) => e.key === "Escape" && setState({ path: pathname, open: false })}
-            className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/5 pointer-coarse:min-h-11"
+            className="rounded-lg border border-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/5 pointer-coarse:min-h-11 lg:hidden"
           >
             {label}
           </button>

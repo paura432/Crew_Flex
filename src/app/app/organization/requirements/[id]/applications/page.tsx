@@ -94,6 +94,7 @@ export default async function RequirementApplicationsPage({
             return (
               <article
                 key={application.id}
+                id={`a-${application.id}`} // a notice links here (v2-18)
                 aria-label={title}
                 className="space-y-3 rounded-xl border border-line bg-white p-5"
               >

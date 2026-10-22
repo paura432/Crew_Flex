@@ -44,6 +44,7 @@ for anyone else.
 | `technician_type_ratings` (LOCAL, `20261023100100`)   | own · admin/manager of technician's org · platform admin (like the qualifications)                                                                | – (`save_professional_passport` only)                                                         | – (RPC only)                                                                                                                                                                                                                                                                                                                                  | – (RPC only)                                                                            |
 | `technician_private_details` (LOCAL)                  | **own only** (not the organization, not platform admins)                                                                                          | – (RPC only)                                                                                  | – (RPC only)                                                                                                                                                                                                                                                                                                                                  | – (cascade)                                                                             |
 | `technician_organization_blocks` (LOCAL)              | **own only**                                                                                                                                      | – (RPC only)                                                                                  | –                                                                                                                                                                                                                                                                                                                                             | – (RPC only)                                                                            |
+| `notifications` (LOCAL)                               | – (no grant). The recipient's own, through `get_my_notifications` only (access and retention re-checked)                                          | – (DEFINER triggers of the event only)                                                        | – (no grant). Own `read_at` through `mark_notifications_read` (DEFINER, `auth.uid()` in the body)                                                                                                                                                                                                                                             | – (cascades, retention, cap, role loss)                                                 |
 
 | `app_private.feature_flags` | – (no grant; owner only) | – | – | – |
 | `app_private.application_transitions`, `app_private.requirement_cards` | – (no grant; read by the DEFINER RPCs) | – | – | – |
@@ -93,6 +94,15 @@ only platform admins read). A professional with visibility `verified_orgs` enter
 reviewed organization, always pseudonymous; for any other organization it is as invisible as `private`. The
 S-7 exception (applying) is unchanged. `get_platform_summary` (DEFINER, platform admin, 42501 otherwise) returns
 counts only; the audit view reads `audit_events` under the existing policy.
+**In-app notices (v2-18, LOCAL `20261023800000`).** Any signed-in account reads only the notices addressed to it.
+Who receives one is decided in the database, in the transaction of the event: the other party of each application
+event (the applicant when the organization acts; every admin/manager of the requirement's organization, except the
+applicant, when the technician acts) and the active applicants when the requirement is paused, resumed or closed —
+never the actor, never a plain `member`. Reading re-checks access at read time: an organization recipient must still
+be admin/manager of that organization (losing the role also deletes those notices), and sees the applicant under the
+pool rules (T-04). The table has no grant to any API role (owner-only policies stay as a second layer): reads go
+through `get_my_notifications`, marks through `mark_notifications_read` (own rows, `read_at` only). The event
+trigger share-locks the memberships it notifies, so a concurrent demotion waits and then deletes the new notice.
 
 ## Edge Function checklist
 

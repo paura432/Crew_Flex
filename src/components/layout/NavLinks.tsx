@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BELL_PATH } from "@/features/notices/components/NoticeBell";
 
 export interface NavItem {
   href: string;
   label: string;
+  /** A count after the label (unread notices): `text` is shown, `label` is what assistive tech reads. */
+  badge?: { text: string; label: string };
 }
 
 // V1.8 `icons[tab]` (Shared.jsx: lucide 19 px, fallback Briefcase). Inline paths: no icon dependency.
@@ -31,6 +34,7 @@ const ICON_PATHS: Record<string, string> = {
   // v1.8 `logbook: BookOpen`
   "/app/professional/logbook":
     "M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
+  "/app/notices": BELL_PATH,
   "/app/tools":
     "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-8 8l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 8-8z",
   "/app/settings":
@@ -83,6 +87,17 @@ export function NavLinks({ items, label }: { items: NavItem[]; label: string }) 
                   <path d={ICON_PATHS[item.href] ?? BRIEFCASE} />
                 </svg>
                 {item.label}
+                {item.badge && (
+                  <>
+                    <span
+                      aria-hidden
+                      className="ml-auto rounded-full bg-accent px-1.5 text-xs leading-5 font-bold text-ink tabular-nums"
+                    >
+                      {item.badge.text}
+                    </span>
+                    <span className="sr-only">{` ${item.badge.label}`}</span>
+                  </>
+                )}
               </Link>
             </li>
           );

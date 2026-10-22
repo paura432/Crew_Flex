@@ -87,6 +87,9 @@ Desktop (`lg`, ≥ 1024 px): sticky navy sidebar with the name, account type/rol
 role) and sign-out at the bottom; the menu scrolls inside the screen when it is taller than the viewport (X-03).
 Platform admins get a «Ver como» switcher above the menu (D-13): four links (Técnico, Empresa, Recruiter,
 Administración) over their own account, each showing that view's sections. Below
-`lg`: the sidebar becomes a navy top bar (brand, «Cerrar sesión», «Menú») and the sections fold behind the «Menú»
-disclosure, which closes on navigation. No bottom dock (C-12). Tables become stacked lists below `md`; no accidental
+`lg`: the sidebar becomes a navy top bar (brand, notices bell, «Cerrar sesión», «Menú»; below 420 px the brand shows
+only the CF mark — its name stays for assistive tech — so the bar fits at 360–390 px) and the sections fold behind the
+«Menú» disclosure, which closes on navigation. The notices bell (v2-18) sits next to the brand at every width: a link
+to «Avisos» with an accent count badge (12 px, «99+» cap; the count is in the accessible name), and the «Avisos» menu
+entry repeats the count. No bottom dock (C-12). Tables become stacked lists below `md`; no accidental
 horizontal scroll at 390 px. Touch targets 44 px on coarse pointers.

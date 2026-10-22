@@ -77,8 +77,10 @@ LOCAL `20261023300000`): the calendar cannot change those days and no write may 
 - **No contractual effect is invented.** Crew Flex records an intention and its terms snapshot; the
   employment or service contract is agreed directly between the parties (V1.8 notice text). Acceptance
   is not a signature; confirmation is not an employment contract.
-- **No automatic notifications** (e-mail, SMS, push, WhatsApp are OUT). The other party sees the new
-  state in the app. An in-app notification centre is a separate, later decision.
+- **No external notifications** (e-mail, SMS, push, WhatsApp are OUT). The other party sees the new
+  state in the app and, since SCOPE-2 (LATER made implementable, LOCAL `20261023800000`), gets an **in-app notice**
+  written in the same transaction as the event (T-70…T-73, `DATA_MODEL.md` `notifications`): ids and the status
+  reached only, rendered at read time.
 - **No money:** no commission, fee or invoice (OD-7, OUT). The prototype's fee fields are not ported.
 - **No identity or document unlock by itself**: governed only by D-07 consents.
 

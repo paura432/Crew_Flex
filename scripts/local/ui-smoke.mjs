@@ -2046,6 +2046,135 @@ ok(
 );
 await logout();
 
+// PKG notices (v2-18, migration 20261023800000): in-app notices for both sides. Setup through the
+// local API (need, Delta's window, the application, the shortlist); every read and mark is a click.
+const noticeTitle = `Local UI check · notices ${Date.now()}`;
+const noticeNeed = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: mroOrg.id,
+    title: noticeTitle,
+    location: "Madrid (MAD)",
+    startsAt: "2026-12-21T06:00:00.000Z",
+    endsAt: "2026-12-22T18:00:00.000Z",
+    shift: "day",
+    headcount: 1,
+    urgency: "planned",
+    qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const noticeNeedId = noticeNeed.data.requirement.id;
+const noticeWindow = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    startsAt: "2026-12-21T00:00:00.000Z",
+    endsAt: "2026-12-23T00:00:00.000Z",
+    status: "available",
+  },
+});
+const noticeApplication = await asSeedUser("delta@crewflex.test", "applications", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: { requirementId: noticeNeedId, shareConsent: true },
+});
+const noticeApplicationId = noticeApplication.data.application.id;
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/notices`);
+await page.waitForLoadState("networkidle");
+const bellLabel = () =>
+  page.locator("a[href='/app/notices'][aria-label]").first().getAttribute("aria-label");
+const newApplicationCard = page.locator("main article", { hasText: noticeTitle });
+ok(
+  "PKG notices a: the organization is told of the new application (pseudonym, «New»), the bell counts it",
+  /Notices: \d+ unread/.test((await bellLabel()) ?? "") &&
+    /New application/.test(await newApplicationCard.innerText()) &&
+    /Anonymous professional CF-[0-9A-F]{10}/.test(await newApplicationCard.innerText()) &&
+    (await newApplicationCard.getByText("New", { exact: true }).count()) === 1,
+  "",
+);
+await page.getByRole("button", { name: "Mark all as read" }).click();
+const allRead = await page
+  .getByRole("status")
+  .filter({ hasText: "All your notices are read." })
+  .waitFor({ timeout: 15000 })
+  .then(() => true)
+  .catch(() => false);
+await page.reload();
+await page.waitForLoadState("networkidle");
+const readChips = await newApplicationCard.getByText("New", { exact: true }).count();
+await newApplicationCard.getByRole("button", { name: "View applications" }).click();
+const ledToApplications = await page
+  .waitForURL((u) => u.pathname === `/app/organization/requirements/${noticeNeedId}/applications`, {
+    timeout: 20000,
+  })
+  .then(() => true)
+  .catch(() => false);
+ok(
+  "PKG notices b: «Mark all as read» empties the bell and the «New» chips; the notice leads to the applications",
+  allRead && readChips === 0 && ledToApplications,
+  "",
+);
+await logout();
+const noticeOrgView = await asSeedUser("admin.mro@crewflex.test", "applications", {
+  query: { requirementId: noticeNeedId },
+});
+await asSeedUser("admin.mro@crewflex.test", "applications", {
+  method: "PATCH",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    applicationId: noticeApplicationId,
+    to: "shortlisted",
+    expectedUpdatedAt: noticeOrgView.data.applications[0].updatedAt,
+  },
+});
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/notices`);
+await page.waitForLoadState("networkidle");
+const updateCard = page.locator("main article", { hasText: noticeTitle });
+ok(
+  "PKG notices c: the technician reads «Application update · {need} · Demo MRO Madrid · Shortlisted» (no raw code)",
+  /Application update/.test(await updateCard.innerText()) &&
+    /Demo MRO Madrid · Shortlisted/.test(await updateCard.innerText()) &&
+    !/shortlisted/.test(await updateCard.innerText()),
+  "",
+);
+await updateCard.getByRole("button", { name: "View application" }).click();
+await page.waitForURL((u) => u.pathname === "/app/professional/applications", { timeout: 20000 });
+const landedOnCard = page.url().endsWith(`#a-${noticeApplicationId}`);
+await page.goto(`${BASE}/app/notices`);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG notices d: «View application» marks the notice read and lands on the technician's card",
+  landedOnCard && (await updateCard.getByText("New", { exact: true }).count()) === 0,
+  "",
+);
+await logout();
+// Restore: withdraw, free Delta's days, close the need (its notices go with the cleanup script).
+const noticeMine = await asSeedUser("delta@crewflex.test", "applications");
+await asSeedUser("delta@crewflex.test", "applications", {
+  method: "PATCH",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    applicationId: noticeApplicationId,
+    to: "withdrawn",
+    expectedUpdatedAt: noticeMine.data.applications.find((a) => a.id === noticeApplicationId)
+      .updatedAt,
+  },
+});
+await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "DELETE",
+  query: { id: noticeWindow.data.window.id },
+});
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: noticeNeedId, status: "closed" },
+});
+for (const email of ["delta@crewflex.test", "manager.mro@crewflex.test"]) {
+  await asSeedUser(email, "notifications", { method: "PATCH", body: { all: true } });
+}
+
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
 const touch = await browser.newContext({

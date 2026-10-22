@@ -2,6 +2,9 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { signOutAction } from "@/features/auth/actions";
+import { getUnreadNoticeCount } from "@/features/notices/api";
+import { NoticeBell } from "@/features/notices/components/NoticeBell";
+import { unreadBadge } from "@/features/notices/view";
 import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/feature-flags";
 import { primaryMembership, type SessionActor } from "@/server/session";
 import { accountSummaryKeys } from "./account-summary";
@@ -11,12 +14,18 @@ import { switcherViews } from "./views";
 import { ViewSections, ViewSwitcher, type NavSection } from "./ViewSwitcher";
 
 export async function AppShell({ actor, children }: { actor: SessionActor; children: ReactNode }) {
-  const [t, tNav, tDomain, walletEnabled] = await Promise.all([
+  const [t, tNav, tDomain, tNotices, walletEnabled, unreadResult] = await Promise.all([
     getTranslations("common"),
     getTranslations("nav"),
     getTranslations("domain"),
+    getTranslations("notices"),
     actor.profile.account_type === "professional" ? isDocumentWalletEnabled() : false,
+    getUnreadNoticeCount(),
   ]);
+  // v2-18: unknown when the service does not answer — no badge, the page says why. Layouts do not
+  // re-render on navigation: the count is fresh on load and after any action (revalidatePath).
+  const unread = unreadResult.ok ? unreadResult.data.unread : null;
+  const badge = unreadBadge(unread);
   const organization = primaryMembership(actor)?.organization;
   const isProfessional = actor.profile.account_type === "professional";
 
@@ -39,6 +48,14 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/logbook", label: tNav("logbook") },
   ];
   const accountNav: NavItem[] = [
+    // v1.8 connected «Avisos» for every account type (SH-03 #10), with the unread count.
+    {
+      href: "/app/notices",
+      label: tNotices("nav"),
+      ...(badge
+        ? { badge: { text: badge, label: tNotices("unread", { count: unread ?? 0 }) } }
+        : {}),
+    },
     { href: "/app/tools", label: tNav("tools") },
     { href: "/app/settings", label: tNav("settings") },
   ];
@@ -96,13 +113,20 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
               >
                 CF
               </span>
-              <span className="leading-tight">
+              {/* Below 420 px the mark alone (the name stays for assistive tech) leaves room for the bell. */}
+              <span className="sr-only leading-tight min-[420px]:not-sr-only">
                 <span className="block text-lg font-bold tracking-tight">{t("appName")}</span>
                 <span className="block text-[11px] tracking-[0.28em] text-[#91aac1]">
                   {t("brandTag")}
                 </span>
               </span>
             </Link>
+          }
+          bell={
+            <NoticeBell
+              count={unread}
+              label={badge ? tNotices("bell", { count: unread ?? 0 }) : tNotices("nav")}
+            />
           }
           toolbar={
             <form action={signOutAction}>

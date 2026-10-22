@@ -296,3 +296,18 @@ are a separate package after the company-side diff; `src/domain/passport.ts` alr
 pool's pseudonym and visibility rules — the main category, categories, aircraft, English, work permits and whether
 restrictions are declared (`get_requirement_candidate_passports`), never the restriction text, contact, employer,
 rate or blocks. IMPLEMENTED (local).
+
+## BR-22 In-app notices (v2-18, T-70…T-73) — `notifications` / `src/features/notices/view.ts`
+
+Every application event tells **the other party** of whoever acted, in the same transaction: the organization acts
+→ the applicant; the technician applies, accepts, withdraws or cancels → every admin/manager of the requirement's
+organization except the applicant (a new application is «Nueva candidatura»; every other change «Actualización de
+candidatura · {necesidad} · {estado}» with the translated status, never the raw code). Pausing, resuming and closing
+a requirement tell each technician with an **active** application (received … confirmed); covered ↔ open is not told
+(the confirmation or cancellation already was). The actor is never told of their own act; plain members never
+receive notices. «Nuevo» until the notice is opened or «Marcar todas como leídas»; opening leads to the application
+(technician: its card in «Mis candidaturas»; organization: the requirement's applications). While unread, a
+notice takes the next event about the same technician and requirement (a new status, pause/resume/close, or
+applying again after withdrawing) instead of a new one. Kept 180 days
+and the newest 200 per reader (T-73). In-app
+only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) is not part of this rule yet. IMPLEMENTED (local).
