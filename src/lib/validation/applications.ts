@@ -18,19 +18,37 @@ export const listOpportunitiesQuery = z.strictObject({
    * `eligible=1` too, either kind (the two never overlap).
    */
   rest: z.enum(["1"]).optional(),
-  /** v1.8 «Buscar oportunidad»: title, base or organization name. */
+  /** v1.8 «Buscar oportunidad»: title, base, organization name or a required qualification (T-91). */
   q: z.string().trim().max(80).optional(),
+  /**
+   * v2-20 «Ofertas en la red» (organization members): the same published requirements without any
+   * eligibility, so `eligible`/`rest` are refused with it.
+   */
+  view: z.enum(["network"]).optional(),
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   limit: z.coerce.number().int().min(1).max(50).default(OPPORTUNITIES_PAGE_SIZE),
 });
 export type ListOpportunitiesQuery = z.infer<typeof listOpportunitiesQuery>;
 
+/** v2-05 «Candidaturas» of the organization: cards per page. */
+export const ORGANIZATION_APPLICATIONS_PAGE_SIZE = 20;
+
 export const listApplicationsQuery = z.strictObject({
-  /** Organization side: the applications of one requirement (admin/manager). */
+  /**
+   * Organization side: the applications of one requirement (admin/manager); with `view=list`, the
+   * requirement filter of the organization-wide list.
+   */
   requirementId: z.uuid("v.requirement.id").optional(),
-  /** Organization side: counters per status (dashboard). */
+  /**
+   * Organization side (admin/manager): `counts` per status (dashboard), `list` one page of every
+   * application (v2-05), `byRequirement` per-requirement counts (v2-05 tabs, v2-08 coverage).
+   */
   organizationId: z.uuid().optional(),
-  view: z.enum(["counts"]).optional(),
+  view: z.enum(["counts", "list", "byRequirement"]).optional(),
+  /** `view=list` only: one status tab. */
+  status: z.enum(APPLICATION_STATUSES).optional(),
+  offset: z.coerce.number().int().min(0).max(10000).default(0),
+  limit: z.coerce.number().int().min(1).max(50).default(ORGANIZATION_APPLICATIONS_PAGE_SIZE),
 });
 export type ListApplicationsQuery = z.infer<typeof listApplicationsQuery>;
 

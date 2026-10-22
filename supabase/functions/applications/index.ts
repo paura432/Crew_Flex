@@ -4,6 +4,12 @@
 // GET   /applications?requirementId=<uuid>             → { requirementId, applications: OrgApplication[] }
 //                                                        (admin/manager of its organization; 404 hidden)
 // GET   /applications?organizationId=<uuid>&view=counts → { counts } (admin/manager)
+// GET   /applications?organizationId=<uuid>&view=list[&requirementId=&status=&offset=&limit=]
+//                                                      → { applications: OrganizationApplication[], total }
+//                                                        (admin/manager; v2-05 «Candidaturas», newest first)
+// GET   /applications?organizationId=<uuid>&view=byRequirement → { requirements: [{ requirementId,
+//                                                        headcount, startsAt, endsAt, shiftCount, counts }] }
+//                                                        (admin/manager; v2-05 tabs, v2-08 coverage)
 // POST  /applications { requirementId, shareConsent: true }        → 201 { application } · 200 replay
 // PATCH /applications { applicationId, to, expectedUpdatedAt, reason?, proposalId?, acceptTerms? }
 //                                                      → { transition, replayed }
@@ -17,6 +23,7 @@ import {
   loadOwnCandidate,
   periodOf,
   toMyApplication,
+  toOrganizationApplication,
   toOrgApplication,
 } from "../_shared/applications.ts";
 import type { Actor } from "../_shared/auth.ts";
@@ -25,6 +32,7 @@ import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_share
 import { APPLICATION_STATUSES } from "../../../src/domain/applications.ts";
 import {
   applyInput,
+  type ListApplicationsQuery,
   listApplicationsQuery,
   type TransitionInput,
   transitionInput,
@@ -35,6 +43,8 @@ import type {
   ApplicationTransitionResponse,
   MyApplication,
   MyApplicationListResponse,
+  OrganizationApplicationsResponse,
+  RequirementApplicationCountsResponse,
   RequirementApplicationsResponse,
 } from "../../../src/types/api.ts";
 
@@ -81,6 +91,56 @@ export function toCounts(data: unknown): ApplicationCountsResponse {
   return { counts };
 }
 
+const requirementCountsRow = z.object({
+  requirement_id: z.string(),
+  headcount: z.number().int(),
+  starts_at: z.string(),
+  ends_at: z.string(),
+  shift_count: z.number().int().nullable(),
+  counts: z.partialRecord(z.enum(APPLICATION_STATUSES), z.number().int()),
+});
+
+export function toRequirementCounts(data: unknown): RequirementApplicationCountsResponse {
+  return {
+    requirements: z
+      .array(requirementCountsRow)
+      .parse(data)
+      .map((row) => ({
+        requirementId: row.requirement_id,
+        headcount: row.headcount,
+        startsAt: toIso(row.starts_at),
+        endsAt: toIso(row.ends_at),
+        shiftCount: row.shift_count,
+        counts: row.counts,
+      })),
+  };
+}
+
+/**
+ * One page of the organization's applications (admin/manager checked by the caller and by the RPC).
+ * Past the last page the RPC returns no row, so the total is read again with a one-row page: the
+ * page can then send the user to the last page.
+ */
+async function loadOrganizationApplications(
+  actor: Actor,
+  query: ListApplicationsQuery & { organizationId: string },
+): Promise<OrganizationApplicationsResponse> {
+  const page = async (offset: number, limit: number) => {
+    const { data, error } = await actor.client.rpc("get_organization_applications", {
+      p_organization_id: query.organizationId,
+      p_requirement_id: query.requirementId ?? null,
+      p_status: query.status ?? null,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw fromDatabaseError(error);
+    return z.array(z.unknown()).parse(data).map(toOrganizationApplication);
+  };
+  const rows = await page(query.offset, query.limit);
+  const total = rows[0]?.total ?? (query.offset > 0 ? ((await page(0, 1))[0]?.total ?? 0) : 0);
+  return { applications: rows.map((r) => r.application), total };
+}
+
 async function loadMine(actor: Actor): Promise<MyApplication[]> {
   const { data, error } = await actor.client.rpc("get_my_applications");
   if (error) throw fromDatabaseError(error); // 42501 → 403 (not a professional account)
@@ -99,6 +159,24 @@ export const handler = createHandler("applications", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
     const query = parseQuery(ctx.url, listApplicationsQuery);
+    if (query.status && query.view !== "list") throw new ApiError("VALIDATION_ERROR");
+
+    if (query.view === "list") {
+      const { organizationId } = query;
+      if (!organizationId) throw new ApiError("VALIDATION_ERROR");
+      await requireOrganizationRole(actor, organizationId, ["admin", "manager"]);
+      return { data: await loadOrganizationApplications(actor, { ...query, organizationId }) };
+    }
+
+    if (query.view === "byRequirement") {
+      if (!query.organizationId || query.requirementId) throw new ApiError("VALIDATION_ERROR");
+      await requireOrganizationRole(actor, query.organizationId, ["admin", "manager"]);
+      const { data, error } = await actor.client.rpc("get_requirement_application_counts", {
+        p_organization_id: query.organizationId,
+      });
+      if (error) throw fromDatabaseError(error);
+      return { data: toRequirementCounts(data) };
+    }
 
     if (query.requirementId) {
       if (query.organizationId || query.view) throw new ApiError("VALIDATION_ERROR");
@@ -144,7 +222,7 @@ export const handler = createHandler("applications", {
       p_share_consent: input.shareConsent, // literal true (schema); the database requires it too
       p_request_id: ctx.requestId,
     });
-    // P0002 → 404 · CFA01…CFA10 → 409 + reason · CF409 → 409 (key reused with another requirement)
+    // P0002 → 404 · CFA01…CFA10, CFA13 → 409 + reason · CF409 → 409 (key reused with another requirement)
     if (error) throw fromDatabaseError(error);
     const { id, replayed } = createdRow(data);
     const application = (await loadMine(actor)).find((a) => a.id === id);

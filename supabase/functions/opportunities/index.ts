@@ -3,12 +3,17 @@
 //     `eligible=1` the compatible ones, `rest=1` the «possible on rest» ones (BR-14.1), both = either
 // GET /opportunities?id=<uuid>                               → { opportunity } (404: not published,
 //                                                              ended or missing — the same answer)
-// Professional accounts only (403 otherwise). The list comes from `list_opportunities` (DEFINER, fixed
-// projection: organization name, no ids of people or organizations, no counts); eligibility is the
-// shared engine on the caller's OWN data (`own_candidate_profile`), every failed rule explained in
-// `match.blockers` — publication never makes anyone eligible. LLM ≠ eligibility engine.
+// GET /opportunities?view=network[&urgency=&q=&offset=&limit=] → { opportunities: OpportunityRequirement[],
+//                                                              total, considered, cap } (v2-20)
+// GET /opportunities?view=network&id=<uuid>                  → { requirement } (404 as above)
+// Professional accounts (403 otherwise); `view=network` is for organization members instead (403 without
+// a membership) and carries no eligibility at all. The list comes from `list_opportunities` (DEFINER,
+// fixed projection: organization name, no ids of people or organizations, no counts; never the caller's
+// own organizations' requirements, T-90); eligibility is the shared engine on the caller's OWN data
+// (`own_candidate_profile`), every failed rule explained in `match.blockers` — publication never makes
+// anyone eligible. LLM ≠ eligibility engine.
 import { z } from "zod";
-import { requireActor, requireTechnician } from "../_shared/auth.ts";
+import { type Actor, requireActor, requireTechnician } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import {
@@ -24,8 +29,11 @@ import {
   listOpportunitiesQuery,
 } from "../../../src/lib/validation/applications.ts";
 import type {
+  NetworkOpportunityListResponse,
+  NetworkOpportunityResponse,
   Opportunity,
   OpportunityListResponse,
+  OpportunityRequirement,
   OpportunityResponse,
 } from "../../../src/types/api.ts";
 
@@ -42,21 +50,57 @@ export const fitFilter =
     Boolean(query.eligible && o.match.eligible) ||
     Boolean(query.rest && o.possibleOnRest);
 
+/** «Ofertas en la red» (v2-20): any membership, read under RLS (own rows). */
+async function requireMembership(actor: Actor): Promise<void> {
+  const { data, error } = await actor.client
+    .from("organization_members")
+    .select("organization_id")
+    .eq("profile_id", actor.id)
+    .limit(1);
+  if (error) throw new ApiError("INTERNAL_ERROR");
+  if (!data || data.length === 0) throw new ApiError("FORBIDDEN");
+}
+
+async function listPublished(
+  actor: Actor,
+  query: ListOpportunitiesQuery,
+): Promise<OpportunityRequirement[]> {
+  const { data, error } = await actor.client.rpc("list_opportunities", {
+    p_id: query.id ?? null,
+    p_urgency: query.id ? null : (query.urgency ?? null),
+    p_q: query.id ? null : query.q || null,
+    p_limit: OPPORTUNITY_CAP,
+  });
+  if (error) throw fromDatabaseError(error); // 42501 → 403 (neither a professional nor a member)
+  const requirements = z.array(z.unknown()).parse(data).map(toOpportunityRequirement);
+  if (query.id && requirements.length === 0) throw new ApiError("NOT_FOUND");
+  return requirements;
+}
+
 export const handler = createHandler("opportunities", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
     const query = parseQuery(ctx.url, listOpportunitiesQuery);
-    await requireTechnician(actor);
 
-    const { data, error } = await actor.client.rpc("list_opportunities", {
-      p_id: query.id ?? null,
-      p_urgency: query.id ? null : (query.urgency ?? null),
-      p_q: query.id ? null : query.q || null,
-      p_limit: OPPORTUNITY_CAP,
-    });
-    if (error) throw fromDatabaseError(error); // 42501 → 403 (not a professional account)
-    const requirements = z.array(z.unknown()).parse(data).map(toOpportunityRequirement);
-    if (query.id && requirements.length === 0) throw new ApiError("NOT_FOUND");
+    if (query.view === "network") {
+      // Organizations see the published projection only: no eligibility, no «Compatibles».
+      if (query.eligible || query.rest) throw new ApiError("VALIDATION_ERROR");
+      await requireMembership(actor);
+      const requirements = await listPublished(actor, query);
+      if (query.id)
+        return { data: { requirement: requirements[0]! } satisfies NetworkOpportunityResponse };
+      return {
+        data: {
+          opportunities: requirements.slice(query.offset, query.offset + query.limit),
+          total: requirements.length,
+          considered: requirements.length,
+          cap: OPPORTUNITY_CAP,
+        } satisfies NetworkOpportunityListResponse,
+      };
+    }
+
+    await requireTechnician(actor);
+    const requirements = await listPublished(actor, query);
 
     const [own, mine] =
       requirements.length === 0

@@ -1,12 +1,26 @@
 import { assert, assertEquals, assertFalse, assertThrows } from "@std/assert";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
-import { toMyApplication, toOrgApplication } from "../_shared/applications.ts";
+import {
+  toMyApplication,
+  toOrganizationApplication,
+  toOrgApplication,
+} from "../_shared/applications.ts";
 import { toCandidate } from "../_shared/requirements.ts";
 import { idempotencyKey, parseValue } from "../_shared/validation.ts";
 import { APPLICATION_CONFLICTS } from "../../../src/domain/applications.ts";
-import { applyInput, transitionInput } from "../../../src/lib/validation/applications.ts";
-import { handler, toCounts, toTransitionResponse, transitionArgs } from "./index.ts";
+import {
+  applyInput,
+  listApplicationsQuery,
+  transitionInput,
+} from "../../../src/lib/validation/applications.ts";
+import {
+  handler,
+  toCounts,
+  toRequirementCounts,
+  toTransitionResponse,
+  transitionArgs,
+} from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -114,7 +128,7 @@ Deno.test("transition arguments carry the request, never an identity or a side",
 });
 
 Deno.test(
-  "CFA01…CFA12 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
+  "CFA01…CFA13 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
   () => {
     APPLICATION_CONFLICTS.forEach((reason, i) => {
       const code = `CFA${String(i + 1).padStart(2, "0")}`;
@@ -125,7 +139,8 @@ Deno.test(
       assertEquals([error.status, error.code, error.reason], [409, "CONFLICT", reason]);
       assertFalse(error.message.includes("internal detail"));
     });
-    assertEquals(fromDatabaseError({ code: "CFA13" }).code, "INTERNAL_ERROR");
+    assertEquals(fromDatabaseError({ code: "CFA13" }).reason, "OWN_ORGANIZATION"); // v2-27, T-90
+    assertEquals(fromDatabaseError({ code: "CFA14" }).code, "INTERNAL_ERROR");
     assertEquals(fromDatabaseError({ code: "CF412" }).reason, undefined);
   },
 );
@@ -367,3 +382,111 @@ Deno.test(
     );
   },
 );
+
+Deno.test(
+  "v2-05: an organization-wide row = the per-requirement row + its card, evaluated against that card",
+  () => {
+    const { application, total } = toOrganizationApplication({
+      ...applicationRow,
+      ...candidateColumns("verified"),
+      requirement_id: "r1",
+      requirement: card,
+      total: 7,
+    });
+    assertEquals(total, 7);
+    assertEquals(application.requirementId, "r1");
+    assertEquals(application.requirement.status, "paused");
+    assertEquals(application.requirement.title, "B1.1 · A320 line support");
+    assertEquals(
+      application.requirement.qualifications.map((q) => q.code),
+      ["B1.1", "SMS"],
+    );
+    assertEquals(application.candidate?.id, "CF-0A1B2C3D4E");
+    assert(application.match?.eligible); // B1.1 verified, available over the whole period
+    assertFalse(JSON.stringify(application).includes("organization_id"));
+    // A closed account (20261023400100): no applicant columns → listed without candidate or match.
+    const closed = toOrganizationApplication({
+      ...applicationRow,
+      status: "finished",
+      candidate_ref: null,
+      candidate_pool: null,
+      candidate_display_name: null,
+      candidate_base_location: null,
+      candidate_years_experience: null,
+      candidate_qualifications: null,
+      candidate_availability: null,
+      requirement_id: "r1",
+      requirement: card,
+      total: 1,
+    }).application;
+    assertEquals([closed.candidate, closed.match, closed.status], [null, null, "finished"]);
+    assertEquals(closed.history.length, 2);
+  },
+);
+
+Deno.test("v2-05/v2-08: per-requirement counts map to the contract", () => {
+  assertEquals(
+    toRequirementCounts([
+      {
+        requirement_id: "r1",
+        headcount: 2,
+        starts_at: "2031-01-10T06:00:00+00:00",
+        ends_at: "2031-01-12T18:00:00+00:00",
+        shift_count: 2,
+        counts: { confirmed: 1, received: 2 },
+      },
+    ]),
+    {
+      requirements: [
+        {
+          requirementId: "r1",
+          headcount: 2,
+          startsAt: "2031-01-10T06:00:00.000Z",
+          endsAt: "2031-01-12T18:00:00.000Z",
+          shiftCount: 2,
+          counts: { confirmed: 1, received: 2 },
+        },
+      ],
+    },
+  );
+  assertThrows(() =>
+    toRequirementCounts([
+      {
+        requirement_id: "r1",
+        headcount: 1,
+        starts_at: "x",
+        ends_at: "y",
+        shift_count: null,
+        counts: { bogus: 1 },
+      },
+    ]),
+  );
+});
+
+Deno.test("list query: strict views and status, bounded pages", () => {
+  const ORG = "00000000-0000-4000-8000-0000000000bb";
+  assertEquals(
+    parseValue({ organizationId: ORG, view: "list", status: "accepted" }, listApplicationsQuery),
+    { organizationId: ORG, view: "list", status: "accepted", offset: 0, limit: 20 },
+  );
+  for (const bad of [
+    { organizationId: ORG, view: "everything" },
+    { organizationId: ORG, view: "list", status: "hired" },
+    { organizationId: ORG, view: "list", limit: "51" },
+    { organizationId: ORG, view: "list", offset: "-1" },
+    { organizationId: ORG, view: "list", role: "admin" },
+  ]) {
+    assertThrows(() => parseValue(bad, listApplicationsQuery), ApiError);
+  }
+});
+
+Deno.test("the organization-wide views also need a valid token before anything else", async () => {
+  const restore = silence();
+  for (const view of ["list", "byRequirement"]) {
+    const res = await handler(
+      new Request(`http://fn/applications?organizationId=${ID}&view=${view}`),
+    );
+    assertEquals(res.status, 401);
+  }
+  restore();
+});

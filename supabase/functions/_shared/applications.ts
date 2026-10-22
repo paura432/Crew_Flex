@@ -25,6 +25,7 @@ import type {
   MyApplication,
   Opportunity,
   OpportunityRequirement,
+  OrganizationApplication,
   OrgApplication,
 } from "../../../src/types/api.ts";
 import type { Actor } from "./auth.ts";
@@ -162,17 +163,25 @@ function base(row: z.infer<z.ZodObject<typeof applicationColumns>>, requirementI
 
 const myRow = z.object({ ...applicationColumns, requirement_id: z.string(), requirement: card });
 
+/**
+ * The requirement card as the API returns it: ISO UTC instants, qualifications hard first, the builder
+ * terms (absent = not stated).
+ */
+function toCardRequirement(raw: z.infer<typeof card>) {
+  return {
+    ...raw,
+    startsAt: toIso(raw.startsAt),
+    endsAt: toIso(raw.endsAt),
+    createdAt: toIso(raw.createdAt),
+    qualifications: [...raw.qualifications].sort(byLevelThenCode),
+    ...toTerms(raw, raw.timeZone),
+  };
+}
+
 /** A row of `get_my_applications()`, evaluated on the caller's own data. */
 export function toMyApplication(raw: unknown, own: Candidate): MyApplication {
   const row = myRow.parse(raw);
-  const requirement = {
-    ...row.requirement,
-    startsAt: toIso(row.requirement.startsAt),
-    endsAt: toIso(row.requirement.endsAt),
-    createdAt: toIso(row.requirement.createdAt),
-    qualifications: [...row.requirement.qualifications].sort(byLevelThenCode),
-    ...toTerms(row.requirement, row.requirement.timeZone),
-  };
+  const requirement = toCardRequirement(row.requirement);
   return {
     ...base(row, row.requirement_id),
     requirement,
@@ -197,6 +206,32 @@ export function toOrgApplication(
     candidate: toCandidateSummary(candidate),
     match: evaluateMatch(requirement, candidate),
   };
+}
+
+const organizationRow = z.object({
+  ...applicationColumns,
+  requirement_id: z.string(),
+  requirement: card,
+  total: z.number(),
+  candidate_ref: z.string().nullable(),
+});
+
+/**
+ * A row of `get_organization_applications()` (v2-05): the same applicant columns as
+ * `get_requirement_applications()` plus its requirement card, evaluated against that requirement. A
+ * technician who closed the account (no applicant columns) is `candidate: null, match: null`.
+ */
+export function toOrganizationApplication(raw: unknown): {
+  application: OrganizationApplication;
+  total: number;
+} {
+  const row = organizationRow.parse(raw);
+  const requirement = toCardRequirement(row.requirement);
+  const application: OrganizationApplication =
+    row.candidate_ref === null
+      ? { ...base(row, requirement.id), candidate: null, match: null, requirement }
+      : { ...toOrgApplication(raw, requirement), requirement };
+  return { application, total: row.total };
 }
 
 export interface OwnApplication {

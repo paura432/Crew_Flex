@@ -1,6 +1,9 @@
-import { assert, assertEquals } from "@std/assert";
+import { assert, assertEquals, assertThrows } from "@std/assert";
 import { periodOf, toOpportunity, toOpportunityRequirement } from "../_shared/applications.ts";
+import { ApiError } from "../_shared/errors.ts";
 import { toCandidate } from "../_shared/requirements.ts";
+import { parseValue } from "../_shared/validation.ts";
+import { listOpportunitiesQuery } from "../../../src/lib/validation/applications.ts";
 import { fitFilter, handler, OPPORTUNITY_CAP } from "./index.ts";
 
 const silence = () => {
@@ -224,4 +227,18 @@ Deno.test("own windows are read once for the period covering every requirement",
     ]),
     { from: "2031-01-05T00:00:00.000Z", to: "2031-01-12T00:00:00.000Z" },
   );
+});
+
+Deno.test("v2-20 network view: strict query, no eligibility filters, a token first", async () => {
+  assertEquals(parseValue({ view: "network", q: "tr-a320" }, listOpportunitiesQuery), {
+    view: "network",
+    q: "tr-a320",
+    offset: 0,
+    limit: 20,
+  });
+  assertThrows(() => parseValue({ view: "everyone" }, listOpportunitiesQuery), ApiError);
+  const restore = silence();
+  const res = await handler(new Request("http://fn/opportunities?view=network"));
+  restore();
+  assertEquals(res.status, 401);
 });

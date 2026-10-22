@@ -547,6 +547,48 @@ export interface ApplicationCountsResponse {
   counts: Partial<Record<ApplicationStatus, number>>;
 }
 
+/**
+ * v2-05: one application of the organization, with the requirement it answers. `candidate` and `match`
+ * are null when the technician closed the account (the application, its seat and history stay).
+ */
+export interface OrganizationApplication extends ApplicationBase {
+  candidate: CandidateSummary | null;
+  match: MatchResult | null;
+  requirement: OpportunityRequirement & { status: RequirementStatus };
+}
+
+/** v2-05 «Candidaturas» of the organization (admin/manager), newest first. */
+export interface OrganizationApplicationsResponse {
+  applications: OrganizationApplication[];
+  /** Applications matching the filters (requirement, status) across all pages. */
+  total: number;
+}
+
+/** v2-05 tabs / v2-08 coverage: applications per status of each requirement that received any. */
+export interface RequirementApplicationCountsResponse {
+  requirements: {
+    requirementId: string;
+    headcount: number;
+    startsAt: string;
+    endsAt: string;
+    /** Number of shifts (v2-09); null = one continuous period. */
+    shiftCount: number | null;
+    counts: Partial<Record<ApplicationStatus, number>>;
+  }[];
+}
+
+/** v2-20 «Ofertas en la red» (organization members): the published projection, no eligibility. */
+export interface NetworkOpportunityListResponse {
+  opportunities: OpportunityRequirement[];
+  total: number;
+  considered: number;
+  cap: number;
+}
+
+export interface NetworkOpportunityResponse {
+  requirement: OpportunityRequirement;
+}
+
 export interface ApplicationResponse {
   application: MyApplication;
 }
