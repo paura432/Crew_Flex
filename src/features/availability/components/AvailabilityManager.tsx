@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { Metric } from "@/components/ui/Metric";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { AvailabilityStatus } from "@/domain/availability";
@@ -26,10 +26,10 @@ import {
 } from "../actions";
 import {
   calendarDays,
+  canEditDay,
   countDays,
   DAY_STYLE,
   dayWindow,
-  isDayEditable,
   refusesPastStart,
   monthOffset,
   shiftMonth,
@@ -43,6 +43,7 @@ import {
   RotationError,
   type PlannedDay,
 } from "../rotation";
+import { availabilityErrorCopy } from "../error-copy";
 import { CyclePlanner, type CycleSettings } from "./CyclePlanner";
 
 type Picker = AvailabilityStatus | "clear";
@@ -71,7 +72,7 @@ export function AvailabilityManager({
   assignedDays = [],
 }: {
   windows: AvailabilityWindow[];
-  /** UTC days of confirmed assignments (D-06): marked, never locked (T-13). */
+  /** UTC days of confirmed assignments (D-06): marked and protected (BR-4.9, T-15). */
   assignedDays?: string[];
   /** Saved generator pattern (private), or null. */
   rotation: AvailabilityRotation | null;
@@ -127,7 +128,7 @@ export function AvailabilityManager({
     label: string,
     task: () => Promise<AvailabilityActionResult>,
     onOk?: () => void,
-    conflict?: string,
+    write: "days" | "window" = "window",
   ) {
     setNotice(null);
     startTransition(async () => {
@@ -140,11 +141,7 @@ export function AvailabilityManager({
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(
-          conflict && result.code === "CONFLICT"
-            ? { tone: "danger", text: conflict, requestId: result.requestId }
-            : actionErrorCopy(tRoot, result),
-        );
+        setNotice(availabilityErrorCopy(tRoot, result, write));
       }
     });
   }
@@ -170,7 +167,7 @@ export function AvailabilityManager({
         ),
       clearDraft,
       // The draft is kept (clearDraft runs on success only) so it can be re-applied after a reload.
-      t("cycle.conflict"),
+      "days",
     );
   }
 
@@ -196,7 +193,8 @@ export function AvailabilityManager({
 
   function onPreview(settings: CycleSettings) {
     try {
-      const generated = planCycle(days, settings.pattern, { ...settings, today });
+      // BR-4.9: the days of a confirmed assignment are skipped, even with «replace» (v1.8).
+      const generated = planCycle(days, settings.pattern, { ...settings, today, assigned });
       // X-15: every day from today already has windows and «replace» is off → say so, not silence.
       if (Object.keys(generated).length === 0) {
         setCycleError(t(`cycle.error.${emptyPreviewReason(days, today)}`));
@@ -230,7 +228,7 @@ export function AvailabilityManager({
 
   function onDayClick(date: string) {
     const day = days.find((d) => d.date === date);
-    if (!day || !isDayEditable(date, today)) return;
+    if (!day || !canEditDay(date, today, assigned)) return;
     const status = picker === "clear" ? null : picker;
     if (planned > 0) {
       changePlan((old) => ({ ...old, [date]: { status } }));
@@ -372,7 +370,14 @@ export function AvailabilityManager({
           ))}
         </div>
         <p className="text-sm text-muted">{t("pickerHint")}</p>
-        <p className="mb-4 text-sm text-muted">{t("aogHint")}</p>
+        <p className="text-sm text-muted">{t("aogHint")}</p>
+        {/* Legend of the assignment mark + v1.8 «… protegidas también en el servidor» (BR-4.9). */}
+        <p className="mb-4 text-sm text-muted">
+          <span aria-hidden className="font-bold text-navy">
+            ● {t("assignedShort")}
+          </span>{" "}
+          · {t("assignedHint")}
+        </p>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold tracking-wide text-muted uppercase">
           {WEEKDAYS.map((d) => (
@@ -385,6 +390,7 @@ export function AvailabilityManager({
           {cells.map(({ key, day }) => {
             if (day === null) return <div key={key} aria-hidden />;
             const draft = plan[day.date];
+            const isAssigned = assigned.has(day.date);
             const state = draft ? PLANNED_STATE(draft.status) : day.state;
             const label = draft?.cycle
               ? `${dayLabel(state)} · ${t(`cycle.state.${draft.cycle}`)}`
@@ -393,18 +399,19 @@ export function AvailabilityManager({
               <button
                 key={key}
                 type="button"
-                disabled={pending || !isDayEditable(day.date, today)}
+                disabled={pending || !canEditDay(day.date, today, assigned)}
                 onClick={() => onDayClick(day.date)}
-                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${assigned.has(day.date) ? `, ${t("assigned")}` : ""}`}
+                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${isAssigned ? `, ${t("assigned")}. ${t("protectedDay")}` : ""}`}
                 className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
               >
                 <span className="text-base font-bold tabular-nums">
                   {Number(day.date.slice(-2))}
                 </span>
                 <span className="hidden text-[11px] leading-none sm:block">{dayLabel(state)}</span>
-                {assigned.has(day.date) && (
+                {/* Below `sm` only the dot fits the cell (VIS-02 #11); the words are in the label. */}
+                {isAssigned && (
                   <span aria-hidden className="text-[11px] leading-none font-bold text-navy">
-                    ● {t("assignedShort")}
+                    ●<span className="hidden sm:inline"> {t("assignedShort")}</span>
                   </span>
                 )}
               </button>

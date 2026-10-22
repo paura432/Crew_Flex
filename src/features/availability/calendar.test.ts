@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assignmentDays,
   calendarDays,
+  canEditDay,
   countDays,
   dayWindow,
   isDayEditable,
@@ -130,7 +131,17 @@ describe("refusesPastStart (X-19, form only)", () => {
   });
 });
 
-describe("assignmentDays (confirmed assignments, display only)", () => {
+describe("canEditDay (BR-4.9, N-04)", () => {
+  it("past days and the days of a confirmed assignment are locked; the rest is editable", () => {
+    const assigned = new Set(["2026-10-24"]);
+    expect(canEditDay("2026-10-21", "2026-10-22", assigned)).toBe(false); // past
+    expect(canEditDay("2026-10-24", "2026-10-22", assigned)).toBe(false); // assigned
+    expect(canEditDay("2026-10-22", "2026-10-22", assigned)).toBe(true);
+    expect(canEditDay("2026-10-25", "2026-10-22", new Set())).toBe(true);
+  });
+});
+
+describe("assignmentDays (days of confirmed assignments or opportunities)", () => {
   it("every UTC day an assignment touches, end exclusive", () => {
     expect([
       ...assignmentDays([{ startsAt: "2026-12-01T06:00:00Z", endsAt: "2026-12-03T18:00:00Z" }]),

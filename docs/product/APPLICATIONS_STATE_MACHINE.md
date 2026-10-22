@@ -68,6 +68,10 @@ Invalid transition → 409; wrong actor → 403/404 without revealing existence;
 transaction. Business logic in `src/domain/applications.ts` (pure table of allowed transitions, shared
 with the Edge Function and mirrored by the SQL function, with a parity test as in suite M/P).
 
+While an application is `confirmed`, the technician's availability over its period is protected (BR-4.9, T-15,
+LOCAL `20261023300000`): the calendar cannot change those days and no write may leave the assignment below 100 %
+(409 `ASSIGNMENT_PROTECTED`). `finished` and `cancelled` release them (T-16).
+
 ## 3. What a transition does NOT do
 
 - **No contractual effect is invented.** Crew Flex records an intention and its terms snapshot; the

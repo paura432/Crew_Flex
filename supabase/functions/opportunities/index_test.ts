@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { periodOf, toOpportunity, toOpportunityRequirement } from "../_shared/applications.ts";
 import { toCandidate } from "../_shared/requirements.ts";
-import { handler, OPPORTUNITY_CAP } from "./index.ts";
+import { fitFilter, handler, OPPORTUNITY_CAP } from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -160,6 +160,50 @@ Deno.test(
     assertEquals([other.myApplication, other.applyBlocker], [null, null]); // another requirement's
   },
 );
+
+Deno.test(
+  "BR-14.1 possibleOnRest: only availability missing, rest days (no window) would cover, may apply after",
+  () => {
+    const requirement = toOpportunityRequirement({ ...row, urgency: "planned" });
+    const now = Date.parse("2031-01-01T00:00:00Z");
+    // No window over the period at all: every day is private rest → «Posible en descanso».
+    const rest = toOpportunity(requirement, me("verified", []), [], now);
+    assertEquals([rest.applyBlocker, rest.possibleOnRest], ["NOT_ELIGIBLE", true]);
+    // A blocked window is work, not rest; «AOG only» blocks a planned need (BR-4.8).
+    for (const status of ["unavailable", "aog_only"])
+      assertEquals(
+        toOpportunity(requirement, me("verified", [{ status }]), [], now).possibleOnRest,
+        false,
+      );
+    // A qualification blocker, an eligible match, a started need or an own application: never.
+    assertEquals(toOpportunity(requirement, me("pending", []), [], now).possibleOnRest, false);
+    assertEquals(toOpportunity(requirement, me("verified"), [], now).possibleOnRest, false);
+    assertEquals(
+      toOpportunity(requirement, me("verified", []), [], Date.parse(row.starts_at)).possibleOnRest,
+      false,
+    );
+    const applied = [
+      { id: "a1", requirementId: "r1", status: "received" as const, createdAt: row.created_at },
+    ];
+    assertEquals(
+      toOpportunity(requirement, me("verified", []), applied, now).possibleOnRest,
+      false,
+    );
+  },
+);
+
+Deno.test("list filters: eligible=1, rest=1, both = either, none = all", () => {
+  const eligible = { match: { eligible: true }, possibleOnRest: false };
+  const rest = { match: { eligible: false }, possibleOnRest: true };
+  const neither = { match: { eligible: false }, possibleOnRest: false };
+  const old = { match: { eligible: false } }; // an older function: no field
+  const keep = (query: { eligible?: "1"; rest?: "1" }) =>
+    [eligible, rest, neither, old].map((o) => fitFilter(query)(o as never));
+  assertEquals(keep({}), [true, true, true, true]);
+  assertEquals(keep({ eligible: "1" }), [true, false, false, false]);
+  assertEquals(keep({ rest: "1" }), [false, true, false, false]);
+  assertEquals(keep({ eligible: "1", rest: "1" }), [true, true, false, false]);
+});
 
 Deno.test("own windows are read once for the period covering every requirement", () => {
   assertEquals(periodOf([]), null);

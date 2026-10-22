@@ -581,7 +581,18 @@
       "follow": "Ver seguimiento",
       "noOpportunities": "Todavía no hay oportunidades compatibles.",
       "noApplications": "Tu próxima candidatura empieza aquí.",
-      "loadError": "No se ha podido cargar ahora. Recarga para reintentar."
+      "loadError": "No se ha podido cargar ahora. Recarga para reintentar.",
+      "opportunitiesDay": "Oportunidades · {day}",
+      "clearDay": "Quitar selección de fecha",
+      "compatibleLine": "Requisitos y disponibilidad compatibles",
+      "restLine": "Posible en descanso: revisa y publica tus fechas",
+      "viewOffer": "Ver oferta",
+      "reviewDates": "Revisar fechas",
+      "noOpportunitiesDay": "Sin oportunidades para este día",
+      "noOpportunitiesHint": "Revisa tu perfil o publica las fechas que quieras ofrecer. Los descansos privados no se envían a empresas.",
+      "openCalendar": "Abrir mi calendario",
+      "noApplicationsHint": "Explora las oportunidades y elige las condiciones y fechas que te encajen.",
+      "searchOpportunities": "Buscar oportunidades"
     }
   },
   "qualifications": {
@@ -742,7 +753,20 @@
     "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos.",
     "calendarLabel": "Disponibilidad por día",
     "assigned": "asignación confirmada",
-    "assignedShort": "Asignada"
+    "assignedShort": "Asignada",
+    "protected": {
+      "days": "No puedes modificar una fecha con asignación confirmada.",
+      "window": "Conserva la disponibilidad de tus asignaciones confirmadas."
+    },
+    "protectedDay": "Una asignación confirmada está protegida.",
+    "assignedHint": "Las fechas con asignación confirmada están protegidas también en el servidor.",
+    "assignedDay": "Asignado",
+    "mini": {
+      "offers": "{date}: {state}. {count, plural, one {# oportunidad} other {# oportunidades}}",
+      "offersPotential": "{date}: {state}. {count, plural, one {# oportunidad posible} other {# oportunidades posibles}}, revisa la publicación de descanso",
+      "legendOffers": "Oportunidades",
+      "note": "Calendario en UTC. El punto rojo señala oportunidades en días compatibles o descansos que podrías publicar. No cambia tu disponibilidad."
+    }
   },
   "organization": {
     "dashboard": {

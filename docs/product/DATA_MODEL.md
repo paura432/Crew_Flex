@@ -104,6 +104,13 @@ DELETE, `lock_availability_owner()`) takes `pg_advisory_xact_lock` keyed by the 
 
 `status` is `available` / `unavailable` / `aog_only` (`aog_only` added by `20261019150000`, local only; meaning in BR-4.8).
 
+Confirmed assignments are protected (BR-4.9, `20261023300000`, local only): trigger
+`availability_windows_protect_assignments` (AFTER INSERT/UPDATE/DELETE, DEFINER `protect_assignment_availability()`)
+raises `CFV01` when a row change reduces the availability of one of the owner's `confirmed` applications and that
+assignment is then not covered 100 % (`app_private.hard_eligibility`); `replace_availability_days` refuses every listed
+day that overlaps one (`app_private.confirmed_assignment_overlaps`) and splits a window tail-first so an adjacent
+assignment never looks uncovered mid-save. Skipped while the profile is being deleted (cascade).
+
 ### `availability_rotations` (`20261019140000`, local only)
 
 The cycle generator's saved pattern, one row per technician: `pattern` (14 values, BR-4.7), `anchor`
@@ -240,6 +247,7 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `apply_to_requirement(requirement_id, key, share_consent, request_id)` (`20261022130300`, local only)                                                                                    | DEFINER         | ∅ → `received`: technician only, idempotent (`application.create`), open (`CFA01`), not started (`CFA02`), Q5/T-09 (`CFA09`/`CFA10`), eligible now (T-08: `CFA03`/`CFA04`); the share consent must be `true` (22023), recorded as a flag; event + audit. |
 | `transition_application(id, to, expected_updated_at, key, reason, proposal_id, request_id)` (`20261022130300`, local only)                                                               | DEFINER         | Every other transition (`app_private.application_transitions`): locks, side from the DB, idempotent (`application.transition`), version `CF412`, proposals, confirm re-checks, covered ↔ open; event + audit.                                            |
 | `get_requirement_applications(requirement_id)` · `get_my_applications()` · `get_application_counts(org)` (`20261022130300`, local only)                                                  | DEFINER, stable | Org view (admin/manager, pool rules, 42501 otherwise) · own applications with the requirement card · counts per status (admin/manager).                                                                                                                  |
+| `protect_assignment_availability()` · `app_private.confirmed_assignment_overlaps(from, to)` (`20261023300000`, local only)                                                               | DEFINER         | BR-4.9: AFTER trigger on `availability_windows` (a write that leaves a confirmed assignment it reduces below 100 % → `CFV01`) · does a period overlap the caller's own confirmed assignment (`auth.uid()`).                                              |
 | `set_updated_at()`                                                                                                                                                                       | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                                                                       |
 
 ### `app_private` schema (not exposed by PostgREST)

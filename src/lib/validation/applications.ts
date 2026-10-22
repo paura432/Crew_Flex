@@ -13,6 +13,11 @@ export const listOpportunitiesQuery = z.strictObject({
   urgency: z.enum(URGENCIES).optional(),
   /** v1.8 «Compatibles»: only the opportunities the caller is eligible for now. */
   eligible: z.enum(["1"]).optional(),
+  /**
+   * v1.8 «Posible en descanso» (BR-14.1): only the ones that publishing rest days would open. With
+   * `eligible=1` too, either kind (the two never overlap).
+   */
+  rest: z.enum(["1"]).optional(),
   /** v1.8 «Buscar oportunidad»: title, base or organization name. */
   q: z.string().trim().max(80).optional(),
   offset: z.coerce.number().int().min(0).max(10000).default(0),

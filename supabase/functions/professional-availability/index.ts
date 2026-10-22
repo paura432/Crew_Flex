@@ -6,6 +6,8 @@
 //   PUT    /professional-availability { days: [{ date, status|null }], rotation?, expectedVersion? }
 //          (Idempotency-Key) → sets whole UTC days atomically (shift-cycle generator), RPC
 //          replace_availability_days; 409 CONFLICT when `expectedVersion` is stale (W5-03)
+// N-04 (BR-4.9, 20261023300000): every write is refused with 409 `reason: ASSIGNMENT_PROTECTED` when it
+// changes a day of a confirmed assignment (PUT) or reduces the availability one needs (POST/PATCH/DELETE).
 // The technician id is ALWAYS the JWT subject: the body never carries ownership. RLS enforces
 // `technician_profile_id = auth.uid()` as a second layer.
 import { z } from "zod";

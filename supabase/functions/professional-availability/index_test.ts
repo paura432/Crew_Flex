@@ -1,4 +1,5 @@
 import { assertEquals } from "@std/assert";
+import { fromDatabaseError } from "../_shared/errors.ts";
 import { handler, replaceDaysArgs, toRotation, toWindow } from "./index.ts";
 
 const silence = () => {
@@ -85,3 +86,20 @@ Deno.test("calendar save sends the expected version, or none for older clients (
   );
   assertEquals(replaceDaysArgs({ days }, key).p_expected_version, null);
 });
+
+Deno.test(
+  "N-04: a write that touches a confirmed assignment (CFV01) is a 409 ASSIGNMENT_PROTECTED",
+  () => {
+    const error = fromDatabaseError({ code: "CFV01", message: "internal detail" });
+    assertEquals(
+      [error.status, error.code, error.reason],
+      [409, "CONFLICT", "ASSIGNMENT_PROTECTED"],
+    );
+    assertEquals(error.message.includes("internal detail"), false); // the DB message never leaks
+    // The applications' family is unchanged, an unknown CFV code is no reason, the stale version
+    // (CF412) stays a plain 409 without one.
+    assertEquals(fromDatabaseError({ code: "CFA04" }).reason, "AVAILABILITY_INCOMPLETE");
+    assertEquals(fromDatabaseError({ code: "CFV99" }).reason, undefined);
+    assertEquals(fromDatabaseError({ code: "CF412" }).reason, undefined);
+  },
+);

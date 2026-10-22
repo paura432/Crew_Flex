@@ -114,3 +114,39 @@ export function availabilityCoverage(
     fullyCovered: covered === total,
   };
 }
+
+/**
+ * BR-4.9 (N-04, v1.8 connected `server/connected.mjs:22` and `server/app.mjs:67`): stable reasons of a
+ * refused availability write (409 `reason`). The SQL raises them as SQLSTATE `CFV01`… in this order
+ * (`supabase/functions/_shared/errors.ts`), a family apart from `APPLICATION_CONFLICTS` (`CFA..`).
+ */
+export const AVAILABILITY_CONFLICTS = [
+  "ASSIGNMENT_PROTECTED", // CFV01: a day of a confirmed assignment, or availability it needs, would change
+] as const;
+export type AvailabilityConflict = (typeof AVAILABILITY_CONFLICTS)[number];
+
+const AVAILABILITY_BLOCKERS = new Set(["NOT_AVAILABLE", "PARTIAL_AVAILABILITY"]);
+
+/**
+ * BR-14.1, v1.8 «Posible en descanso» (demo `homeModel.js:6-15`): the professional meets every other
+ * rule (only availability blockers) and the period would be fully covered if every part of it with no
+ * window at all — a private rest day — were published as `available`. Blocked time (`unavailable`, or
+ * `aog_only` for a need that is not AOG; BR-4.2/BR-4.8) is never treated as rest. A hint for the
+ * professional only: it never makes anyone eligible (BR-3).
+ */
+export function possibleOnRest(
+  match: { eligible: boolean; blockers: readonly { code: string }[] },
+  windows: readonly AvailabilityWindow[],
+  period: { startsAt: string; endsAt: string; urgency: Urgency },
+): boolean {
+  if (match.eligible || match.blockers.length === 0) return false;
+  if (!match.blockers.every((b) => AVAILABILITY_BLOCKERS.has(b.code))) return false;
+  const start = Date.parse(period.startsAt);
+  const end = Date.parse(period.endsAt);
+  return !windows.some(
+    (w) =>
+      effectiveStatus(w.status, period.urgency) === "unavailable" &&
+      Date.parse(w.startsAt) < end &&
+      Date.parse(w.endsAt) > start,
+  );
+}

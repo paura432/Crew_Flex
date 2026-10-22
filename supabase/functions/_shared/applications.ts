@@ -7,6 +7,7 @@ import {
   applyBlocker,
   type ApplicationStatus,
 } from "../../../src/domain/applications.ts";
+import { possibleOnRest } from "../../../src/domain/availability.ts";
 import {
   type Candidate,
   evaluateMatch,
@@ -201,17 +202,22 @@ export function toOpportunity(
     .filter((a) => a.requirementId === requirement.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const latest = forThis[0];
+  // list_opportunities returns `open` requirements only.
+  const blocker = applyBlocker(
+    { status: "open", startsAt: requirement.startsAt },
+    forThis.map((a) => a.status),
+    match.eligible,
+    nowMs,
+  );
   return {
     requirement,
     match,
     myApplication: latest ? { id: latest.id, status: latest.status } : null,
-    // list_opportunities returns `open` requirements only.
-    applyBlocker: applyBlocker(
-      { status: "open", startsAt: requirement.startsAt },
-      forThis.map((a) => a.status),
-      match.eligible,
-      nowMs,
-    ),
+    applyBlocker: blocker,
+    // BR-14.1: nothing but availability stands between the caller and applying (not started, no
+    // application) and their rest days would cover it. A hint, never eligibility.
+    possibleOnRest:
+      blocker === "NOT_ELIGIBLE" && possibleOnRest(match, own.availability, requirement),
   };
 }
 

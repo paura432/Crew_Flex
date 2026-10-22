@@ -581,7 +581,18 @@
       "follow": "Follow up",
       "noOpportunities": "No compatible opportunities yet.",
       "noApplications": "Your next application starts here.",
-      "loadError": "Could not load right now. Reload to retry."
+      "loadError": "Could not load right now. Reload to retry.",
+      "opportunitiesDay": "Opportunities · {day}",
+      "clearDay": "Clear date selection",
+      "compatibleLine": "Requirements and availability match",
+      "restLine": "Possible on a rest day: review and publish your dates",
+      "viewOffer": "View offer",
+      "reviewDates": "Review dates",
+      "noOpportunitiesDay": "No opportunities for this day",
+      "noOpportunitiesHint": "Review your profile or publish the dates you want to offer. Private rest days are never sent to companies.",
+      "openCalendar": "Open my calendar",
+      "noApplicationsHint": "Explore the opportunities and choose the terms and dates that suit you.",
+      "searchOpportunities": "Find opportunities"
     }
   },
   "qualifications": {
@@ -742,7 +753,20 @@
     "aogHint": "“AOG only” days count only for needs declared as AOG; every other need sees them as not available. Blocked days override both.",
     "calendarLabel": "Availability by day",
     "assigned": "confirmed assignment",
-    "assignedShort": "Assigned"
+    "assignedShort": "Assigned",
+    "protected": {
+      "days": "You cannot change a date with a confirmed assignment.",
+      "window": "Keep the availability of your confirmed assignments."
+    },
+    "protectedDay": "A confirmed assignment is protected.",
+    "assignedHint": "Dates with a confirmed assignment are protected on the server too.",
+    "assignedDay": "Assigned",
+    "mini": {
+      "offers": "{date}: {state}. {count, plural, one {# opportunity} other {# opportunities}}",
+      "offersPotential": "{date}: {state}. {count, plural, one {# possible opportunity} other {# possible opportunities}}, review your rest-day publishing",
+      "legendOffers": "Opportunities",
+      "note": "Calendar in UTC. The red dot marks opportunities on compatible days or on rest days you could publish. It does not change your availability."
+    }
   },
   "organization": {
     "dashboard": {

@@ -1,5 +1,6 @@
 // Published requirements for professionals (M07, owner decision D-12 of 2026-10-22).
-// GET /opportunities[?urgency=&eligible=1&q=&offset=&limit=] → { opportunities, total, considered, cap }
+// GET /opportunities[?urgency=&eligible=1&rest=1&q=&offset=&limit=] → { opportunities, total, considered, cap }
+//     `eligible=1` the compatible ones, `rest=1` the «possible on rest» ones (BR-14.1), both = either
 // GET /opportunities?id=<uuid>                               → { opportunity } (404: not published,
 //                                                              ended or missing — the same answer)
 // Professional accounts only (403 otherwise). The list comes from `list_opportunities` (DEFINER, fixed
@@ -18,13 +19,28 @@ import {
   toOpportunityRequirement,
 } from "../_shared/applications.ts";
 import { parseQuery } from "../_shared/validation.ts";
-import { listOpportunitiesQuery } from "../../../src/lib/validation/applications.ts";
-import type { OpportunityListResponse, OpportunityResponse } from "../../../src/types/api.ts";
+import {
+  type ListOpportunitiesQuery,
+  listOpportunitiesQuery,
+} from "../../../src/lib/validation/applications.ts";
+import type {
+  Opportunity,
+  OpportunityListResponse,
+  OpportunityResponse,
+} from "../../../src/types/api.ts";
 
 // ponytail: one request evaluates at most 200 published requirements (the SQL cap of
 // list_opportunities); the response says so with `considered` / `cap`. Paginate in SQL when the
 // network publishes more than that at once.
 export const OPPORTUNITY_CAP = 200;
+
+/** `eligible=1` keeps the compatible ones, `rest=1` the possible-on-rest ones, both = either, none = all. */
+export const fitFilter =
+  (query: Pick<ListOpportunitiesQuery, "eligible" | "rest">) =>
+  (o: Pick<Opportunity, "match" | "possibleOnRest">) =>
+    (!query.eligible && !query.rest) ||
+    Boolean(query.eligible && o.match.eligible) ||
+    Boolean(query.rest && o.possibleOnRest);
 
 export const handler = createHandler("opportunities", {
   GET: async (ctx) => {
@@ -53,7 +69,7 @@ export const handler = createHandler("opportunities", {
     const all = own ? requirements.map((r) => toOpportunity(r, own, mine, now)) : [];
 
     if (query.id) return { data: { opportunity: all[0]! } satisfies OpportunityResponse };
-    const filtered = query.eligible ? all.filter((o) => o.match.eligible) : all;
+    const filtered = all.filter(fitFilter(query));
     return {
       data: {
         opportunities: filtered.slice(query.offset, query.offset + query.limit),

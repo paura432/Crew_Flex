@@ -85,6 +85,11 @@ export interface PlanOptions {
   replace: boolean;
   /** `YYYY-MM-DD` (UTC). Past days are never generated. */
   today: string;
+  /**
+   * UTC days of confirmed assignments (BR-4.9, v1.8 `ConnectedCalendar.jsx:10`): never generated, even
+   * with `replace` — the server would refuse the whole save.
+   */
+  assigned?: ReadonlySet<string>;
 }
 
 export interface PlannedDay {
@@ -103,6 +108,7 @@ export function planCycle(
   const plan: Record<string, PlannedDay> = {};
   for (const day of days) {
     if (day.date < options.today) continue;
+    if (options.assigned?.has(day.date)) continue;
     if (!options.replace && day.windows.length > 0) continue;
     const cycle = cycleDay(pattern, options.anchor, day.date, options.custom);
     const status = cycle === "working" ? "unavailable" : options.publishRest ? "available" : null;

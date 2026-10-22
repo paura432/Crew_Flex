@@ -153,15 +153,26 @@ export function countDays(
 }
 
 /**
- * UTC days touched by confirmed assignments (D-06 «Asignación», v1.8 «Asignado»): display only — a
- * confirmation reserves nothing in the calendar and does not lock it (T-13).
+ * UTC days touched by periods (end exclusive): confirmed assignments (D-06 «Asignación», v1.8
+ * «Asignado») or opportunities. Since N-04 (BR-4.9, T-15) the days of a `confirmed` assignment are
+ * protected: not editable here and refused by the server (only `confirmed`, T-16).
  */
 export function assignmentDays(assignments: readonly { startsAt: string; endsAt: string }[]) {
   const days = new Set<string>();
   for (const a of assignments) {
     const end = Date.parse(a.endsAt);
-    for (let t = dayStart(a.startsAt.slice(0, 10)); t < end; t += 86_400_000)
+    for (let t = dayStart(a.startsAt.slice(0, 10)); t < end; t += DAY_MS)
       days.add(new Date(t).toISOString().slice(0, 10));
   }
   return days;
 }
+
+/**
+ * A calendar day can be changed: today or later (v1.8 parity) and not a day of a confirmed
+ * assignment (BR-4.9, v1.8 «Una asignación confirmada está protegida.»).
+ */
+export const canEditDay = (date: string, today: string, assigned: ReadonlySet<string>) =>
+  isDayEditable(date, today) && !assigned.has(date);
+
+/** The mini calendar's «Asignado» cell (v1.8 `.mini-day.assigned`), over any day state. */
+export const ASSIGNED_STYLE = "border-blue/40 bg-info-bg text-blue";

@@ -52,7 +52,8 @@ is not part of its accessible name (T-3).
 Typography: Inter (via `next/font`; V1.8 named Inter/Outfit but never loaded them). Body 15px/1.6, never below
 12px, with V1.8 micro-labels kept at 11 px, and only these (a design test lists the files): table headers, sidebar
 section titles (including «Ver como»), the «AVIATION» brand tag, the weekday row of the mini calendar and the state
-label inside an availability day cell. The tools workbench follows the 12 px rule with no exception (a design
+label and the «● Asignada» mark inside an availability day cell (below `sm` the mark is only the dot; its words stay in
+the cell's `aria-label`). The tools workbench follows the 12 px rule with no exception (a design
 test guards it). Headings tight tracking. Numbers
 in metrics use tabular figures.
 

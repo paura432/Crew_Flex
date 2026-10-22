@@ -6,7 +6,12 @@ import type {
   ApplicationStatus,
   ApplyBlocker,
 } from "../domain/applications.ts";
-import type { AvailabilityStatus, CycleDay, Rotation } from "../domain/availability.ts";
+import type {
+  AvailabilityConflict,
+  AvailabilityStatus,
+  CycleDay,
+  Rotation,
+} from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/documents.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
@@ -42,8 +47,11 @@ export interface ApiErrorBody {
   code: ApiErrorCode;
   message: string;
   issues?: { path: string; message: string }[];
-  /** Which server check refused a 409 on applications/opportunities (D-06; `APPLICATION_CONFLICTS`). */
-  reason?: ApplicationConflict;
+  /**
+   * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`) or an
+   * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`).
+   */
+  reason?: ApplicationConflict | AvailabilityConflict;
 }
 
 export type ApiResponse<T> =
@@ -294,6 +302,12 @@ export interface Opportunity {
   myApplication: { id: string; status: ApplicationStatus } | null;
   /** Why «Presentar candidatura» is unavailable now; null = may apply. */
   applyBlocker: ApplyBlocker | null;
+  /**
+   * v1.8 «Posible en descanso» (BR-14.1): only availability stops the caller from applying, and
+   * publishing their rest days (no window) as available would cover the period. Optional: an older
+   * function does not send it (= false).
+   */
+  possibleOnRest?: boolean;
 }
 
 export interface OpportunityListResponse {

@@ -4,6 +4,10 @@ import {
   APPLICATION_CONFLICTS,
   type ApplicationConflict,
 } from "../../../src/domain/applications.ts";
+import {
+  AVAILABILITY_CONFLICTS,
+  type AvailabilityConflict,
+} from "../../../src/domain/availability.ts";
 
 export const ERROR_STATUS = {
   UNAUTHORIZED: 401,
@@ -41,8 +45,11 @@ export class ApiError extends Error {
     readonly code: ErrorCode,
     message: string = DEFAULT_MESSAGES[code],
     readonly issues?: FieldIssue[],
-    /** Which server check refused a 409 (applications/opportunities, `APPLICATION_CONFLICTS`). */
-    readonly reason?: ApplicationConflict,
+    /**
+     * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`) or
+     * availability (`AVAILABILITY_CONFLICTS`, BR-4.9).
+     */
+    readonly reason?: ApplicationConflict | AvailabilityConflict,
   ) {
     super(message);
     this.name = "ApiError";
@@ -61,12 +68,17 @@ interface PostgrestLikeError {
 }
 
 /**
- * Our business conflicts (migration 20261022130300): SQLSTATE `CFA01`…`CFA12` are the entries of
- * `APPLICATION_CONFLICTS` in order. Custom codes, never `40001` (PostgREST retries that one forever).
+ * Our business conflicts: SQLSTATE `CFA01`…`CFA12` are the entries of `APPLICATION_CONFLICTS` in order
+ * (migration 20261022130300), `CFV01`… those of `AVAILABILITY_CONFLICTS` (20261023300000). Custom codes,
+ * never `40001` (PostgREST retries that one forever).
  */
-export function conflictReason(sqlstate: string | undefined): ApplicationConflict | undefined {
-  const match = /^CFA(\d{2})$/.exec(sqlstate ?? "");
-  return match ? APPLICATION_CONFLICTS[Number(match[1]) - 1] : undefined;
+export function conflictReason(
+  sqlstate: string | undefined,
+): ApplicationConflict | AvailabilityConflict | undefined {
+  const match = /^CF([AV])(\d{2})$/.exec(sqlstate ?? "");
+  if (!match) return undefined;
+  const list = match[1] === "A" ? APPLICATION_CONFLICTS : AVAILABILITY_CONFLICTS;
+  return list[Number(match[2]) - 1];
 }
 
 /** Maps PostgREST / Postgres errors to safe API errors. Never forwards the DB message. */

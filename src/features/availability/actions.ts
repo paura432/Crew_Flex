@@ -22,6 +22,8 @@ export type AvailabilityActionResult =
       ok: false;
       code: ApiErrorBody["code"];
       message: string;
+      /** Which server check refused a 409 (BR-4.9: `ASSIGNMENT_PROTECTED`). */
+      reason?: ApiErrorBody["reason"];
       fieldErrors?: FieldErrors;
       requestId?: string;
     };
@@ -38,6 +40,7 @@ function fromResponse(result: ApiResponse<unknown>): AvailabilityActionResult {
     ok: false,
     code: result.error.code,
     message: result.error.message,
+    ...(result.error.reason ? { reason: result.error.reason } : {}),
     fieldErrors: Object.fromEntries(
       (result.error.issues ?? []).map((issue) => [
         issue.path.split(".")[0] ?? "form",

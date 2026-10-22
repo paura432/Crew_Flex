@@ -9,8 +9,7 @@ import {
   createWorkRequirementInput,
   updateWorkRequirementInput,
 } from "@/lib/validation/work-requirement";
-import type { ApplicationConflict } from "@/domain/applications";
-import type { ApiErrorCode } from "@/types/api";
+import type { ApiErrorBody, ApiErrorCode } from "@/types/api";
 import { createRequirement, setRequirementStatus, updateRequirement } from "./api";
 
 export type CreateRequirementState =
@@ -22,7 +21,7 @@ export type CreateRequirementState =
       fieldErrors?: FieldErrors;
       requestId?: string;
       /** 409 reason (`HAS_APPLICATIONS` when editing, D-06). */
-      reason?: ApplicationConflict;
+      reason?: ApiErrorBody["reason"];
     };
 
 /**
@@ -107,7 +106,7 @@ export type RequirementStatusResult =
       message: string;
       requestId?: string;
       /** 409 reason, e.g. ACTIVE_COMMITMENTS when closing with accepted/confirmed applications. */
-      reason?: ApplicationConflict;
+      reason?: ApiErrorBody["reason"];
     };
 
 /**

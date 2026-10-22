@@ -40,6 +40,19 @@ describe("replaceDaysAction: version check on calendar save (W5-03)", () => {
     expect(replaceAvailabilityDays).toHaveBeenCalledTimes(1);
   });
 
+  it("N-04: a protected day keeps its reason, so the page can say why", async () => {
+    vi.mocked(replaceAvailabilityDays).mockResolvedValue({
+      ok: false,
+      error: { code: "CONFLICT", message: "Conflict.", reason: "ASSIGNMENT_PROTECTED" },
+      requestId: "req-2",
+    });
+    expect(await replaceDaysAction({ days }, KEY)).toMatchObject({
+      ok: false,
+      code: "CONFLICT",
+      reason: "ASSIGNMENT_PROTECTED",
+    });
+  });
+
   it("refuses a malformed version without calling the API", async () => {
     expect(await replaceDaysAction({ days, expectedVersion: "v1" }, KEY)).toMatchObject({
       ok: false,

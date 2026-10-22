@@ -4521,11 +4521,13 @@ describe("V. applications: the D-06 state machine in the database (migration 202
       );
       await refused(planned.id, SEED.managerMro, "AVAILABILITY_INCOMPLETE");
       expect((await step(tx, SEED.managerMro, aog.id, "confirmed")).status).toBe("confirmed");
-      await tx.exec("reset role");
-      await tx.query("delete from public.availability_windows where technician_profile_id = $1", [
-        SEED.delta,
-      ]);
+      // N-04 (20261023300000): the confirmed AOG assignment keeps its availability, so the AOG-only
+      // window goes only once the ordinary one covers those days too.
       await makeAvailable(tx, [SEED.delta]);
+      await tx.query(
+        "delete from public.availability_windows where technician_profile_id = $1 and status = 'aog_only'",
+        [SEED.delta],
+      );
 
       // Another organization's confirmed assignment overlaps (the AOG one above is 20–22 days out).
       const lisbon = await accepted({

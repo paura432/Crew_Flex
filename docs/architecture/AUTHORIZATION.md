@@ -56,6 +56,13 @@ the published ones (`open`, not ended) only through `list_opportunities`, a fixe
 own act). The transition RPC decides the side from the database (applicant = technician; admin/manager of the
 requirement's organization who is not the applicant = organization; anyone else gets the same `P0002` as a random id).
 
+**Protected assignment days (BR-4.9, LOCAL `20261023300000`).** The owner's availability writes stay "own", but a
+write that touches one of the owner's `confirmed` assignments is refused for everybody (`CFV01` → 409
+`ASSIGNMENT_PROTECTED`): the DEFINER trigger `protect_assignment_availability()` reads the owner's applications and
+their requirement periods (which a professional cannot SELECT), and `app_private.confirmed_assignment_overlaps(from, to)`
+(DEFINER, `authenticated` only) answers only about `auth.uid()`'s own confirmed applications — no other person's data
+and no oracle beyond what the caller already reads through RLS. No new grant on a table.
+
 ## Edge Function checklist
 
 Every protected handler, in order:

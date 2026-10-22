@@ -1,11 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { ApplicationConflict } from "@/domain/applications";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { applyInput, transitionInput } from "@/lib/validation/applications";
 import { idempotencyKeySchema } from "@/lib/validation/idempotency";
-import type { ApiErrorCode, ApiResponse } from "@/types/api";
+import type { ApiErrorBody, ApiErrorCode, ApiResponse } from "@/types/api";
 import { applyToRequirement, transitionApplication } from "./api";
 
 export type ApplicationActionResult =
@@ -15,7 +14,7 @@ export type ApplicationActionResult =
       code: ApiErrorCode;
       message: string;
       /** Which server check refused a 409 (D-06); the UI names it. */
-      reason?: ApplicationConflict;
+      reason?: ApiErrorBody["reason"];
       fieldErrors?: FieldErrors;
       requestId?: string;
     };
