@@ -123,7 +123,11 @@
       "password": "Password",
       "forgot": "Forgot your password?",
       "passwordChanged": "Password changed. Every session was signed out: sign in with your new password.",
-      "signedOut": "Signed out."
+      "signedOut": "Signed out.",
+      "accountClosed": "Account closed.",
+      "emailConfirmed": "E-mail confirmed. You can sign in now.",
+      "confirmLinkInvalid": "This link has expired, was already used or is not valid. Sign in; if your e-mail is not confirmed yet, sign up again to get a new link.",
+      "haveInvitation": "I have an invitation"
     },
     "register": {
       "title": "Create account",
@@ -146,7 +150,14 @@
       "organizationName": "Organization name",
       "organizationType": "Organization type",
       "country": "Country (ISO code)",
-      "countryHint": "e.g. ES"
+      "countryHint": "e.g. ES",
+      "invitedAs": "You have been invited to create an account of type {type}.",
+      "invitationCode": "Invitation code",
+      "invitationCodeHint": "It comes in your invitation link.",
+      "invitationCodeAsk": "Open the link in your invitation e-mail or paste its code here.",
+      "invitationOnly": "Signing up to Crew Flex is by invitation only.",
+      "invitationInvalid": "This link has expired, was already used or is not valid.",
+      "invitationContinue": "Continue"
     },
     "errors": {
       "VALIDATION_ERROR": "Check the highlighted fields.",
@@ -158,7 +169,10 @@
       "UNKNOWN": "Authentication failed. Try again.",
       "SAME_PASSWORD": "Choose a password different from the current one.",
       "RECOVERY_EXPIRED": "Your reset session has expired. Request a new link.",
-      "RATE_LIMITED": "Too many attempts. Wait a few minutes and try again."
+      "RATE_LIMITED": "Too many attempts. Wait a few minutes and try again.",
+      "INVITATION_REQUIRED": "Sign-up is by invitation only: use the link you received.",
+      "INVITATION_INVALID": "This link has expired, was already used or is not valid.",
+      "INVITATION_OTHER_EMAIL": "This invitation belongs to another e-mail address."
     },
     "orgType": {
       "mro": "MRO",
@@ -1318,7 +1332,8 @@
     "email": "Email",
     "accountType": "Account type",
     "organization": "Organization",
-    "role": "Role"
+    "role": "Role",
+    "platformRole": "Platform role"
   },
   "recruiter": {
     "eyebrow": "Recruiter",
@@ -2052,5 +2067,43 @@
     "pageInfo": "{total, plural, one {# notice} other {# notices}} · page {page} of {pages}",
     "previous": "Previous",
     "next": "Next"
+  },
+  "account": {
+    "data": {
+      "title": "Your data",
+      "export": "Export my data and files",
+      "exportHint": "A JSON file with your account, passport, qualifications, availability, applications and documents (files up to 3 MB in total; the rest are listed and downloaded from Documents). It contains no other person's data and no audit trail.",
+      "exportFailed": "The export could not be prepared. Try again.",
+      "closeTitle": "Close account",
+      "closeText": "Deletes your credentials, profile and files. Commitment and audit records are kept without the profile to settle the operational history.",
+      "closeDetails": "Your applications in progress are withdrawn. If you are an organization's last administrator, its open requirements are closed. This cannot be undone.",
+      "confirmLabel": "Type {word}",
+      "submit": "Close my account",
+      "submitting": "Closing the account…",
+      "errors": {
+        "CONFIRM_WORD": "Type {word} to confirm.",
+        "ACTIVE_COMMITMENTS": "Resolve the accepted or confirmed commitments first.",
+        "generic": "The account could not be closed. Try again."
+      },
+      "exporting": "Preparing the export…",
+      "exportReady": "Export ready."
+    },
+    "invite": {
+      "title": "Invite",
+      "description": "E-mail an invitation to create an account. It expires in 7 days and is good for one account, with that e-mail address.",
+      "off": "Sign-up is open in this environment: invitations are switched off.",
+      "email": "Invitee's e-mail",
+      "accountType": "Account type",
+      "submit": "Create invitation",
+      "submitting": "Sending…",
+      "sent": "Invitation sent to {email}.",
+      "errors": {
+        "CONFLICT": "An account with that e-mail already exists.",
+        "NOT_FOUND": "Invitations are switched off in this environment.",
+        "FORBIDDEN": "Only platform administration can invite.",
+        "VALIDATION_ERROR": "Check the highlighted fields.",
+        "generic": "The invitation could not be sent. Try again in a minute."
+      }
+    }
   }
 }

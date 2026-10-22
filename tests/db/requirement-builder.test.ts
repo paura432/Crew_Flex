@@ -712,9 +712,12 @@ describe("the new edit overload refuses everyone but the organization's admins/m
        where p.prosecdef and n.nspname in ('public', 'app_private')`,
     );
     expect(rows.length).toBeGreaterThan(20);
+    // The only anon-callable DEFINER functions: the sign-up page's invitation checks (account
+    // package, T-40; documented S-10 exception in memory-bank/04-security-invariants.md).
+    const ANON_BY_DESIGN = ["public.invitation_status", "public.invitation_signup_required"];
     for (const fn of rows) {
       expect(fn.config ?? [], fn.name).toContain('search_path=""');
-      expect(fn.anon, fn.name).toBe(false);
+      expect(fn.anon, fn.name).toBe(ANON_BY_DESIGN.includes(fn.name));
     }
   });
 });

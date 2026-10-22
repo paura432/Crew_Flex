@@ -6,8 +6,9 @@ import { Metric } from "@/components/ui/Metric";
 import { Panel } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
+import { InviteForm } from "@/features/account/components/InviteForm";
 import { getPlatformSummary } from "@/features/admin/api";
-import { canOpenQualificationReview } from "@/server/feature-flags";
+import { canOpenQualificationReview, isInvitationSignupRequired } from "@/server/feature-flags";
 import { requireSessionActor } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,13 +18,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * «Administración» view of the platform-admin switcher (owner, 2026-10-22): the platform figures
- * (v1.8 «Tu plataforma, en cifras.», counts only — commissions are SCOPE OUT), the organization
- * review, the audit trail, the qualification review (still OD-3) and the tools. 404 for anyone else.
+ * (v1.8 «Tu plataforma, en cifras.», counts only — commissions are SCOPE OUT), sign-up invitations
+ * (while the owner flag is on), the organization review, the audit trail, the qualification review
+ * (still OD-3) and the tools. 404 for anyone else.
  */
 export default async function AdminHomePage() {
   const actor = await requireSessionActor();
   if (actor.profile.platform_role !== "platform_admin") notFound();
-  const [t, summary] = await Promise.all([getTranslations("admin.home"), getPlatformSummary()]);
+  const [t, tInvite, summary, invitationOnly] = await Promise.all([
+    getTranslations("admin.home"),
+    getTranslations("account.invite"),
+    getPlatformSummary(),
+    isInvitationSignupRequired(),
+  ]);
 
   return (
     <>
@@ -78,6 +85,17 @@ export default async function AdminHomePage() {
         )}
       </section>
       <div className="grid gap-4 md:grid-cols-2">
+        {/* v1.8 «Invitar a la beta» (OD-8 default T-40): only while sign-up is by invitation. */}
+        <Panel title={tInvite("title")} className="md:col-span-2">
+          {invitationOnly ? (
+            <>
+              <p className="mb-4 max-w-prose text-sm text-muted">{tInvite("description")}</p>
+              <InviteForm />
+            </>
+          ) : (
+            <p className="text-sm text-muted">{tInvite("off")}</p>
+          )}
+        </Panel>
         <Panel title={t("organizationsTitle")}>
           <p className="mb-4 text-sm text-muted">{t("organizationsText")}</p>
           <ButtonLink href="/app/admin/organizations" variant="primary">

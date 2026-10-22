@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
+import { CloseAccountForm } from "@/features/account/components/CloseAccountForm";
+import { ExportLink } from "@/features/account/components/ExportLink";
 import { LocaleSwitcher } from "@/features/preferences/components/LocaleSwitcher";
 import { primaryMembership, requireSessionActor } from "@/server/session";
 
@@ -11,10 +13,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** Account-level settings for every signed-in user (professional or organization). */
-export default async function SettingsPage() {
-  const [actor, t, tDomain, tCommon] = await Promise.all([
+export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
+  const [actor, params, t, tData, tDomain, tCommon] = await Promise.all([
     requireSessionActor(),
+    searchParams,
     getTranslations("settings"),
+    getTranslations("account.data"),
     getTranslations("domain"),
     getTranslations("common"),
   ]);
@@ -29,6 +33,10 @@ export default async function SettingsPage() {
           [t("organization"), membership.organization.name],
           [t("role"), tDomain(`role.${membership.role}`)],
         ] as [string, string][])
+      : []),
+    // ACC-01 #4: the platform role too, only for those who have one.
+    ...(actor.profile.platform_role === "platform_admin"
+      ? ([[t("platformRole"), tDomain("platformRole.platform_admin")]] as [string, string][])
       : []),
   ];
 
@@ -51,6 +59,21 @@ export default async function SettingsPage() {
               </div>
             ))}
           </dl>
+        </Panel>
+        <Panel title={tData("title")}>
+          <div className="flex max-w-prose flex-col gap-4">
+            {params.export === "failed" && (
+              <p
+                role="alert"
+                className="rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger"
+              >
+                {tData("exportFailed")}
+              </p>
+            )}
+            <p className="text-sm text-muted">{tData("exportHint")}</p>
+            <ExportLink />
+            <CloseAccountForm />
+          </div>
         </Panel>
       </div>
     </>

@@ -123,7 +123,11 @@
       "password": "Contraseña",
       "forgot": "¿Has olvidado tu contraseña?",
       "passwordChanged": "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.",
-      "signedOut": "Sesión cerrada."
+      "signedOut": "Sesión cerrada.",
+      "accountClosed": "Cuenta cerrada.",
+      "emailConfirmed": "Correo confirmado. Ya puedes iniciar sesión.",
+      "confirmLinkInvalid": "Enlace caducado, utilizado o no válido. Inicia sesión; si tu correo no está confirmado, regístrate de nuevo para recibir otro enlace.",
+      "haveInvitation": "Tengo una invitación"
     },
     "register": {
       "title": "Crear cuenta",
@@ -146,7 +150,14 @@
       "organizationName": "Nombre de la organización",
       "organizationType": "Tipo de organización",
       "country": "País (código ISO)",
-      "countryHint": "p. ej. ES"
+      "countryHint": "p. ej. ES",
+      "invitedAs": "Te han invitado a crear una cuenta de tipo {type}.",
+      "invitationCode": "Código de invitación",
+      "invitationCodeHint": "Viene en el enlace de tu invitación.",
+      "invitationCodeAsk": "Abre el enlace de tu correo de invitación o pega aquí su código.",
+      "invitationOnly": "El alta en Crew Flex es solo por invitación.",
+      "invitationInvalid": "Enlace caducado, utilizado o no válido.",
+      "invitationContinue": "Continuar"
     },
     "errors": {
       "VALIDATION_ERROR": "Revisa los campos marcados.",
@@ -158,7 +169,10 @@
       "UNKNOWN": "La autenticación ha fallado. Inténtalo de nuevo.",
       "SAME_PASSWORD": "Elige una contraseña distinta de la actual.",
       "RECOVERY_EXPIRED": "La sesión de restablecimiento ha caducado. Solicita un enlace nuevo.",
-      "RATE_LIMITED": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
+      "RATE_LIMITED": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+      "INVITATION_REQUIRED": "El alta es solo por invitación: usa el enlace que has recibido.",
+      "INVITATION_INVALID": "Enlace caducado, utilizado o no válido.",
+      "INVITATION_OTHER_EMAIL": "La invitación pertenece a otro correo."
     },
     "orgType": {
       "mro": "MRO",
@@ -1318,7 +1332,8 @@
     "email": "Correo electrónico",
     "accountType": "Tipo de cuenta",
     "organization": "Organización",
-    "role": "Rol"
+    "role": "Rol",
+    "platformRole": "Rol de plataforma"
   },
   "recruiter": {
     "eyebrow": "Recruiter",
@@ -2052,5 +2067,43 @@
     "pageInfo": "{total, plural, one {# aviso} other {# avisos}} · página {page} de {pages}",
     "previous": "Anteriores",
     "next": "Siguientes"
+  },
+  "account": {
+    "data": {
+      "title": "Tus datos",
+      "export": "Exportar mis datos y archivos",
+      "exportHint": "Un archivo JSON con tu cuenta, tu pasaporte, tus cualificaciones, tu disponibilidad, tus candidaturas y tus documentos (los archivos, hasta 3 MB en total; los demás aparecen en la lista y se descargan desde Documentos). No incluye datos de otras personas ni la auditoría.",
+      "exportFailed": "No se ha podido preparar la exportación. Inténtalo de nuevo.",
+      "closeTitle": "Cerrar cuenta",
+      "closeText": "Elimina credenciales, perfil y archivos. Los registros de compromisos y auditoría se conservan sin el perfil para resolver el historial operativo.",
+      "closeDetails": "Tus candidaturas en curso se retiran. Si eres el último administrador de una organización, sus necesidades abiertas se cierran. No se puede deshacer.",
+      "confirmLabel": "Escribe {word}",
+      "submit": "Cerrar mi cuenta",
+      "submitting": "Cerrando la cuenta…",
+      "errors": {
+        "CONFIRM_WORD": "Escribe {word} para confirmar.",
+        "ACTIVE_COMMITMENTS": "Resuelve primero los compromisos aceptados o confirmados.",
+        "generic": "No se ha podido cerrar la cuenta. Inténtalo de nuevo."
+      },
+      "exporting": "Preparando la exportación…",
+      "exportReady": "Exportación preparada."
+    },
+    "invite": {
+      "title": "Invitar",
+      "description": "Envía por correo una invitación para crear una cuenta. Caduca en 7 días y sirve para una sola cuenta, con ese correo.",
+      "off": "El alta está abierta en este entorno: las invitaciones están desactivadas.",
+      "email": "Correo del invitado",
+      "accountType": "Tipo de cuenta",
+      "submit": "Crear invitación",
+      "submitting": "Enviando…",
+      "sent": "Invitación enviada a {email}.",
+      "errors": {
+        "CONFLICT": "Ya existe una cuenta con ese correo.",
+        "NOT_FOUND": "Las invitaciones están desactivadas en este entorno.",
+        "FORBIDDEN": "Solo la administración de la plataforma puede invitar.",
+        "VALIDATION_ERROR": "Revisa los campos marcados.",
+        "generic": "No se ha podido enviar la invitación. Inténtalo de nuevo en un minuto."
+      }
+    }
   }
 }

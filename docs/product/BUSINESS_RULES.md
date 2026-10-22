@@ -317,3 +317,19 @@ notice takes the next event about the same technician and requirement (a new sta
 applying again after withdrawing) instead of a new one. Kept 180 days
 and the newest 200 per reader (T-73). In-app
 only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) is not part of this rule yet. IMPLEMENTED (local).
+
+## BR-19 Account data rights and sign-up by invitation (PKG account; T-40, T-42, T-43) — `close_my_account` / `handle_new_user`
+
+- **Closing an account** (v1.8 `account.close`, without its partial delete): the person types the word of their UI
+  language (`CERRAR` / `CLOSE`). Refused while they have an application `accepted` or `confirmed`, or are the last
+  admin of an organization whose requirements have one (`ACTIVE_COMMITMENTS`). Applications `received`,
+  `shortlisted` or `proposed` are withdrawn explicitly (an event and an audit row each), never silently; the others
+  keep their status. An organization whose last admin closes the account closes its draft, open and paused
+  requirements (T-12 still holds: their other applications do not move). Applications, requirements and audit rows
+  stay without the profile. The same rules apply whoever deletes the account. IMPLEMENTED (local).
+- **Export** (v1.8 «Exportar mis datos y archivos»): only the person's own records, never another person's data nor
+  the audit trail; wallet files embedded (base64) while their total is ≤ 3 MiB (`filesToEmbed`, oldest first, each
+  file that still fits), the others listed. IMPLEMENTED (local).
+- **Sign-up by invitation** (owner flag `invitation_signup`, off by default): a code is valid 7 days, for one sign-up,
+  by the invited address only; the invitation decides the account type (professional or organization, never platform
+  admin); a code of another address is refused and not consumed. Without the flag, open sign-up. IMPLEMENTED (local).

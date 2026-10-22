@@ -2307,6 +2307,143 @@ ok(
     (await page.locator("main").innerText()).includes(rbTitle),
 );
 await logout();
+// PKG account (v2 diff 10 «Backlog derivado» #2–#4, #20; English UI). Needs the stack restarted with
+// this branch's supabase/config.toml (local e-mail confirmation) and Mailpit at MAILPIT_URL. Leaves no
+// data: the one account it creates is closed at the end (its audit rows stay, by design).
+{
+  const MAILPIT = process.env.MAILPIT_URL ?? "http://127.0.0.1:56324";
+  const mainText = () => page.locator("main").innerText();
+
+  // a) #20 platform role in Settings; with the flag off the «Invite» panel says sign-up is open.
+  await login("platform.admin@crewflex.test");
+  await page.goto(`${BASE}/app/settings`);
+  await page.waitForLoadState("networkidle");
+  const adminSettings = await mainText();
+  await page.goto(`${BASE}/app/admin`);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG account a: Settings shows «Platform role: Platform admin»; /app/admin «Invite» is off (open sign-up)",
+    /Platform role/i.test(adminSettings) &&
+      /Platform admin/.test(adminSettings) &&
+      /Sign-up is open in this environment/.test(await mainText()),
+    "",
+  );
+  await logout();
+
+  // b) #4 export: own records only, as a JSON attachment.
+  await login("delta@crewflex.test");
+  await page.goto(`${BASE}/app/settings`);
+  await page.waitForLoadState("networkidle");
+  const dataPanel = await mainText();
+  const [download] = await Promise.all([
+    page.waitForEvent("download", { timeout: 20000 }).catch(() => null),
+    page.getByRole("link", { name: "Export my data and files" }).click(),
+  ]);
+  await page.waitForSelector("[role=status]:has-text('Export ready.')", { timeout: 20000 });
+  const exportedName = download?.suggestedFilename();
+  const exported = await page.request.get(`${BASE}/app/settings/export`);
+  const body = exported.ok() ? await exported.json() : null;
+  ok(
+    "PKG account b: «Your data» → «Export ready.», a JSON attachment with the caller's own data only",
+    /Your data/.test(dataPanel) &&
+      exportedName === "CrewFlex-my-data.json" &&
+      /Export my data and files/.test(dataPanel) &&
+      /attachment/.test(exported.headers()["content-disposition"] ?? "") &&
+      body?.format === "crewflex-account-export/1" &&
+      body?.account?.email === "delta@crewflex.test" &&
+      Array.isArray(body?.professional?.qualifications) &&
+      !/alpha@crewflex\.test|admin\.mro@crewflex\.test/.test(JSON.stringify(body)),
+    `status=${exported.status()}`,
+  );
+  await logout();
+
+  // c) #3 a forged or reused sign-up link lands on the login with its own notice (not the reset form).
+  await page.goto(`${BASE}/auth/confirm?token_hash=x&type=signup&next=/app`);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG account c: a bad sign-up link → /login?confirmError=1 with its notice",
+    new URL(page.url()).pathname === "/login" &&
+      /expired, was already used or is not valid/.test(await mainText()),
+    page.url(),
+  );
+
+  // d) #2 off / #3: open sign-up unchanged (account type, no code); an existing address is not
+  //    enumerated; a new one gets the confirmation e-mail, whose link lands on the login.
+  await page.goto(`${BASE}/register`);
+  await page.waitForLoadState("networkidle");
+  const openForm =
+    (await page.locator("input[name=accountType]").count()) === 2 &&
+    (await page.locator("#invitationCode").count()) === 0;
+  const register = async (email) => {
+    await page.goto(`${BASE}/register`);
+    await page.waitForLoadState("networkidle");
+    await page.check("input[name=accountType][value=professional]");
+    await page.fill("#displayName", "Smoke Close");
+    await page.fill("#email", email);
+    await page.fill("#password", `${PW}-close`);
+    await page.getByRole("button", { name: "Create account" }).click();
+    await page.waitForSelector("[role=status]:has-text('Check your inbox')", { timeout: 20000 });
+  };
+  await register("delta@crewflex.test"); // existing: the same answer as a new address
+  const email = `smoke-close-${Date.now()}@crewflex.test`;
+  await register(email);
+  let link = null;
+  for (let i = 0; i < 20 && !link; i++) {
+    await page.waitForTimeout(500);
+    const found = await fetch(
+      `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`,
+    ).then(
+      (r) => (r.ok ? r.json() : null),
+      () => null,
+    );
+    const id = found?.messages?.[0]?.ID;
+    if (!id) continue;
+    const message = await fetch(`${MAILPIT}/api/v1/message/${id}`).then((r) => r.json());
+    link = /href="([^"]+)"/.exec(message.HTML ?? "")?.[1]?.replaceAll("&amp;", "&") ?? null;
+  }
+  if (link) {
+    await page.goto(link);
+    await page.waitForURL((u) => u.pathname === "/login", { timeout: 20000 });
+  }
+  ok(
+    "PKG account d: open sign-up form unchanged; Mailpit link → login «E-mail confirmed»",
+    openForm && Boolean(link) && /E-mail confirmed/.test(await mainText()),
+    link ? page.url() : "no e-mail in Mailpit",
+  );
+
+  // e) #4 close: the word of the UI language, then the account is gone and cannot sign in.
+  if (link) {
+    await page.fill("#email", email);
+    await page.fill("#password", `${PW}-close`);
+    await page.click("button[type=submit]");
+    await page.waitForURL((u) => u.pathname.startsWith("/app/"), { timeout: 30000 });
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) !== "en") {
+      await page.locator("[role=radio][lang=en]").first().click();
+      await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+    }
+    await page.locator("summary", { hasText: "Close account" }).click();
+    await page.fill("#confirm", "CERRAR");
+    await page.getByRole("button", { name: "Close my account" }).click();
+    await page.waitForSelector("text=Type CLOSE to confirm.", { timeout: 15000 });
+    await page.fill("#confirm", "CLOSE");
+    await page.getByRole("button", { name: "Close my account" }).click();
+    await page.waitForURL((u) => u.pathname === "/login", { timeout: 30000 });
+    const closedNotice = /Account closed\./.test(await mainText());
+    await page.fill("#email", email);
+    await page.fill("#password", `${PW}-close`);
+    await page.click("button[type=submit]");
+    await page.waitForSelector("[role=alert]", { timeout: 15000 });
+    ok(
+      "PKG account e: «Type CLOSE» refuses another word; closed → «Account closed.»; sign-in refused",
+      closedNotice && /Email or password is incorrect/.test(await mainText()),
+      "",
+    );
+  } else {
+    ok("PKG account e: account closure (skipped: no confirmation e-mail)", false, "");
+  }
+}
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).

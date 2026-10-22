@@ -595,3 +595,72 @@ export interface NoticeReadResponse {
   /** `{ id }`: the notice as the list shows it (the server derives its link from it). */
   notice: Notice | null;
 }
+
+// --- PKG account: own data export, account closure (M-3 default) and invitations (OD-8 default) ----
+
+/** One own record as the database returned it: only the columns the export selects, names kept. */
+export type ExportRecord = Record<string, unknown>;
+
+/** A wallet document in the export: its metadata and, while under the size cap, its bytes (base64). */
+export interface ExportedDocument extends ProfessionalDocument {
+  contentBase64: string | null;
+}
+
+/**
+ * «Exportar mis datos y archivos» (`account` GET): the caller's own records only — no other person's
+ * data, no audit trail (v1.8 B §5.10). `professional` is null for organization accounts.
+ */
+export interface AccountExport {
+  format: "crewflex-account-export/1";
+  exportedAt: string;
+  account: {
+    id: string;
+    email: string | null;
+    displayName: string;
+    accountType: "professional" | "organization";
+    platformRole: "user" | "platform_admin";
+    preferredLocale: Locale | null;
+    createdAt: string;
+  };
+  memberships: ExportRecord[];
+  professional: {
+    profile: ExportRecord;
+    qualifications: ExportRecord[];
+    reviewNotes: ExportRecord[];
+    availability: ExportRecord[];
+    rotation: ExportRecord | null;
+    applications: ExportRecord[];
+    /** Passport declarations (owner-only parts included: they are the caller's own). */
+    typeRatings: ExportRecord[];
+    privateDetails: ExportRecord | null;
+    organizationBlocks: ExportRecord[];
+    logbook: ExportRecord[];
+  } | null;
+  requirementsCreated: ExportRecord[];
+  documents: ExportedDocument[];
+  /** Documents listed without their bytes (over the size cap): download them from «Documentos». */
+  filesOmitted: number;
+}
+
+export interface AccountExportResponse {
+  export: AccountExport;
+}
+
+/** «Cerrar cuenta» (`account` DELETE). `filesPending` objects are purged later by documents-maintenance. */
+export interface AccountCloseResponse {
+  closed: true;
+  filesRemoved: number;
+  filesPending: number;
+}
+
+/** What the platform admin sees of an invitation: never its code. */
+export interface Invitation {
+  id: string;
+  email: string;
+  accountType: "professional" | "organization";
+  expiresAt: string;
+}
+
+export interface InvitationResponse {
+  invitation: Invitation;
+}

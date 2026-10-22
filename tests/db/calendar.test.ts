@@ -338,8 +338,22 @@ describe("N-04 · the days of a confirmed assignment are protected (202610233000
 
   it("account deletion still cascades: the profile's windows go without a CFV01", async () => {
     await asUser(db, null, async (tx) => {
-      await assignment(tx);
-      // Account deletion: windows and applications go with the profile; the trigger does not object.
+      const { application } = await assignment(tx);
+      // Since 20261023400100 (T-42) an account with a confirmed assignment cannot be deleted by any
+      // path (CFA11, the account rule — not this trigger's CFV01); once the assignment is resolved the
+      // deletion cascades and this trigger does not object.
+      await tx.exec("savepoint confirmed_assignment");
+      const refused = await tx.query("delete from auth.users where id = $1", [SEED.delta]).then(
+        () => null,
+        (error: { code?: string }) => error.code,
+      );
+      await tx.exec("rollback to savepoint confirmed_assignment");
+      expect(refused).toBe("CFA11");
+      await tx.query(
+        "update public.applications set status = 'cancelled', reason = 'Fixture' where id = $1",
+        [application],
+      );
+      // Account deletion: windows go with the profile; the trigger does not object.
       await tx.query("delete from auth.identities where user_id = $1", [SEED.delta]);
       await tx.query("delete from auth.users where id = $1", [SEED.delta]);
       const { rows } = await tx.query(

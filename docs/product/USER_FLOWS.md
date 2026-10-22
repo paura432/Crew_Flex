@@ -7,13 +7,29 @@
    Organization: + organization name, type, country.
 3. Supabase Auth `signUp`. Trigger `handle_new_user` creates `profiles` and either
    `technician_profiles` or `organizations` + `organization_members(role=admin)`.
-4. If the project requires email confirmation → "Check your inbox" state. Otherwise → `/app`.
+4. If the project requires email confirmation → "Check your inbox" state (also for an address that already has an
+   account: no enumeration). Otherwise → `/app`. The e-mail link lands on `/auth/confirm?next=/app` → `/login`
+   «Correo confirmado. Ya puedes iniciar sesión.» without opening a session; an expired or used link → the login
+   with its own notice (local Auth: confirmation on, T-41).
+5. **By invitation** (LOCAL, owner flag `invitation_signup`, T-40): a platform admin enters e-mail + account type in
+   «Invitar» (`/app/admin`) and sees «Invitación enviada a {email}.» (never the code). The e-mail links to
+   `/register?invite=<code>`: the form shows the code and the invitation's account type (no choice); a missing,
+   expired, used or other-address code gets its own message. Without a code, `/register` asks only for it.
 
 ## UF-2 Sign in / out (IMPLEMENTED)
 
 `/login` → email + password → `/app` → redirected to `/app/organization` or `/app/professional`
 by `account_type`. States: loading, invalid credentials, network error, success.
-Sign out from the app shell.
+Sign out from the app shell. Local Auth: sessions end 12 h after sign-in (T-44).
+
+## UF-2b Account data: export and close (IMPLEMENTED, local — PKG account, T-42/T-43)
+
+`/app/settings` → «Tus datos»: «Exportar mis datos y archivos» downloads `CrewFlex-mis-datos.json` (own records +
+wallet files up to 3 MiB) and says «Exportación preparada.» (without script the link still downloads it). With
+the invitation flag the login's «¿Sin cuenta? Crea una» becomes «Tengo una invitación». «Cerrar cuenta» (a closed disclosure): what is deleted and what stays, «Escribe CERRAR»,
+«Cerrar mi cuenta». Wrong word → «Escribe CERRAR para confirmar.»; accepted/confirmed applications → «Resuelve primero
+los compromisos aceptados o confirmados.»; success → `/login` «Cuenta cerrada.», and the account can no longer sign
+in. Platform admins also read «Rol de plataforma» in «Cuenta».
 
 ## UF-3 Organization: create requirement → capacity → matches (IMPLEMENTED — first milestone)
 

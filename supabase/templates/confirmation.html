@@ -1,0 +1,25 @@
+<!-- LOCAL Auth template (supabase/config.toml [auth.email.template.confirmation]). Production: owner.
+     Two uses: the invitation e-mail of a delivery account (metadata `invitation_delivery`, function
+     `invitations`; the account is deleted at once, so the link goes straight to the app's
+     /register?invite=<code>) and the ordinary sign-up confirmation (/auth/confirm?next=/app). -->
+{{ if .Data.invitation_delivery }}
+<h2>Crew Flex</h2>
+<p>
+  Te han invitado a crear una cuenta en Crew Flex. · You have been invited to create a Crew Flex
+  account.
+</p>
+<p><a href="{{ .RedirectTo }}">Crear mi cuenta · Create my account</a></p>
+<p>
+  La invitación caduca en 7 días y sirve para una sola cuenta con este correo. · The invitation
+  expires in 7 days and is good for one account with this e-mail address.
+</p>
+{{ else }}
+<h2>Crew Flex</h2>
+<p>
+  Confirma tu correo para activar tu cuenta. · Confirm your e-mail address to activate your account.
+</p>
+<p><a href="{{ .ConfirmationURL }}">Confirmar mi correo · Confirm my e-mail</a></p>
+<p>
+  Si no has creado una cuenta, ignora este mensaje. · If you did not sign up, ignore this message.
+</p>
+{{ end }}

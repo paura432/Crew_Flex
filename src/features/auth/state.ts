@@ -10,6 +10,12 @@ export type AuthErrorCode =
   | "RECOVERY_EXPIRED"
   | "RATE_LIMITED"
   | "NETWORK_ERROR"
+  /** Invitation-only sign-up (owner flag, T-40): no code was given. */
+  | "INVITATION_REQUIRED"
+  /** The code is unknown, expired, used or revoked (v1.8 «Enlace caducado, utilizado o no válido.»). */
+  | "INVITATION_INVALID"
+  /** The code is valid for another address; nothing was consumed (v1.8 «…pertenece a otro email.»). */
+  | "INVITATION_OTHER_EMAIL"
   | "UNKNOWN";
 
 export type AuthFormState =
@@ -63,14 +69,61 @@ export function isRecentRecovery(amr: unknown, nowSeconds: number): boolean {
   );
 }
 
+export type LoginNotice =
+  "passwordChanged" | "accountClosed" | "emailConfirmed" | "confirmLinkInvalid" | "signedOut";
+
 /**
- * Which outcome banner the login page shows, from its query: a finished password reset wins over a
- * plain sign-out (both end the session; the reset one says why).
+ * Which outcome banner the login page shows, from its query. The ones that explain why the session
+ * ended win (password reset, closed account) over the e-mail confirmation and a plain sign-out.
  */
-export function loginNotice(params: { reset?: unknown; signedOut?: unknown }) {
-  if (params.reset === "1") return "passwordChanged" as const;
-  if (params.signedOut === "1") return "signedOut" as const;
+export function loginNotice(params: {
+  reset?: unknown;
+  closed?: unknown;
+  confirmed?: unknown;
+  confirmError?: unknown;
+  signedOut?: unknown;
+}): LoginNotice | null {
+  if (params.reset === "1") return "passwordChanged";
+  if (params.closed === "1") return "accountClosed";
+  if (params.confirmed === "1") return "emailConfirmed";
+  if (params.confirmError === "1") return "confirmLinkInvalid";
+  if (params.signedOut === "1") return "signedOut";
   return null;
+}
+
+export type ConfirmLink =
+  /** Password recovery (`next=/reset-password`): open the session and go on. */
+  | { kind: "recovery"; code: string | null; tokenHash: string | null }
+  /** Sign-up confirmation, already verified by Auth (a PKCE `code` exists only after that). */
+  | { kind: "signup_confirmed" }
+  /** Sign-up confirmation by `token_hash` (custom e-mail template): verify it, keep no session. */
+  | { kind: "signup_token"; tokenHash: string; type: "signup" | "email" }
+  | { kind: "invalid" };
+
+/**
+ * What an e-mail link that lands on `/auth/confirm` is (AUTH-03). Recovery links name their own
+ * destination; every other link is a sign-up confirmation (`emailRedirectTo = /auth/confirm?next=/app`),
+ * which never opens a session here: the person signs in afterwards (no login CSRF through a link), and
+ * an expired or reused one says so on the login page instead of the password-reset form.
+ */
+export function confirmLink(params: {
+  next: string;
+  code: string | null;
+  tokenHash: string | null;
+  type: string | null;
+}): ConfirmLink {
+  if (params.next === "/reset-password") {
+    return {
+      kind: "recovery",
+      code: params.code,
+      tokenHash: params.type === "recovery" ? params.tokenHash : null,
+    };
+  }
+  if (params.code) return { kind: "signup_confirmed" };
+  if (params.tokenHash && (params.type === "signup" || params.type === "email")) {
+    return { kind: "signup_token", tokenHash: params.tokenHash, type: params.type };
+  }
+  return { kind: "invalid" };
 }
 
 export interface AuthErrorLike {

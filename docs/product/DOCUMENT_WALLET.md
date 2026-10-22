@@ -94,6 +94,12 @@ after the grace period), `operator_delete` (anyone else, e.g. SQL by an operator
 `orphan_upload` (created by reconciliation, below). So the licence scans of a deleted account no longer stay in
 the bucket forever: they become due after the grace period.
 
+**«Cerrar cuenta» (PKG account, LOCAL `20261023400100`, T-42).** The person's own closure deletes their document rows
+**as the owner** before the account (tombstones `owner_delete`, due at once — the person asked for the erasure), and
+the `account` function then removes those objects with the person's own token (own folder, no row points at them).
+Whatever Storage leaves is purged by the next `documents-maintenance` run. Only a deletion that skips the button
+(operator, Auth Admin API) takes the `account_deleted` grace.
+
 **Reconciliation.** `document_maintenance_batch` lists objects of the bucket that **no row and no open
 tombstone** reference and that are older than the orphan grace (24 h — a POST may still be committing its row,
 review L-1). Dry-run lists them; apply records `orphan_upload` tombstones. An object that a row references is

@@ -25,6 +25,12 @@ pnpm exec supabase functions serve --env-file supabase/functions/.env       # ev
 pnpm dev                                                                    # http://localhost:3000 (or 3001)
 ```
 
+Local Auth (since PKG account, `supabase/config.toml`): **e-mail confirmation is on** and sessions end **12 h** after
+sign-in. A new sign-up gets its link in Mailpit (http://127.0.0.1:56324; API `/api/v1/search?query=to:"<email>"`);
+seed and E2E accounts are created confirmed. Sign-up by invitation stays off until the owner-only row
+`app_private.feature_flags('invitation_signup', true)` exists (`scripts/local/db-owner-sql.sh`). Auth settings are
+read at `supabase start`: restart the stack after changing them.
+
 Re-seed from scratch (destroys only the local Docker database, asks for confirmation):
 
 ```bash

@@ -225,7 +225,9 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# LOCAL: on, as v1.8 (AUTH-03, OD-8 default T-41); the link lands on /auth/confirm?next=/app.
+# Production Auth (confirmation, redirect URL, template) is the owner's setting.
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -244,6 +246,12 @@ otp_expiry = 3600
 # pass = "env(SENDGRID_API_KEY)"
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
+
+# LOCAL (T-40/T-41): sign-up confirmation, and the invitation e-mail sent to a short-lived delivery
+# account (metadata `invitation_delivery`, `invitations` function). Production template: owner.
+[auth.email.template.confirmation]
+subject = "Crew Flex"
+content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -271,9 +279,10 @@ max_frequency = "5s"
 # 4152127777 = "123456"
 
 # Configure logged in session timeouts.
-# [auth.sessions]
+# LOCAL: 12 h from sign-in, as v1.8 (AUTH-05 #2, T-44). Production session limits are the owner's.
+[auth.sessions]
 # Force log out after the specified duration.
-# timebox = "24h"
+timebox = "12h"
 # Force log out if the user has been inactive longer than the specified duration.
 # inactivity_timeout = "8h"
 
@@ -492,5 +501,15 @@ import_map = "./functions/deno.json"
 
 # Local only, not deployed: in-app notices (v2-18). Deploy only after migration 20261023800000.
 [functions.notifications]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+# Local only, not deployed (PKG account): own data export + account closure, and sign-up invitations
+# (platform admin; 404 unless the owner-only DB flag `invitation_signup` is on). Neither reads a privileged key.
+[functions.account]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+[functions.invitations]
 verify_jwt = false
 import_map = "./functions/deno.json"

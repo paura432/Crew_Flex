@@ -6,6 +6,61 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      account_invitations: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"];
+          code_hash: string;
+          consumed_at: string | null;
+          consumed_by: string | null;
+          created_at: string;
+          created_by: string | null;
+          email: string;
+          expires_at: string;
+          id: string;
+          revoked_at: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          account_type: Database["public"]["Enums"]["account_type"];
+          code_hash: string;
+          consumed_at?: string | null;
+          consumed_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          email: string;
+          expires_at: string;
+          id?: string;
+          revoked_at?: string | null;
+        };
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"];
+          code_hash?: string;
+          consumed_at?: string | null;
+          consumed_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          revoked_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "account_invitations_consumed_by_fkey";
+            columns: ["consumed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "account_invitations_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       application_events: {
         Row: {
           actor: string;
@@ -97,7 +152,7 @@ export type Database = {
           reason: string | null;
           requirement_id: string;
           status: Database["public"]["Enums"]["application_status"];
-          technician_profile_id: string;
+          technician_profile_id: string | null;
           updated_at: string;
         };
         ComputedFields: never;
@@ -109,7 +164,7 @@ export type Database = {
           reason?: string | null;
           requirement_id: string;
           status?: Database["public"]["Enums"]["application_status"];
-          technician_profile_id: string;
+          technician_profile_id?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -120,7 +175,7 @@ export type Database = {
           reason?: string | null;
           requirement_id?: string;
           status?: Database["public"]["Enums"]["application_status"];
-          technician_profile_id?: string;
+          technician_profile_id?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -925,47 +980,65 @@ export type Database = {
       };
       work_requirements: {
         Row: {
+          archived_at: string | null;
+          conditions: Json | null;
+          country: string | null;
           created_at: string;
-          created_by: string;
+          created_by: string | null;
+          description: string | null;
           ends_at: string;
           headcount: number;
           id: string;
           location: string;
           organization_id: string;
           shift: Database["public"]["Enums"]["shift_type"];
+          shifts: Json | null;
           starts_at: string;
           status: Database["public"]["Enums"]["requirement_status"];
+          timezone: string | null;
           title: string;
           updated_at: string;
           urgency: Database["public"]["Enums"]["requirement_urgency"];
         };
         ComputedFields: never;
         Insert: {
+          archived_at?: string | null;
+          conditions?: Json | null;
+          country?: string | null;
           created_at?: string;
-          created_by: string;
+          created_by?: string | null;
+          description?: string | null;
           ends_at: string;
           headcount: number;
           id?: string;
           location: string;
           organization_id: string;
           shift?: Database["public"]["Enums"]["shift_type"];
+          shifts?: Json | null;
           starts_at: string;
           status?: Database["public"]["Enums"]["requirement_status"];
+          timezone?: string | null;
           title: string;
           updated_at?: string;
           urgency?: Database["public"]["Enums"]["requirement_urgency"];
         };
         Update: {
+          archived_at?: string | null;
+          conditions?: Json | null;
+          country?: string | null;
           created_at?: string;
-          created_by?: string;
+          created_by?: string | null;
+          description?: string | null;
           ends_at?: string;
           headcount?: number;
           id?: string;
           location?: string;
           organization_id?: string;
           shift?: Database["public"]["Enums"]["shift_type"];
+          shifts?: Json | null;
           starts_at?: string;
           status?: Database["public"]["Enums"]["requirement_status"];
+          timezone?: string | null;
           title?: string;
           updated_at?: string;
           urgency?: Database["public"]["Enums"]["requirement_urgency"];
@@ -1004,9 +1077,33 @@ export type Database = {
           replayed: boolean;
         }[];
       };
+      archive_work_requirement: {
+        Args: { p_id: string };
+        Returns: {
+          archived_at: string;
+          id: string;
+          status: Database["public"]["Enums"]["requirement_status"];
+        }[];
+      };
       availability_version: { Args: Record<PropertyKey, never>; Returns: string };
       can_view_member: { Args: { p_profile_id: string }; Returns: boolean };
+      close_my_account: {
+        Args: { p_request_id?: string };
+        Returns: {
+          storage_path: string;
+        }[];
+      };
       count_my_unread_notifications: { Args: Record<PropertyKey, never>; Returns: number };
+      count_viable_candidates: {
+        Args: {
+          p_ends_at: string;
+          p_hard_type_ids: string[];
+          p_organization_id: string;
+          p_starts_at: string;
+          p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+        };
+        Returns: number;
+      };
       create_availability_window: {
         Args: {
           p_ends_at: string;
@@ -1017,6 +1114,18 @@ export type Database = {
         Returns: {
           id: string;
           replayed: boolean;
+        }[];
+      };
+      create_invitation: {
+        Args: {
+          p_account_type: Database["public"]["Enums"]["account_type"];
+          p_email: string;
+          p_request_id?: string;
+        };
+        Returns: {
+          code: string;
+          expires_at: string;
+          invitation_id: string;
         }[];
       };
       create_logbook_entry: {
@@ -1053,38 +1162,84 @@ export type Database = {
           replayed: boolean;
         }[];
       };
-      create_work_requirement: {
-        Args: {
-          p_ends_at: string;
-          p_headcount: number;
-          p_location: string;
-          p_organization_id: string;
-          p_qualifications: Json;
-          p_shift: Database["public"]["Enums"]["shift_type"];
-          p_starts_at: string;
-          p_title: string;
-          p_urgency: Database["public"]["Enums"]["requirement_urgency"];
-        };
-        Returns: string;
-      };
-      create_work_requirement_idempotent: {
-        Args: {
-          p_ends_at: string;
-          p_headcount: number;
-          p_idempotency_key: string;
-          p_location: string;
-          p_organization_id: string;
-          p_qualifications: Json;
-          p_shift: Database["public"]["Enums"]["shift_type"];
-          p_starts_at: string;
-          p_title: string;
-          p_urgency: Database["public"]["Enums"]["requirement_urgency"];
-        };
-        Returns: {
-          id: string;
-          replayed: boolean;
-        }[];
-      };
+      create_work_requirement:
+        | {
+            Args: {
+              p_ends_at: string;
+              p_headcount: number;
+              p_location: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_starts_at: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: string;
+          }
+        | {
+            Args: {
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_headcount: number;
+              p_location: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: string;
+          };
+      create_work_requirement_idempotent:
+        | {
+            Args: {
+              p_ends_at: string;
+              p_headcount: number;
+              p_idempotency_key: string;
+              p_location: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_starts_at: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              id: string;
+              replayed: boolean;
+            }[];
+          }
+        | {
+            Args: {
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_headcount: number;
+              p_idempotency_key: string;
+              p_location: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              id: string;
+              replayed: boolean;
+            }[];
+          };
       declare_qualification: {
         Args: {
           p_expires_at: string;
@@ -1117,6 +1272,10 @@ export type Database = {
       document_purge_record: {
         Args: { p_error: string; p_outcome: string; p_tombstone_id: string };
         Returns: undefined;
+      };
+      finish_invitation_delivery: {
+        Args: { p_invitation_id: string; p_request_id?: string; p_sent: boolean };
+        Returns: number;
       };
       get_application_counts: {
         Args: { p_organization_id: string };
@@ -1229,6 +1388,14 @@ export type Database = {
         };
         Returns: boolean;
       };
+      invitation_signup_required: { Args: Record<PropertyKey, never>; Returns: boolean };
+      invitation_status: {
+        Args: { p_code: string; p_email?: string };
+        Returns: {
+          account_type: Database["public"]["Enums"]["account_type"];
+          status: string;
+        }[];
+      };
       is_feature_enabled: { Args: { p_name: string }; Returns: boolean };
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean };
       is_platform_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -1247,7 +1414,10 @@ export type Database = {
           p_urgency?: Database["public"]["Enums"]["requirement_urgency"];
         };
         Returns: {
+          conditions: Json;
+          country: string;
           created_at: string;
+          description: string;
           ends_at: string;
           headcount: number;
           id: string;
@@ -1255,7 +1425,9 @@ export type Database = {
           organization_name: string;
           qualifications: Json;
           shift: Database["public"]["Enums"]["shift_type"];
+          shifts: Json;
           starts_at: string;
+          time_zone: string;
           title: string;
           total: number;
           urgency: Database["public"]["Enums"]["requirement_urgency"];
@@ -1369,25 +1541,51 @@ export type Database = {
         };
         Returns: string;
       };
-      update_work_requirement: {
-        Args: {
-          p_ends_at: string;
-          p_expected_updated_at: string;
-          p_headcount: number;
-          p_id: string;
-          p_location: string;
-          p_qualifications: Json;
-          p_shift: Database["public"]["Enums"]["shift_type"];
-          p_starts_at: string;
-          p_title: string;
-          p_urgency: Database["public"]["Enums"]["requirement_urgency"];
-        };
-        Returns: {
-          changed: string[];
-          id: string;
-          updated_at: string;
-        }[];
-      };
+      update_work_requirement:
+        | {
+            Args: {
+              p_ends_at: string;
+              p_expected_updated_at: string;
+              p_headcount: number;
+              p_id: string;
+              p_location: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_starts_at: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              changed: string[];
+              id: string;
+              updated_at: string;
+            }[];
+          }
+        | {
+            Args: {
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_expected_updated_at: string;
+              p_headcount: number;
+              p_id: string;
+              p_location: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              changed: string[];
+              id: string;
+              updated_at: string;
+            }[];
+          };
     };
     Enums: {
       account_type: "professional" | "organization";

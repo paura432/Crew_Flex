@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 import { loginNotice } from "@/features/auth/state";
+import { isInvitationSignupRequired } from "@/server/feature-flags";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
@@ -10,7 +11,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const [params, t] = await Promise.all([searchParams, getTranslations("auth.signIn")]);
+  const [params, t, invitationOnly] = await Promise.all([
+    searchParams,
+    getTranslations("auth.signIn"),
+    isInvitationSignupRequired(),
+  ]);
   const { next } = params;
   const notice = loginNotice(params);
   return (
@@ -19,8 +24,12 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       <p className="mb-6 text-muted">{t("lead")}</p>
       {notice && (
         <p
-          role="status"
-          className="mb-4 rounded-lg border border-ok/30 bg-ok-bg px-4 py-3 text-sm text-ok"
+          role={notice === "confirmLinkInvalid" ? "alert" : "status"}
+          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+            notice === "confirmLinkInvalid"
+              ? "border-danger/30 bg-danger-bg text-danger"
+              : "border-ok/30 bg-ok-bg text-ok"
+          }`}
         >
           {t(notice)}
         </p>
@@ -35,9 +44,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </Link>
       </p>
       <p className="mt-6 text-sm text-muted">
-        {t("noAccount")}{" "}
+        {/* AUTH-01 #10: with sign-up by invitation (T-40) the way in is v1.8's «Tengo una invitación». */}
+        {invitationOnly ? null : `${t("noAccount")} `}
         <Link href="/register" className="font-semibold text-blue hover:underline">
-          {t("createOne")}
+          {invitationOnly ? t("haveInvitation") : t("createOne")}
         </Link>
       </p>
     </>

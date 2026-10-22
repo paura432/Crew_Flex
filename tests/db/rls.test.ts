@@ -4937,7 +4937,10 @@ describe("V. applications: the D-06 state machine in the database (migration 202
     });
   });
 
-  it("deleting a technician or an organization cascades their applications, proposals and events", async () => {
+  // Account deletion keeps the technician's applications without them and refuses while one is
+  // confirmed (T-42, migration 20261023400100 — supersedes the cascade + seat release of LOW-2); deleting
+  // an organization still cascades its requirements' applications, proposals and events.
+  it("an account never takes a confirmed seat with it; deleting an organization cascades its applications", async () => {
     await db
       .transaction(async (owner) => {
         const need = await createNeed(owner, {
@@ -4948,10 +4951,23 @@ describe("V. applications: the D-06 state machine in the database (migration 202
         });
         const delta = await seedApplication(owner, need, SEED.delta, "confirmed");
         const echo = await seedApplication(owner, need, SEED.echo, "proposed");
-        await owner.query("delete from auth.identities where user_id = $1", [SEED.delta]);
-        await owner.query("delete from auth.users where id = $1", [SEED.delta]); // account deletion
-        // The confirmed seat went with the account: the requirement is open again (review LOW-2).
-        expect(await requirementStatus(owner, need)).toBe("open");
+        expect(
+          (await sqlError(owner, "delete from auth.users where id = $1", [SEED.delta])).code,
+        ).toBe("CFA11"); // account deletion while confirmed
+        expect(await requirementStatus(owner, need)).toBe("covered");
+        await owner.query("delete from auth.users where id = $1", [SEED.echo]);
+        expect(
+          (
+            await owner.query(
+              "select status, technician_profile_id from public.applications where id = $1",
+              [echo],
+            )
+          ).rows,
+        ).toEqual([{ status: "withdrawn", technician_profile_id: null }]);
+        expect(
+          await rowCount(owner, "select 1 from public.applications where id = $1", [delta]),
+        ).toBe(1);
+        await owner.query("delete from public.organizations where id = $1", [mroId]);
         expect(
           await rowCount(owner, "select 1 from public.applications where id = $1", [delta]),
         ).toBe(0);
@@ -4962,7 +4978,6 @@ describe("V. applications: the D-06 state machine in the database (migration 202
             [delta],
           ),
         ).toBe(0);
-        await owner.query("delete from public.organizations where id = $1", [mroId]);
         expect(
           await rowCount(owner, "select 1 from public.applications where id = $1", [echo]),
         ).toBe(0);
