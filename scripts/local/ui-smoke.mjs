@@ -1091,6 +1091,95 @@ await page.fill("#baseLocation", foxtrotBase);
 await page.click("main form button[type=submit]");
 await page.waitForSelector("[role=status]:has-text('Passport updated')", { timeout: 15000 });
 
+// 28 (area-40 v2 backlog L-1…L-4, T-3): the learning tools render and take one interaction each;
+// nothing leaves localhost (the external translator link is checked, never followed).
+await page.goto(`${BASE}/app/tools`);
+await page.waitForLoadState("networkidle");
+ok(
+  "28a tools home: v1.8 tile order with the learning tools (fuel still out, D-11)",
+  (await page.locator("main section:not([aria-labelledby]) h2").allInnerTexts()).join("|") ===
+    "Daily challenge|Translator|Torque|Conversions|English and acronyms|Duration",
+);
+await page.goto(`${BASE}/app/tools/knowledge`);
+await page.waitForLoadState("networkidle");
+const knowledgeSearch = page.getByRole("searchbox", { name: "Search term, acronym or ATA" });
+await knowledgeSearch.fill(" amm ");
+await page.getByRole("button", { name: /^AMM/ }).first().click();
+const knowledgeText = await page.locator("main").innerText();
+ok(
+  "28b English and acronyms: 102 entries, accent/space-free search, entry with «Copy entry»",
+  /102 entries · 46 reference chapters/.test(knowledgeText) &&
+    /Aircraft Maintenance Manual/.test(knowledgeText) &&
+    (await page.getByRole("button", { name: "Copy entry" }).isVisible()),
+);
+await page.getByRole("button", { name: "ATA index" }).click();
+await knowledgeSearch.fill("hidraulica");
+ok(
+  "28c ATA index ignores accents: «hidraulica» → 29 Energía hidráulica",
+  (await page.locator("main ul[lang=es] li").allInnerTexts())
+    .map((x) => x.replace(/\s+/g, " ").trim())
+    .join("|") === "29 Energía hidráulica",
+);
+await page.goto(`${BASE}/app/tools/translator`);
+await page.waitForLoadState("networkidle");
+await page.fill("#translator-text", "torque");
+await page.getByText("Translate free text with Google Translate").click();
+const externalLink = page.locator("main a[href^='https://translate.google.com/']");
+const linkBeforeConsent = await externalLink.count();
+await page.getByLabel("I want to send this text to Google to translate it.").check();
+ok(
+  "28d translator: «torque» → «Par de apriete»; the external link only after the consent tick",
+  /Par de apriete/.test(await page.locator("main [aria-live]").first().innerText()) &&
+    linkBeforeConsent === 0 &&
+    (await externalLink.getAttribute("href")) ===
+      "https://translate.google.com/?sl=en&tl=es&text=torque&op=translate",
+);
+await page.goto(`${BASE}/app/tools/daily`);
+await page.waitForLoadState("networkidle");
+await page.getByRole("button", { name: "Start today's challenge" }).click();
+await page.locator("main [role=group][aria-label=Answers] button").first().click();
+await page.getByRole("button", { name: "Confirm answer" }).click();
+const learningKeys = await page.evaluate(() =>
+  Object.keys(localStorage).filter((k) => k.startsWith("crewflex-learning-")),
+);
+ok(
+  "28e daily challenge: start, answer, explanation, progress stored under the user's id",
+  /Question 2 of 5/.test(await page.locator("main").innerText()) &&
+    /Previous answer correct|Review of the previous answer/.test(
+      (await page.locator("main [role=status]").allInnerTexts()).join(" "),
+    ) &&
+    learningKeys.length === 1 &&
+    /^crewflex-learning-[0-9a-f-]{36}$/.test(learningKeys[0]),
+  learningKeys.join(","),
+);
+// T-3: the «▸/▾» drawn by `summary.flex::before` stays out of the accessible name (Chromium AX tree).
+const axSession = await ctx.newCDPSession(page);
+const disclosureNames = async () =>
+  (await axSession.send("Accessibility.getFullAXTree")).nodes
+    .filter((n) => n.role?.value === "DisclosureTriangle")
+    .map((n) => n.name?.value ?? "");
+await page.goto(`${BASE}/app/tools/convert`);
+await page.waitForLoadState("networkidle");
+const summaryNames = await disclosureNames();
+await page.goto(`${BASE}/app/professional`);
+await page.waitForLoadState("networkidle");
+summaryNames.push(...(await disclosureNames()));
+await axSession.detach();
+ok(
+  "28f summaries named «Formula, sources and scope» / «The 7 profile items», without ▸ or ▾ (T-3)",
+  summaryNames.includes("Formula, sources and scope") &&
+    summaryNames.includes("The 7 profile items") &&
+    !summaryNames.some((n) => /[▸▾]/.test(n)),
+  summaryNames.join(" | "),
+);
+ok(
+  "28g Mi espacio: «Learning achievements» with the medals and the no-authority notice",
+  await page
+    .locator("main section", { hasText: "Learning achievements" })
+    .getByText("grant no signing authority", { exact: false })
+    .isVisible(),
+);
+
 // 6e. Overview separates profile completeness from verification (8.2); mobile nav shows every item (8.3)
 await page.goto(`${BASE}/app/professional`);
 await page.waitForLoadState("networkidle");
