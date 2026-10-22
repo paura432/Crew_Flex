@@ -1,3 +1,5 @@
+import { EU_COUNTRIES, type EuCountry } from "./organization.ts";
+
 export const SHIFTS = ["day", "night", "split", "flexible"] as const;
 export type Shift = (typeof SHIFTS)[number];
 
@@ -25,36 +27,8 @@ export const MAX_REQUIREMENT_DAYS = 366;
  * The job's country (v1.8 `server/rules.mjs:1`, OD-6/D-04 default T-61): the 27 EU members, ISO 3166-1 alpha-2.
  * Mirrored by the CHECK `work_requirements_country_eu` (PGlite suite requirement-builder compares both).
  */
-export const EU_COUNTRIES = [
-  "AT",
-  "BE",
-  "BG",
-  "HR",
-  "CY",
-  "CZ",
-  "DK",
-  "EE",
-  "FI",
-  "FR",
-  "DE",
-  "GR",
-  "HU",
-  "IE",
-  "IT",
-  "LV",
-  "LT",
-  "LU",
-  "MT",
-  "NL",
-  "PL",
-  "PT",
-  "RO",
-  "SK",
-  "SI",
-  "ES",
-  "SE",
-] as const;
-export type EuCountry = (typeof EU_COUNTRIES)[number];
+// One list for the organization's country (admin-org, T-51) and the job's country: re-exported, not copied.
+export { EU_COUNTRIES, type EuCountry };
 export const DEFAULT_COUNTRY: EuCountry = "ES";
 
 /**

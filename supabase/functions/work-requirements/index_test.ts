@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { parseValue } from "../_shared/validation.ts";
+import { MAX_BODY_BYTES, MAX_REQUIREMENT_BODY_BYTES, parseValue } from "../_shared/validation.ts";
 import {
   createWorkRequirementInput,
   updateWorkRequirementInput,
@@ -131,6 +131,51 @@ Deno.test("an edit saves a draft as a draft or publishes it, never another statu
     updateArgs(parseValue({ ...base, intent }, updateWorkRequirementInput)).p_status;
   assertEquals([status(), status("draft"), status("publish")], [null, "draft", "open"]);
 });
+
+Deno.test(
+  "the largest valid requirement body fits in its 128 KB limit (366 shifts, 4000 × 3-byte characters)",
+  () => {
+    const day = (i: number) => new Date(Date.UTC(2031, 0, 1) + i * 86_400_000).toISOString();
+    const shifts = Array.from({ length: 366 }, (_, i) => ({
+      startsAt: day(i).replace("T00:00:00.000Z", "T08:00:00.000Z"),
+      endsAt: day(i).replace("T00:00:00.000Z", "T16:00:00.000Z"),
+      baseHours: 7.75,
+    }));
+    const body = {
+      ...builderInput,
+      title: "x".repeat(120),
+      location: "x".repeat(80),
+      startsAt: shifts[0]!.startsAt,
+      endsAt: shifts.at(-1)!.endsAt,
+      timeZone: "UTC",
+      description: "€".repeat(4000),
+      shifts,
+      qualifications: Array.from({ length: 20 }, (_, i) => ({
+        qualificationTypeId: `11111111-1111-4111-8111-${String(i).padStart(12, "0")}`,
+        level: "hard",
+      })),
+      conditions: {
+        hourlyRate: 1999.99,
+        overtimeRate: 1999.99,
+        perDiem: 1999.99,
+        shiftHours: 23.75,
+        contractType: "temporary",
+        budgetMandatory: true,
+        maxMobilizationHours: 168,
+        arrival: "€".repeat(160),
+        flights: false,
+        accommodation: false,
+        localTransport: false,
+        meals: false,
+        ownTools: false,
+      },
+    };
+    parseValue(body, createWorkRequirementInput); // valid (throws otherwise)
+    const bytes = new TextEncoder().encode(JSON.stringify({ ...body, intent: "publish" })).length;
+    assertEquals(bytes < MAX_REQUIREMENT_BODY_BYTES, true, `${bytes} bytes`);
+    assertEquals(bytes > MAX_BODY_BYTES, true); // why the default 32 KB is not enough
+  },
+);
 
 Deno.test("work-requirements PATCH (archive) rejects unauthenticated requests", async () => {
   const restore = silence();

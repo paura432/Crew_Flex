@@ -139,11 +139,9 @@ export const handler = createHandler("work-requirements", {
 
   POST: async (ctx) => {
     const actor = await requireActor(ctx);
-    const input = await parseJsonBody(
-      ctx.req,
-      createWorkRequirementInput,
-      { maxBytes: MAX_REQUIREMENT_BODY_BYTES },
-    );
+    const input = await parseJsonBody(ctx.req, createWorkRequirementInput, {
+      maxBytes: MAX_REQUIREMENT_BODY_BYTES,
+    });
     await requireOrganizationRole(actor, input.organizationId, ["admin", "manager"]);
 
     const key = idempotencyKey(ctx.req);
@@ -202,11 +200,9 @@ export const handler = createHandler("work-requirements", {
 
   PUT: async (ctx) => {
     const actor = await requireActor(ctx);
-    const input = await parseJsonBody(
-      ctx.req,
-      updateWorkRequirementInput,
-      { maxBytes: MAX_REQUIREMENT_BODY_BYTES },
-    );
+    const input = await parseJsonBody(ctx.req, updateWorkRequirementInput, {
+      maxBytes: MAX_REQUIREMENT_BODY_BYTES,
+    });
     const current = await loadRequirement(actor, input.id); // hidden and missing → 404
     await requireOrganizationRole(actor, current.organizationId, ["admin", "manager"]);
     const { error } = await actor.client.rpc("update_work_requirement", updateArgs(input));

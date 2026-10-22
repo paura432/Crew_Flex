@@ -423,9 +423,12 @@ $$;
 
 -- «{n} candidatos con requisitos y bloques viables» (v1.8 Company2.jsx:112,125; T-66) for the builder's period,
 -- urgency and hard qualifications, saved or not: internal members of the organization (any visibility, BR-7
--- internal pool) plus external professionals with `anonymous` or `open` visibility (never `private`, S-7) who pass
--- the hard filters. A COUNT only — no ids, names or data (what matching already shows pseudonymously for a saved
--- requirement). Admin/manager of the organization only; anything else 42501.
+-- internal pool) plus the external candidates app_private.ranked_external_pool admits — `anonymous`/`open`, or
+-- `verified_orgs` when the organization's review is registered (BR-8, 20261023500200), never `private` (S-7), never
+-- one who blocked this organization (N-08, 20261023100300) — who pass the hard filters. The same candidate predicate
+-- as that pool (PGlite suite requirement-builder compares both on a saved requirement). A COUNT only — no ids, names
+-- or data (what matching already shows pseudonymously for a saved requirement). Admin/manager of the organization
+-- only; anything else 42501.
 create function public.count_viable_candidates(
   p_organization_id uuid,
   p_starts_at timestamptz,
@@ -461,7 +464,14 @@ begin
     on m.organization_id = p_organization_id and m.profile_id = tp.profile_id
   cross join lateral app_private.hard_eligibility_for(
     p_starts_at, p_ends_at, p_urgency, p_hard_type_ids, tp.profile_id) as e
-  where (m.profile_id is not null or tp.visibility in ('anonymous', 'open'))
+  where (m.profile_id is not null
+         or ((tp.visibility in ('anonymous', 'open')
+              or (tp.visibility = 'verified_orgs'
+                  and exists (select 1 from public.organizations o
+                              where o.id = p_organization_id and o.review_status = 'reviewed')))
+             and not exists (select 1 from public.technician_organization_blocks b
+                             where b.technician_profile_id = tp.profile_id
+                               and b.organization_id = p_organization_id)))
     -- cheap prefilter: holds the first hard type, active and verified
     and exists (
       select 1 from public.technician_qualifications tq

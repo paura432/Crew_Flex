@@ -907,6 +907,70 @@ describe("live count of viable candidates (v2-13, T-66)", () => {
     });
   });
 
+  it("counts exactly the pool's candidates: internal + ranked_external_pool, blocks and «verified_orgs» included", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await makeAvailable(tx, [SEED.delta, SEED.echo, SEED.hotelPrivate, SEED.alpha]);
+      const { id } = await create(tx, SEED.adminMro, {
+        qualifications: [
+          { qualification_type_id: b11, requirement_level: "hard" },
+          { qualification_type_id: a320, requirement_level: "hard" },
+        ],
+      });
+      const envelope = shiftEnvelope(threeDays())!;
+      const poolTruth = async () => {
+        await tx.exec("reset role");
+        const { rows } = await tx.query<{ n: number }>(
+          `select (select count(*)::int from app_private.ranked_external_pool($1) where hard_eligible)
+                + (select count(*)::int from public.organization_members m
+                   join public.technician_profiles tp on tp.profile_id = m.profile_id
+                   cross join lateral app_private.hard_eligibility($1, tp.profile_id) e
+                   where m.organization_id = $2 and e.qualifications_ok and e.availability_ok) as n`,
+          [id, mroId],
+        );
+        return rows[0]!.n;
+      };
+      const count = async () => {
+        await actAs(tx, SEED.managerMro);
+        return (
+          await tx.query<{ n: number }>(COUNT, [
+            mroId,
+            envelope.startsAt,
+            envelope.endsAt,
+            "planned",
+            [b11, a320],
+          ])
+        ).rows[0]!.n;
+      };
+      const base = await count();
+      expect(base).toBe(await poolTruth());
+      // N-08: echo blocks Demo MRO → leaves the pool and the count alike.
+      await tx.exec("reset role");
+      await tx.query(
+        "insert into public.technician_organization_blocks (technician_profile_id, organization_id) values ($1, $2)",
+        [SEED.echo, mroId],
+      );
+      expect(await count()).toBe(base - 1);
+      expect(await count()).toBe(await poolTruth());
+      // BR-8: hotel as «verified_orgs» counts only once the organization's review is registered.
+      await tx.query(
+        "update public.technician_profiles set visibility = 'verified_orgs' where profile_id = $1",
+        [SEED.hotelPrivate],
+      );
+      await tx.query(
+        "update public.organizations set review_status = 'pending', reviewed_at = null where id = $1",
+        [mroId],
+      );
+      const pending = await count();
+      expect(pending).toBe(await poolTruth());
+      await tx.query(
+        "update public.organizations set review_status = 'reviewed', reviewed_at = now() where id = $1",
+        [mroId],
+      );
+      expect(await count()).toBe(pending + 1);
+      expect(await count()).toBe(await poolTruth());
+    });
+  });
+
   it("only for a period that has not started (no probing of the past)", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       await actAs(tx, SEED.adminMro);
