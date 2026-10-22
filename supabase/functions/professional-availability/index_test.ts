@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { fromDatabaseError } from "../_shared/errors.ts";
-import { handler, replaceDaysArgs, toRotation, toWindow } from "./index.ts";
+import { handler, replaceDaysArgs, toRotation, toWindow, windowWriteError } from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -101,5 +101,29 @@ Deno.test(
     assertEquals(fromDatabaseError({ code: "CFA04" }).reason, "AVAILABILITY_INCOMPLETE");
     assertEquals(fromDatabaseError({ code: "CFV99" }).reason, undefined);
     assertEquals(fromDatabaseError({ code: "CF412" }).reason, undefined);
+  },
+);
+
+Deno.test(
+  "N-26: the past-start floor (22023 + hint past_start) is the form's field error; other errors map as before",
+  () => {
+    const floor = windowWriteError({
+      code: "22023",
+      hint: "past_start",
+      message: "an availability window cannot start on a past day",
+    });
+    assertEquals(
+      [floor.status, floor.code, floor.issues],
+      [400, "VALIDATION_ERROR", [{ path: "startsAt", message: "v.start.future" }]],
+    );
+    assertEquals(floor.message.includes("past day"), false); // the DB message never leaks
+    // What an old function answers for the same refusal: a clean 400 without the field (compatibility).
+    const refusal = { code: "22023", hint: "past_start" };
+    const old = fromDatabaseError(refusal);
+    assertEquals([old.status, old.issues], [400, undefined]);
+    // Another 22023, a CHECK or the assignment lock are unchanged.
+    assertEquals(windowWriteError({ code: "22023", hint: "other" }).issues, undefined);
+    assertEquals(windowWriteError({ code: "23514" }).status, 400);
+    assertEquals(windowWriteError({ code: "CFV01" }).reason, "ASSIGNMENT_PROTECTED");
   },
 );

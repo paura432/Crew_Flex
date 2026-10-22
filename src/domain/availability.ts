@@ -125,6 +125,13 @@ export const AVAILABILITY_CONFLICTS = [
 ] as const;
 export type AvailabilityConflict = (typeof AVAILABILITY_CONFLICTS)[number];
 
+/**
+ * N-26 (BR-4.6, migration 20261024200100): the SQL `hint` of the 22023 raised when a single window is
+ * created, or its start moved, before today (UTC). Old functions map that 22023 to a plain 400; the
+ * current one turns this hint into the form's own field error (`v.start.future`).
+ */
+export const PAST_START_HINT = "past_start";
+
 const AVAILABILITY_BLOCKERS = new Set(["NOT_AVAILABLE", "PARTIAL_AVAILABILITY"]);
 
 /**
