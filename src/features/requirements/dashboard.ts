@@ -19,9 +19,15 @@ export function dashboardRequirements(
 }
 
 /**
- * «Necesidades abiertas» value: the current count, or «{limit}+» when the filtered request came back
- * full (more may exist beyond the page).
+ * «Necesidades abiertas» value: the API's exact `total` of the filtered request (X-06); without it
+ * (release-1 backend) the current count, or «{limit}+» when the request came back full.
  */
-export function openRequirementsValue(current: number, returned: number, limit: number): string {
+export function openRequirementsValue(
+  current: number,
+  returned: number,
+  limit: number,
+  total?: number,
+): string {
+  if (total !== undefined) return String(total);
   return returned >= limit ? `${limit}+` : String(current);
 }

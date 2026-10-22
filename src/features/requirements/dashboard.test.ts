@@ -63,5 +63,8 @@ describe("openRequirementsValue", () => {
     expect(openRequirementsValue(3, 3, 50)).toBe("3");
     expect(openRequirementsValue(0, 0, 50)).toBe("0");
     expect(openRequirementsValue(49, 50, 50)).toBe("50+");
+    // X-06: the API's exact total wins over the page heuristic
+    expect(openRequirementsValue(49, 50, 50, 73)).toBe("73");
+    expect(openRequirementsValue(0, 0, 50, 0)).toBe("0");
   });
 });

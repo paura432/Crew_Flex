@@ -88,6 +88,7 @@ export default async function OrganizationDashboard() {
                   current.length,
                   open.data.requirements.length,
                   DEFAULT_LIST_LIMIT,
+                  open.data.total,
                 )}
                 detail={t("openRequirementsDetail")}
               />
