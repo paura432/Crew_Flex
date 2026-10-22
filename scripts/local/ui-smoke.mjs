@@ -3030,6 +3030,101 @@ await logout();
     await asSeedUser(email, "notifications", { method: "PATCH", body: { all: true } });
   }
 }
+// PKG matching-v18 (v2-11, BR-3.7–3.13, BR-5.6, T-80…T-87): the v1.8 profile requirements explained on both
+// sides. Organization: the seeded «B1.1 · A320 / B737 NG line check (v1.8 profile rules)» of Demo Airline Ops
+// Barcelona (read only). Professional: a need with country Spain created through the local API (the builder's
+// default country), seen by Delta (permit ES) and Kilo (no permit), then closed — nothing published is left.
+await login("admin.airline@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements`);
+await page.waitForLoadState("networkidle");
+const v18Href = await page
+  .locator("a:has-text('A320 / B737 NG line check')")
+  .first()
+  .getAttribute("href");
+await page.goto(`${BASE}${v18Href}/matches`);
+await page.waitForLoadState("networkidle");
+await page.locator("main article").first().waitFor({ timeout: 15000 });
+const v18Eligible = page.locator("main article").filter({ hasNotText: "Not eligible" });
+const v18EligibleText = (await v18Eligible.count()) === 1 ? await v18Eligible.innerText() : "";
+ok(
+  "PKG matching-v18 1 one eligible candidate (Delta), every v1.8 profile requirement listed and met",
+  /Profile requirements/.test(v18EligibleText) &&
+    /Work permit: Spain/.test(v18EligibleText) &&
+    /Category B1\.1/.test(v18EligibleText) &&
+    /Aircraft: A320 Family \/ B737 NG/.test(v18EligibleText) &&
+    /Type rating B1\.1 · A320 Family \/ B737 NG\s+Met: Declared, valid and unrestricted/.test(
+      v18EligibleText,
+    ) &&
+    /Minimum experience: 5 years/.test(v18EligibleText) &&
+    /Capability: Line Maintenance/.test(v18EligibleText) &&
+    /Affinity \(soft score\)/.test(v18EligibleText),
+  v18EligibleText.replace(/\s+/g, " ").slice(0, 240),
+);
+const v18Echo = await page
+  .locator("main article", { hasText: "Technician Echo" })
+  .first()
+  .innerText();
+ok(
+  "PKG matching-v18 2 Echo (open): the restricted rating and the missing capability are the blockers, never the restriction text",
+  /The B1\.1 · A320 Family \/ B737 NG type rating declares restrictions/.test(v18Echo) &&
+    /Required capability: Line Maintenance/.test(v18Echo) &&
+    !/No engine run-ups/.test(await page.locator("main").innerText()),
+  v18Echo.replace(/\s+/g, " ").slice(0, 240),
+);
+ok(
+  "PKG matching-v18 3 «Experiencia mínima 5» leaves out who declares 4 (Golf), explained",
+  /Below the minimum experience \(5 years\)/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+const v18Title = `Local UI check · v1.8 rules ${Date.now()}`;
+const [v18Org] = await seedRest(
+  "admin.mro@crewflex.test",
+  "organizations?select=id&name=eq.Demo%20MRO%20Madrid",
+);
+const v18Types = await seedRest(
+  "admin.mro@crewflex.test",
+  "qualification_types?select=id&code=in.(B1.1,TR-A320)",
+);
+const v18Created = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: v18Org.id,
+    title: v18Title,
+    location: "Madrid (MAD)",
+    startsAt: new Date(Date.now() + 60 * 86_400_000).toISOString(),
+    endsAt: new Date(Date.now() + 62 * 86_400_000).toISOString(),
+    shift: "day",
+    headcount: 1,
+    urgency: "planned",
+    country: "ES",
+    qualifications: v18Types.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const v18Id = v18Created.data?.requirement.id;
+const v18Opportunity = async (email) => {
+  await login(email);
+  await page.goto(`${BASE}/app/professional/opportunities/${v18Id}`);
+  await page.waitForLoadState("networkidle");
+  const text = await page.locator("main").innerText();
+  await logout();
+  return text;
+};
+const v18Delta = await v18Opportunity("delta@crewflex.test");
+const v18Kilo = await v18Opportunity("kilo@crewflex.test");
+ok(
+  "PKG matching-v18 4 own eligibility: the job's country is checked against the declared work permits (Delta yes, Kilo no)",
+  Boolean(v18Id) &&
+    /Work permit: Spain\s+Met: Declared in the profile/.test(v18Delta) &&
+    /No work permit declared for Spain/.test(v18Kilo) &&
+    /Work permit: Spain\s+Not met: Not declared in the profile/.test(v18Kilo),
+  JSON.stringify({ created: Boolean(v18Id), kilo: v18Kilo.replace(/\s+/g, " ").slice(0, 160) }),
+);
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: v18Id, status: "closed" },
+});
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).

@@ -179,28 +179,35 @@ export function RequirementForm({
 
   // --- Live count of viable candidates (v2-13) -----------------------------------------------------------
   const hardIds = draft.qualifications.filter(([, level]) => level === "hard").map(([id]) => id);
-  const countKey = JSON.stringify([period.startsAt, period.endsAt, draft.urgency, hardIds]);
+  // The job's country counts too (matching-v18: a work permit for it, BR-3.7); "" = not stated.
+  const country = draft.country || undefined;
+  const countKey = JSON.stringify([
+    period.startsAt,
+    period.endsAt,
+    draft.urgency,
+    hardIds,
+    country,
+  ]);
   const countable = viableCandidatesInput.safeParse({
     organizationId,
     startsAt: period.startsAt,
     endsAt: period.endsAt,
     urgency: draft.urgency,
     hardQualificationTypeIds: hardIds,
+    country,
   }).success;
   const [viable, setViable] = useState<{ key: string; value: number | null } | null>(null);
   useEffect(() => {
-    const [startsAt, endsAt, urgency, hardQualificationTypeIds] = JSON.parse(countKey) as [
-      string,
-      string,
-      string,
-      string[],
-    ];
+    const [startsAt, endsAt, urgency, hardQualificationTypeIds, countryOfKey] = JSON.parse(
+      countKey,
+    ) as [string, string, string, string[], string | null]; // JSON turns undefined into null
     const input = viableCandidatesInput.safeParse({
       organizationId,
       startsAt,
       endsAt,
       urgency,
       hardQualificationTypeIds,
+      country: countryOfKey ?? undefined,
     });
     if (!input.success) return;
     let current = true;
