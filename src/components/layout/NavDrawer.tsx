@@ -44,7 +44,7 @@ export function NavDrawer({
       </div>
       <div
         id={id}
-        className={`${open ? "block" : "hidden"} space-y-1 px-2 pb-3 lg:block lg:flex-1 lg:space-y-4 lg:px-3`}
+        className={`${open ? "block" : "hidden"} space-y-1 px-2 pb-3 lg:block lg:min-h-0 lg:flex-1 lg:space-y-4 lg:overflow-y-auto lg:px-3`}
       >
         {children}
       </div>

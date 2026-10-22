@@ -936,6 +936,26 @@ ok(
   (await page.locator("a[href='/app/admin/verifications']").count()) > 0,
   "",
 );
+// 20e (X-03): on a short desktop the sidebar scrolls inside the screen; the footer stays visible.
+await page.setViewportSize({ width: 1280, height: 600 });
+await page.goto(`${BASE}/app/tools`);
+await page.waitForLoadState("networkidle");
+const sidebar = await page.evaluate(() => {
+  const aside = document.querySelector("aside");
+  const nav = aside.querySelector("div[id]");
+  nav.scrollTop = nav.scrollHeight;
+  const last = [...aside.querySelectorAll("a")].at(-1).getBoundingClientRect().bottom;
+  const footer = [...aside.querySelectorAll("form button")].at(-1).getBoundingClientRect().bottom;
+  return { last, footer, scrolls: nav.scrollHeight > nav.clientHeight, vh: innerHeight };
+});
+ok(
+  "20e sidebar at 1280×600: menu scrolls, last entry and footer sign-out on screen",
+  sidebar.scrolls && sidebar.last <= sidebar.vh && sidebar.footer <= sidebar.vh,
+  JSON.stringify(sidebar),
+);
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${BASE}/app/admin`);
+await page.waitForLoadState("networkidle");
 await viewSwitcher.locator("a[href='/app/recruiter']").click();
 await page.waitForURL(/\/app\/recruiter$/);
 ok(
