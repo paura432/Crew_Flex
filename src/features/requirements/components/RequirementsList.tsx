@@ -40,7 +40,10 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
           {requirements.map((r) => (
             <tr key={r.id} className="align-top">
               <td className="py-3 pr-4">
-                <Link href={detailHref(r.id)} className="font-semibold text-blue hover:underline">
+                <Link
+                  href={detailHref(r.id)}
+                  className="inline-flex items-center font-semibold text-blue hover:underline pointer-coarse:min-h-11"
+                >
                   {r.title}
                 </Link>
                 <div className="text-muted">{r.location}</div>

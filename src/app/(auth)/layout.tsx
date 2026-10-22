@@ -9,7 +9,7 @@ export default async function AuthLayout({ children }: { children: ReactNode }) 
     <div className="grid min-h-screen place-items-center bg-canvas px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5 pointer-coarse:min-h-11">
             <span
               aria-hidden
               className="grid size-9 place-items-center rounded-lg bg-accent font-black text-navy"

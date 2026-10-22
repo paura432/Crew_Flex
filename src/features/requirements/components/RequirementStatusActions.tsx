@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { canChangeRequirementStatus, type RequirementStatus } from "@/domain/work-requirement";
@@ -27,6 +27,18 @@ export function RequirementStatusActions({
   const tStatus = useTranslations("organization.detail.status");
   const tRoot = useTranslations();
   const [confirming, setConfirming] = useState(false);
+  // Backing out of the close step gives focus back to «Cerrar necesidad» (v2 diff: it fell to <body>).
+  const closeTrigger = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (confirming || !refocus.current) return;
+    refocus.current = false;
+    closeTrigger.current?.focus();
+  }, [confirming]);
+  const backOut = () => {
+    refocus.current = true;
+    setConfirming(false);
+  };
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -48,6 +60,7 @@ export function RequirementStatusActions({
       {confirming ? (
         <div
           role="group"
+          onKeyDown={(e) => e.key === "Escape" && backOut()}
           aria-label={t("action")}
           className="space-y-3 rounded-lg border border-line p-4"
         >
@@ -57,7 +70,7 @@ export function RequirementStatusActions({
               {t("confirm")}
             </Button>
             {/* Focus lands on the safe choice when the irreversible step opens. */}
-            <Button autoFocus disabled={pending} onClick={() => setConfirming(false)}>
+            <Button autoFocus disabled={pending} onClick={backOut}>
               {t("cancel")}
             </Button>
           </div>
@@ -75,7 +88,7 @@ export function RequirementStatusActions({
             </Button>
           )}
           {canChangeRequirementStatus(status, "closed") && (
-            <Button disabled={pending} onClick={() => setConfirming(true)}>
+            <Button ref={closeTrigger} disabled={pending} onClick={() => setConfirming(true)}>
               {t("action")}
             </Button>
           )}

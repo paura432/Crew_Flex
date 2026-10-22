@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Field";
 import { callAction, Notice, type NoticeState } from "@/components/ui/Notice";
@@ -46,6 +46,19 @@ export function ApplicationActions({
   const tDomain = useTranslations("domain");
   const tRoot = useTranslations();
   const [asking, setAsking] = useState<ApplicationTransition | null>(null);
+  // Backing out of a step (button or Escape) gives focus back to the button that opened it.
+  const triggers = useRef(new Map<string, HTMLButtonElement>());
+  const returnTo = useRef<string | null>(null);
+  const keyOf = (tr: ApplicationTransition) => `${tr.to}-${tr.actor}`;
+  useEffect(() => {
+    if (asking || !returnTo.current) return;
+    triggers.current.get(returnTo.current)?.focus();
+    returnTo.current = null;
+  }, [asking]);
+  const backOut = () => {
+    if (asking) returnTo.current = keyOf(asking);
+    setAsking(null);
+  };
   const [reason, setReason] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [notice, setNotice] = useState<NoticeState | null>(null);
@@ -101,6 +114,7 @@ export function ApplicationActions({
       {asking ? (
         <div
           role="group"
+          onKeyDown={(e) => e.key === "Escape" && backOut()}
           aria-label={t(transitionLabelKey(asking))}
           className="space-y-3 rounded-lg border border-line p-4"
         >
@@ -153,7 +167,7 @@ export function ApplicationActions({
             <Button
               autoFocus={!asking.reason && asking.to !== "accepted"}
               disabled={pending}
-              onClick={() => setAsking(null)}
+              onClick={backOut}
             >
               {t("back")}
             </Button>
@@ -176,7 +190,11 @@ export function ApplicationActions({
               </Button>
             ) : (
               <Button
-                key={`${tr.to}-${tr.actor}`}
+                key={keyOf(tr)}
+                ref={(el) => {
+                  if (el) triggers.current.set(keyOf(tr), el);
+                  else triggers.current.delete(keyOf(tr));
+                }}
                 variant={
                   tr.reason || tr.to === "withdrawn"
                     ? "danger"

@@ -101,8 +101,8 @@ export default async function OpportunitiesPage({
           <Link
             key={pill.key}
             href={opportunitiesHref(filters, pill.patch)}
-            aria-current={active === pill.key ? "page" : undefined}
-            className="inline-flex min-h-9 items-center rounded-full border border-line bg-white px-4 text-sm font-semibold text-muted pointer-coarse:min-h-11 aria-[current=page]:border-navy aria-[current=page]:bg-navy aria-[current=page]:text-white"
+            aria-current={active === pill.key ? "true" : undefined}
+            className="inline-flex min-h-9 items-center rounded-full border border-line bg-white px-4 text-sm font-semibold text-muted pointer-coarse:min-h-11 aria-[current=true]:border-navy aria-[current=true]:bg-navy aria-[current=true]:text-white"
           >
             {t(`filter.${pill.key}`)}
           </Link>

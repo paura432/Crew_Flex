@@ -1334,7 +1334,7 @@
       "accepted": "Condiciones aceptadas · versión {version}",
       "pending": "Pendiente de aceptación",
       "sent": "Enviada el {date}",
-      "notice": "CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
+      "notice": "Crew Flex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
       "newVersion": "Una propuesta nueva necesita otra aceptación; la aceptada se conserva en el historial."
     },
     "action": {

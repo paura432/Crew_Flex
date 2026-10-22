@@ -38,7 +38,7 @@ export async function OpportunityCard({ opportunity }: { opportunity: Opportunit
         )}
       </div>
       <h2 id={`o-${r.id}`} className="mt-2 text-lg font-semibold break-words">
-        <Link href={href} className="text-blue hover:underline pointer-coarse:py-2.5">
+        <Link href={href} className="block text-blue hover:underline pointer-coarse:py-2.5">
           {r.title}
         </Link>
       </h2>

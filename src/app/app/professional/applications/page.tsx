@@ -74,8 +74,8 @@ export default async function MyApplicationsPage({
       href={
         value ? `/app/professional/applications?status=${value}` : "/app/professional/applications"
       }
-      aria-current={status === value ? "page" : undefined}
-      className="inline-flex min-h-9 items-center rounded-full border border-line bg-white px-4 text-sm font-semibold text-muted pointer-coarse:min-h-11 aria-[current=page]:border-navy aria-[current=page]:bg-navy aria-[current=page]:text-white"
+      aria-current={status === value ? "true" : undefined}
+      className="inline-flex min-h-9 items-center rounded-full border border-line bg-white px-4 text-sm font-semibold text-muted pointer-coarse:min-h-11 aria-[current=true]:border-navy aria-[current=true]:bg-navy aria-[current=true]:text-white"
     >
       {label}
     </Link>
@@ -135,7 +135,18 @@ export default async function MyApplicationsPage({
                       {r.organizationName} · {r.location} ·{" "}
                       {formatPeriod(locale, r.startsAt, r.endsAt)}
                     </p>
-                    {note && <p className="mt-1 text-sm text-warn">{t(`card.${note}`)}</p>}
+                    {note && (
+                      <p
+                        className={`mt-1 text-sm ${
+                          // covered by this very assignment is not a warning (v2 diff)
+                          note === "requirementCovered" && application.status === "confirmed"
+                            ? "text-muted"
+                            : "text-warn"
+                        }`}
+                      >
+                        {t(`card.${note}`)}
+                      </p>
+                    )}
                   </div>
                   <ApplicationDetails application={application} />
                   <ApplicationActions

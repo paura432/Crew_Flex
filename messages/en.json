@@ -1334,7 +1334,7 @@
       "accepted": "Accepted terms · version {version}",
       "pending": "Awaiting acceptance",
       "sent": "Sent on {date}",
-      "notice": "CrewFlex intermediates; the employment or service contract is agreed directly between the parties.",
+      "notice": "Crew Flex intermediates; the employment or service contract is agreed directly between the parties.",
       "newVersion": "A new proposal needs a new acceptance; the accepted one stays in the history."
     },
     "action": {
