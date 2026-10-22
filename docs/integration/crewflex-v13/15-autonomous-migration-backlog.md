@@ -152,17 +152,20 @@ on `next dev` or `next build` (stated); smoke = `ui-smoke.mjs` on `next build &&
 ### 6.3 Implementation packages of the v2 diff (SCOPE-2 «copiarlo todo», DEFAULTS)
 
 Plan and task ids: `01-BACKLOG-MIGRACION.md` of the v2 folder. One worktree per package, merged one by one with the full
-gate. States: IN_PROGRESS → MERGED (local, verified) · BLOCKED.
+gate. States: IN_PROGRESS → MERGED (local, verified) · BLOCKED. Gates after passport + admin-org (db reset, HEAD
+`2e102fd`): `pnpm check` 0 (741, Deno 122), PGlite 218, E2E 48/48, race 11/11, ui-smoke 178/179 on `next start` (28f
+expected the old 7-item count: smoke fixed).
 
-| Package                                                                                                           | Content (diff task ids)                                  | State                                                                            |
-| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| learning                                                                                                          | 40 L-1…L-4, T-1…T-3                                      | MERGED (`895ad83`…`2097670`)                                                     |
-| passport                                                                                                          | 20 N-01, N-02, N-05…N-08, N-16, N-25 (N-24)              | IN_PROGRESS                                                                      |
-| logbook                                                                                                           | 20 N-12                                                  | MERGED (`173e064`…`cbb3aa9`; migration `20261023200000`, `professional-logbook`) |
-| calendar                                                                                                          | 20 N-03, N-04 (T-13 → v1.8), N-17, N-22; 30 v2-06, v2-07 | MERGED (`61fe213`, `32c1402`; migration `20261023300000`)                        |
-| account                                                                                                           | 10 #2 (flag), #3, #4 (= 20 N-13/N-14), #11, #20          | IN_PROGRESS                                                                      |
-| admin-org                                                                                                         | 10 #5 (= 30 v2-19), #9, #13 (= 20 N-09), #15             | IN_PROGRESS                                                                      |
-| requirement-builder                                                                                               | 30 v2-09, v2-10, v2-12, v2-13, v2-14                     | IN_PROGRESS                                                                      |
-| notices                                                                                                           | 30 v2-18, 10 #1, 20 N-11                                 | IN_PROGRESS                                                                      |
-| matching-v18, directory, pack-view, hiring-polish, outreach, recruiter, shell-visual, wallet-extras, server-floor | see the v2 backlog                                       | TODO (after their dependencies)                                                  |
-| partial coverage (30 v2-30)                                                                                       | D-06 Q6 ↔ SCOPE-2 conflict                               | BLOCKED (owner)                                                                  |
+| Package                                                          | Content (diff task ids)                                  | State                                                                                 |
+| ---------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| learning                                                         | 40 L-1…L-4, T-1…T-3                                      | MERGED (`895ad83`…`2097670`)                                                          |
+| passport                                                         | 20 N-01, N-02, N-05…N-08, N-16, N-25 (N-24)              | MERGED (`e6fa81e`; migrations `202610231000xx`–`100300`; pool block kept in `500200`) |
+| logbook                                                          | 20 N-12                                                  | MERGED (`173e064`…`cbb3aa9`; migration `20261023200000`, `professional-logbook`)      |
+| calendar                                                         | 20 N-03, N-04 (T-13 → v1.8), N-17, N-22; 30 v2-06, v2-07 | MERGED (`61fe213`, `32c1402`; migration `20261023300000`)                             |
+| account                                                          | 10 #2 (flag), #3, #4 (= 20 N-13/N-14), #11, #20          | IN_REVIEW (security review)                                                           |
+| admin-org                                                        | 10 #5 (= 30 v2-19), #9, #13 (= 20 N-09), #15             | MERGED (`e55c67a`…`50b73b0`; migrations `202610235000xx`–`500400`)                    |
+| requirement-builder                                              | 30 v2-09, v2-10, v2-12, v2-13, v2-14                     | IN_PROGRESS                                                                           |
+| notices                                                          | 30 v2-18, 10 #1, 20 N-11                                 | IN_PROGRESS                                                                           |
+| matching-v18, hiring-polish, wallet-extras (+ server-floor N-26) | 30 v2-11; 30 v2-05/08/20/21/25/26/27; 20 N-19/20/21/26   | IN_PROGRESS                                                                           |
+| directory, pack-view, outreach, recruiter, shell-visual          | see the v2 backlog                                       | TODO (after their dependencies)                                                       |
+| partial coverage (30 v2-30)                                      | D-06 Q6 ↔ SCOPE-2 conflict                               | BLOCKED (owner)                                                                       |

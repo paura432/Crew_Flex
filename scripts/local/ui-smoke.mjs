@@ -1182,9 +1182,9 @@ await page.waitForLoadState("networkidle");
 summaryNames.push(...(await disclosureNames()));
 await axSession.detach();
 ok(
-  "28f summaries named «Formula, sources and scope» / «The 7 profile items», without ▸ or ▾ (T-3)",
+  "28f summaries named «Formula, sources and scope» / «The N profile items», without ▸ or ▾ (T-3)",
   summaryNames.includes("Formula, sources and scope") &&
-    summaryNames.includes("The 7 profile items") &&
+    summaryNames.some((n) => /^The \d+ profile items$/.test(n)) &&
     !summaryNames.some((n) => /[▸▾]/.test(n)),
   summaryNames.join(" | "),
 );
