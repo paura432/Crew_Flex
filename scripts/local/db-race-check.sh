@@ -3,7 +3,7 @@
 # LOCAL Docker stack only: talks to the container `supabase_db_crew-flex` with `docker exec psql`
 # (never a URL), after the same local-target check as scripts/local/sb-local.sh. Every scenario
 # restores the rows it changed, so the deterministic seed stays as it was.
-# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|all]   (default: all)
+# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|outreach|all]   (default: all)
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
 CONTAINER=supabase_db_crew-flex
@@ -443,6 +443,57 @@ SQL
   done
 }
 
+# --- PKG outreach: «Distribuir aviso Urgente / AOG» (migrations 20261024400000…400200) -----------------
+# Delta's notice preferences are saved for the scenario and put back as they were at the end.
+ADMIN_MRO=00000000-0000-4000-8000-000000000001
+MANAGER_MRO=00000000-0000-4000-8000-000000000014
+outreach_ready() {
+  [ "$(echo "select to_regproc('public.requirement_outreach') is not null;" | psql_owner)" = t ] && return 0
+  fail "migrations 20261024400000…400200 are not applied to the local stack (outreach scenario not run)"
+  return 1
+}
+outreach_twice() {
+  echo "== outreach: an admin and a manager distribute the same need at once — one distribution, one notice"
+  applications_ready || return 0
+  outreach_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"
+  local saved; saved="$(echo "select row_to_json(p) from public.technician_notice_preferences p where profile_id = '$DELTA';" | psql_owner)"
+  psql_owner >/dev/null <<SQL
+insert into public.technician_notice_preferences (profile_id, urgent_opt_in, aog_opt_in, mobilization_hours)
+values ('$DELTA', true, true, 12)
+on conflict (profile_id) do update set urgent_opt_in = true, aog_opt_in = true, mobilization_hours = 12,
+  time_zone = 'Europe/Madrid', quiet_start = null, quiet_end = null;
+SQL
+  local req; req="$(race_need 'Demo MRO Madrid' 1)"
+  echo "update public.work_requirements set urgency = 'aog' where id = '$req';" | psql_owner >/dev/null
+  printf "begin;\nselect notified from public.requirement_outreach('%s');\nselect pg_sleep(1.5);\ncommit;\n" "$req" \
+    | psql_as "$ADMIN_MRO" >"$OUT_A" &
+  local pa=$!
+  sleep 0.4
+  printf "select notified from public.requirement_outreach('%s');\n" "$req" | psql_as "$MANAGER_MRO" >"$OUT_B" || true
+  wait "$pa" || true
+  local runs audits notices
+  runs="$(echo "select count(*) from public.outreach_distributions where requirement_id = '$req';" | psql_owner)"
+  audits="$(echo "select count(*) from public.audit_events where action = 'requirement.outreach_distributed' and entity_id = '$req';" | psql_owner)"
+  notices="$(echo "select count(*) from public.notifications where kind = 'outreach' and requirement_id = '$req' and recipient_id = '$DELTA';" | psql_owner)"
+  if [ "$runs" = 1 ] && [ "$audits" = 1 ] && [ "$notices" = 1 ] && grep -q 'already distributed' "$OUT_B"; then
+    pass "the requirement lock ordered both; the second got OUTREACH_ALREADY_SENT and nobody got two notices"
+  else fail "distributions=$runs audits=$audits delta notices=$notices"; cat "$OUT_A" "$OUT_B"; fi
+  if [ -z "$saved" ]; then
+    echo "delete from public.technician_notice_preferences where profile_id = '$DELTA';" | psql_owner >/dev/null
+  else
+    psql_owner >/dev/null <<SQL
+update public.technician_notice_preferences p
+set urgent_opt_in = s.urgent_opt_in, aog_opt_in = s.aog_opt_in, mobilization_hours = s.mobilization_hours,
+    time_zone = s.time_zone, quiet_start = s.quiet_start, quiet_end = s.quiet_end
+from json_populate_record(null::public.technician_notice_preferences, '$saved'::json) s
+where p.profile_id = '$DELTA';
+SQL
+  fi
+  race_cleanup "$req"
+}
+
 case "${1:-all}" in
   e3) e3; e3_simultaneous ;;
   idempotency) idempotency ;;
@@ -451,8 +502,10 @@ case "${1:-all}" in
   applications) applications; pause_vs_confirm; double_booking; apply_vs_edit ;;
   notices) notices_role_loss ;;
   wallet-trash) wallet_trash ;;
+  outreach) outreach_twice ;;
   all) e3; e3_simultaneous; idempotency; review; availability
-       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash ;;
+       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash
+       outreach_twice ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"
