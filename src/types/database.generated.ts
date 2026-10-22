@@ -1322,6 +1322,35 @@ export type Database = {
           total: number;
         }[];
       };
+      get_organization_applications: {
+        Args: {
+          p_limit?: number;
+          p_offset?: number;
+          p_organization_id: string;
+          p_requirement_id?: string;
+          p_status?: Database["public"]["Enums"]["application_status"];
+        };
+        Returns: {
+          accepted_proposal_id: string;
+          application_id: string;
+          candidate_availability: Json;
+          candidate_base_location: string;
+          candidate_display_name: string;
+          candidate_pool: string;
+          candidate_qualifications: Json;
+          candidate_ref: string;
+          candidate_years_experience: number;
+          created_at: string;
+          current_proposal: Json;
+          history: Json;
+          reason: string;
+          requirement: Json;
+          requirement_id: string;
+          status: Database["public"]["Enums"]["application_status"];
+          total: number;
+          updated_at: string;
+        }[];
+      };
       get_platform_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1331,6 +1360,17 @@ export type Database = {
           organizations: number;
           technicians: number;
           working_now: number;
+        }[];
+      };
+      get_requirement_application_counts: {
+        Args: { p_organization_id: string };
+        Returns: {
+          counts: Json;
+          ends_at: string;
+          headcount: number;
+          requirement_id: string;
+          shift_count: number;
+          starts_at: string;
         }[];
       };
       get_requirement_applications: {
