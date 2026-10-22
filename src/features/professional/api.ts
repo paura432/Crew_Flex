@@ -15,7 +15,11 @@ export interface ProfessionalOverview {
   availability: AvailabilityWindowRow[];
 }
 
-/** The professional's own data, read under RLS (own rows only). */
+/**
+ * The professional's own data, read under RLS (own rows only). `null` = the account has no technician
+ * profile; a failed read throws (X-16: it used to look like «this is an organization account»), so the
+ * route's error boundary shows the retry with its reference.
+ */
 export async function getOwnProfessionalOverview(
   profileId: string,
 ): Promise<ProfessionalOverview | null> {
@@ -41,7 +45,10 @@ export async function getOwnProfessionalOverview(
       .order("starts_at")
       .overrideTypes<AvailabilityWindowRow[], { merge: false }>(),
   ]);
-  if (profile.error || !profile.data || qualifications.error || availability.error) return null;
+  if (profile.error || qualifications.error || availability.error) {
+    throw new Error("professional overview unavailable");
+  }
+  if (!profile.data) return null;
   return {
     profile: profile.data,
     qualifications: [...qualifications.data].sort((a, b) =>
