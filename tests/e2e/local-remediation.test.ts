@@ -10,64 +10,14 @@
  * and `scripts/local/cleanup-test-rows.sh` removes them.
  * Run: `pnpm e2e:remote` with `.env.e2e` pointing at the local stack.
  */
-import { createClient } from "@supabase/supabase-js";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { isLocalUrl } from "./guard";
+import { call, client, key, signIn, url, type Envelope } from "./local-api";
 
-const url = process.env.E2E_SUPABASE_URL;
-const key = process.env.E2E_SUPABASE_PUBLISHABLE_KEY;
-const LOCAL_PASSWORD = "crewflex-local-only"; // synthetic local seed only (LOCAL_ENVIRONMENT.md §4)
 const MAD = "B1.1 · A320 line maintenance reinforcement";
 const GOLF = "00000000-0000-4000-8000-000000000024";
-
-interface Envelope {
-  ok: boolean;
-  data?: Record<string, unknown>;
-  error?: { code: string; message: string };
-  requestId: string;
-}
-
-const client = (token?: string) =>
-  createClient(url!, key!, {
-    ...(token ? { global: { headers: { Authorization: `Bearer ${token}` } } } : {}),
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-async function signIn(email: string): Promise<string> {
-  const { data, error } = await client().auth.signInWithPassword({
-    email,
-    password: LOCAL_PASSWORD,
-  });
-  if (error || !data.session) throw new Error(`local sign-in failed: ${error?.message}`);
-  return data.session.access_token;
-}
-
-async function call(
-  fn: string,
-  init: {
-    method?: string;
-    token?: string;
-    query?: Record<string, string>;
-    body?: unknown;
-    headers?: Record<string, string>;
-  } = {},
-): Promise<{ status: number; body: Envelope }> {
-  const target = new URL(`/functions/v1/${fn}`, url);
-  for (const [k, v] of Object.entries(init.query ?? {})) target.searchParams.set(k, v);
-  const res = await fetch(target, {
-    method: init.method ?? "GET",
-    headers: {
-      ...init.headers,
-      ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}),
-      apikey: key!,
-      "Content-Type": "application/json",
-    },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: res.status, body: (await res.json()) as Envelope };
-}
 
 describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", () => {
   let manager = "";
