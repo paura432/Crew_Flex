@@ -141,9 +141,10 @@ on `next dev` or `next build` (stated); smoke = `ui-smoke.mjs` on `next build &&
 
 ### 6.2 Module loops (ratified 2026-10-22)
 
-| ID  | Module                                | State | Plan / notes                                                                                         |
-| --- | ------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------- |
-| L2  | M07 opportunities (D-12)              | TODO  | after M05 schema; RPC `list_opportunities` (fixed projection), Edge `opportunities`, own eligibility |
-| L3  | M08 applications (D-06 Q2–Q7)         | TODO  | tables + one transition RPC, T1–T13, Edge `applications`, org/technician UI                          |
-| L4  | M05 lifecycle + integration (M04/M06) | TODO  | `paused` (own migration), guards, edit without applications, dashboards                              |
-| L5  | M09 Candidate Pack (D-07, P3 open)    | TODO  | contracts/domain/tests only; no third-party document access                                          |
+| ID  | Module                                | State                   | Commits / evidence                                                                                                                                                                                                       |
+| --- | ------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| L2  | M07 opportunities (D-12)              | VERIFIED (local)        | backend `56aa1a7`/`164f2cb`/`00dd8ea` (agent branch, merged), UI `db05af1`, fix `c49440f`; PGlite U; E2E hiring; smoke 26a–b on `next build`                                                                             |
+| L3  | M08 applications (D-06 Q2–Q7)         | VERIFIED (local)        | same commits + `5c22e29` races; PGlite V/W (T1–T13); `db-race-check.sh` all PASS; E2E 48/48; smoke 26c–g                                                                                                                 |
+| L4  | M05 lifecycle + integration (M04/M06) | VERIFIED (local)        | pause/resume `9868253`; edit without applications (PUT, CFA12) in `56aa1a7`/`164f2cb`; close refused with commitments (CFA11); covered/open by seats; calendar «Asignada»; dashboards — the edit **UI** is still pending |
+| L5  | M09 Candidate Pack (D-07, P3 open)    | PREPARED (switched off) | `a1e1223`: rules + tests only; no sharing path                                                                                                                                                                           |
+| L6  | Exhaustive diff v2 (SCOPE-2)          | IN_PROGRESS             | `C:\Users\perfo\Downloads\CrewFlex_DIFF_HTML_v18_vs_Next_2026-10-22-v2\` — snapshot `821c24f` on :3003, v1.8 demo + connected in execution, text coverage 14,1 %                                                         |

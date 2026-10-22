@@ -3,6 +3,7 @@ import type {
   ChangeRequirementStatusInput,
   CreateWorkRequirementInput,
   RequirementListOrder,
+  UpdateWorkRequirementInput,
 } from "@/lib/validation/work-requirement";
 import { invokeEdgeFunction } from "@/server/edge-functions";
 import type { WorkRequirement } from "@/domain/work-requirement";
@@ -40,6 +41,10 @@ export const createRequirement = (input: CreateWorkRequirementInput, idempotency
     body: input,
     headers: { "Idempotency-Key": idempotencyKey },
   });
+
+/** Edit (M05): only while the requirement never received an application (409 HAS_APPLICATIONS). */
+export const updateRequirement = (input: UpdateWorkRequirementInput) =>
+  invokeEdgeFunction<WorkRequirementResponse>("work-requirements", { method: "PUT", body: input });
 
 /** Pause, resume (`open`) or close (terminal) — M05, V1.8 `job.status`. */
 export const setRequirementStatus = (input: ChangeRequirementStatusInput) =>

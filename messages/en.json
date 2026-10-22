@@ -52,7 +52,8 @@
     "opportunities": "Opportunities",
     "opportunity": "Opportunity",
     "applications": "My applications",
-    "requirementApplications": "Applications"
+    "requirementApplications": "Applications",
+    "requirementEdit": "Edit requirement"
   },
   "nav": {
     "organization": "Organization",
@@ -805,7 +806,8 @@
         "pausedDone": "Requirement paused: no longer published or evaluated.",
         "resumedDone": "Requirement resumed: published again.",
         "pausedNote": "This requirement is paused: it is not published as an opportunity and no candidates are evaluated. Resume it to publish it again."
-      }
+      },
+      "edit": "Edit requirement"
     },
     "new": {
       "title": "New work requirement",
@@ -833,7 +835,11 @@
       "submitting": "Creating…",
       "forbidden": "Your role cannot create requirements in this organization.",
       "unreachable": "The service could not be reached. Your data is still here — retry.",
-      "sessionExpired": "Your session expired. Sign in again."
+      "sessionExpired": "Your session expired. Sign in again.",
+      "editSubmit": "Save changes",
+      "editSubmitting": "Saving…",
+      "hasApplications": "This requirement already received applications: it cannot be edited.",
+      "stale": "The requirement changed while you were editing it. Reload to see the current version; nothing was saved."
     },
     "matches": {
       "eyebrow": "External network · matching preview",

@@ -23,26 +23,26 @@ and the **connected app** (`server/app.mjs`, 287 lines, Node + SQLite, invite-on
 
 ## 1. Module summary
 
-| Module                            | Prio | State                                                    | Present / partial / missing | Blocking                                                                                                |
-| --------------------------------- | ---- | -------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------- |
-| M00 Foundation, nav, shell        | P0   | AUDITED                                                  | 3 / 3 / 2                   | C-12 (dock/visual direction)                                                                            |
-| M01 Auth and account              | P0   | VERIFIED_PARITY_LOCAL (batch 1 + reset gate, 2nd audit)  | 5 / 3 / 2                   | OD-8 (invite-only), retention P3/M-3 (account close)                                                    |
-| M02 Technician dashboard          | P1   | VERIFIED_LOCAL (batch 3)                                 | 3 / 3 / 5                   | D-06 (applications), M07 (opportunities), D-07/D-10 (avatar), OD-3 (medals)                             |
-| M03 Professional passport         | P1   | AUDITED                                                  | 6 / 6 / 9                   | C-10/D-02/D-03, OD-6/D-04, OD-7, D-07/D-10 (avatar)                                                     |
-| M04 Availability and calendar     | P0   | DEPLOYED (prod, authenticated E2E not run)               | 9 / 4 / 3                   | D-06 (assigned days), NEXT: AOG opt-in                                                                  |
-| M05 Organization and requirements | P0   | PARTIAL (close: batch 6; pause/resume 2026-10-22)        | 3 / 9 / 11                  | requirement lifecycle (pause/edit), R-D4 (drafts), C-9/D-08, OD-4/D-09, OD-5, OD-7, SCOPE LATER (rates) |
-| M06 Directory and matching        | P1   | VERIFIED_PARITY_LOCAL (batch 2 + compare fix, 2nd audit) | 7 / 4 / 4                   | D-07 (free directory), OD-7 (rate filter), C-10 (category/aircraft filters)                             |
-| M07 Opportunities (technician)    | P1   | NOT_STARTED                                              | 0 / 0 / 6                   | D-06, D-07, D-12 (marketplace visibility)                                                               |
-| M08 Applications and hiring       | P0*  | SPECCED                                                  | 0 / 0 / 14                  | **D-06 Q2–Q6 ratification**                                                                             |
-| M09 Candidate Pack                | P1   | SPECCED                                                  | 0 / 0 / 7                   | **D-07 P1–P4**, D-10 scanner, SCOPE LATER                                                               |
-| M10 Document wallet               | P1   | VERIFIED_LOCAL                                           | 6 / 4 / 1                   | Release 2 approval (retention 30 d/24 h, legal hold, maintenance)                                       |
-| M11 Recruiter                     | P2   | SPECCED                                                  | 0 / 1 / 7                   | D-12, SCOPE LATER                                                                                       |
-| M12 Messaging, notifications      | P2   | NOT_STARTED                                              | 0 / 0 / 7                   | SCOPE OUT (chat), C-11 (channels), D-06                                                                 |
-| M13 Administration                | P2   | AUDITED                                                  | 1 / 3 / 9                   | OD-3, SCOPE OUT (full back office), OD-7                                                                |
-| M14 Logbook                       | P2   | NOT_STARTED                                              | 0 / 0 / 3                   | SCOPE LATER                                                                                             |
-| M15 Tools                         | P1   | DEPLOYED (prod; sub-rows §8)                             | 5 / 1 / 5                   | D-11 (fuel: technical review), SCOPE LATER (glossary, translator)                                       |
-| M16 Complementary (learning…)     | P2   | NOT_STARTED                                              | 0 / 0 / 4                   | SCOPE LATER                                                                                             |
-| M17 Visual parity                 | P1   | AUDITED                                                  | see §5                      | C-12                                                                                                    |
+| Module                            | Prio | State                                                                               | Present / partial / missing | Blocking                                                                          |
+| --------------------------------- | ---- | ----------------------------------------------------------------------------------- | --------------------------- | --------------------------------------------------------------------------------- |
+| M00 Foundation, nav, shell        | P0   | AUDITED                                                                             | 3 / 3 / 2                   | C-12 (dock/visual direction)                                                      |
+| M01 Auth and account              | P0   | VERIFIED_PARITY_LOCAL (batch 1 + reset gate, 2nd audit)                             | 5 / 3 / 2                   | OD-8 (invite-only), retention P3/M-3 (account close)                              |
+| M02 Technician dashboard          | P1   | VERIFIED_LOCAL (batch 3)                                                            | 3 / 3 / 5                   | D-06 (applications), M07 (opportunities), D-07/D-10 (avatar), OD-3 (medals)       |
+| M03 Professional passport         | P1   | AUDITED                                                                             | 6 / 6 / 9                   | C-10/D-02/D-03, OD-6/D-04, OD-7, D-07/D-10 (avatar)                               |
+| M04 Availability and calendar     | P0   | DEPLOYED (prod, authenticated E2E not run)                                          | 9 / 4 / 3                   | D-06 (assigned days), NEXT: AOG opt-in                                            |
+| M05 Organization and requirements | P0   | PARTIAL (close, pause/resume, edit without applications: VERIFIED_LOCAL 2026-10-22) | 3 / 9 / 11                  | archive/duplicate/drafts (v1.8 defaults, SCOPE-2), C-9/D-08 terms (default)       |
+| M06 Directory and matching        | P1   | VERIFIED_PARITY_LOCAL (batch 2 + compare fix, 2nd audit)                            | 7 / 4 / 4                   | D-07 (free directory), OD-7 (rate filter), C-10 (category/aircraft filters)       |
+| M07 Opportunities (technician)    | P1   | VERIFIED_LOCAL (2026-10-22: list, filters, detail, own eligibility, apply)          | 0 / 0 / 6                   | D-07 (contact/docs off); v1.8 days selection = partial coverage (LATER → SCOPE-2) |
+| M08 Applications and hiring       | P0*  | VERIFIED_LOCAL (2026-10-22: both sides, T1–T13, races, E2E, smoke 26)               | 0 / 0 / 14                  | chat/commissions OUT; notifications (LATER → SCOPE-2)                             |
+| M09 Candidate Pack                | P1   | PREPARED (rules switched off, 2026-10-22)                                           | 0 / 0 / 7                   | **D-07 P3**, D-10 scanner                                                         |
+| M10 Document wallet               | P1   | VERIFIED_LOCAL                                                                      | 6 / 4 / 1                   | Release 2 approval (retention 30 d/24 h, legal hold, maintenance)                 |
+| M11 Recruiter                     | P2   | SPECCED                                                                             | 0 / 1 / 7                   | D-12, SCOPE LATER                                                                 |
+| M12 Messaging, notifications      | P2   | NOT_STARTED                                                                         | 0 / 0 / 7                   | SCOPE OUT (chat), C-11 (channels), D-06                                           |
+| M13 Administration                | P2   | AUDITED                                                                             | 1 / 3 / 9                   | OD-3, SCOPE OUT (full back office), OD-7                                          |
+| M14 Logbook                       | P2   | NOT_STARTED                                                                         | 0 / 0 / 3                   | SCOPE LATER                                                                       |
+| M15 Tools                         | P1   | DEPLOYED (prod; sub-rows §8)                                                        | 5 / 1 / 5                   | D-11 (fuel: technical review), SCOPE LATER (glossary, translator)                 |
+| M16 Complementary (learning…)     | P2   | NOT_STARTED                                                                         | 0 / 0 / 4                   | SCOPE LATER                                                                       |
+| M17 Visual parity                 | P1   | AUDITED                                                                             | see §5                      | C-12                                                                              |
 
 \* P0 for a complete hiring journey, but blocked until the owner ratifies the D-06 contract.
 
@@ -199,24 +199,30 @@ Source refs: `C:` = `server/<file>:<line>`, `D:` = `src/<path>` (v1.8). Target r
 
 ### M07 Opportunities (technician)
 
-TD-67 list/filters/deep link · TD-68 cards with affinity and eligibility banner · TD-69 detail · TD-70 hard
-checks (category, rating, engine, courses, years, permit, mobilization, tools) · TD-71 apply modal (days,
-docs, logbook, consents) · CX-23/29 published jobs, one active application — all **MISSING · D-06, D-07**.
-The urgency derivation in TD-70 is DO-NOT-COPY (C-8/D-05).
+**2026-10-22, VERIFIED_LOCAL** (D-12 ratified): `/app/professional/opportunities` (v1.8 Marketplace: search, pills
+Todas/Compatibles/Planificado/Urgente/AOG, cards with the own verdict, pages; `list_opportunities` fixed projection,
+organization name only) and its detail (facts, own eligibility with every failed rule explained, apply with explicit
+consent) — TD-67/68/69/70, CX-23/29 (one active application, Q5). Not ported yet: TD-68 affinity % (REJECTED T-03),
+TD-71 day/document/logbook selection in the apply modal (days = partial coverage, LATER → SCOPE-2; documents = D-07
+P3). Evidence: PGlite suite U, `tests/e2e/hiring.test.ts`, ui-smoke 26a–b. The urgency derivation in TD-70 is
+DO-NOT-COPY (C-8/D-05).
 
 ### M08 Applications and hiring
 
-CX-29 apply · CX-30 / TD-72/73 / CO-50..59 state machine, actors, reasons, timeline · CX-31 / CO-52 proposal
-snapshot + explicit acceptance (R-08 decided) · CX-32 / CO-54 confirm gates (re-checked server-side, per-day
-capacity, no overlap) · CO-56/57 cancel/finish · TD-64 / CX-18 assigned days — all **MISSING ·
-`docs/product/APPLICATIONS_STATE_MACHINE.md`, Q2–Q6 owner proposals not ratified**. CO-53 «simulate
-acceptance» = DEMO-ONLY. CX-33 commissions/invoices = SCOPE OUT.
+**2026-10-22, VERIFIED_LOCAL** (D-06 Q2–Q7 ratified): CX-29 apply · CX-30 / TD-72/73 / CO-50..59 state machine,
+actors, reasons, history · CX-31 / CO-52 proposal versions + explicit acceptance (R-08) · CX-32 / CO-54 confirm
+re-checks at commit (qualifications, availability BR-4.8, overlap, seats under lock) · CO-56/57 cancel (reason) /
+finish (after the period) · TD-64 / CX-18 assigned days marked in the calendar (display only, T-13) · dashboard
+counters. Evidence: PGlite suites V/W (T1–T13), `db-race-check.sh applications` (5/5), E2E hiring 6/6, ui-smoke 26.
+Not ported: CO-53 «simulate acceptance» = DEMO-ONLY; CX-33 commissions/invoices and the conversation = SCOPE OUT;
+notifications (LATER → SCOPE-2, pending); org-wide «Candidaturas» screen (per requirement only today).
 
 ### M09 Candidate Pack and privacy
 
-CO-60 / TD-74 / CX-39 pack snapshot, protected identity/docs, unlock after acceptance + consent · CO-61 export
-JSON / print · RC-05 present to client — **MISSING · D-07 P1–P4, D-10 scanner, SCOPE LATER**. Prototype
-DO-NOT-COPY: pack copied into the application row and kept after withdrawal (C: app.mjs:110).
+**2026-10-22, PREPARED:** access rules as pure functions switched off (`src/domain/candidate-pack.ts`,
+`PACK_ACTIVATION` false; P1/P2/P4 direction ratified). CO-60 / TD-74 / CX-39 sharing, CO-61 export/print, RC-05 —
+**blocked by D-07 P3 + D-10 scanner**; export PDF = SCOPE OUT. Prototype DO-NOT-COPY: pack copied into the
+application row and kept after withdrawal (C: app.mjs:110).
 
 ### M10 Document wallet (local, release 2)
 

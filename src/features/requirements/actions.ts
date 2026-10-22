@@ -7,9 +7,11 @@ import { idempotencyKeySchema } from "@/lib/validation/idempotency";
 import {
   changeRequirementStatusInput,
   createWorkRequirementInput,
+  updateWorkRequirementInput,
 } from "@/lib/validation/work-requirement";
+import type { ApplicationConflict } from "@/domain/applications";
 import type { ApiErrorCode } from "@/types/api";
-import { createRequirement, setRequirementStatus } from "./api";
+import { createRequirement, setRequirementStatus, updateRequirement } from "./api";
 
 export type CreateRequirementState =
   | { status: "idle" }
@@ -19,6 +21,8 @@ export type CreateRequirementState =
       message: string;
       fieldErrors?: FieldErrors;
       requestId?: string;
+      /** 409 reason (`HAS_APPLICATIONS` when editing, D-06). */
+      reason?: ApplicationConflict;
     };
 
 /**
@@ -59,6 +63,40 @@ export async function createRequirementAction(
     };
   }
   redirect(`/app/organization/requirements/${result.data.requirement.id}`);
+}
+
+/**
+ * Edit (M05, owner 2026-10-22): same validation as create plus the version the form was loaded with;
+ * the database refuses it once the requirement has ever received an application (CFA12).
+ */
+export async function updateRequirementAction(input: unknown): Promise<CreateRequirementState> {
+  const parsed = updateWorkRequirementInput.safeParse(input);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      code: "VALIDATION_ERROR",
+      message: "common.checkFields",
+      fieldErrors: toFieldErrors(parsed.error),
+    };
+  }
+  const result = await updateRequirement(parsed.data);
+  if (!result.ok) {
+    return {
+      status: "error",
+      code: result.error.code,
+      message: result.error.message,
+      reason: result.error.reason,
+      fieldErrors: Object.fromEntries(
+        (result.error.issues ?? []).map((issue) => [
+          issue.path.split(".")[0] ?? "form",
+          issue.message,
+        ]),
+      ),
+      requestId: result.requestId,
+    };
+  }
+  revalidatePath("/app/organization", "layout");
+  redirect(`/app/organization/requirements/${parsed.data.id}`);
 }
 
 export type RequirementStatusResult =

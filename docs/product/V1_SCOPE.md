@@ -53,6 +53,9 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 
 ## LATER
 
+> **Owner, 2026-10-22 (SCOPE-2):** every LATER item below is now implementable **locally** («copiarlo todo»), with
+> v1.8's behaviour as the documented default where a decision is open (`08-product-decisions.md` §SCOPE-2). OUT stays out.
+
 - Candidate Pack (consent-based, per requirement).
 - Partial coverage (several technicians covering one requirement period by day blocks).
 - Urgent / AOG outreach intensity, opt-in priority contact.

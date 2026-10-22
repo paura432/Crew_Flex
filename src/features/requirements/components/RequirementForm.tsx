@@ -6,26 +6,34 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { QUALIFICATION_CATEGORIES, type QualificationType } from "@/domain/qualification";
-import type { RequirementLevel } from "@/domain/work-requirement";
+import type { RequirementLevel, WorkRequirement } from "@/domain/work-requirement";
 import { SHIFTS, URGENCIES } from "@/domain/work-requirement";
 import { resolveFieldErrors } from "@/i18n/validation";
 import { useIdempotencyKey } from "@/lib/idempotency";
-import { toUtcIso } from "@/lib/format";
+import { toLocalInput, toUtcIso } from "@/lib/format";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
-import { createWorkRequirementInput } from "@/lib/validation/work-requirement";
-import { createRequirementAction } from "../actions";
+import {
+  createWorkRequirementInput,
+  updateWorkRequirementInput,
+} from "@/lib/validation/work-requirement";
+import { createRequirementAction, updateRequirementAction } from "../actions";
 
 export function RequirementForm({
   organizationId,
   qualificationTypes,
+  initial,
 }: {
   organizationId: string;
   qualificationTypes: QualificationType[];
+  /** Edit mode (M05): the requirement as loaded, `updatedAt` included (optimistic check). */
+  initial?: WorkRequirement;
 }) {
   const t = useTranslations("organization.new");
   const tDomain = useTranslations("domain");
   const tRoot = useTranslations();
-  const [selected, setSelected] = useState<Map<string, RequirementLevel>>(new Map());
+  const [selected, setSelected] = useState<Map<string, RequirementLevel>>(
+    () => new Map(initial?.qualifications.map((q) => [q.qualificationTypeId, q.level])),
+  );
   const [rawErrors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<{ message: string; requestId?: string } | null>(
     null,
@@ -47,8 +55,7 @@ export function RequirementForm({
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const payload = {
-      organizationId,
+    const fields = {
       title: String(form.get("title") ?? ""),
       location: String(form.get("location") ?? ""),
       startsAt: toUtcIso(String(form.get("startsAt") ?? "")),
@@ -62,31 +69,44 @@ export function RequirementForm({
       })),
     };
 
-    const parsed = createWorkRequirementInput.safeParse(payload);
+    const parsed = initial
+      ? updateWorkRequirementInput.safeParse({
+          id: initial.id,
+          expectedUpdatedAt: initial.updatedAt,
+          ...fields,
+        })
+      : createWorkRequirementInput.safeParse({ organizationId, ...fields });
     setServerError(null);
     if (!parsed.success) {
       setErrors(toFieldErrors(parsed.error));
       return;
     }
     setErrors({});
+    const data = parsed.data;
     startTransition(async () => {
       const result = await callAction(() =>
-        createRequirementAction(parsed.data, idempotency.keyFor(parsed.data)),
+        "id" in data
+          ? updateRequirementAction(data)
+          : createRequirementAction(data, idempotency.keyFor(data)),
       );
       // On success the action redirects; we only get here on failure.
       if (result.status === "error") {
         setErrors(result.fieldErrors ?? {});
         setServerError({
           message:
-            result.code === "FORBIDDEN"
-              ? t("forbidden")
-              : result.code === "NETWORK_ERROR"
-                ? t("unreachable")
-                : result.code === "UNAUTHORIZED"
-                  ? t("sessionExpired")
-                  : result.code === "VALIDATION_ERROR"
-                    ? tRoot("common.checkFields")
-                    : tRoot(`api.${result.code}.description`),
+            "reason" in result && result.reason === "HAS_APPLICATIONS"
+              ? t("hasApplications")
+              : result.code === "CONFLICT" && initial
+                ? t("stale")
+                : result.code === "FORBIDDEN"
+                  ? t("forbidden")
+                  : result.code === "NETWORK_ERROR"
+                    ? t("unreachable")
+                    : result.code === "UNAUTHORIZED"
+                      ? t("sessionExpired")
+                      : result.code === "VALIDATION_ERROR"
+                        ? tRoot("common.checkFields")
+                        : tRoot(`api.${result.code}.description`),
           requestId: result.requestId,
         });
       }
@@ -123,16 +143,30 @@ export function RequirementForm({
           {t("sectionNeed")}
         </legend>
         <Field id="title" label={t("fields.title")} error={errors.title}>
-          <input {...input("title")} placeholder={t("titlePlaceholder")} />
+          <input
+            {...input("title")}
+            placeholder={t("titlePlaceholder")}
+            defaultValue={initial?.title}
+          />
         </Field>
         <Field id="location" label={t("fields.location")} error={errors.location}>
-          <input {...input("location")} placeholder={t("locationPlaceholder")} />
+          <input
+            {...input("location")}
+            placeholder={t("locationPlaceholder")}
+            defaultValue={initial?.location}
+          />
         </Field>
         <Field id="headcount" label={t("fields.headcount")} error={errors.headcount}>
-          <input {...input("headcount")} type="number" min={1} max={50} defaultValue={1} />
+          <input
+            {...input("headcount")}
+            type="number"
+            min={1}
+            max={50}
+            defaultValue={initial?.headcount ?? 1}
+          />
         </Field>
         <Field id="urgency" label={t("fields.urgency")} error={errors.urgency}>
-          <select {...input("urgency")} defaultValue="planned">
+          <select {...input("urgency")} defaultValue={initial?.urgency ?? "planned"}>
             {URGENCIES.map((u) => (
               <option key={u} value={u}>
                 {tDomain(`urgency.${u}`)}
@@ -147,13 +181,21 @@ export function RequirementForm({
           {t("sectionPeriod")}
         </legend>
         <Field id="startsAt" label={t("fields.starts")} error={errors.startsAt}>
-          <input {...input("startsAt")} type="datetime-local" />
+          <input
+            {...input("startsAt")}
+            type="datetime-local"
+            defaultValue={initial ? toLocalInput(initial.startsAt) : undefined}
+          />
         </Field>
         <Field id="endsAt" label={t("fields.ends")} error={errors.endsAt}>
-          <input {...input("endsAt")} type="datetime-local" />
+          <input
+            {...input("endsAt")}
+            type="datetime-local"
+            defaultValue={initial ? toLocalInput(initial.endsAt) : undefined}
+          />
         </Field>
         <Field id="shift" label={t("fields.shift")} error={errors.shift}>
-          <select {...input("shift")} defaultValue="day">
+          <select {...input("shift")} defaultValue={initial?.shift ?? "day"}>
             {SHIFTS.map((s) => (
               <option key={s} value={s}>
                 {tDomain(`shift.${s}`)}
@@ -227,9 +269,19 @@ export function RequirementForm({
 
       <div className="flex flex-wrap gap-3">
         <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-          {pending ? t("submitting") : t("submit")}
+          {pending
+            ? t(initial ? "editSubmitting" : "submitting")
+            : t(initial ? "editSubmit" : "submit")}
         </Button>
-        <ButtonLink href="/app/organization/requirements">{tRoot("common.cancel")}</ButtonLink>
+        <ButtonLink
+          href={
+            initial
+              ? `/app/organization/requirements/${initial.id}`
+              : "/app/organization/requirements"
+          }
+        >
+          {tRoot("common.cancel")}
+        </ButtonLink>
       </div>
     </form>
   );

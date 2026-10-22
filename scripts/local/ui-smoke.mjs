@@ -1303,6 +1303,48 @@ await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
   method: "PATCH",
   body: { id: hiringId, status: "closed" },
 });
+// 27 (M05 edit, owner 2026-10-22): a need with applications cannot be edited; one without can.
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements/${hiringId}/edit`);
+await page.waitForLoadState("networkidle");
+const editRefused = /already received applications/.test(await page.locator("main").innerText());
+const editable = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: mroOrg.id,
+    title: "Local UI check · edit me",
+    location: "Madrid (MAD)",
+    startsAt: "2026-12-14T06:00:00.000Z",
+    endsAt: "2026-12-15T18:00:00.000Z",
+    shift: "day",
+    headcount: 1,
+    urgency: "planned",
+    qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const editableId = editable.data.requirement.id;
+await page.goto(`${BASE}/app/organization/requirements/${editableId}`);
+await page.waitForLoadState("networkidle");
+await page.getByRole("link", { name: "Edit requirement" }).click();
+await page.waitForURL(/\/edit$/);
+await page.fill("#title", "Local UI check · edited");
+await page.fill("#headcount", "2");
+await page.getByRole("button", { name: "Save changes" }).click();
+await page.waitForURL((u) => u.pathname === `/app/organization/requirements/${editableId}`, {
+  timeout: 30000,
+});
+await page.waitForLoadState("networkidle");
+ok(
+  "27 edit: refused with applications; without them the form saves (title, headcount)",
+  editRefused && /Local UI check · edited/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: editableId, status: "closed" },
+});
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).

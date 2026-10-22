@@ -52,7 +52,8 @@
     "opportunities": "Oportunidades",
     "opportunity": "Oportunidad",
     "applications": "Mis candidaturas",
-    "requirementApplications": "Candidaturas"
+    "requirementApplications": "Candidaturas",
+    "requirementEdit": "Editar necesidad"
   },
   "nav": {
     "organization": "Organización",
@@ -805,7 +806,8 @@
         "pausedDone": "Necesidad pausada: ya no se publica ni se evalúa.",
         "resumedDone": "Necesidad reanudada: vuelve a publicarse.",
         "pausedNote": "Esta necesidad está pausada: no se publica como oportunidad ni se evalúan candidatos. Reanúdala para volver a publicarla."
-      }
+      },
+      "edit": "Editar necesidad"
     },
     "new": {
       "title": "Nueva necesidad de personal",
@@ -833,7 +835,11 @@
       "submitting": "Creando…",
       "forbidden": "Tu rol no puede crear necesidades en esta organización.",
       "unreachable": "No se ha podido contactar con el servicio. Tus datos siguen aquí; reintenta.",
-      "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión."
+      "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+      "editSubmit": "Guardar cambios",
+      "editSubmitting": "Guardando…",
+      "hasApplications": "Esta necesidad ya recibió candidaturas: no se puede editar.",
+      "stale": "La necesidad cambió mientras la editabas. Recarga para ver la versión actual; no se ha guardado nada."
     },
     "matches": {
       "eyebrow": "Red externa · vista previa del matching",

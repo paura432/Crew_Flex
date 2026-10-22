@@ -70,6 +70,12 @@ export default async function RequirementDetailPage({
               {requirement.status === "paused" && (
                 <p className="text-sm text-muted">{t("status.pausedNote")}</p>
               )}
+              {/* M05: editable only while it never received an application (the server re-checks). */}
+              {applications?.ok && applications.data.applications.length === 0 && (
+                <ButtonLink href={`/app/organization/requirements/${requirement.id}/edit`}>
+                  {t("edit")}
+                </ButtonLink>
+              )}
               {applications?.ok && (
                 <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
                   {tApplications("view", { count: applications.data.applications.length })}
