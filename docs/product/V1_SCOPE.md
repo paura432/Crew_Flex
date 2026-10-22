@@ -67,7 +67,8 @@ Current phase: **Foundation + Prototype V0**. Milestone:
   Glossary/ATA («English and acronyms», `/app/tools/knowledge`), translator (`/app/tools/translator`) and the daily
   challenge with its learning medals (`/app/tools/daily`, «Learning achievements» in Mi espacio, BR-16): IMPLEMENTED
   (local, 2026-10-22, area-40 v2 backlog L-1…L-4); editorial banks of v1.8 2026-10-13.1, pending formal review. Fuel
-  sheet and logbook: not started.
+  sheet: not started (D-11).
+- Logbook from the prototype (M14, N-12): IMPLEMENTED (local only, 2026-10-22; `/app/professional/logbook`, migration `20261023200000`, `professional-logbook`; not deployed). Owner only, self-declared (BR-16, defaults T-15…T-18).
 - Rates, logistics and contract conditions on requirements.
 
 ## OUT (not this product phase)

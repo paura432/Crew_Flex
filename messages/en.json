@@ -53,7 +53,8 @@
     "opportunity": "Opportunity",
     "applications": "My applications",
     "requirementApplications": "Applications",
-    "requirementEdit": "Edit requirement"
+    "requirementEdit": "Edit requirement",
+    "logbook": "Logbook"
   },
   "nav": {
     "organization": "Organization",
@@ -79,7 +80,8 @@
       "admin": "Administration"
     },
     "opportunities": "Opportunities",
-    "applications": "My applications"
+    "applications": "My applications",
+    "logbook": "Logbook"
   },
   "landing": {
     "eyebrow": "Aircraft maintenance workforce",
@@ -1541,5 +1543,59 @@
     "orgOnlyAction": "See requirements",
     "managersOnlyTitle": "Applications are handled by admins and managers",
     "managersOnlyDescription": "Your role in the organization cannot see or move applications."
+  },
+  "logbook": {
+    "eyebrow": "MY EXPERIENCE",
+    "title": "Personal logbook",
+    "description": "Private auxiliary record. It does not replace your company's official records.",
+    "noProfileDescription": "The logbook belongs to professional accounts.",
+    "disclaimer": "Self-declared record; it is not a certification of experience or a release to service. Only you can see it: no organization has access.",
+    "newTitle": "New entry",
+    "date": "Task date",
+    "aircraft": "Aircraft",
+    "aircraftHint": "Pick a model from the list or type your own (for example, with the registration).",
+    "categoryLabel": "Task category",
+    "category": {
+      "defect_rectification": "Defect Rectification",
+      "inspection": "Inspection",
+      "component_replacement": "Component Replacement",
+      "troubleshooting": "Troubleshooting",
+      "sheet_metal_structures": "Sheet Metal / Structures",
+      "cabin_interiors": "Cabin / Interiors"
+    },
+    "environmentLabel": "Environment",
+    "environment": {
+      "line_maintenance": "Line Maintenance",
+      "base_maintenance": "Base Maintenance",
+      "engine_bay_check": "Engine Bay Check",
+      "aog_intervention": "AOG Intervention",
+      "workshop": "Workshop"
+    },
+    "ata": "ATA (optional)",
+    "hours": "Hours",
+    "hoursHint": "From 0 to 24, in steps of 0.1.",
+    "descriptionLabel": "Private technical description",
+    "cvRelevant": "Available to select for the Candidate Pack",
+    "cvRelevantHint": "The Candidate Pack is not active yet: this mark shares nothing with anyone.",
+    "save": "Save entry",
+    "saved": "Entry saved",
+    "updated": "Logbook updated",
+    "deleted": "Entry deleted",
+    "invalid": "Enter a task you have done, a valid date and a description.",
+    "historyTitle": "History",
+    "archiveTitle": "Archived entries",
+    "showArchive": "View archive",
+    "showActive": "View active",
+    "empty": "No entries yet. The ones you save will appear here.",
+    "emptyArchive": "No archived entries.",
+    "truncated": "Showing the {shown} most recent of {total} entries.",
+    "ataValue": "ATA {ata}",
+    "hoursValue": "{hours, number} h",
+    "selfDeclared": "Self-declared",
+    "selectable": "Selectable for the Candidate Pack",
+    "editTitle": "Edit experience",
+    "archive": "Archive",
+    "restore": "Restore",
+    "confirmDelete": "Delete permanently"
   }
 }

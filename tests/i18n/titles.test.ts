@@ -24,6 +24,7 @@ const TITLE_FOR_NAV: Record<keyof typeof es.nav, keyof typeof es.meta | null> = 
   documents: "documents",
   opportunities: "opportunities",
   applications: "applications",
+  logbook: "logbook",
 };
 
 describe("page titles match the menu", () => {

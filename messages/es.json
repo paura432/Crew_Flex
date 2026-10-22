@@ -53,7 +53,8 @@
     "opportunity": "Oportunidad",
     "applications": "Mis candidaturas",
     "requirementApplications": "Candidaturas",
-    "requirementEdit": "Editar necesidad"
+    "requirementEdit": "Editar necesidad",
+    "logbook": "Logbook"
   },
   "nav": {
     "organization": "Organización",
@@ -79,7 +80,8 @@
       "admin": "Administración"
     },
     "opportunities": "Oportunidades",
-    "applications": "Mis candidaturas"
+    "applications": "Mis candidaturas",
+    "logbook": "Logbook"
   },
   "landing": {
     "eyebrow": "Personal de mantenimiento aeronáutico",
@@ -1541,5 +1543,59 @@
     "orgOnlyAction": "Ver necesidades",
     "managersOnlyTitle": "Las candidaturas las gestionan administradores y managers",
     "managersOnlyDescription": "Tu rol en la organización no permite ver ni mover candidaturas."
+  },
+  "logbook": {
+    "eyebrow": "MI EXPERIENCIA",
+    "title": "Logbook personal",
+    "description": "Registro auxiliar privado. No sustituye registros oficiales de la empresa.",
+    "noProfileDescription": "El logbook pertenece a las cuentas profesionales.",
+    "disclaimer": "Registro autodeclarado; no constituye certificación de experiencia ni puesta en servicio. Solo tú puedes verlo: ninguna empresa tiene acceso.",
+    "newTitle": "Nueva entrada",
+    "date": "Fecha de la tarea",
+    "aircraft": "Aeronave",
+    "aircraftHint": "Elige un modelo de la lista o escribe el tuyo (por ejemplo, con la matrícula).",
+    "categoryLabel": "Categoría de tarea",
+    "category": {
+      "defect_rectification": "Defect Rectification",
+      "inspection": "Inspection",
+      "component_replacement": "Component Replacement",
+      "troubleshooting": "Troubleshooting",
+      "sheet_metal_structures": "Sheet Metal / Structures",
+      "cabin_interiors": "Cabin / Interiors"
+    },
+    "environmentLabel": "Entorno",
+    "environment": {
+      "line_maintenance": "Line Maintenance",
+      "base_maintenance": "Base Maintenance",
+      "engine_bay_check": "Engine Bay Check",
+      "aog_intervention": "AOG Intervention",
+      "workshop": "Workshop"
+    },
+    "ata": "ATA (opcional)",
+    "hours": "Horas",
+    "hoursHint": "De 0 a 24, en pasos de 0,1.",
+    "descriptionLabel": "Descripción técnica privada",
+    "cvRelevant": "Disponible para seleccionar en Candidate Pack",
+    "cvRelevantHint": "El Candidate Pack aún no está activo: esta marca no comparte nada con nadie.",
+    "save": "Guardar entrada",
+    "saved": "Entrada guardada",
+    "updated": "Logbook actualizado",
+    "deleted": "Entrada eliminada",
+    "invalid": "Indica una tarea realizada, fecha válida y descripción.",
+    "historyTitle": "Historial",
+    "archiveTitle": "Entradas archivadas",
+    "showArchive": "Ver archivo",
+    "showActive": "Ver activas",
+    "empty": "Todavía no hay entradas. Las que guardes aparecerán aquí.",
+    "emptyArchive": "No hay entradas archivadas.",
+    "truncated": "Se muestran las {shown} entradas más recientes de {total}.",
+    "ataValue": "ATA {ata}",
+    "hoursValue": "{hours, number} h",
+    "selfDeclared": "Autodeclarada",
+    "selectable": "Seleccionable para expediente",
+    "editTitle": "Editar experiencia",
+    "archive": "Archivar",
+    "restore": "Restaurar",
+    "confirmDelete": "Eliminar definitivamente"
   }
 }

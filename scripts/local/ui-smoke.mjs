@@ -1617,6 +1617,137 @@ ok(
   JSON.stringify(calDeleted.error ?? ""),
 );
 
+// PKG logbook — N-12 personal logbook (M14, BR-16): nav order, future date refused, create (the form
+// empties), hours in the locale's format, selection flag, inline edit, archive → archive view → restore,
+// delete; an organization admin of a member's org reads nothing. Restores: the smoke entry is deleted.
+{
+  const LB = "/app/professional/logbook";
+  const AIRCRAFT = "A320 EC-QAA (smoke)";
+  const madrid = (offsetDays) =>
+    new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(
+      new Date(Date.now() + offsetDays * 86_400_000),
+    );
+  const cleanup = async () => {
+    for (const view of ["active", "archived"]) {
+      const list = await asSeedUser("delta@crewflex.test", "professional-logbook", {
+        query: { view },
+      });
+      for (const e of list.data?.entries ?? []) {
+        if (e.aircraft === AIRCRAFT)
+          await asSeedUser("delta@crewflex.test", "professional-logbook", {
+            method: "DELETE",
+            query: { id: e.id },
+          });
+      }
+    }
+  };
+  await cleanup(); // an interrupted earlier run
+  await login("delta@crewflex.test");
+  await page.goto(`${BASE}${LB}`);
+  await page.waitForLoadState("networkidle");
+  const hrefs = await page.$$eval("nav a", (as) => as.map((a) => a.getAttribute("href")));
+  const at = (h) => hrefs.indexOf(h);
+  ok(
+    "PKG logbook: nav entry after Mis candidaturas / Documents and before Tools; page heading",
+    at(LB) > at("/app/professional/applications") &&
+      at(LB) > at("/app/professional/documents") &&
+      at(LB) < at("/app/tools") &&
+      /Personal logbook/.test(await page.locator("h1").innerText()),
+    hrefs.join(" "),
+  );
+  await page.fill("#entryDate", madrid(2));
+  await page.fill("#aircraft", AIRCRAFT);
+  await page.fill("#hours", "3.5");
+  await page.fill("#description", "Local UI check · main wheel replaced.");
+  await page.getByRole("button", { name: "Save entry" }).click();
+  ok(
+    "PKG logbook: a future date is refused («not future work»)",
+    /not future work/.test(
+      await page
+        .locator("#entryDate-error")
+        .innerText()
+        .catch(() => ""),
+    ),
+    "",
+  );
+  await page.fill("#entryDate", madrid(0));
+  await page.fill("#ata", "32");
+  await page.selectOption("#category", "component_replacement");
+  await page.getByRole("button", { name: "Save entry" }).click();
+  await page.waitForSelector("[role=status]:has-text('Entry saved')", { timeout: 15000 });
+  const row = page.locator("main li", { hasText: AIRCRAFT });
+  ok(
+    "PKG logbook: saved entry listed («aircraft · category», ATA · hours · environment, self-declared); form emptied",
+    (await row.count()) === 1 &&
+      /A320 EC-QAA \(smoke\) · Component Replacement/.test(await row.innerText()) &&
+      /ATA 32 · 3\.5 h · Line Maintenance/.test(await row.innerText()) &&
+      /Self-declared/.test(await row.innerText()) &&
+      (await page.inputValue("#aircraft")) === "",
+    (await row.innerText().catch(() => "no row")).replace(/\s+/g, " ").slice(0, 160),
+  );
+  await responsiveShots("pkg-logbook");
+  const orgView = await asSeedUser("admin.mro@crewflex.test", "professional-logbook");
+  const orgRest = await seedRest("admin.mro@crewflex.test", "logbook_entries?select=id");
+  ok(
+    "PKG logbook: owner only — an organization admin reads no entry (function and PostgREST)",
+    Array.isArray(orgView.data?.entries) &&
+      orgView.data.entries.length === 0 &&
+      Array.isArray(orgRest) &&
+      orgRest.length === 0,
+    JSON.stringify(orgView).slice(0, 80),
+  );
+  await row.getByLabel("Selectable for the Candidate Pack").check();
+  await page.waitForSelector("[role=status]:has-text('Logbook updated')", { timeout: 15000 });
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG logbook: «Selectable for the Candidate Pack» persists after reload",
+    await row.getByLabel("Selectable for the Candidate Pack").isChecked(),
+    "",
+  );
+  await row.getByRole("button", { name: "Edit" }).click();
+  await page.fill("#edit-hours", "2");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.waitForSelector("[role=status]:has-text('Logbook updated')", { timeout: 15000 });
+  ok(
+    "PKG logbook: inline edit saves (2 h)",
+    /ATA 32 · 2 h ·/.test(await row.innerText()),
+    (await row.innerText()).replace(/\s+/g, " ").slice(0, 120),
+  );
+  await row.getByRole("button", { name: "Archive" }).click();
+  await page.waitForSelector("[role=status]:has-text('Logbook updated')", { timeout: 15000 });
+  await page.waitForFunction(
+    (a) => !document.querySelector("main")?.innerText.includes(a),
+    AIRCRAFT,
+  );
+  await page.getByRole("link", { name: "View archive" }).click();
+  await page.waitForURL(/view=archived/);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG logbook: archived entry is in «Archived entries», not in the history",
+    /Archived entries/.test(await page.locator("main").innerText()) && (await row.count()) === 1,
+    "",
+  );
+  await row.getByRole("button", { name: "Restore" }).click();
+  await page.waitForSelector("[role=status]:has-text('Logbook updated')", { timeout: 15000 });
+  await page.getByRole("link", { name: "View active" }).click();
+  await page.waitForURL((u) => u.pathname === LB && !u.search.includes("archived"));
+  await page.waitForLoadState("networkidle");
+  ok("PKG logbook: restored entry is back in the history", (await row.count()) === 1, "");
+  await row.getByRole("button", { name: "Archive" }).click();
+  await page.waitForSelector("[role=status]:has-text('Logbook updated')", { timeout: 15000 });
+  await page.goto(`${BASE}${LB}?view=archived`);
+  await page.waitForLoadState("networkidle");
+  await row.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "Delete permanently" }).click();
+  await page.waitForSelector("[role=status]:has-text('Entry deleted')", { timeout: 15000 });
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  ok("PKG logbook: deleted entry is gone (seed state restored)", (await row.count()) === 0, "");
+  await logout();
+  await cleanup();
+}
+
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
 const touch = await browser.newContext({

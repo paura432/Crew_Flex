@@ -30,10 +30,11 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/profile", label: tNav("profile") },
     { href: "/app/professional/qualifications", label: tNav("qualifications") },
     { href: "/app/professional/availability", label: tNav("availability") },
-    // v1.8 order: … Disponibilidad, Oportunidades, Mis candidaturas, Wallet (M07/M08)
+    // v1.8 order: … Disponibilidad, Oportunidades, Mis candidaturas, Wallet, Logbook (M07/M08, M14)
     { href: "/app/professional/opportunities", label: tNav("opportunities") },
     { href: "/app/professional/applications", label: tNav("applications") },
     ...(walletEnabled ? [{ href: "/app/professional/documents", label: tNav("documents") }] : []),
+    { href: "/app/professional/logbook", label: tNav("logbook") },
   ];
   const accountNav: NavItem[] = [
     { href: "/app/tools", label: tNav("tools") },
