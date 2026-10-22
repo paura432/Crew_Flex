@@ -333,7 +333,7 @@ export function QualificationsManager({
                     </StatusChip>
                     <div className="flex gap-2">
                       <Button
-                        className="min-h-8 px-3 text-xs"
+                        size="sm"
                         disabled={pending}
                         onClick={() => {
                           setEditing(q);
@@ -344,7 +344,7 @@ export function QualificationsManager({
                         {tRoot("common.edit")}
                       </Button>
                       <ConfirmButton
-                        className="min-h-8 px-3 text-xs"
+                        size="sm"
                         disabled={pending}
                         label={tRoot("common.remove")}
                         confirmLabel={t("confirmRemove")}

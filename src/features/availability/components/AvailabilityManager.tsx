@@ -471,7 +471,7 @@ export function AvailabilityManager({
                 </span>
                 <div className="flex gap-2">
                   <Button
-                    className="min-h-8 px-3 text-xs"
+                    size="sm"
                     onClick={() => {
                       setEditing(w);
                       setErrors({});
@@ -482,7 +482,7 @@ export function AvailabilityManager({
                     {tRoot("common.edit")}
                   </Button>
                   <ConfirmButton
-                    className="min-h-8 px-3 text-xs"
+                    size="sm"
                     disabled={pending}
                     label={tRoot("common.delete")}
                     confirmLabel={t("confirmDelete")}

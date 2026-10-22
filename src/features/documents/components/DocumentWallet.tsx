@@ -391,15 +391,11 @@ export function DocumentWallet({
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <Button
-                          className="min-h-8 px-3 text-xs"
-                          disabled={pending}
-                          onClick={() => onOpen(d.id)}
-                        >
+                        <Button size="sm" disabled={pending} onClick={() => onOpen(d.id)}>
                           {t("open")}
                         </Button>
                         <Button
-                          className="min-h-8 px-3 text-xs"
+                          size="sm"
                           disabled={pending}
                           onClick={() => {
                             setEditing(d.id);
@@ -412,14 +408,15 @@ export function DocumentWallet({
                         {confirmDelete === d.id ? (
                           <>
                             <Button
-                              className="min-h-8 px-3 text-xs text-danger"
+                              variant="danger"
+                              size="sm"
                               disabled={pending}
                               onClick={() => onDelete(d.id)}
                             >
                               {t("confirmDelete")}
                             </Button>
                             <Button
-                              className="min-h-8 px-3 text-xs"
+                              size="sm"
                               disabled={pending}
                               onClick={() => setConfirmDelete(null)}
                             >
@@ -428,7 +425,8 @@ export function DocumentWallet({
                           </>
                         ) : (
                           <Button
-                            className="min-h-8 px-3 text-xs text-danger"
+                            variant="danger"
+                            size="sm"
                             disabled={pending}
                             onClick={() => setConfirmDelete(d.id)}
                           >

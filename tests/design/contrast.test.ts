@@ -45,25 +45,36 @@ describe("text contrast (WCAG AA, 4.5:1 for body-size text)", () => {
   });
 });
 
-describe("landing (X-01)", () => {
+/** Every `.tsx` file under `dir`. */
+const tsxFiles = (dir: string): string[] =>
+  readdirSync(join(root, dir)).flatMap((name) => {
+    const path = `${dir}/${name}`;
+    if (statSync(join(root, path)).isDirectory()) return tsxFiles(path);
+    return path.endsWith(".tsx") ? [path] : [];
+  });
+
+describe("buttons (X-01)", () => {
   it("white «Iniciar sesión» on the navy landing (was bg-white under text-white, 1:1)", () => {
     expect(contrast("#ffffff", token("--color-navy"))).toBeGreaterThanOrEqual(4.5);
     expect(read("src/app/page.tsx")).toMatch(/href="\/login" variant="inverse"/);
+  });
+
+  it("no caller overrides a variant's colour or size through className (stylesheet order wins)", () => {
+    const tag = /<(?:Button|ButtonLink|ConfirmButton)\b(?:[^<>]|=>)*?className=\{?["`]([^"`]*)/g;
+    const offenders = tsxFiles("src").flatMap((path) =>
+      [...read(path).matchAll(tag)]
+        .filter((m) => /(?:^|\s)(?:hover:)?(?:bg|text|border|min-h|px|py)-/.test(m[1]!))
+        .map((m) => `${path}: ${m[1]}`),
+    );
+    expect(offenders).toEqual([]);
   });
 });
 
 describe("reduced motion", () => {
   it("no animation in src/ runs without `motion-safe:` (prefers-reduced-motion)", () => {
-    const offenders: string[] = [];
-    const walk = (dir: string) => {
-      for (const name of readdirSync(join(root, dir))) {
-        const path = `${dir}/${name}`;
-        if (statSync(join(root, path)).isDirectory()) walk(path);
-        else if (path.endsWith(".tsx") && /(?<!motion-safe:)\banimate-(?!none)/.test(read(path)))
-          offenders.push(path);
-      }
-    };
-    walk("src");
+    const offenders = tsxFiles("src").filter((path) =>
+      /(?<!motion-safe:)\banimate-(?!none)/.test(read(path)),
+    );
     expect(offenders).toEqual([]);
   });
 });

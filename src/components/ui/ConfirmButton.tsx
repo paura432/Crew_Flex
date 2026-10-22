@@ -14,14 +14,14 @@ export function ConfirmButton({
   cancelLabel,
   onConfirm,
   disabled = false,
-  className = "",
+  size = "md",
 }: {
   label: string;
   confirmLabel: string;
   cancelLabel: string;
   onConfirm: () => void;
   disabled?: boolean;
-  className?: string;
+  size?: "md" | "sm";
 }) {
   const [asking, setAsking] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -37,7 +37,8 @@ export function ConfirmButton({
     return (
       <Button
         ref={trigger}
-        className={`${className} text-danger`}
+        variant="danger"
+        size={size}
         disabled={disabled}
         onClick={() => setAsking(true)}
       >
@@ -48,7 +49,8 @@ export function ConfirmButton({
   return (
     <>
       <Button
-        className={`${className} text-danger`}
+        variant="danger"
+        size={size}
         disabled={disabled}
         onClick={() => {
           setAsking(false);
@@ -59,7 +61,7 @@ export function ConfirmButton({
       </Button>
       <Button
         autoFocus
-        className={className}
+        size={size}
         disabled={disabled}
         onClick={() => {
           refocus.current = true;
