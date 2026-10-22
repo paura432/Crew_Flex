@@ -1,5 +1,5 @@
 -- Crew Flex — requirement terms: shifts, country, IANA zone, conditions, description, archive flag
--- (v2 diff area 30: v2-09, v2-10, v2-12, v2-14; SCOPE-2 + DEFAULTS of 2026-10-22, technical defaults T-15…T-19 in
+-- (v2 diff area 30: v2-09, v2-10, v2-12, v2-14; SCOPE-2 + DEFAULTS of 2026-10-22, technical defaults T-60…T-64 in
 -- docs/integration/crewflex-v13/08-product-decisions.md).
 -- NON-DESTRUCTIVE: adds six nullable columns, their CHECK constraints, four private validators, one INSERT column
 -- grant; `create or replace` of guard_closed_requirement / guard_requirement_with_applications (same rules, the
@@ -16,12 +16,12 @@
 --                   start date; the requirement's [starts_at, ends_at) is exactly their envelope. NULL = one
 --                   continuous period (every requirement until now). D-06 Q6 is unchanged: an application covers
 --                   the requirement's whole period, so eligibility, applications and the confirm re-check keep
---                   using the envelope (T-15).
+--                   using the envelope (T-60).
 --   * conditions  — informative terms without real money (v1.8 demo Company2.jsx:114-125, Marketplace.jsx:11-44;
 --                   OD-7: no fee, commission or invoice): rates, per diem, hours per shift, contract type, budget
---                   flag, mobilisation, incorporation and logistics (T-17). Validated key by key below.
+--                   flag, mobilisation, incorporation and logistics (T-62). Validated key by key below.
 --   * description — free text ≤ 4000 (v1.8 connected «Descripción y condiciones»).
---   * archived_at — v1.8 «Archivar» (one way): only on a closed requirement (T-19); written by the archive RPC only.
+--   * archived_at — v1.8 «Archivar» (one way): only on a closed requirement (T-64); written by the archive RPC only.
 -- Who writes them: the create RPC (SECURITY INVOKER, so `authenticated` gets INSERT on the five business columns)
 -- and the edit RPC (DEFINER). There is no UPDATE grant: direct PostgREST writes cannot change them, and the CHECK
 -- constraints hold for every write path, the table owner included.

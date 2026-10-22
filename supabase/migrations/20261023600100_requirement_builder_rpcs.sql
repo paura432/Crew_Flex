@@ -1,5 +1,5 @@
 -- Crew Flex — requirement builder RPCs (v2 diff area 30: v2-09, v2-10, v2-12 terms; v2-14 drafts and archive;
--- v2-13 live count of viable candidates). Technical defaults T-15…T-21 (08-product-decisions.md).
+-- v2-13 live count of viable candidates). Technical defaults T-60…T-66 (08-product-decisions.md).
 -- NON-DESTRUCTIVE: new overloads of create_work_requirement / create_work_requirement_idempotent /
 -- update_work_requirement (the old signatures stay, unchanged, for the functions already deployed), two new RPCs
 -- (archive_work_requirement, count_viable_candidates), one private helper (hard_eligibility_for) and a
@@ -7,7 +7,7 @@
 -- to the helper, so apply, confirm and the live count share ONE SQL expression; rls suite W keeps proving it
 -- agrees with ranked_external_pool and evaluateMatch). No table, column, policy, grant or data is removed.
 --
--- Drafts (R-D4 default, T-18): `draft` is created by the create RPC when asked; a draft has the columns every
+-- Drafts (R-D4 default, T-63): `draft` is created by the create RPC when asked; a draft has the columns every
 -- requirement has (title, base, period, headcount) but may lack qualifications (0–20, no hard one needed) — the
 -- BR-1.4 deferred trigger already skips drafts. Publishing (create as `open`, edit with p_status = 'open', or the
 -- status PATCH draft → open) applies the full rules: 1–20 qualifications with a hard one here and at commit
@@ -298,7 +298,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------------------------
--- Archive (v1.8 «Archivar», one way; T-19): admin/manager of the requirement's organization. A closed requirement
+-- Archive (v1.8 «Archivar», one way; T-64): admin/manager of the requirement's organization. A closed requirement
 -- is flagged; a draft is closed and flagged in the same step (an archived requirement is always closed, so it is
 -- never published again). Anything else must be closed first (409; closing keeps its own rule, T-12). Archiving
 -- twice is a no-op. Missing and not allowed are the same 42501 (no oracle on published ids). Audited
@@ -409,7 +409,7 @@ as $$
   where wr.id = p_requirement_id;
 $$;
 
--- «{n} candidatos con requisitos y bloques viables» (v1.8 Company2.jsx:112,125; T-21) for the builder's period,
+-- «{n} candidatos con requisitos y bloques viables» (v1.8 Company2.jsx:112,125; T-66) for the builder's period,
 -- urgency and hard qualifications, saved or not: internal members of the organization (any visibility, BR-7
 -- internal pool) plus external professionals with `anonymous` or `open` visibility (never `private`, S-7) who pass
 -- the hard filters. A COUNT only — no ids, names or data (what matching already shows pseudonymously for a saved

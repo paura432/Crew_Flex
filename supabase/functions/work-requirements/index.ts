@@ -12,7 +12,7 @@
 //                                      a no-op (200); a change the lifecycle does not allow is 409; closing
 //                                      with an accepted/confirmed application is 409 `ACTIVE_COMMITMENTS`;
 //                                      publishing a draft (draft → open) applies the creation rules (400)
-// PATCH /work-requirements { id, archive: true } → v1.8 «Archivar» (one way, T-19): a closed requirement,
+// PATCH /work-requirements { id, archive: true } → v1.8 «Archivar» (one way, T-64): a closed requirement,
 //                                      or a draft (closed in the same step); anything else 409
 // PUT /work-requirements { id, expectedUpdatedAt, title, …, qualifications, country?, timeZone?, description?,
 //                          shifts?, conditions?, intent? } → edit (admin/manager; M05): only while the
@@ -175,7 +175,7 @@ export const handler = createHandler("work-requirements", {
         throw new ApiError("CONFLICT", "This status change is not allowed.");
       }
       if (current.status === "draft") {
-        // Publishing applies the creation rules to what the draft holds (R-D4, T-18).
+        // Publishing applies the creation rules to what the draft holds (R-D4, T-63).
         const issues = publishIssues(current);
         if (issues.length > 0) {
           throw new ApiError(

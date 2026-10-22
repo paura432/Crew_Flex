@@ -1,6 +1,6 @@
 // POST /matching-evaluate { requirementId } → deterministic, explainable external matches.
 // POST /matching-evaluate { organizationId, startsAt, endsAt, urgency, hardQualificationTypeIds } → the
-//      requirement builder's live count «{n} candidatos con requisitos y bloques viables» (v2-13, T-21): a
+//      requirement builder's live count «{n} candidatos con requisitos y bloques viables» (v2-13, T-66): a
 //      COUNT of internal members and visible professionals who pass the hard filters, from the same SQL rule as
 //      apply and confirm (count_viable_candidates); admin/manager of that organization only. No identities.
 // LLM ≠ eligibility engine: this is pure rule evaluation (src/domain/matching.ts).

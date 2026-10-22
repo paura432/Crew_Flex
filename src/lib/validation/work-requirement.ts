@@ -48,7 +48,7 @@ export const requirementShiftInput = z.strictObject({
 });
 
 /**
- * Informative conditions without real money (v2-12, OD-7; T-17): the v1.8 demo fields and ranges. Every key is
+ * Informative conditions without real money (v2-12, OD-7; T-62): the v1.8 demo fields and ranges. Every key is
  * optional (absent = not stated); unknown keys — commissions included — are refused. Same rules as the CHECK
  * `work_requirements_conditions_valid`.
  */
@@ -99,7 +99,7 @@ const requirementFields = {
     .min(1, "v.headcount.min")
     .max(HEADCOUNT_MAX, "v.headcount.max"),
   urgency: z.enum(URGENCIES, "v.urgency.invalid"),
-  // At least one, and a hard one, unless the requirement is saved as a draft (R-D4, T-18): see the refinement.
+  // At least one, and a hard one, unless the requirement is saved as a draft (R-D4, T-63): see the refinement.
   qualifications: z.array(requirementQualificationInput).max(20, "v.qualifications.max"),
   // Requirement builder (v2-09/10/12, LOCAL 20261023600000). Optional: absent = not stated, so older clients keep
   // working; the form always sends country and zone (default ES, Europe/Madrid).
@@ -242,7 +242,7 @@ export function publishIssues(r: WorkRequirement) {
 export const REQUIREMENT_LIST_ORDERS = ["starts_asc", "created_desc"] as const;
 export type RequirementListOrder = (typeof REQUIREMENT_LIST_ORDERS)[number];
 
-/** v1.8 «Archivada» (T-19) in the list: everything (default, as before), only the others, or only archived. */
+/** v1.8 «Archivada» (T-64) in the list: everything (default, as before), only the others, or only archived. */
 export const REQUIREMENT_ARCHIVE_FILTERS = ["include", "exclude", "only"] as const;
 export type RequirementArchiveFilter = (typeof REQUIREMENT_ARCHIVE_FILTERS)[number];
 
@@ -272,7 +272,7 @@ export const changeRequirementStatusInput = z.strictObject({
 });
 export type ChangeRequirementStatusInput = z.infer<typeof changeRequirementStatusInput>;
 
-/** v1.8 «Archivar» (one way, T-19): a closed requirement, or a draft (closed in the same step). */
+/** v1.8 «Archivar» (one way, T-64): a closed requirement, or a draft (closed in the same step). */
 export const archiveRequirementInput = z.strictObject({
   id: z.uuid("v.requirement.id"),
   archive: z.literal(true),
@@ -292,7 +292,7 @@ export const evaluateRequirementInput = z.strictObject({
 export type EvaluateRequirementInput = z.infer<typeof evaluateRequirementInput>;
 
 /**
- * v1.8 «{n} candidatos con requisitos y bloques viables» (v2-13, T-21): the builder's period, urgency and hard
+ * v1.8 «{n} candidatos con requisitos y bloques viables» (v2-13, T-66): the builder's period, urgency and hard
  * qualifications, saved or not (`POST /matching-evaluate`). The answer is a count only.
  */
 export const viableCandidatesInput = z

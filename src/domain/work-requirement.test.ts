@@ -155,7 +155,7 @@ describe("v1.8 summary figures", () => {
   });
 });
 
-describe("archive and duplicate (v2-14, T-19/T-20)", () => {
+describe("archive and duplicate (v2-14, T-64/T-65)", () => {
   it("archives closed requirements and drafts, once", () => {
     expect(canArchive({ status: "closed" })).toBe(true);
     expect(canArchive({ status: "draft" })).toBe(true);

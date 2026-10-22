@@ -427,7 +427,7 @@ describe("create with terms, drafts and the idempotency key (20261023600100)", (
     });
   });
 
-  it("an open requirement needs a hard qualification; a draft may have none (R-D4, T-18)", async () => {
+  it("an open requirement needs a hard qualification; a draft may have none (R-D4, T-63)", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       await actAs(tx, SEED.adminMro);
       const none = await sqlError(tx, CREATE, createArgs({ qualifications: [] }));
@@ -644,7 +644,7 @@ describe("edit with terms; save and publish a draft", () => {
   });
 });
 
-describe("archive (v1.8 «Archivar», one way; T-19)", () => {
+describe("archive (v1.8 «Archivar», one way; T-64)", () => {
   const ARCHIVE = "select * from public.archive_work_requirement($1)";
 
   it("archives a closed requirement and closes + archives a draft; open ones must be closed first", async () => {
@@ -789,7 +789,7 @@ describe("opportunity projection and proposal terms carry the new terms (D-12 fi
   });
 });
 
-describe("live count of viable candidates (v2-13, T-21)", () => {
+describe("live count of viable candidates (v2-13, T-66)", () => {
   const COUNT = "select public.count_viable_candidates($1, $2, $3, $4, $5::uuid[]) as n";
 
   it("counts internal members and visible professionals who pass the hard filters — never private ones", async () => {

@@ -22,7 +22,7 @@ export const HEADCOUNT_MAX = 50;
 export const MAX_REQUIREMENT_DAYS = 366;
 
 /**
- * The job's country (v1.8 `server/rules.mjs:1`, OD-6/D-04 default T-16): the 27 EU members, ISO 3166-1 alpha-2.
+ * The job's country (v1.8 `server/rules.mjs:1`, OD-6/D-04 default T-61): the 27 EU members, ISO 3166-1 alpha-2.
  * Mirrored by the CHECK `work_requirements_country_eu` (PGlite suite requirement-builder compares both).
  */
 export const EU_COUNTRIES = [
@@ -58,7 +58,7 @@ export type EuCountry = (typeof EU_COUNTRIES)[number];
 export const DEFAULT_COUNTRY: EuCountry = "ES";
 
 /**
- * The base's IANA zone (v1.8 connected «Zona IANA de la base», default Europe/Madrid; T-16): the EU members'
+ * The base's IANA zone (v1.8 connected «Zona IANA de la base», default Europe/Madrid; T-61): the EU members'
  * zones and UTC, a fixed list both the browser (Intl) and PostgreSQL know. It only tells local dates apart (one
  * shift per local start date); every instant is still stored and shown in UTC (BR-10). Mirrored by the CHECK
  * `work_requirements_timezone_known`.
@@ -119,7 +119,7 @@ export interface RequirementShift {
 }
 
 /**
- * Informative terms of a requirement (v1.8 demo `Company2.jsx:114-125`, `Marketplace.jsx:11-44`; T-17). Money is
+ * Informative terms of a requirement (v1.8 demo `Company2.jsx:114-125`, `Marketplace.jsx:11-44`; T-62). Money is
  * EUR and only displayed: no fee, commission, invoice or payment exists (OD-7, SCOPE OUT). Every key is optional
  * (absent = not stated). `budgetMandatory` is declared by the organization and not evaluated by the engine yet
  * (C-10, v2-11).
@@ -180,7 +180,7 @@ export interface WorkRequirement {
   /** Sorted shifts; the period is their envelope. null = one continuous period. */
   shifts?: RequirementShift[] | null;
   conditions?: RequirementConditions | null;
-  /** v1.8 «Archivada» (T-19): set once, on a closed requirement. */
+  /** v1.8 «Archivada» (T-64): set once, on a closed requirement. */
   archivedAt?: string | null;
 }
 
@@ -208,17 +208,17 @@ export function canChangeRequirementStatus(from: RequirementStatus, to: Requirem
 }
 
 /**
- * V1.8 evaluates and publishes `published` jobs only: drafts (R-D4, T-18), paused and closed needs have no
+ * V1.8 evaluates and publishes `published` jobs only: drafts (R-D4, T-63), paused and closed needs have no
  * candidate pool.
  */
 export const isEvaluable = (r: Pick<WorkRequirement, "status">) =>
   r.status !== "draft" && r.status !== "paused" && r.status !== "closed";
 
-/** v1.8 «Archivar» (T-19): one way, for a closed requirement or a draft (archiving a draft also closes it). */
+/** v1.8 «Archivar» (T-64): one way, for a closed requirement or a draft (archiving a draft also closes it). */
 export const canArchive = (r: Pick<WorkRequirement, "status"> & { archivedAt?: string | null }) =>
   !r.archivedAt && (r.status === "closed" || r.status === "draft");
 
-// --- Shifts (v2-09, v1.8 connected ShiftEditor; T-15) ---------------------------------------------
+// --- Shifts (v2-09, v1.8 connected ShiftEditor; T-60) ---------------------------------------------
 
 /** `YYYY-MM-DD` of an instant in an IANA zone (v1.8 `localDay`). */
 export function localDate(iso: string, timeZone: string): string {
@@ -330,7 +330,7 @@ export function baseAmount(terms: {
   return { hours, hourlyRate: rate, amount: Math.round(hours * rate * 100) / 100 };
 }
 
-// --- Duplicate (v2-14, v1.8 `duplicate`, Company2.jsx:140; T-20) ----------------------------------
+// --- Duplicate (v2-14, v1.8 `duplicate`, Company2.jsx:140; T-65) ----------------------------------
 
 /** v1.8 starts a copy 45 days from today. */
 export const DUPLICATE_LEAD_DAYS = 45;
