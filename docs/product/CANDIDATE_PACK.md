@@ -1,4 +1,12 @@
-# Candidate Pack and contact consent (D-07) · DESIGN, not implemented
+# Candidate Pack and contact consent (D-07) · DESIGN — rules PREPARED, NOT ACTIVATED
+
+> **2026-10-22 (M09, local):** the access rules of §1 are pure functions in `src/domain/candidate-pack.ts`
+> (`contactVisible`, `documentAccessible`, kill switch `PACK_ACTIVATION = { contact: false, documents: false }`),
+> tested in `candidate-pack.test.ts` (nothing unlocks while the switch is off; P1/P4 from `accepted`/`confirmed`
+> with the contact consent; P2 only selected, kept, `clean`, unexpired documents; consents independent; a
+> cancellation locks again). **No table, RPC, Edge Function or UI shares contact or documents**, and none of
+> §2 is built: it waits for P3 (retention period, legal), the approved scanner (D-10) and the owner's activation.
+> Applicants are shown to the organization only as the candidate pool shows them (pseudonym rules, T-04).
 
 > Owner direction of 2026-10-19 (D-07, restated later the same day): identity, contact and documents stay protected; access depends on a concrete purpose, a valid application state and explicit consent.
 > Earlier direction (D-07): no private document or contact datum is ever shared because a
