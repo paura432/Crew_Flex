@@ -238,7 +238,7 @@ Deno.test("N-19: an archived row maps its trash date to ISO", () => {
 
 Deno.test(
   "N-19 PATCH: { archived } archives or restores (marker only); metadata bodies are unchanged; mixes are refused",
-  async () => {
+  () => {
     const archived = documentPatch({ archived: true });
     assertEquals(Object.keys(archived), ["archived_at"]);
     assertEquals(typeof archived.archived_at, "string");
@@ -261,7 +261,7 @@ Deno.test(
       null,
       [],
     ]) {
-      const error = await (async () => {
+      const error = (() => {
         try {
           documentPatch(body);
         } catch (e) {
