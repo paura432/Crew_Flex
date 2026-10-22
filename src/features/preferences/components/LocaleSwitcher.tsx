@@ -12,7 +12,14 @@ import { setLocaleAction } from "../actions";
  * Two presentations of the same action: `compact` (ES | EN buttons for public pages) and the
  * Settings card list. Keeps route, session and page state; only the rendered tree refreshes.
  */
-export function LocaleSwitcher({ variant = "cards" }: { variant?: "cards" | "compact" }) {
+export function LocaleSwitcher({
+  variant = "cards",
+  onDark = false,
+}: {
+  variant?: "cards" | "compact";
+  /** Compact switcher on the navy landing: the checked option turns white (navy-on-navy read inverted). */
+  onDark?: boolean;
+}) {
   const locale = useLocale();
   const t = useTranslations("locale");
   const tSettings = useTranslations("settings");
@@ -58,7 +65,11 @@ export function LocaleSwitcher({ variant = "cards" }: { variant?: "cards" | "com
             // aria-disabled, not disabled: a disabled button drops keyboard focus mid-switch.
             aria-disabled={pending}
             onClick={() => choose(value)}
-            className="min-h-8 pointer-coarse:min-h-11 rounded-md border border-line bg-white px-2 font-semibold text-muted uppercase aria-checked:border-navy aria-checked:bg-navy aria-checked:text-white aria-disabled:opacity-60"
+            className={`min-h-8 pointer-coarse:min-h-11 rounded-md border px-2 font-semibold uppercase aria-disabled:opacity-60 ${
+              onDark
+                ? "border-white/40 text-white aria-checked:border-white aria-checked:bg-white aria-checked:text-navy"
+                : "border-line bg-white text-muted aria-checked:border-navy aria-checked:bg-navy aria-checked:text-white"
+            }`}
           >
             {value}
           </button>

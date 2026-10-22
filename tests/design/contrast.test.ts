@@ -45,6 +45,13 @@ describe("text contrast (WCAG AA, 4.5:1 for body-size text)", () => {
   });
 });
 
+describe("landing (X-01)", () => {
+  it("white «Iniciar sesión» on the navy landing (was bg-white under text-white, 1:1)", () => {
+    expect(contrast("#ffffff", token("--color-navy"))).toBeGreaterThanOrEqual(4.5);
+    expect(read("src/app/page.tsx")).toMatch(/href="\/login" variant="inverse"/);
+  });
+});
+
 describe("reduced motion", () => {
   it("no animation in src/ runs without `motion-safe:` (prefers-reduced-motion)", () => {
     const offenders: string[] = [];

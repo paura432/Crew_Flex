@@ -193,6 +193,22 @@ ok(
     /frame-ancestors 'none'/.test(cspHeader),
   cspHeader.slice(0, 80),
 );
+// 0b (X-01) landing: «Sign in» was white on white (variant bg-white beat bg-transparent), and the
+// compact ES/EN marked the checked option navy on navy. Computed colours, not class names.
+await page.goto(`${BASE}/`);
+const landing = await page.evaluate(() => {
+  const style = (el) => el && getComputedStyle(el);
+  const signIn = style(document.querySelector("main a[href='/login']"));
+  const checked = style(document.querySelector("[role=radio][aria-checked=true]"));
+  return { color: signIn?.color, bg: signIn?.backgroundColor, checkedBg: checked?.backgroundColor };
+});
+ok(
+  "0b landing: «Sign in» white on the navy page, checked ES/EN white",
+  landing.color === "rgb(255, 255, 255)" &&
+    landing.bg === "rgba(0, 0, 0, 0)" &&
+    landing.checkedBg === "rgb(255, 255, 255)",
+  JSON.stringify(landing),
+);
 await login("delta@crewflex.test");
 ok(
   "1 login delta (external professional) → /app/professional",

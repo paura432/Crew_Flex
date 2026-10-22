@@ -19,7 +19,7 @@ export default async function HomePage() {
             </span>
             <span className="text-xl font-bold tracking-tight">{tCommon("appName")}</span>
           </span>
-          <LocaleSwitcher variant="compact" />
+          <LocaleSwitcher variant="compact" onDark />
         </header>
         <section className="max-w-3xl">
           <p className="text-xs font-semibold tracking-[0.2em] text-accent uppercase">
@@ -33,10 +33,7 @@ export default async function HomePage() {
             <ButtonLink href="/register" variant="primary">
               {t("createAccount")}
             </ButtonLink>
-            <ButtonLink
-              href="/login"
-              className="border-white/20 bg-transparent text-white hover:bg-white/10"
-            >
+            <ButtonLink href="/login" variant="inverse">
               {t("signIn")}
             </ButtonLink>
           </div>
