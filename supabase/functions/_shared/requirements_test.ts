@@ -16,6 +16,7 @@ const requirementRow = {
   urgency: "urgent",
   status: "open",
   created_at: "2026-10-09T10:00:00+00:00",
+  updated_at: "2026-10-09T10:30:00.123456+00:00",
   work_requirement_qualifications: [
     { requirement_level: "soft", qualification_types: { id: "q-sms", code: "SMS", name: "SMS" } },
     { requirement_level: "hard", qualification_types: { id: "q-b11", code: "B1.1", name: "B1.1" } },
@@ -53,6 +54,7 @@ Deno.test("rows map to domain objects that the shared engine evaluates", () => {
     ["B1.1", "SMS"],
   );
   assertEquals(requirement.startsAt, "2026-10-18T20:00:00.000Z");
+  assertEquals(requirement.updatedAt, "2026-10-09T10:30:00.123Z"); // the PUT version, ms precision
 
   const internal = [poolRow("a", "internal", "verified"), poolRow("b", "internal", "pending")].map(
     toCandidate,

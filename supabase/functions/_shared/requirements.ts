@@ -5,6 +5,7 @@ import type { Candidate } from "../../../src/domain/matching.ts";
 import {
   isEvaluable,
   REQUIREMENT_LEVELS,
+  type RequiredQualification,
   REQUIREMENT_STATUSES,
   SHIFTS,
   URGENCIES,
@@ -19,7 +20,7 @@ import { ApiError, fromDatabaseError } from "./errors.ts";
 
 export const REQUIREMENT_SELECT = `
   id, organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_at,
-  work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) )
+  updated_at, work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) )
 `;
 
 const requirementRow = z.object({
@@ -34,6 +35,7 @@ const requirementRow = z.object({
   urgency: z.enum(URGENCIES),
   status: z.enum(REQUIREMENT_STATUSES),
   created_at: z.string(),
+  updated_at: z.string(),
   work_requirement_qualifications: z.array(
     z.object({
       requirement_level: z.enum(REQUIREMENT_LEVELS),
@@ -42,7 +44,11 @@ const requirementRow = z.object({
   ),
 });
 
-const toIso = (value: string) => new Date(value).toISOString();
+export const toIso = (value: string) => new Date(value).toISOString();
+
+/** Hard first, then by code: stable, readable ordering everywhere. */
+export const byLevelThenCode = (a: RequiredQualification, b: RequiredQualification) =>
+  a.level === b.level ? a.code.localeCompare(b.code) : a.level === "hard" ? -1 : 1;
 
 export function toWorkRequirement(raw: unknown): WorkRequirement {
   const row = requirementRow.parse(raw);
@@ -58,6 +64,7 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
     urgency: row.urgency,
     status: row.status,
     createdAt: toIso(row.created_at),
+    updatedAt: toIso(row.updated_at),
     qualifications: row.work_requirement_qualifications
       .map((q) => ({
         qualificationTypeId: q.qualification_types.id,
@@ -65,10 +72,7 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
         name: q.qualification_types.name,
         level: q.requirement_level,
       }))
-      // Hard first, then by code: stable, readable ordering everywhere.
-      .sort((a, b) =>
-        a.level === b.level ? a.code.localeCompare(b.code) : a.level === "hard" ? -1 : 1,
-      ),
+      .sort(byLevelThenCode),
   };
 }
 

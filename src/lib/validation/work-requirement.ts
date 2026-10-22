@@ -24,61 +24,83 @@ export const requirementQualificationInput = z.strictObject({
  */
 export const START_GRACE_MS = 15 * 60 * 1000;
 
+const requirementFields = {
+  title: z.string("v.title.required").trim().min(3, "v.title.min").max(120, "v.title.max"),
+  location: z
+    .string("v.location.required")
+    .trim()
+    .min(2, "v.location.min")
+    .max(80, "v.location.max"),
+  startsAt: z.iso.datetime({ offset: true, error: "v.start.required" }),
+  endsAt: z.iso.datetime({ offset: true, error: "v.end.required" }),
+  shift: z.enum(SHIFTS, "v.shift.invalid"),
+  headcount: z
+    .number("v.headcount.number")
+    .int("v.headcount.int")
+    .min(1, "v.headcount.min")
+    .max(HEADCOUNT_MAX, "v.headcount.max"),
+  urgency: z.enum(URGENCIES, "v.urgency.invalid"),
+  qualifications: z
+    .array(requirementQualificationInput)
+    .min(1, "v.qualifications.min")
+    .max(20, "v.qualifications.max"),
+};
+type RequirementFields = z.infer<z.ZodObject<typeof requirementFields>>;
+
+/** The creation rules (BR-1.3/BR-1.4), shared by create and edit (M05: «with the creation validations»). */
+function refineRequirement(
+  value: RequirementFields,
+  ctx: z.core.$RefinementCtx<RequirementFields>,
+) {
+  const start = Date.parse(value.startsAt);
+  const end = Date.parse(value.endsAt);
+  if (start < Date.now() - START_GRACE_MS) {
+    ctx.addIssue({ code: "custom", path: ["startsAt"], message: "v.start.future" });
+  }
+  if (end <= start) {
+    ctx.addIssue({ code: "custom", path: ["endsAt"], message: "v.end.afterStart" });
+  } else if (end - start > MAX_REQUIREMENT_DAYS * DAY_MS) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["endsAt"],
+      message: "v.requirement.maxDays",
+    });
+  }
+  const ids = value.qualifications.map((q) => q.qualificationTypeId);
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["qualifications"],
+      message: "v.qualifications.duplicate",
+    });
+  }
+  if (value.qualifications.length > 0 && !value.qualifications.some((q) => q.level === "hard")) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["qualifications"],
+      message: "v.qualifications.hard",
+    });
+  }
+}
+
 export const createWorkRequirementInput = z
-  .strictObject({
-    organizationId: z.uuid("v.organization.required"),
-    title: z.string("v.title.required").trim().min(3, "v.title.min").max(120, "v.title.max"),
-    location: z
-      .string("v.location.required")
-      .trim()
-      .min(2, "v.location.min")
-      .max(80, "v.location.max"),
-    startsAt: z.iso.datetime({ offset: true, error: "v.start.required" }),
-    endsAt: z.iso.datetime({ offset: true, error: "v.end.required" }),
-    shift: z.enum(SHIFTS, "v.shift.invalid"),
-    headcount: z
-      .number("v.headcount.number")
-      .int("v.headcount.int")
-      .min(1, "v.headcount.min")
-      .max(HEADCOUNT_MAX, "v.headcount.max"),
-    urgency: z.enum(URGENCIES, "v.urgency.invalid"),
-    qualifications: z
-      .array(requirementQualificationInput)
-      .min(1, "v.qualifications.min")
-      .max(20, "v.qualifications.max"),
-  })
-  .superRefine((value, ctx) => {
-    const start = Date.parse(value.startsAt);
-    const end = Date.parse(value.endsAt);
-    if (start < Date.now() - START_GRACE_MS) {
-      ctx.addIssue({ code: "custom", path: ["startsAt"], message: "v.start.future" });
-    }
-    if (end <= start) {
-      ctx.addIssue({ code: "custom", path: ["endsAt"], message: "v.end.afterStart" });
-    } else if (end - start > MAX_REQUIREMENT_DAYS * DAY_MS) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["endsAt"],
-        message: "v.requirement.maxDays",
-      });
-    }
-    const ids = value.qualifications.map((q) => q.qualificationTypeId);
-    if (new Set(ids).size !== ids.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["qualifications"],
-        message: "v.qualifications.duplicate",
-      });
-    }
-    if (value.qualifications.length > 0 && !value.qualifications.some((q) => q.level === "hard")) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["qualifications"],
-        message: "v.qualifications.hard",
-      });
-    }
-  });
+  .strictObject({ organizationId: z.uuid("v.organization.required"), ...requirementFields })
+  .superRefine(refineRequirement);
 export type CreateWorkRequirementInput = z.infer<typeof createWorkRequirementInput>;
+
+/**
+ * Edit (M05, owner 2026-10-22): the whole requirement again, with the version the client loaded
+ * (`updatedAt`, ms). The database refuses it once the requirement received an application (409
+ * `HAS_APPLICATIONS`), when it changed since (409) and when closed (409). The organization never changes.
+ */
+export const updateWorkRequirementInput = z
+  .strictObject({
+    id: z.uuid("v.requirement.id"),
+    expectedUpdatedAt: z.iso.datetime({ offset: true }),
+    ...requirementFields,
+  })
+  .superRefine(refineRequirement);
+export type UpdateWorkRequirementInput = z.infer<typeof updateWorkRequirementInput>;
 
 export const REQUIREMENT_LIST_ORDERS = ["starts_asc", "created_desc"] as const;
 export type RequirementListOrder = (typeof REQUIREMENT_LIST_ORDERS)[number];

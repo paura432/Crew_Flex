@@ -5,7 +5,7 @@ import { logRequest } from "./logger.ts";
 export type ApiSuccess<T> = { ok: true; data: T; requestId: string };
 export type ApiFailure = {
   ok: false;
-  error: { code: string; message: string; issues?: FieldIssue[] };
+  error: { code: string; message: string; issues?: FieldIssue[]; reason?: string };
   requestId: string;
 };
 
@@ -84,6 +84,7 @@ export function createHandler(fn: string, handlers: Partial<Record<HttpMethod, H
           code: apiError.code,
           message: apiError.message,
           ...(apiError.issues ? { issues: apiError.issues } : {}),
+          ...(apiError.reason ? { reason: apiError.reason } : {}),
         },
         requestId,
       };

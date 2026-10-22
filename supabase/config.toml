@@ -463,3 +463,13 @@ import_map = "./functions/deno.json"
 [functions.documents-maintenance]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+# Local only, not deployed: published requirements for professionals (M07, D-12) and the application
+# state machine (M08, D-06). Deploy only after migrations 20261022130200/130300.
+[functions.opportunities]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+[functions.applications]
+verify_jwt = false
+import_map = "./functions/deno.json"

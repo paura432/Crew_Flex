@@ -6,7 +6,13 @@
 // PATCH /work-requirements { id, status: "paused" | "open" | "closed" } → pause, resume or close
 //                                      (admin/manager; M05, V1.8 `job.status`); `closed` is terminal.
 //                                      Enforced and audited by the database; the same status again is
-//                                      a no-op (200); a change the lifecycle does not allow is 409
+//                                      a no-op (200); a change the lifecycle does not allow is 409; closing
+//                                      with an accepted/confirmed application is 409 `ACTIVE_COMMITMENTS`
+// PUT /work-requirements { id, expectedUpdatedAt, title, location, startsAt, endsAt, shift, headcount,
+//                          urgency, qualifications } → edit (admin/manager; M05): only while the
+//                                      requirement never received an application (409 `HAS_APPLICATIONS`),
+//                                      409 when changed since `expectedUpdatedAt` or closed; nothing changed
+//                                      is a 200 no-op. RPC update_work_requirement (DEFINER), audited.
 import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
@@ -17,11 +23,32 @@ import {
   changeRequirementStatusInput,
   createWorkRequirementInput,
   listWorkRequirementsQuery,
+  type UpdateWorkRequirementInput,
+  updateWorkRequirementInput,
 } from "../../../src/lib/validation/work-requirement.ts";
 import type {
   WorkRequirementListResponse,
   WorkRequirementResponse,
 } from "../../../src/types/api.ts";
+
+/** RPC arguments of the edit (M05); the organization never changes and is not sent. */
+export function updateArgs(input: UpdateWorkRequirementInput) {
+  return {
+    p_id: input.id,
+    p_expected_updated_at: input.expectedUpdatedAt,
+    p_title: input.title,
+    p_location: input.location,
+    p_starts_at: input.startsAt,
+    p_ends_at: input.endsAt,
+    p_shift: input.shift,
+    p_headcount: input.headcount,
+    p_urgency: input.urgency,
+    p_qualifications: input.qualifications.map((q) => ({
+      qualification_type_id: q.qualificationTypeId,
+      requirement_level: q.level,
+    })),
+  };
+}
 
 export const handler = createHandler("work-requirements", {
   GET: async (ctx) => {
@@ -115,6 +142,18 @@ export const handler = createHandler("work-requirements", {
       if (error) throw fromDatabaseError(error); // 55000 → CONFLICT
       if (!data?.length) throw new ApiError("FORBIDDEN"); // RLS matched no row (role revoked meanwhile)
     }
+    const requirement = await loadRequirement(actor, input.id);
+    return { data: { requirement } satisfies WorkRequirementResponse };
+  },
+
+  PUT: async (ctx) => {
+    const actor = await requireActor(ctx);
+    const input = await parseJsonBody(ctx.req, updateWorkRequirementInput);
+    const current = await loadRequirement(actor, input.id); // hidden and missing → 404
+    await requireOrganizationRole(actor, current.organizationId, ["admin", "manager"]);
+    const { error } = await actor.client.rpc("update_work_requirement", updateArgs(input));
+    // CF412 (stale) · CFA12 (has applications, + reason) · 55000 (closed) → 409; 22023/23514 → 400
+    if (error) throw fromDatabaseError(error);
     const requirement = await loadRequirement(actor, input.id);
     return { data: { requirement } satisfies WorkRequirementResponse };
   },

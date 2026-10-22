@@ -1,5 +1,9 @@
 // Normalized, client-safe errors. `message` is always safe to show to a user; internal
 // details never leave the function (they are logged, without secrets).
+import {
+  APPLICATION_CONFLICTS,
+  type ApplicationConflict,
+} from "../../../src/domain/applications.ts";
 
 export const ERROR_STATUS = {
   UNAUTHORIZED: 401,
@@ -37,6 +41,8 @@ export class ApiError extends Error {
     readonly code: ErrorCode,
     message: string = DEFAULT_MESSAGES[code],
     readonly issues?: FieldIssue[],
+    /** Which server check refused a 409 (applications/opportunities, `APPLICATION_CONFLICTS`). */
+    readonly reason?: ApplicationConflict,
   ) {
     super(message);
     this.name = "ApiError";
@@ -54,8 +60,26 @@ interface PostgrestLikeError {
   message?: string;
 }
 
+/**
+ * Our business conflicts (migration 20261022130300): SQLSTATE `CFA01`…`CFA12` are the entries of
+ * `APPLICATION_CONFLICTS` in order. Custom codes, never `40001` (PostgREST retries that one forever).
+ */
+export function conflictReason(sqlstate: string | undefined): ApplicationConflict | undefined {
+  const match = /^CFA(\d{2})$/.exec(sqlstate ?? "");
+  return match ? APPLICATION_CONFLICTS[Number(match[1]) - 1] : undefined;
+}
+
 /** Maps PostgREST / Postgres errors to safe API errors. Never forwards the DB message. */
 export function fromDatabaseError(error: PostgrestLikeError): ApiError {
+  const reason = conflictReason(error.code);
+  if (reason) {
+    return new ApiError(
+      "CONFLICT",
+      "This action is not possible in the current state.",
+      undefined,
+      reason,
+    );
+  }
   switch (error.code) {
     case "42501": // insufficient_privilege (incl. RLS violations and our "not authorized")
       return new ApiError("FORBIDDEN");

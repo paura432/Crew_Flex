@@ -40,6 +40,11 @@ export interface WorkRequirement {
   urgency: Urgency;
   status: RequirementStatus;
   createdAt: string;
+  /**
+   * Optimistic version for the edit (`work-requirements` PUT `expectedUpdatedAt`, ms precision; M05).
+   * Optional: absent from functions older than the edit and from hand-built fixtures.
+   */
+  updatedAt?: string;
   qualifications: RequiredQualification[];
 }
 

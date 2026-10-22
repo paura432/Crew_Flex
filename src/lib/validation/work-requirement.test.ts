@@ -4,6 +4,7 @@ import {
   createWorkRequirementInput,
   evaluateRequirementInput,
   listWorkRequirementsQuery,
+  updateWorkRequirementInput,
 } from "./work-requirement.ts";
 
 const B11 = "11111111-1111-4111-8111-000000000001";
@@ -122,5 +123,47 @@ describe("evaluateRequirementInput", () => {
         organizationId: "22222222-2222-4222-8222-000000000001",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("updateWorkRequirementInput (M05 edit, owner 2026-10-22)", () => {
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+  const edit: Record<string, unknown> = {
+    id: "33333333-3333-4333-8333-000000000001",
+    expectedUpdatedAt: "2026-10-15T10:00:00.123Z",
+    ...valid,
+  };
+  delete edit.organizationId; // the organization never changes and is not sent
+  const errors = (input: unknown) => {
+    const result = updateWorkRequirementInput.safeParse(input);
+    return result.success ? {} : toFieldErrors(result.error);
+  };
+
+  it("takes the whole requirement with the version it was loaded at, and the creation rules", () => {
+    expect(errors(edit)).toEqual({});
+    expect(errors({ ...edit, startsAt: "2026-10-14T12:00:00Z" })).toMatchObject({
+      startsAt: "v.start.future",
+    });
+    expect(
+      errors({ ...edit, qualifications: [{ qualificationTypeId: SMS, level: "soft" }] }),
+    ).toMatchObject({ qualifications: "v.qualifications.hard" });
+    expect(
+      updateWorkRequirementInput.safeParse({ ...edit, expectedUpdatedAt: undefined }).success,
+    ).toBe(false);
+  });
+
+  it("never moves a requirement to another organization nor takes identity from the body", () => {
+    for (const extra of [
+      { organizationId: valid.organizationId },
+      { createdBy: edit.id },
+      { status: "open" },
+    ])
+      expect(updateWorkRequirementInput.safeParse({ ...edit, ...extra }).success).toBe(false);
   });
 });
