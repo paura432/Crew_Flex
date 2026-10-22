@@ -11,8 +11,14 @@ import { isLocalUrl } from "./guard";
 import { call, client, key, signIn, url } from "./local-api";
 
 type Json = Record<string, unknown>;
-const START = "2026-12-01T06:00:00.000Z";
-const END = "2026-12-03T18:00:00.000Z";
+// Relative to today (UTC), so the period never falls in the past: since N-26 (20261024200100) the
+// availability API refuses a window that starts before today, and the need must still be in the future.
+const DAY_MS = 86_400_000;
+const DAY0 = new Date(Math.floor(Date.now() / DAY_MS) * DAY_MS + 40 * DAY_MS); // 00:00 UTC, +40 days
+const at = (days: number, hours: number) =>
+  new Date(DAY0.getTime() + days * DAY_MS + hours * 3_600_000).toISOString();
+const START = at(0, 6);
+const END = at(2, 18);
 
 describe.skipIf(!isLocalUrl(url) || !key)("local E2E: opportunities and hiring (M07/M08)", () => {
   const tokens: Record<string, string> = {};
@@ -99,8 +105,8 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: opportunities and hiring (
         token: as(who),
         headers: { "Idempotency-Key": randomUUID() },
         body: {
-          startsAt: "2026-12-01T00:00:00.000Z",
-          endsAt: "2026-12-04T00:00:00.000Z",
+          startsAt: at(0, 0),
+          endsAt: at(3, 0),
           status: "available",
         },
       });
