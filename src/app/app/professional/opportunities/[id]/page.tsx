@@ -57,14 +57,17 @@ export default async function OpportunityPage({
           <MatchExplanation match={match} />
           <p className="mt-3 text-xs text-muted">{t("eligibilityNote")}</p>
         </Panel>
-        <Panel title={t("applyTitle")}>
-          <ApplyPanel
-            requirementId={requirement.id}
-            organizationName={requirement.organizationName}
-            blocker={applyBlocker}
-            myStatus={myApplication?.status ?? null}
-          />
-        </Panel>
+        {/* «Preparar candidatura» on the list card lands here (v2-26). */}
+        <div id="apply" className="scroll-mt-4">
+          <Panel title={t("applyTitle")}>
+            <ApplyPanel
+              requirementId={requirement.id}
+              organizationName={requirement.organizationName}
+              blocker={applyBlocker}
+              myStatus={myApplication?.status ?? null}
+            />
+          </Panel>
+        </div>
       </div>
     </>
   );

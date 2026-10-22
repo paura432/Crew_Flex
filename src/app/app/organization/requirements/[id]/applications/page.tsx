@@ -5,14 +5,8 @@ import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
-import { StatusChip } from "@/components/ui/StatusChip";
-import { canFinish } from "@/domain/applications";
-import type { WorkRequirement } from "@/domain/work-requirement";
 import { listRequirementApplications } from "@/features/applications/api";
-import { ApplicationActions } from "@/features/applications/components/ApplicationActions";
-import { ApplicationDetails } from "@/features/applications/components/ApplicationDetails";
-import { APPLICATION_TONE } from "@/features/applications/view";
-import { MatchExplanation } from "@/features/matching/components/MatchCard";
+import { OrgApplicationCard } from "@/features/applications/components/OrgApplicationCard";
 import { getRequirement } from "@/features/requirements/api";
 import { RequirementStatusChip } from "@/features/requirements/components/RequirementBadges";
 import { formatPeriod } from "@/i18n/format";
@@ -23,9 +17,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("requirementApplications") };
 }
 
-/** Request time (dynamic page): render must stay pure for React's lint. */
-const periodEndedNow = (r: Pick<WorkRequirement, "endsAt">) => canFinish(r, Date.now());
-
 /**
  * M08, organization side (v1.8 «Candidaturas» filtered by one job): applicants as the candidate pool
  * shows them (pseudonym rules, T-04), their live eligibility, proposal, history and the actions of
@@ -34,12 +25,10 @@ const periodEndedNow = (r: Pick<WorkRequirement, "endsAt">) => canFinish(r, Date
 export default async function RequirementApplicationsPage({
   params,
 }: PageProps<"/app/organization/requirements/[id]/applications">) {
-  const [{ id }, { organization, canManage }, t, tMatching, tDomain, locale] = await Promise.all([
+  const [{ id }, { organization, canManage }, t, locale] = await Promise.all([
     params,
     requireOrganizationContext(),
     getTranslations("applications"),
-    getTranslations("matching"),
-    getTranslations("domain"),
     getLocale(),
   ]);
   if (!canManage) {
@@ -64,7 +53,6 @@ export default async function RequirementApplicationsPage({
   const { requirement } = requirementResult.data;
   // RLS lets platform admins read every tenant; these pages show the acting organization only.
   if (requirement.organizationId !== organization.id) notFound();
-  const periodEnded = periodEndedNow(requirement);
 
   return (
     <>
@@ -88,53 +76,13 @@ export default async function RequirementApplicationsPage({
         <StateMessage title={t("orgEmptyTitle")} description={t("orgEmptyDescription")} />
       ) : (
         <div className="space-y-4">
-          {applicationsResult.data.applications.map((application) => {
-            const { candidate, match } = application;
-            const title = candidate.displayName ?? tMatching("anonymous", { ref: candidate.id });
-            return (
-              <article
-                key={application.id}
-                id={`a-${application.id}`} // a notice links here (v2-18)
-                aria-label={title}
-                className="space-y-3 rounded-xl border border-line bg-white p-5"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusChip tone={APPLICATION_TONE[application.status]}>
-                    {tDomain(`applicationStatus.${application.status}`)}
-                  </StatusChip>
-                  <StatusChip tone={match.eligible ? "ok" : "danger"}>
-                    {match.eligible ? tMatching("eligible") : tMatching("notEligible")}
-                  </StatusChip>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold break-words">{title}</h2>
-                  <p className="text-sm text-muted">
-                    {candidate.baseLocation ?? tMatching("baseNotShared")}
-                    {candidate.yearsExperience !== null &&
-                      ` · ${tMatching("years", { count: candidate.yearsExperience })}`}
-                  </p>
-                </div>
-                <MatchExplanation match={match} />
-                <ApplicationDetails application={application} />
-                <ApplicationActions
-                  applicationId={application.id}
-                  status={application.status}
-                  updatedAt={application.updatedAt}
-                  actor="organization"
-                  proposal={
-                    application.currentProposal
-                      ? {
-                          id: application.currentProposal.id,
-                          version: application.currentProposal.version,
-                        }
-                      : null
-                  }
-                  periodEnded={periodEnded}
-                  requirementOpen={requirement.status === "open"}
-                />
-              </article>
-            );
-          })}
+          {applicationsResult.data.applications.map((application) => (
+            <OrgApplicationCard
+              key={application.id}
+              application={application}
+              requirement={requirement}
+            />
+          ))}
         </div>
       )}
     </>

@@ -41,7 +41,7 @@ export default async function MyApplicationsPage({
     <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
   );
   if (actor.profile.account_type !== "professional") {
-    // An organization account: its applications live on each requirement (v2 diff SH-07 #15).
+    // An organization account: its applications are in its own «Candidaturas» (v2-05).
     return (
       <>
         {header}
@@ -49,7 +49,7 @@ export default async function MyApplicationsPage({
           title={t("orgOnlyTitle")}
           description={t("orgOnlyDescription")}
           action={
-            <ButtonLink href="/app/organization/requirements">{t("orgOnlyAction")}</ButtonLink>
+            <ButtonLink href="/app/organization/applications">{t("orgOnlyAction")}</ButtonLink>
           }
         />
       </>

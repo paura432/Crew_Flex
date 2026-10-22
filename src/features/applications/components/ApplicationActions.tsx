@@ -107,7 +107,10 @@ export function ApplicationActions({
         ? t("withdrawHint")
         : tr.to === "proposed"
           ? t("proposeHint")
-          : null;
+          : // v1.8 «Cancelar asignación» modal (Workflow.jsx:85, v2-26): what cancelling a seat does.
+            tr.to === "cancelled" && tr.from === "confirmed"
+            ? t("cancelAssignmentHint")
+            : null;
 
   return (
     <div className="space-y-3">

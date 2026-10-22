@@ -12,6 +12,7 @@ import { MatchCard } from "@/features/matching/components/MatchCard";
 import { getRequirement } from "@/features/requirements/api";
 import { RequirementStatusActions } from "@/features/requirements/components/RequirementStatusActions";
 import { RequirementFacts } from "@/features/requirements/components/RequirementFacts";
+import { confirmedCoverage, countStatuses, seatsTaken } from "@/domain/coverage";
 import {
   canArchive,
   isEvaluable,
@@ -19,6 +20,7 @@ import {
   type WorkRequirement,
 } from "@/domain/work-requirement";
 import { listRequirementApplications } from "@/features/applications/api";
+import { CoverageMeter } from "@/features/requirements/components/CoverageMeter";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -56,12 +58,13 @@ export default async function RequirementDetailPage({
     canManage && !draft ? listRequirementApplications(requirement.id) : null,
   ]);
   const applicationCount = applications?.ok ? applications.data.applications.length : 0;
-  // «Cobertura por jornada»: seats taken (confirmed + finished), the same count that covers the requirement.
+  // «Cobertura por jornada» and v2-08 «{p}% cobertura confirmada» (BR-23): seats taken (confirmed +
+  // finished), the same count that covers the requirement.
   const confirmedSeats = applications?.ok
-    ? applications.data.applications.filter(
-        (a) => a.status === "confirmed" || a.status === "finished",
-      ).length
+    ? seatsTaken(countStatuses(applications.data.applications))
     : null;
+  const coverage =
+    confirmedSeats === null ? null : confirmedCoverage(requirement.headcount, confirmedSeats);
   const applicationsLink = applications?.ok && (
     <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
       {tApplications("view", { count: applicationCount })}
@@ -80,6 +83,11 @@ export default async function RequirementDetailPage({
       <div className="space-y-6">
         <Panel>
           <RequirementFacts requirement={requirement} confirmedSeats={confirmedSeats} />
+          {coverage && (
+            <div className="mt-4 max-w-sm">
+              <CoverageMeter coverage={coverage} seats />
+            </div>
+          )}
           {closed ? (
             <div className="mt-4 space-y-3 border-t border-line pt-4">
               <p className="text-sm text-muted">

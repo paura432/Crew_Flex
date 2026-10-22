@@ -14,7 +14,8 @@ export function matchListHref(base: string, query: MatchListQuery, over: Partial
   const next = { ...query, ...over };
   const params = new URLSearchParams();
   if (next.q) params.set("q", next.q);
-  if (next.eligibleOnly) params.set("eligible", "1");
+  // «Solo elegibles» is the default (v2-25): only «off» is written.
+  if (!next.eligibleOnly) params.set("eligible", "0");
   if (next.sort !== "relevance") params.set("sort", next.sort);
   if (next.page > 1) params.set("page", String(next.page));
   for (const id of next.compare) params.append("compare", id);
@@ -59,6 +60,8 @@ export async function MatchListControls({ query, base }: { query: MatchListQuery
         </select>
       </label>
       <label className="flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 text-sm">
+        {/* Unticked sends only this one: off. Ticked sends both; `1` wins (parseMatchListQuery). */}
+        <input type="hidden" name="eligible" value="0" />
         <input type="checkbox" name="eligible" value="1" defaultChecked={query.eligibleOnly} />
         {t("eligibleOnly")}
       </label>
@@ -125,7 +128,7 @@ export async function CompareForm({
   return (
     <form id="compare-form" method="get" className="flex flex-wrap items-center gap-3">
       {query.q && <input type="hidden" name="q" value={query.q} />}
-      {query.eligibleOnly && <input type="hidden" name="eligible" value="1" />}
+      {!query.eligibleOnly && <input type="hidden" name="eligible" value="0" />}
       {query.sort !== "relevance" && <input type="hidden" name="sort" value={query.sort} />}
       {query.page > 1 && <input type="hidden" name="page" value={query.page} />}
       {selectedIds

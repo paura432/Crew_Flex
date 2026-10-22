@@ -24,6 +24,8 @@ const TITLE_FOR_NAV: Record<keyof typeof es.nav, keyof typeof es.meta | null> = 
   documents: "documents",
   opportunities: "opportunities",
   applications: "applications",
+  organizationApplications: "organizationApplications",
+  network: "network",
   logbook: "logbook",
   organizationProfile: "organizationProfile",
   administration: "admin",

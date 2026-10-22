@@ -18,7 +18,9 @@ import {
 } from "@/features/requirements/dashboard";
 import { DEFAULT_LIST_LIMIT } from "@/lib/validation/work-requirement";
 import { TERMINAL_APPLICATION_STATUSES, type ApplicationStatus } from "@/domain/applications";
-import { getApplicationCounts } from "@/features/applications/api";
+import { coveredShifts, seatsByRequirement, sumCounts } from "@/domain/coverage";
+import { getRequirementApplicationCounts } from "@/features/applications/api";
+import { CoverageGuide } from "@/features/requirements/components/CoverageGuide";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,18 +55,21 @@ const activeApplications = (counts: Partial<Record<ApplicationStatus, number>>) 
     .reduce((sum, [, n]) => sum + (n ?? 0), 0);
 
 export default async function OrganizationDashboard() {
-  const [{ organization, canManage }, t] = await Promise.all([
+  const [{ organization, canManage }, t, tHiring] = await Promise.all([
     requireOrganizationContext(),
     getTranslations("organization.dashboard"),
+    getTranslations("hiring.dashboard"),
   ]);
   const [result, open, counts] = await Promise.all([
     // Archived needs (v1.8 «Archivada», T-64) leave the working lists.
     listRequirements(organization.id, { archived: "exclude" }),
     listFocusCandidates(organization.id),
-    canManage ? getApplicationCounts(organization.id) : null,
+    // Per requirement (v2-08): the organization's counters are their sums (admin/manager, T-93).
+    canManage ? getRequirementApplicationCounts(organization.id) : null,
   ]);
-  // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and confirmed assignments (D-06).
-  const applicationCounts = counts?.ok ? counts.data.counts : null;
+  // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and «Jornadas cubiertas» (D-06).
+  const perRequirement = counts?.ok ? counts.data.requirements : null;
+  const applicationCounts = perRequirement ? sumCounts(perRequirement) : null;
   const current = open.ok ? currentAtRequestTime(open.data.requirements) : [];
   const focus = current[0];
 
@@ -113,8 +118,8 @@ export default async function OrganizationDashboard() {
                     tone={(applicationCounts.accepted ?? 0) > 0 ? "warn" : "neutral"}
                   />
                   <Metric
-                    label={t("confirmedAssignments")}
-                    value={applicationCounts.confirmed ?? 0}
+                    label={tHiring("coveredShifts")}
+                    value={coveredShifts(perRequirement ?? [])}
                     detail={t("confirmedOnly")}
                   />
                 </>
@@ -140,10 +145,15 @@ export default async function OrganizationDashboard() {
           >
             <RequirementsList
               requirements={dashboardRequirements(result.data.requirements, current)}
+              seats={perRequirement ? seatsByRequirement(perRequirement) : undefined}
+              coverageLabel="covered"
             />
           </Panel>
         </div>
       )}
+      <div className="mt-6">
+        <CoverageGuide canManage={canManage} />
+      </div>
     </>
   );
 }

@@ -6,6 +6,8 @@ import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
+import { seatsByRequirement } from "@/domain/coverage";
+import { getRequirementApplicationCounts } from "@/features/applications/api";
 import { listRequirements } from "@/features/requirements/api";
 import { RequirementsList } from "@/features/requirements/components/RequirementsList";
 import { RequirementsPager } from "@/features/requirements/components/RequirementsPager";
@@ -38,12 +40,17 @@ export default async function RequirementsPage({
   const base = archivedView ? "/app/organization/requirements?archived=1" : undefined;
   // Newest first, 20 per page: the old ascending 50-row read hid every need after the 50th.
   const page = parseRequirementsPage(pageParam);
-  const result = await listRequirements(organization.id, {
-    order: "created_desc",
-    archived: archivedView ? "only" : "exclude",
-    offset: pageOffset(page),
-    limit: REQUIREMENTS_PAGE_SIZE,
-  });
+  const [result, counts] = await Promise.all([
+    listRequirements(organization.id, {
+      order: "created_desc",
+      archived: archivedView ? "only" : "exclude",
+      offset: pageOffset(page),
+      limit: REQUIREMENTS_PAGE_SIZE,
+    }),
+    // v2-08: confirmed coverage per row (admin/manager; members see the status chips only, T-93).
+    canManage ? getRequirementApplicationCounts(organization.id) : null,
+  ]);
+  const seats = counts?.ok ? seatsByRequirement(counts.data.requirements) : undefined;
   const total = result.ok ? (result.data.total ?? result.data.requirements.length) : 0;
   // `?page=` past the end (hand-edited, or rows closed meanwhile) lands on the last page (X-04).
   if (total > 0 && page > pageCount(total)) {
@@ -88,7 +95,7 @@ export default async function RequirementsPage({
         />
       ) : (
         <Panel>
-          <RequirementsList requirements={result.data.requirements} />
+          <RequirementsList requirements={result.data.requirements} seats={seats} />
           <RequirementsPager page={page} pages={pageCount(total)} total={total} base={base} />
         </Panel>
       )}

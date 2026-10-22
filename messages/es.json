@@ -57,7 +57,10 @@
     "applications": "Mis candidaturas",
     "requirementApplications": "Candidaturas",
     "requirementEdit": "Editar necesidad",
-    "logbook": "Logbook"
+    "logbook": "Logbook",
+    "organizationApplications": "Candidaturas",
+    "network": "Ofertas en la red",
+    "networkOpportunity": "Oferta en la red"
   },
   "nav": {
     "organization": "Organización",
@@ -88,7 +91,9 @@
     },
     "opportunities": "Oportunidades",
     "applications": "Mis candidaturas",
-    "logbook": "Logbook"
+    "logbook": "Logbook",
+    "organizationApplications": "Candidaturas",
+    "network": "Ofertas en la red"
   },
   "landing": {
     "eyebrow": "Personal de mantenimiento aeronáutico",
@@ -508,7 +513,7 @@
       "flexible": "Flexible"
     },
     "urgency": {
-      "planned": "Planificada",
+      "planned": "Planificado",
       "urgent": "Urgente",
       "aog": "AOG"
     },
@@ -948,7 +953,6 @@
       "newRequirement": "Nueva necesidad",
       "applications": "Candidaturas en curso",
       "toConfirm": "{count, plural, one {# pendiente de confirmar} other {# pendientes de confirmar}}",
-      "confirmedAssignments": "Asignaciones confirmadas",
       "confirmedOnly": "Solo asignaciones confirmadas"
     },
     "requirements": {
@@ -1951,7 +1955,8 @@
       "finishHint": "Disponible después de la última jornada.",
       "withdrawHint": "Se retirará tu candidatura. Podrás volver a presentarte mientras la necesidad siga abierta.",
       "proposeHint": "Se enviará una copia fija de las condiciones publicadas; el profesional tendrá que aceptarla.",
-      "done": "Hecho: {status}."
+      "done": "Hecho: {status}.",
+      "cancelAssignmentHint": "Se liberarán plazas y se restaurará la disponibilidad anterior del técnico. El historial conservará el motivo."
     },
     "conflict": {
       "REQUIREMENT_NOT_OPEN": "La necesidad no está abierta (pausada, cubierta o cerrada).",
@@ -1965,12 +1970,13 @@
       "ALREADY_APPLIED": "Ya hay una candidatura en curso.",
       "REAPPLY_NOT_ALLOWED": "No se puede volver a presentar: la candidatura anterior terminó.",
       "ACTIVE_COMMITMENTS": "Resuelve antes las asignaciones activas (aceptadas o confirmadas).",
-      "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar."
+      "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar.",
+      "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización."
     },
     "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual.",
     "orgOnlyTitle": "«Mis candidaturas» es para profesionales",
-    "orgOnlyDescription": "Las candidaturas que recibe tu organización están en cada necesidad.",
-    "orgOnlyAction": "Ver necesidades",
+    "orgOnlyDescription": "Las candidaturas que recibe tu organización están en «Candidaturas».",
+    "orgOnlyAction": "Ver candidaturas",
     "managersOnlyTitle": "Las candidaturas las gestionan administradores y managers",
     "managersOnlyDescription": "Tu rol en la organización no permite ver ni mover candidaturas."
   },
@@ -2137,6 +2143,56 @@
         "VALIDATION_ERROR": "Revisa los campos marcados.",
         "generic": "No se ha podido enviar la invitación. Inténtalo de nuevo en un minuto."
       }
+    }
+  },
+  "hiring": {
+    "coverage": {
+      "confirmed": "{percent} cobertura confirmada",
+      "covered": "{percent} cubierto",
+      "seats": "{filled} / {total} plazas confirmadas"
+    },
+    "manageApplications": "Gestionar candidaturas",
+    "dashboard": {
+      "coveredShifts": "Jornadas cubiertas",
+      "closeTitle": "Cómo cerrar una cobertura",
+      "step1": "Publica fechas y requisitos.",
+      "step2": "Compara candidatos elegibles.",
+      "step3": "Revisa el Candidate Pack y propone.",
+      "step4": "El técnico acepta y confirmas la asignación.",
+      "quickLinks": "Accesos rápidos",
+      "builderTitle": "Constructor",
+      "builderText": "Necesidades estructuradas",
+      "packsTitle": "Candidate Packs",
+      "packsText": "Expedientes y seguimiento",
+      "note": "Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado. Crew Flex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma."
+    },
+    "applications": {
+      "eyebrow": "Pipeline",
+      "title": "De candidatura a cobertura.",
+      "selected": "Oferta seleccionada: {title}",
+      "viewAll": "Ver todas",
+      "backToOffers": "Volver a ofertas",
+      "emptyTitle": "Sin candidaturas en este estado",
+      "emptyDescription": "Selecciona otra oferta o prepara una candidatura.",
+      "pagination": "Páginas de candidaturas",
+      "pageInfo": "{total, plural, one {# candidatura} other {# candidaturas}} · página {page} de {pages}",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "allTab": "Todas",
+      "closedAccount": "Cuenta cerrada",
+      "closedAccountNote": "El profesional cerró su cuenta; la candidatura y su historial se conservan."
+    },
+    "network": {
+      "title": "Ofertas en la red.",
+      "ownNote": "Las necesidades de tu organización están en «Necesidades».",
+      "detailEyebrow": "Ofertas en la red",
+      "back": "Volver a ofertas en la red",
+      "viewDetail": "Ver detalle"
+    },
+    "opportunityCard": {
+      "viewDetail": "Ver detalle",
+      "prepare": "Preparar candidatura",
+      "applied": "Ya presentada"
     }
   }
 }

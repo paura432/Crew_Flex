@@ -57,7 +57,10 @@
     "applications": "My applications",
     "requirementApplications": "Applications",
     "requirementEdit": "Edit requirement",
-    "logbook": "Logbook"
+    "logbook": "Logbook",
+    "organizationApplications": "Applications",
+    "network": "Offers in the network",
+    "networkOpportunity": "Network offer"
   },
   "nav": {
     "organization": "Organization",
@@ -88,7 +91,9 @@
     },
     "opportunities": "Opportunities",
     "applications": "My applications",
-    "logbook": "Logbook"
+    "logbook": "Logbook",
+    "organizationApplications": "Applications",
+    "network": "Offers in the network"
   },
   "landing": {
     "eyebrow": "Aircraft maintenance workforce",
@@ -948,7 +953,6 @@
       "newRequirement": "New requirement",
       "applications": "Applications in progress",
       "toConfirm": "{count, plural, one {# awaiting confirmation} other {# awaiting confirmation}}",
-      "confirmedAssignments": "Confirmed assignments",
       "confirmedOnly": "Confirmed assignments only"
     },
     "requirements": {
@@ -1951,7 +1955,8 @@
       "finishHint": "Available after the last day.",
       "withdrawHint": "Your application will be withdrawn. You can apply again while the requirement stays open.",
       "proposeHint": "A fixed copy of the published terms will be sent; the professional must accept it.",
-      "done": "Done: {status}."
+      "done": "Done: {status}.",
+      "cancelAssignmentHint": "Seats will be released and the technician's previous availability restored. The history keeps the reason."
     },
     "conflict": {
       "REQUIREMENT_NOT_OPEN": "The requirement is not open (paused, covered or closed).",
@@ -1965,12 +1970,13 @@
       "ALREADY_APPLIED": "There is already an application in progress.",
       "REAPPLY_NOT_ALLOWED": "Cannot apply again: the previous application ended.",
       "ACTIVE_COMMITMENTS": "Resolve the active assignments first (accepted or confirmed).",
-      "HAS_APPLICATIONS": "This requirement already received applications: it cannot be edited."
+      "HAS_APPLICATIONS": "This requirement already received applications: it cannot be edited.",
+      "OWN_ORGANIZATION": "You cannot apply to a requirement of your own organization."
     },
     "stale": "The application changed in the meantime. Reload to see its current state.",
     "orgOnlyTitle": "«My applications» is for professionals",
-    "orgOnlyDescription": "The applications your organization receives are on each requirement.",
-    "orgOnlyAction": "See requirements",
+    "orgOnlyDescription": "The applications your organization receives are under «Applications».",
+    "orgOnlyAction": "See applications",
     "managersOnlyTitle": "Applications are handled by admins and managers",
     "managersOnlyDescription": "Your role in the organization cannot see or move applications."
   },
@@ -2137,6 +2143,56 @@
         "VALIDATION_ERROR": "Check the highlighted fields.",
         "generic": "The invitation could not be sent. Try again in a minute."
       }
+    }
+  },
+  "hiring": {
+    "coverage": {
+      "confirmed": "{percent} confirmed coverage",
+      "covered": "{percent} covered",
+      "seats": "{filled} / {total} seats confirmed"
+    },
+    "manageApplications": "Manage applications",
+    "dashboard": {
+      "coveredShifts": "Shifts covered",
+      "closeTitle": "How to staff a requirement",
+      "step1": "Publish dates and requirements.",
+      "step2": "Compare eligible candidates.",
+      "step3": "Review the Candidate Pack and propose.",
+      "step4": "The technician accepts and you confirm the assignment.",
+      "quickLinks": "Quick links",
+      "builderTitle": "Builder",
+      "builderText": "Structured requirements",
+      "packsTitle": "Candidate Packs",
+      "packsText": "Files and follow-up",
+      "note": "Proposals, the technician's acceptance and your organization's confirmation are recorded separately. Crew Flex facilitates the process; the contract between the parties is agreed outside the platform."
+    },
+    "applications": {
+      "eyebrow": "Pipeline",
+      "title": "From application to coverage.",
+      "selected": "Selected offer: {title}",
+      "viewAll": "View all",
+      "backToOffers": "Back to offers",
+      "emptyTitle": "No applications in this status",
+      "emptyDescription": "Select another offer or prepare an application.",
+      "pagination": "Application pages",
+      "pageInfo": "{total, plural, one {# application} other {# applications}} · page {page} of {pages}",
+      "previous": "Previous",
+      "next": "Next",
+      "allTab": "All",
+      "closedAccount": "Closed account",
+      "closedAccountNote": "The professional closed their account; the application and its history are kept."
+    },
+    "network": {
+      "title": "Offers in the network.",
+      "ownNote": "Your organization's own requirements are under «Requirements».",
+      "detailEyebrow": "Offers in the network",
+      "back": "Back to offers in the network",
+      "viewDetail": "View details"
+    },
+    "opportunityCard": {
+      "viewDetail": "View details",
+      "prepare": "Prepare application",
+      "applied": "Already applied"
     }
   }
 }

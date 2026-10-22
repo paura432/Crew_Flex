@@ -32,6 +32,10 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
   const organizationNav: NavItem[] = [
     { href: "/app/organization", label: tNav("dashboard") },
     { href: "/app/organization/requirements", label: tNav("requirements") },
+    // v1.8 company order: Resumen, Nueva necesidad, Ofertas y cobertura, Buscar candidatos,
+    // Candidaturas, Ofertas en la red, Organización (v2-05, v2-20); Plantilla is Next's own.
+    { href: "/app/organization/applications", label: tNav("organizationApplications") },
+    { href: "/app/organization/network", label: tNav("network") },
     { href: "/app/organization/workforce", label: tNav("workforce") },
     // v1.8 «Organización» (SH-03 #22, OD-5 default): data and review state, every member reads it
     { href: "/app/organization/settings", label: tNav("organizationProfile") },

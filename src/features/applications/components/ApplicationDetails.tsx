@@ -9,7 +9,10 @@ import type { MyApplication, OrgApplication } from "@/types/api";
 export async function ApplicationDetails({
   application,
 }: {
-  application: MyApplication | OrgApplication;
+  application: Pick<
+    MyApplication | OrgApplication,
+    "status" | "reason" | "currentProposal" | "acceptedProposalId" | "history"
+  >;
 }) {
   const [t, tDomain, locale] = await Promise.all([
     getTranslations("applications"),

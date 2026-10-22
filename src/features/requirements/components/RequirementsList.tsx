@@ -1,18 +1,44 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { confirmedCoverage } from "@/domain/coverage";
 import type { WorkRequirement } from "@/domain/work-requirement";
 import { formatPeriod } from "@/i18n/format";
+import { CoverageMeter } from "./CoverageMeter";
 import { QualificationChips, RequirementStatusChip, UrgencyChip } from "./RequirementBadges";
 
 const detailHref = (id: string) => `/app/organization/requirements/${id}` as const;
+/** v2-05: the organization's «Candidaturas» filtered by this requirement (v1.8 «Gestionar candidaturas»). */
+const applicationsHref = (id: string) => `/app/organization/applications?requirementId=${id}`;
 
-/** Table on ≥ md, stacked list on mobile (no horizontal scroll). */
-export async function RequirementsList({ requirements }: { requirements: WorkRequirement[] }) {
-  const [t, tDomain, locale] = await Promise.all([
+/**
+ * Table on ≥ md, stacked list on mobile (no horizontal scroll). With `seats` (admin/manager: confirmed +
+ * finished per requirement, BR-23) each row shows its confirmed coverage — «{p}% cobertura confirmada»
+ * on the list, «{p}% cubierto» on the dashboard (`coverageLabel`) — and the link to its applications.
+ */
+export async function RequirementsList({
+  requirements,
+  seats,
+  coverageLabel = "confirmed",
+}: {
+  requirements: WorkRequirement[];
+  seats?: ReadonlyMap<string, number>;
+  coverageLabel?: "confirmed" | "covered";
+}) {
+  const [t, tDomain, tHiring, locale] = await Promise.all([
     getTranslations("organization.requirements"),
     getTranslations("domain"),
+    getTranslations("hiring"),
     getLocale(),
   ]);
+  const coverageOf = (r: WorkRequirement) => confirmedCoverage(r.headcount, seats?.get(r.id) ?? 0);
+  const manageLink = (r: WorkRequirement) => (
+    <Link
+      href={applicationsHref(r.id)}
+      className="inline-flex items-center text-sm font-semibold text-blue hover:underline pointer-coarse:min-h-11"
+    >
+      {tHiring("manageApplications")}
+    </Link>
+  );
   return (
     <>
       <table className="hidden w-full text-left text-sm md:table">
@@ -63,6 +89,13 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
                 <div>
                   <RequirementStatusChip requirement={r} />
                 </div>
+                {/* Inside the status cell: a seventh column would not fit at md width. */}
+                {seats && (
+                  <div className="space-y-1 pt-1">
+                    <CoverageMeter coverage={coverageOf(r)} label={coverageLabel} />
+                    {manageLink(r)}
+                  </div>
+                )}
               </td>
             </tr>
           ))}
@@ -87,6 +120,12 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
               {tDomain(`shift.${r.shift}`)} · {r.headcount} ×
             </p>
             <QualificationChips qualifications={r.qualifications} />
+            {seats && (
+              <>
+                <CoverageMeter coverage={coverageOf(r)} label={coverageLabel} />
+                {manageLink(r)}
+              </>
+            )}
           </li>
         ))}
       </ul>

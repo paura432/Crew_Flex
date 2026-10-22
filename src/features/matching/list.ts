@@ -17,6 +17,16 @@ export interface MatchListQuery {
 type Param = string | string[] | undefined;
 const first = (v: Param) => (Array.isArray(v) ? v[0] : v);
 
+/**
+ * v1.8 «Solo elegibles con cobertura» is ON by default (v2-25, T-94): only an explicit `eligible=0`
+ * turns it off. The GET form sends a hidden `eligible=0` before the checkbox (`eligible=1` when ticked),
+ * so an unticked box reads as off and a ticked one as on.
+ */
+const eligibleOnlyParam = (v: Param) => {
+  const values = [v ?? []].flat();
+  return values.includes("1") || !values.includes("0");
+};
+
 /** Parses URL search params leniently: anything unknown falls back to the default. */
 export function parseMatchListQuery(params: Record<string, Param>): MatchListQuery {
   const sort = first(params.sort);
@@ -24,7 +34,7 @@ export function parseMatchListQuery(params: Record<string, Param>): MatchListQue
   const compare = [params.compare ?? []].flat().filter((id) => /^[A-Za-z0-9-]{1,64}$/.test(id));
   return {
     q: (first(params.q) ?? "").trim().slice(0, 80),
-    eligibleOnly: first(params.eligible) === "1",
+    eligibleOnly: eligibleOnlyParam(params.eligible),
     sort: MATCH_SORTS.includes(sort as MatchSort) ? (sort as MatchSort) : "relevance",
     page: Number.isFinite(page) && page > 0 ? page : 1,
     // Bounded: a crafted URL with thousands of ids must not inflate the page (review S-5).
