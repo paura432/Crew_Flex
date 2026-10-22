@@ -31,12 +31,16 @@ export const handler = createHandler("work-requirements", {
       return { data: { requirement } satisfies WorkRequirementResponse };
     }
 
-    let request = actor.client
-      .from("work_requirements")
-      .select(REQUIREMENT_SELECT, { count: "exact" });
-    if (query.organizationId) request = request.eq("organization_id", query.organizationId);
-    if (query.status) request = request.eq("status", query.status);
-    if (query.endsAfter) request = request.gt("ends_at", query.endsAfter);
+    const filtered = (head = false) => {
+      let request = actor.client
+        .from("work_requirements")
+        .select(REQUIREMENT_SELECT, { count: "exact", head });
+      if (query.organizationId) request = request.eq("organization_id", query.organizationId);
+      if (query.status) request = request.eq("status", query.status);
+      if (query.endsAfter) request = request.gt("ends_at", query.endsAfter);
+      return request;
+    };
+    const request = filtered();
     const ordered =
       query.order === "created_desc"
         ? request.order("created_at", { ascending: false }).order("id", { ascending: true })
@@ -45,6 +49,13 @@ export const handler = createHandler("work-requirements", {
       query.offset,
       query.offset + query.limit - 1,
     );
+    if (error?.code === "PGRST103") {
+      // Offset past the last row (`?page=` out of range): PostgREST answers 416. An empty page with
+      // the real total lets the caller clamp, instead of a 500 (X-04).
+      const { count: all, error: countError } = await filtered(true);
+      if (countError) throw fromDatabaseError(countError);
+      return { data: { requirements: [], total: all ?? 0 } satisfies WorkRequirementListResponse };
+    }
     if (error) throw fromDatabaseError(error);
     return {
       data: {

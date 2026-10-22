@@ -610,6 +610,16 @@ ok(
   "",
 );
 await shot("05-requirements-list");
+// 9b (X-04): a page past the end lands on the last page (was PostgREST 416 → «Server error»)
+await page.goto(`${BASE}/app/organization/requirements?page=999`);
+await page.waitForLoadState("networkidle");
+ok(
+  "9b ?page=999 redirects to the last page",
+  /[?&]page=\d+$/.test(page.url()) &&
+    !page.url().endsWith("page=999") &&
+    /A320 line maintenance|Previous/.test(await page.locator("main").innerText()),
+  page.url(),
+);
 const madHref = await page
   .locator("a:has-text('A320 line maintenance')")
   .first()

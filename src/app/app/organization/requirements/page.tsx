@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -38,6 +39,10 @@ export default async function RequirementsPage({
     limit: REQUIREMENTS_PAGE_SIZE,
   });
   const total = result.ok ? (result.data.total ?? result.data.requirements.length) : 0;
+  // `?page=` past the end (hand-edited, or rows closed meanwhile) lands on the last page (X-04).
+  if (total > 0 && page > pageCount(total)) {
+    redirect(`/app/organization/requirements?page=${pageCount(total)}`);
+  }
   const newButton = canManage && (
     <ButtonLink href="/app/organization/requirements/new" variant="primary">
       {tDashboard("newRequirement")}
