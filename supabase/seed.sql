@@ -284,3 +284,26 @@ select wr.id, qt.id, 'hard'
 from wr
 cross join public.qualification_types qt
 where qt.code = 'CAT-A';
+
+-- PKG passport (migrations 20261023100*): v1.8 declarations for the scenario's professionals, so the
+-- candidate cards and the identity card show them. Delta completes every BR-11 item but the wallet
+-- document. Synthetic values only; no phone, employer or block is seeded.
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1}',
+  aircraft = '{A320 Family}', english_level = 'B2', base_country = 'ES', work_permits = '{ES}'
+where profile_id = '00000000-0000-4000-8000-000000000011';
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1,B2}',
+  aircraft = '{A320 Family,B737 NG}', engines = '{CFM56-5B/7B}', skills = '{line_maintenance,aog_support}',
+  english_level = 'C1', base_country = 'ES', work_permits = '{PT,ES,FR}'
+where profile_id = '00000000-0000-4000-8000-000000000021';
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1}',
+  aircraft = '{A320 Family}', english_level = 'B1', base_country = 'ES', work_permits = '{ES}'
+where profile_id = '00000000-0000-4000-8000-000000000022';
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1,CAT-A}',
+  aircraft = '{A320 Family,ATR 72}', english_level = 'B2', base_country = 'PT', work_permits = '{PT,ES}'
+where profile_id = '00000000-0000-4000-8000-000000000023';
+insert into public.technician_private_details (profile_id, min_rate, rate_unit) values
+  ('00000000-0000-4000-8000-000000000021', 45.00, 'hour');
+insert into public.technician_type_ratings (technician_profile_id, aircraft, category, expires_at, restrictions) values
+  ('00000000-0000-4000-8000-000000000021', 'A320 Family', 'B1.1', null, null),
+  ('00000000-0000-4000-8000-000000000022', 'A320 Family', 'B1.1', null, 'No engine run-ups (synthetic)'),
+  ('00000000-0000-4000-8000-000000000023', 'ATR 72', 'CAT-A', '2028-12-31', null);

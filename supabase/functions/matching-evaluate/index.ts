@@ -4,6 +4,7 @@ import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
 import { ApiError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import {
+  loadCandidatePassports,
   loadCandidatePool,
   loadExternalPoolCoverage,
   assertEvaluableStatus,
@@ -34,14 +35,15 @@ export const handler = createHandler("matching-evaluate", {
       throw error;
     }
 
-    const [pool, coverage] = await Promise.all([
+    const [pool, coverage, passports] = await Promise.all([
       loadCandidatePool(actor, requirementId),
       loadExternalPoolCoverage(actor, requirementId),
+      loadCandidatePassports(actor, requirementId),
     ]);
     const external = pool.filter((c) => c.pool === "external");
     const candidates = external
       .map((candidate) => ({
-        candidate: toCandidateSummary(candidate),
+        candidate: toCandidateSummary(candidate, passports.get(candidate.id) ?? null),
         match: evaluateMatch(requirement, candidate),
       }))
       .sort((a, b) => compareMatches(a.match, b.match));

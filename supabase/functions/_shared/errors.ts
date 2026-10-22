@@ -97,6 +97,8 @@ export function fromDatabaseError(error: PostgrestLikeError): ApiError {
       return new ApiError("FORBIDDEN");
     case "22023": // invalid_parameter_value
     case "22P02": // invalid_text_representation
+    case "22007": // invalid_datetime_format
+    case "22008": // datetime_field_overflow (e.g. year 0000, which ISO-date validation accepts)
     case "23502": // not_null_violation
     case "23503": // foreign_key_violation (e.g. unknown qualification type)
     case "23514": // check_violation

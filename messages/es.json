@@ -424,6 +424,44 @@
       },
       "empty": "No hay cambios que guardar",
       "id": "Se necesita un identificador de entrada válido"
+    },
+    "passport": {
+      "primary": {
+        "required": "Elige tu categoría principal.",
+        "notDeclared": "La categoría principal debe estar entre tus categorías."
+      },
+      "categories": "Elige categorías de la lista, sin repetir.",
+      "aircraft": "Elige aeronaves de la lista, sin repetir.",
+      "engines": "Elige motores de la lista, sin repetir.",
+      "skills": "Elige capacidades de la lista, sin repetir.",
+      "permits": "Elige países de la Unión Europea, sin repetir.",
+      "english": "Elige un nivel de A1 a C2.",
+      "ownTools": "Indica si tienes herramientas propias.",
+      "country": "Selecciona un país de la Unión Europea.",
+      "restrictions": {
+        "text": "Las restricciones deben ser texto.",
+        "max": "Como máximo 2000 caracteres."
+      },
+      "rating": {
+        "list": "Habilitación no válida.",
+        "max": "Máximo cuarenta habilitaciones.",
+        "aircraft": "Elige la aeronave de la habilitación.",
+        "category": "Elige una categoría de licencia.",
+        "restrictionsMax": "Como máximo 500 caracteres por habilitación.",
+        "undeclared": "Cada habilitación debe usar una aeronave y una categoría que hayas marcado.",
+        "duplicate": "Esa habilitación ya está en la lista."
+      },
+      "phone": "Revisa el teléfono: dígitos, espacios y un + inicial.",
+      "organization": "Organización no válida.",
+      "minRate": {
+        "number": "La tarifa debe ser un número.",
+        "min": "La tarifa debe ser positiva.",
+        "max": "La tarifa debe ser como máximo 100 000."
+      },
+      "rateUnit": "Elige EUR / hora o EUR / día.",
+      "blocks": {
+        "max": "Como máximo 200 organizaciones bloqueadas."
+      }
     }
   },
   "domain": {
@@ -525,7 +563,8 @@
       "label": "Tu identidad profesional",
       "noBase": "Base por completar",
       "experience": "{count, plural, one {# año} other {# años}} de experiencia declarada",
-      "edit": "Editar perfil"
+      "edit": "Editar perfil",
+      "declared": "Declarado:"
     },
     "noProfileTitle": "Sin perfil profesional",
     "noProfileDescription": "Esta cuenta es una cuenta de organización.",
@@ -569,10 +608,13 @@
       "display_name": "Siguiente: añade tu nombre profesional",
       "base_location": "Siguiente: indica tu base",
       "years_experience": "Siguiente: añade tus años de experiencia",
-      "licence_or_rating": "Siguiente: declara una licencia o type rating",
-      "verified_qualification": "Siguiente: un revisor verifica una cualificación",
-      "availability": "Siguiente: publica días disponibles",
-      "visibility": "Siguiente: elige visibilidad anónima o abierta"
+      "availability": "Siguiente: publica días disponibles futuros",
+      "primary_category": "Siguiente: elige tu categoría principal",
+      "aircraft": "Siguiente: declara las aeronaves con experiencia",
+      "min_rate": "Siguiente: indica tu tarifa mínima",
+      "work_permits": "Siguiente: declara tus permisos de trabajo",
+      "courses": "Siguiente: declara un curso vigente",
+      "document": "Siguiente: sube un documento a tu wallet"
     },
     "facts": {
       "base": "Base",
@@ -592,24 +634,69 @@
       "base": "Base habitual",
       "baseHint": "Aeropuerto o ciudad, p. ej. Madrid (MAD)",
       "basePlaceholder": "Madrid (MAD)",
-      "experience": "02 · Experiencia y movilidad",
+      "experience": "03 · Experiencia y cursos",
       "years": "Años de experiencia",
       "status": "Situación actual",
       "mobility": "Movilidad",
-      "visibilityTitle": "03 · Visibilidad en la red",
+      "visibilityTitle": "05 · Visibilidad en la red",
       "visibilityIntro": "El matching respeta tu elección. Los perfiles privados nunca aparecen ante las organizaciones; el contacto siempre requiere tu consentimiento.",
       "visibilityAria": "Visibilidad",
       "saved": "Pasaporte actualizado. El matching usa los nuevos datos.",
-      "conflict": "Tu pasaporte se modificó en otra ventana o dispositivo. No se ha guardado nada: recarga la página para ver la versión más reciente y vuelve a aplicar tus cambios."
+      "conflict": "Tu pasaporte se modificó en otra ventana o dispositivo. No se ha guardado nada: recarga la página para ver la versión más reciente y vuelve a aplicar tus cambios.",
+      "phone": "Teléfono",
+      "phoneHint": "Privado: no lo ve ninguna organización. El contacto solo se comparte con tu consentimiento.",
+      "baseCountry": "País de la base",
+      "notSet": "Sin indicar",
+      "employer": "Empresa actual",
+      "employerNone": "Ninguna",
+      "employerHint": "Privado. Para que tu empresa no te encuentre, márcala también en «Organizaciones bloqueadas».",
+      "qualificationsTitle": "02 · Cualificaciones",
+      "primaryCategory": "Categoría principal",
+      "primaryPlaceholder": "Elige categoría",
+      "categories": "Categorías y especialidades",
+      "categoriesHint": "Tu categoría principal siempre está marcada.",
+      "aircraft": "Aeronaves con experiencia",
+      "ratingsTitle": "Habilitaciones de tipo",
+      "ratingsIntro": "Aeronave × categoría de licencia. La fecha es opcional cuando no aplique; no se inventa una vigencia. Las organizaciones solo ven que declaras restricciones, no el texto.",
+      "ratingsNone": "Sin habilitaciones declaradas.",
+      "ratingsNeedDeclared": "Marca antes una aeronave y una categoría de licencia (B1, B2, B3, Cat A o Cat C).",
+      "ratingAircraft": "Aeronave de habilitación {n}",
+      "ratingCategory": "Categoría de habilitación {n}",
+      "ratingExpiry": "Vigencia de habilitación {n} (si aplica)",
+      "ratingRestrictions": "Restricciones de habilitación {n}",
+      "ratingRestrictionsPlaceholder": "Sin restricciones declaradas",
+      "addRating": "Añadir habilitación",
+      "removeRating": "Quitar habilitación {n}",
+      "ratingsHint": "Lo declarado no concede autorización de firma. Las licencias y type ratings que cuentan en el matching se declaran y verifican en Cualificaciones.",
+      "generalRestrictions": "Restricciones generales de habilitación o alcance",
+      "generalRestrictionsHint": "Déjalo vacío si no tienes ninguna.",
+      "english": "Inglés técnico",
+      "engines": "Motores",
+      "skills": "Capacidades",
+      "ownTools": "Tengo herramientas propias",
+      "coursesHint": "Los cursos (Human Factors, EWIS, FTS, SMS) se declaran con su vigencia en Cualificaciones.",
+      "openQualifications": "Abrir cualificaciones",
+      "rateTitle": "04 · Tarifa y permisos de trabajo",
+      "minRate": "Tarifa mínima",
+      "minRateHint": "Privada: ninguna organización la ve. Crew Flex no cobra ni paga nada.",
+      "rateUnit": "Unidad de tarifa",
+      "permits": "Permisos de trabajo declarados",
+      "permitsHint": "Países de la Unión Europea en los que puedes trabajar.",
+      "blocks": "Organizaciones bloqueadas",
+      "blocksHint": "Una organización bloqueada no te encuentra entre sus candidatos externos y no se le avisa. Si presentas una candidatura a una de sus necesidades, esa candidatura sí la verá.",
+      "blocksNone": "Todavía no hay organizaciones en la red."
     },
     "item": {
       "display_name": "Nombre profesional",
       "base_location": "Base",
       "years_experience": "Años de experiencia",
-      "licence_or_rating": "Licencia o habilitación de tipo declarada",
-      "verified_qualification": "Al menos una cualificación verificada",
-      "availability": "Días disponibles publicados",
-      "visibility": "Visible para organizaciones (anónimo o abierto)"
+      "availability": "Disponibilidad futura",
+      "primary_category": "Categoría principal",
+      "aircraft": "Aeronaves",
+      "min_rate": "Tarifa mínima",
+      "work_permits": "Países de trabajo",
+      "courses": "Cursos",
+      "document": "Documento aportado"
     },
     "activity": {
       "label": "Oportunidades y candidaturas",
@@ -1720,5 +1807,45 @@
     "archive": "Archivar",
     "restore": "Restaurar",
     "confirmDelete": "Eliminar definitivamente"
+  },
+  "passport": {
+    "categories": {
+      "B1_1": "B1.1",
+      "B1_2": "B1.2",
+      "B1_3": "B1.3",
+      "B1_4": "B1.4",
+      "B2": "B2",
+      "B3": "B3",
+      "CAT_A": "Cat A",
+      "CAT_C": "Cat C",
+      "MECHANIC": "Mecánico",
+      "SHEET_METAL": "Sheet Metal",
+      "NDT": "NDT",
+      "HELPER": "Helper"
+    },
+    "skills": {
+      "line_maintenance": "Line Maintenance",
+      "base_maintenance": "Base Maintenance",
+      "aog_support": "AOG Support",
+      "troubleshooting": "Troubleshooting",
+      "engine_change": "Engine Change",
+      "sheet_metal": "Sheet Metal",
+      "ndt": "NDT",
+      "borescope": "Boroscopia",
+      "cabin_systems": "Cabin Systems"
+    },
+    "rateUnit": {
+      "hour": "EUR / hora",
+      "day": "EUR / día"
+    },
+    "badge": "{percent, number}% completado · {count, plural, one {# evidencia} other {# evidencias}}",
+    "badgeNoWallet": "{percent, number}% completado",
+    "candidate": {
+      "declared": "Declarado:",
+      "primary": "{category} (principal)",
+      "english": "Inglés {level}",
+      "permits": "Permisos: {countries}",
+      "restrictions": "Restricciones declaradas"
+    }
   }
 }

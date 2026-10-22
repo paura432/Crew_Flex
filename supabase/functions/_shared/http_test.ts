@@ -64,6 +64,13 @@ Deno.test("database errors map to safe codes without forwarding the DB message",
     fromDatabaseError({ code: "XX000", message: "boom at line 3" }).message.includes("boom"),
     false,
   );
+  // A date Postgres cannot hold (year 0000) is the caller's input, not a server fault.
+  for (const code of ["22007", "22008"]) {
+    assertEquals(
+      fromDatabaseError({ code, message: "date/time field value out of range" }).code,
+      "VALIDATION_ERROR",
+    );
+  }
 });
 
 for (const [name, fn, method] of [
@@ -145,6 +152,22 @@ Deno.test("E. strict payload schemas reject caller-supplied identity", async () 
   } catch (error) {
     assert(error instanceof ApiError);
     assertEquals(error.code, "VALIDATION_ERROR");
+  }
+});
+
+Deno.test("a route may raise the body limit; the default still applies elsewhere", async () => {
+  const schema = z.strictObject({ text: z.string() });
+  const body = JSON.stringify({ text: "x".repeat(MAX_BODY_BYTES) });
+  const parsed = await parseJsonBody(new Request("http://fn", { method: "POST", body }), schema, {
+    maxBytes: 2 * MAX_BODY_BYTES,
+  });
+  assertEquals(parsed.text.length, MAX_BODY_BYTES);
+  try {
+    await parseJsonBody(new Request("http://fn", { method: "POST", body }), schema);
+    throw new Error("expected error");
+  } catch (error) {
+    assert(error instanceof ApiError);
+    assertEquals(error.code, "PAYLOAD_TOO_LARGE");
   }
 });
 

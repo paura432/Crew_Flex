@@ -113,7 +113,9 @@ coveragePercent     = min(100, internallyEligible / required × 100), rounded to
 | External | Technicians with `visibility ∈ {anonymous, open}`, not members of the organization, holding at least one of the requirement's qualification types. Max 100 evaluated per call. Selection order before the cap (`20261015130300`): **candidates who pass every hard filter of BR-3 first** (same date and availability rules as `evaluateMatch`, asserted by a parity test), then most hard types active + verified, then active, then id. So when ≤ 100 candidates are eligible, all of them are evaluated. `get_requirement_external_pool_summary` returns counts (prefiltered, hard-eligible, cap) and the UI says whether the result is complete, trimmed near misses only, or **partial** (more eligible candidates than the cap). |
 
 Internal candidates are named. External candidates are shown with a per-requirement pseudonymous
-reference unless the professional chose `open` visibility.
+reference unless the professional chose `open` visibility. A professional who **blocked** the requirement's
+organization is not one of its external candidates (`20261023100300`, T-35, BR-18); the internal pool is
+membership and is not affected.
 
 ## BR-8 Visibility
 
@@ -142,13 +144,19 @@ convention; deterministic between server and browser). IMPLEMENTED.
 
 ## BR-11 Passport completeness — `profileCompleteness()`
 
-Seven items the professional controls, equally weighted, rounded percent, plus the ordered list of
-missing items so the UI shows one concrete next step (CF-L03): professional name · base · years of
-experience > 0 · an active licence or type rating · an active **verified** qualification · at least one
-`available` or `aog_only` window (BR-4.8: «AOG only» is published availability, for AOG needs) · visibility other than `private`. Deterministic, never looks at "today". IMPLEMENTED.
+**Since package passport (T-36, local 2026-10-22): the ten items of v1.8 connected** (`connectedModel.js:4`),
+equally weighted, rounded percent, plus the ordered list of missing items so the UI shows one concrete next
+step (CF-L03): professional name · base · main category · at least one declared aircraft · years of
+experience > 0 · minimum rate > 0 · at least one work permit · **future** availability (an `available` or
+`aog_only` window with `ends_at > now`; BR-4.8: «AOG only» is published availability) · a held course (an
+active TRAINING qualification) · an own wallet document. The document item is **left out while the wallet is
+off** (nine items; also when its count cannot be read). A verified qualification and the visibility are no
+longer items (v1.8 counts neither; the 86 % cap in production disappears, verification still gates matching,
+OD-3). Deterministic: the caller passes its `now` through `futureAvailabilityCount`. IMPLEMENTED (local).
 Shown as **"Profile completeness"**, next to "Verified N of M" and the count awaiting review: 100 % means
-the seven profile items are done, **not** that the professional or all of their qualifications are verified
-(remediation 2026-10-15, UX 8.2).
+the profile items are done, **not** that the professional or any qualification is verified (remediation
+2026-10-15, UX 8.2). The passport page shows the same percentage as v1.8's badge «{%} completado · {n}
+evidencias» (n = own wallet documents; only the percentage without the wallet, T-37).
 
 ## BR-12 Document expiry state — `documentExpiryState()`
 
@@ -262,3 +270,29 @@ for the version they looked at, with a mandatory evidence note (1–2000) — an
 (v1.8 has only «Registrar revisión»). A registered review is what `verified_orgs` (BR-8) asks for; it gates nothing
 else yet (v1.8 also refused to confirm an assignment for a pending organization — not ported, see T-52). IMPLEMENTED
 (local).
+
+## BR-18 Passport declarations (package passport, T-30…T-35) — `src/domain/passport.ts`
+
+The v1.8 passport fields are the professional's **own declarations**, saved with the rest of the passport in one
+transaction (`save_professional_passport`, version check I-3) and CHECK-constrained to the domain catalogs:
+
+| Field                                 | Rule                                                                                                                                                                                                 |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Main category + categories            | Any of the 12 v1.8 categories (B1.1…B3, Cat A, Cat C, Mecánico, Sheet Metal, NDT, Helper); the main one is among them, required once any is declared, never `""` (T-30)                              |
+| Aircraft                              | Any of the 12 v1.8 aircraft (T-30)                                                                                                                                                                   |
+| Type ratings                          | Aircraft × licence category (the 8 licences, not the 4 trades), optional validity, restrictions ≤ 500; ≤ 40; each on a declared aircraft and category, once (T-31)                                   |
+| General restrictions                  | Free text ≤ 2000; blank = none (T-31)                                                                                                                                                                |
+| English, engines, capabilities, tools | A1–C2; the 7 v1.8 engines; the 9 v1.8 capabilities; «own tools» yes/no (T-32)                                                                                                                        |
+| Base country, work permits            | The 27 EU member states; the base itself stays free text (T-34)                                                                                                                                      |
+| Minimum rate                          | ≥ 0.01, ≤ 100 000, EUR per hour or per day; **owner-only**, no money moves (T-33)                                                                                                                    |
+| Phone, current employer               | **Owner-only**; never shared (D-07; no sharing path exists) (T-35)                                                                                                                                   |
+| Blocked organizations                 | **Owner-only**, ≤ 200. A blocked organization does not get the professional in its **external** pool or counts (BR-7); membership, the opportunities list and own applications are unaffected (T-35) |
+
+**Not eligibility (yet).** No declaration changes `evaluateMatch`, the candidate-pool hard filters or
+`app_private.hard_eligibility`: the verified catalog qualifications (BR-2/BR-3) still decide. The C-10 defaults that
+use these fields (restriction ⇒ not eligible for a licence need, category/aircraft match, English, years, country)
+are a separate package after the company-side diff; `src/domain/passport.ts` already exposes the pieces it needs
+(`CandidatePassport`, `hasRestrictions`, `meetsEnglishLevel`). Organizations see — in the candidate card, with the
+pool's pseudonym and visibility rules — the main category, categories, aircraft, English, work permits and whether
+restrictions are declared (`get_requirement_candidate_passports`), never the restriction text, contact, employer,
+rate or blocks. IMPLEMENTED (local).

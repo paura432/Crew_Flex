@@ -253,11 +253,13 @@ const checklist = page
 const today = new Date().toISOString().slice(0, 10);
 // N-03 (PKG calendar): the day is a toggle button whose label also counts its opportunities.
 const todayCell = page.locator(`main button[aria-current=date]`);
+// T-36 (package passport): the ten v1.8 items; «Document provided» only counts with the wallet on.
+const checklistItems = await checklist.count();
 ok(
-  "2b overview: 7-item checklist with links for the missing ones; today marked in the month",
-  (await checklist.count()) === 7 &&
+  "2b overview: 10-item checklist (9 without the wallet) with links for the missing ones; today marked in the month",
+  [9, 10].includes(checklistItems) &&
     new RegExp(`^${today}: Available\\. `).test((await todayCell.getAttribute("aria-label")) ?? ""),
-  `${await checklist.count()} items · ${await todayCell.getAttribute("aria-label")}`,
+  `${checklistItems} items · ${await todayCell.getAttribute("aria-label")}`,
 );
 await page.getByRole("link", { name: "Next month" }).click();
 await page.waitForURL(/month=\d{4}-\d{2}/);
@@ -270,12 +272,25 @@ ok(
   /: Rest\. /.test(nextMonthDay ?? ""),
   nextMonthDay,
 );
-// 2e (batch 11, V1.8 hides the progress when complete): Delta is at 100 % → list folded, one click away.
-ok(
-  "2e complete profile: checklist folded behind «The 7 profile items»",
-  (await page.getByText("The 7 profile items").isVisible()) &&
-    !(await checklist.first().isVisible()),
-);
+// 2e (batch 11, V1.8 hides the progress when complete): the seed completes every item of Delta but
+// the wallet document (package passport). Without the wallet: 100 % → list folded, one click away;
+// with it: 90 %, and «Document provided» is the only item with a «Complete» link.
+if (checklistItems === 9) {
+  ok(
+    "2e complete profile: checklist folded behind «The 9 profile items»",
+    (await page.getByText("The 9 profile items").isVisible()) &&
+      !(await checklist.first().isVisible()),
+  );
+} else {
+  const pendingItems = checklist.filter({ has: page.getByRole("link", { name: "Complete" }) });
+  ok(
+    "2e Delta at 90 %: only «Document provided» is left (wallet on)",
+    /Your passport is 90% complete/.test(await page.locator("main").innerText()) &&
+      (await pendingItems.count()) === 1 &&
+      /Document provided/.test(await pendingItems.first().innerText()),
+    `${await pendingItems.count()} pending`,
+  );
+}
 // 2d (batch 7, V1.8 colours): AOG legend swatch is orange (warn-bg), the partial day is hatched.
 const swatch = (label) =>
   page
@@ -1929,6 +1944,105 @@ ok(
     .map((t) => t.split("\n")[0])
     .join("|") === "Private|Anonymous|Verified organizations|Open",
   "",
+);
+await logout();
+
+// PKG passport (N-01, N-02, N-05…N-08, N-16, N-25; migrations 20261023100*): the v1.8 passport
+// fields are offered, saved and reloaded; a rating on an unticked aircraft is refused before sending;
+// the identity card and the organization's candidate card show the declarations. Delta's passport is
+// restored through the local API at the end.
+const deltaPassport = (await asSeedUser("delta@crewflex.test", "professional-profile")).data
+  .profile;
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/professional/profile`);
+await page.waitForLoadState("networkidle");
+const passportCounts = await page.evaluate(() =>
+  Object.fromEntries(
+    ["categories", "aircraft", "engines", "skills", "workPermits"].map((id) => [
+      id,
+      document.querySelectorAll(`fieldset#${id} input[type=checkbox]`).length,
+    ]),
+  ),
+);
+ok(
+  "PKG passport 1 v1.8 catalogs (12 categories, 12 aircraft, 7 engines, 9 capabilities, 27 EU permits), main category, «% complete» badge",
+  JSON.stringify(passportCounts) ===
+    JSON.stringify({ categories: 12, aircraft: 12, engines: 7, skills: 9, workPermits: 27 }) &&
+    (await page.inputValue("#primaryCategory")) === "B1.1" &&
+    /\d+% complete/.test(await page.locator("main header").first().innerText()),
+  JSON.stringify(passportCounts),
+);
+const passportBox = (fieldset, text) =>
+  page.locator(`fieldset#${fieldset} label`, { hasText: text }).locator("input");
+await passportBox("aircraft", "A350").check();
+await page.getByRole("button", { name: "Add type rating" }).click();
+await page.selectOption("#rating-2-aircraft", "A350");
+await page.selectOption("#rating-2-category", "B2");
+await page.fill("#rating-2-restrictions", "Smoke restriction");
+await page.fill("#phone", "+34 600 111 222");
+await page.selectOption("#englishLevel", "B2");
+await page.fill("#minRate", "52.5");
+await passportBox("workPermits", "Germany").check();
+await passportBox("blockedOrganizationIds", "Demo Aero Services Lisbon").check();
+await page.click("main form button[type=submit]");
+await page.waitForSelector("[role=status]:has-text('Passport updated')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG passport 2 saved and reloaded: aircraft, rating with restriction, phone, English, rate, permit, block",
+  (await passportBox("aircraft", "A350").isChecked()) &&
+    (await page.inputValue("#rating-2-aircraft")) === "A350" &&
+    (await page.inputValue("#rating-2-restrictions")) === "Smoke restriction" &&
+    (await page.inputValue("#phone")) === "+34 600 111 222" &&
+    (await page.inputValue("#englishLevel")) === "B2" &&
+    (await page.inputValue("#minRate")) === "52.5" &&
+    (await passportBox("workPermits", "Germany").isChecked()) &&
+    (await passportBox("blockedOrganizationIds", "Demo Aero Services Lisbon").isChecked()),
+  "",
+);
+await passportBox("aircraft", "A350").uncheck();
+await page.click("main form button[type=submit]");
+ok(
+  "PKG passport 3 a rating on an unticked aircraft is refused before anything is sent",
+  await page
+    .getByText("Each type rating must use an aircraft and a category you ticked.")
+    .isVisible(),
+  "",
+);
+await page.goto(`${BASE}/app/professional`);
+await page.waitForLoadState("networkidle");
+const identityText = await page
+  .getByRole("region", { name: "Your professional identity" })
+  .innerText();
+ok(
+  "PKG passport 4 identity card: main category and declared aircraft",
+  /B1\.1 · A320 Family · B737 NG · A350/.test(identityText),
+  identityText.replace(/\s+/g, " ").slice(0, 120),
+);
+await logout();
+const passportNow = (await asSeedUser("delta@crewflex.test", "professional-profile")).data.profile;
+const passportSeed = { ...deltaPassport, expectedUpdatedAt: passportNow.updatedAt };
+delete passportSeed.updatedAt;
+const passportRestored = await asSeedUser("delta@crewflex.test", "professional-profile", {
+  method: "PATCH",
+  body: passportSeed,
+});
+ok(
+  "PKG passport 5 Delta's seed passport restored",
+  passportRestored.ok === true,
+  passportRestored.error?.code ?? "",
+);
+await login("admin.mro@crewflex.test");
+await page.goto(`${madUrl}/matches`);
+await page.waitForLoadState("networkidle");
+const echoCard = page.locator("main article", { hasText: "Technician Echo" }).first();
+await echoCard.waitFor({ timeout: 15000 });
+const echoText = await echoCard.innerText();
+ok(
+  "PKG passport 6 candidate card (Echo, open): declared category, aircraft, English, permits, «Restrictions declared»",
+  /B1\.1 \(main\) · A320 Family · English B1 · Work permits: ES/.test(echoText) &&
+    /Restrictions declared/.test(echoText),
+  echoText.replace(/\s+/g, " ").slice(0, 160),
 );
 await logout();
 

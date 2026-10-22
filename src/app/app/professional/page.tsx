@@ -7,32 +7,17 @@ import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { EXPIRY_TONE, StatusChip } from "@/components/ui/StatusChip";
 import { documentExpiryState, isDueForReview, REVIEW_WINDOW_DAYS } from "@/domain/documents";
-import {
-  COMPLETENESS_ITEMS,
-  profileCompleteness,
-  type CompletenessItem,
-} from "@/domain/professional";
 import { parseMonth } from "@/features/availability/calendar";
-import { listOwnDocumentExpiries } from "@/features/documents/api";
+import { countOwnDocuments, listOwnDocumentExpiries } from "@/features/documents/api";
 import { IdentityCard } from "@/features/professional/components/IdentityCard";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
 import { ProfessionalActivity } from "@/features/applications/components/ProfessionalActivity";
 import { LearningAchievements } from "@/features/tools/components/LearningAchievements";
+import { COMPLETENESS_HREF, completenessOf } from "@/features/professional/completeness";
 import { loadProfessionalContext } from "@/features/professional/load";
 import { formatDate, formatPercent } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
 import { isDocumentWalletEnabled } from "@/server/feature-flags";
-
-/** Where each missing BR-11 item is completed. */
-const NEXT_STEP_HREF: Record<CompletenessItem, string> = {
-  display_name: "/app/professional/profile",
-  base_location: "/app/professional/profile",
-  years_experience: "/app/professional/profile",
-  visibility: "/app/professional/profile",
-  licence_or_rating: "/app/professional/qualifications",
-  verified_qualification: "/app/professional/qualifications",
-  availability: "/app/professional/availability",
-};
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
@@ -58,7 +43,9 @@ export default async function ProfessionalOverviewPage({
   const today = new Date().toISOString().slice(0, 10);
   // V1.8 Badges «Documentos y cursos próximos a revisar» (TD-44): declared expiries within 60 days,
   // expired included, over active qualifications and (when the wallet is on) own documents.
-  const documents = walletEnabled ? await listOwnDocumentExpiries() : [];
+  const [documents, documentCount] = walletEnabled
+    ? await Promise.all([listOwnDocumentExpiries(), countOwnDocuments()])
+    : [[], null];
   const documentsFailed = documents === null;
   const toReview = [
     ...overview.qualifications
@@ -82,21 +69,13 @@ export default async function ProfessionalOverviewPage({
   const verified = active.filter((q) => q.verification_status === "verified").length;
   const awaiting = active.filter((q) => q.verification_status === "pending").length;
   const rejected = active.filter((q) => q.verification_status === "rejected").length;
-  const completeness = profileCompleteness({
-    profile: {
-      displayName: actor.profile.display_name,
-      baseLocation: overview.profile.base_location,
-      yearsExperience: overview.profile.years_experience,
-      visibility: overview.profile.visibility,
-    },
-    qualifications: overview.qualifications.map((q) => ({
-      category: q.qualification_types.category,
-      verificationStatus: q.verification_status,
-      status: q.status,
-    })),
-    // BR-11: «AOG only» is published availability too (BR-4.8).
-    availableWindows: overview.availability.filter((w) => w.status !== "unavailable").length,
-  });
+  // BR-11 / T-36: the ten v1.8 items; «Documento aportado» only while the wallet is on.
+  const completeness = completenessOf(
+    actor.profile.display_name,
+    overview,
+    documentCount,
+    new Date(),
+  );
   const nextStep = completeness.missing[0];
   const month = parseMonth(monthParam) ?? today.slice(0, 7);
   const windows = overview.availability.map((w) => ({
@@ -119,6 +98,8 @@ export default async function ProfessionalOverviewPage({
           name={actor.profile.display_name}
           baseLocation={overview.profile.base_location}
           yearsExperience={overview.profile.years_experience}
+          primaryCategory={overview.profile.primary_category}
+          aircraft={overview.profile.aircraft}
         />
         <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {/* Completeness of the profile items (BR-11) is not a verification status (8.2). */}
@@ -239,10 +220,10 @@ export default async function ProfessionalOverviewPage({
             <p className="mb-3 text-xs text-muted">{t("overview.progressNote")}</p>
             <details open={completeness.percent < 100} className="group">
               <summary className="flex cursor-pointer items-center text-sm font-semibold text-blue pointer-coarse:min-h-11">
-                {t("overview.showChecklist", { count: COMPLETENESS_ITEMS.length })}
+                {t("overview.showChecklist", { count: completeness.items.length })}
               </summary>
               <ul className="divide-y divide-line text-sm">
-                {COMPLETENESS_ITEMS.map((item) => {
+                {completeness.items.map((item) => {
                   const done = !completeness.missing.includes(item);
                   return (
                     <li
@@ -259,7 +240,7 @@ export default async function ProfessionalOverviewPage({
                         </span>
                       </span>
                       {!done && (
-                        <ButtonLink href={NEXT_STEP_HREF[item]}>{t("overview.doIt")}</ButtonLink>
+                        <ButtonLink href={COMPLETENESS_HREF[item]}>{t("overview.doIt")}</ButtonLink>
                       )}
                     </li>
                   );

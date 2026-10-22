@@ -424,6 +424,44 @@
       },
       "empty": "There are no changes to save",
       "id": "A valid entry identifier is required"
+    },
+    "passport": {
+      "primary": {
+        "required": "Choose your main category.",
+        "notDeclared": "The main category must be one of your categories."
+      },
+      "categories": "Choose categories from the list, once each.",
+      "aircraft": "Choose aircraft from the list, once each.",
+      "engines": "Choose engines from the list, once each.",
+      "skills": "Choose capabilities from the list, once each.",
+      "permits": "Choose European Union countries, once each.",
+      "english": "Choose a level from A1 to C2.",
+      "ownTools": "Say whether you have your own tools.",
+      "country": "Select a European Union country.",
+      "restrictions": {
+        "text": "Restrictions must be text.",
+        "max": "At most 2000 characters."
+      },
+      "rating": {
+        "list": "Invalid type rating.",
+        "max": "At most forty type ratings.",
+        "aircraft": "Choose the type rating's aircraft.",
+        "category": "Choose a licence category.",
+        "restrictionsMax": "At most 500 characters per type rating.",
+        "undeclared": "Each type rating must use an aircraft and a category you ticked.",
+        "duplicate": "That type rating is already listed."
+      },
+      "phone": "Check the phone: digits, spaces and a leading +.",
+      "organization": "Invalid organization.",
+      "minRate": {
+        "number": "The rate must be a number.",
+        "min": "The rate must be positive.",
+        "max": "The rate must be at most 100,000."
+      },
+      "rateUnit": "Choose EUR / hour or EUR / day.",
+      "blocks": {
+        "max": "At most 200 blocked organizations."
+      }
     }
   },
   "domain": {
@@ -525,7 +563,8 @@
       "label": "Your professional identity",
       "noBase": "Base to be completed",
       "experience": "{count, plural, one {# year} other {# years}} of declared experience",
-      "edit": "Edit profile"
+      "edit": "Edit profile",
+      "declared": "Declared:"
     },
     "noProfileTitle": "No professional profile",
     "noProfileDescription": "This account is an organization account.",
@@ -569,10 +608,13 @@
       "display_name": "Next: add your professional name",
       "base_location": "Next: set your base",
       "years_experience": "Next: add your years of experience",
-      "licence_or_rating": "Next: declare a licence or type rating",
-      "verified_qualification": "Next: a reviewer verifies a qualification",
-      "availability": "Next: publish available days",
-      "visibility": "Next: choose anonymous or open visibility"
+      "availability": "Next: publish future available days",
+      "primary_category": "Next: choose your main category",
+      "aircraft": "Next: declare the aircraft you know",
+      "min_rate": "Next: set your minimum rate",
+      "work_permits": "Next: declare your work permits",
+      "courses": "Next: declare a current course",
+      "document": "Next: upload a document to your wallet"
     },
     "facts": {
       "base": "Base",
@@ -592,24 +634,69 @@
       "base": "Base",
       "baseHint": "Airport or city, e.g. Madrid (MAD)",
       "basePlaceholder": "Madrid (MAD)",
-      "experience": "02 · Experience and mobility",
+      "experience": "03 · Experience and courses",
       "years": "Years of experience",
       "status": "Current status",
       "mobility": "Mobility",
-      "visibilityTitle": "03 · Visibility in the network",
+      "visibilityTitle": "05 · Visibility in the network",
       "visibilityIntro": "Matching respects your choice. Private profiles never appear to organizations; contact always requires your consent.",
       "visibilityAria": "Visibility",
       "saved": "Passport updated. Matching uses the new data.",
-      "conflict": "Your passport was changed in another window or device. Nothing was saved: reload the page to see the latest version, then apply your changes again."
+      "conflict": "Your passport was changed in another window or device. Nothing was saved: reload the page to see the latest version, then apply your changes again.",
+      "phone": "Phone",
+      "phoneHint": "Private: no organization sees it. Contact is only shared with your consent.",
+      "baseCountry": "Country of your base",
+      "notSet": "Not set",
+      "employer": "Current employer",
+      "employerNone": "None",
+      "employerHint": "Private. To stay hidden from your employer, also tick it under «Blocked organizations».",
+      "qualificationsTitle": "02 · Qualifications",
+      "primaryCategory": "Main category",
+      "primaryPlaceholder": "Choose a category",
+      "categories": "Categories and specialities",
+      "categoriesHint": "Your main category is always ticked.",
+      "aircraft": "Aircraft you have experience on",
+      "ratingsTitle": "Type ratings",
+      "ratingsIntro": "Aircraft × licence category. The date is optional when it does not apply; no validity is invented. Organizations only see that you declare restrictions, not the text.",
+      "ratingsNone": "No type ratings declared.",
+      "ratingsNeedDeclared": "First tick an aircraft and a licence category (B1, B2, B3, Cat A or Cat C).",
+      "ratingAircraft": "Type rating {n} aircraft",
+      "ratingCategory": "Type rating {n} category",
+      "ratingExpiry": "Type rating {n} validity (if any)",
+      "ratingRestrictions": "Type rating {n} restrictions",
+      "ratingRestrictionsPlaceholder": "No restrictions declared",
+      "addRating": "Add type rating",
+      "removeRating": "Remove type rating {n}",
+      "ratingsHint": "A declaration grants no certifying authority. The licences and type ratings that count in matching are declared and verified under Qualifications.",
+      "generalRestrictions": "General rating or scope restrictions",
+      "generalRestrictionsHint": "Leave it empty if you have none.",
+      "english": "Technical English",
+      "engines": "Engines",
+      "skills": "Capabilities",
+      "ownTools": "I have my own tools",
+      "coursesHint": "Courses (Human Factors, EWIS, FTS, SMS) are declared with their validity under Qualifications.",
+      "openQualifications": "Open qualifications",
+      "rateTitle": "04 · Rate and work permits",
+      "minRate": "Minimum rate",
+      "minRateHint": "Private: no organization sees it. Crew Flex charges and pays nothing.",
+      "rateUnit": "Rate unit",
+      "permits": "Declared work permits",
+      "permitsHint": "European Union countries where you may work.",
+      "blocks": "Blocked organizations",
+      "blocksHint": "A blocked organization does not find you among its external candidates and is not told. If you apply to one of its needs, it does see that application.",
+      "blocksNone": "There are no organizations in the network yet."
     },
     "item": {
       "display_name": "Professional name",
       "base_location": "Base",
       "years_experience": "Years of experience",
-      "licence_or_rating": "Licence or type rating declared",
-      "verified_qualification": "At least one verified qualification",
-      "availability": "Published available days",
-      "visibility": "Visible to organizations (anonymous or open)"
+      "availability": "Future availability",
+      "primary_category": "Main category",
+      "aircraft": "Aircraft",
+      "min_rate": "Minimum rate",
+      "work_permits": "Work countries",
+      "courses": "Courses",
+      "document": "Document provided"
     },
     "activity": {
       "label": "Opportunities and applications",
@@ -1720,5 +1807,45 @@
     "archive": "Archive",
     "restore": "Restore",
     "confirmDelete": "Delete permanently"
+  },
+  "passport": {
+    "categories": {
+      "B1_1": "B1.1",
+      "B1_2": "B1.2",
+      "B1_3": "B1.3",
+      "B1_4": "B1.4",
+      "B2": "B2",
+      "B3": "B3",
+      "CAT_A": "Cat A",
+      "CAT_C": "Cat C",
+      "MECHANIC": "Mechanic",
+      "SHEET_METAL": "Sheet Metal",
+      "NDT": "NDT",
+      "HELPER": "Helper"
+    },
+    "skills": {
+      "line_maintenance": "Line Maintenance",
+      "base_maintenance": "Base Maintenance",
+      "aog_support": "AOG Support",
+      "troubleshooting": "Troubleshooting",
+      "engine_change": "Engine Change",
+      "sheet_metal": "Sheet Metal",
+      "ndt": "NDT",
+      "borescope": "Borescope",
+      "cabin_systems": "Cabin Systems"
+    },
+    "rateUnit": {
+      "hour": "EUR / hour",
+      "day": "EUR / day"
+    },
+    "badge": "{percent, number}% complete · {count, plural, one {# piece of evidence} other {# pieces of evidence}}",
+    "badgeNoWallet": "{percent, number}% complete",
+    "candidate": {
+      "declared": "Declared:",
+      "primary": "{category} (main)",
+      "english": "English {level}",
+      "permits": "Work permits: {countries}",
+      "restrictions": "Restrictions declared"
+    }
   }
 }

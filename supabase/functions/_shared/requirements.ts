@@ -11,7 +11,8 @@ import {
   URGENCIES,
   type WorkRequirement,
 } from "../../../src/domain/work-requirement.ts";
-import { toCandidate } from "../../../src/lib/candidate-pool.ts";
+import type { CandidatePassport } from "../../../src/domain/passport.ts";
+import { toCandidate, toCandidatePassport } from "../../../src/lib/candidate-pool.ts";
 
 export { toCandidate };
 import type { CandidateSummary, ExternalPoolCoverage } from "../../../src/types/api.ts";
@@ -125,12 +126,32 @@ export async function loadExternalPoolCoverage(
   return { prefiltered: row.prefiltered, hardEligible: row.hard_eligible, cap: row.cap };
 }
 
-export function toCandidateSummary(candidate: Candidate): CandidateSummary {
+/**
+ * The v1.8 card declarations of the same pool rows (package passport), by candidate reference. The
+ * definer function calls get_requirement_candidate_pool itself, so its authorization, cap, order and
+ * blocks apply unchanged; it never returns contact, employer, rate, blocks or restriction text.
+ */
+export async function loadCandidatePassports(
+  actor: Actor,
+  requirementId: string,
+): Promise<Map<string, CandidatePassport>> {
+  const { data, error } = await actor.client.rpc("get_requirement_candidate_passports", {
+    p_requirement_id: requirementId,
+  });
+  if (error) throw fromDatabaseError(error);
+  return new Map(z.array(z.unknown()).parse(data).map(toCandidatePassport));
+}
+
+export function toCandidateSummary(
+  candidate: Candidate,
+  passport?: CandidatePassport | null,
+): CandidateSummary {
   return {
     id: candidate.id,
     pool: candidate.pool,
     displayName: candidate.displayName,
     baseLocation: candidate.baseLocation,
     yearsExperience: candidate.yearsExperience,
+    ...(passport === undefined ? {} : { passport }),
   };
 }

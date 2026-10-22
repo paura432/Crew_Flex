@@ -1,19 +1,35 @@
 import { getTranslations } from "next-intl/server";
 import { ButtonLink } from "@/components/ui/Button";
+import { categoryKey, type Aircraft, type ProfessionalCategory } from "@/domain/passport";
 import { initials } from "../identity";
 
-/** V1.8 identity card: initials avatar, name, base and declared experience, link to the passport. */
+/**
+ * V1.8 identity card: initials avatar, name, base and declared experience, link to the passport.
+ * The v1.8 medal strip shows the main category and the declared aircraft; until the medals exist
+ * (N-15) they are one plain line under the base.
+ */
 export async function IdentityCard({
   name,
   baseLocation,
   yearsExperience,
+  primaryCategory,
+  aircraft,
 }: {
   name: string;
   baseLocation: string | null;
   yearsExperience: number | null;
+  primaryCategory: ProfessionalCategory | null;
+  aircraft: readonly Aircraft[];
 }) {
-  const t = await getTranslations("professional.identity");
+  const [t, tCategory] = await Promise.all([
+    getTranslations("professional.identity"),
+    getTranslations("passport.categories"),
+  ]);
   const base = baseLocation?.trim() || t("noBase");
+  const declared = [
+    ...(primaryCategory ? [tCategory(categoryKey(primaryCategory))] : []),
+    ...aircraft,
+  ];
   return (
     <section
       aria-label={t("label")}
@@ -34,6 +50,12 @@ export async function IdentityCard({
             yearsExperience > 0 &&
             ` · ${t("experience", { count: yearsExperience })}`}
         </p>
+        {declared.length > 0 && (
+          <p className="text-sm font-medium break-words">
+            <span className="sr-only">{t("declared")} </span>
+            {declared.join(" · ")}
+          </p>
+        )}
       </div>
       <ButtonLink href="/app/professional/profile">{t("edit")}</ButtonLink>
     </section>

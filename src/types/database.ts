@@ -1,6 +1,7 @@
 // Row shapes used by direct (RLS-protected) reads from the Next.js server.
 // Enums are derived from the generated schema (`database.generated.ts`, `pnpm db:types`) so they
 // cannot drift from the database. Rows are NOT domain objects — map them.
+import type { Aircraft, EuCountry, ProfessionalCategory } from "../domain/passport.ts";
 import type { QualificationCategory, VerificationStatus } from "../domain/qualification.ts";
 import type { Locale } from "../i18n/config.ts";
 import type { Database } from "./database.generated";
@@ -49,6 +50,10 @@ export interface TechnicianProfileRow {
   years_experience: number | null;
   current_status: "employed" | "contractor" | "between_contracts";
   visibility: ProfileVisibility;
+  /** v1.8 declarations (migration 20261023100100; CHECK-constrained to src/domain/passport.ts). */
+  primary_category: ProfessionalCategory | null;
+  aircraft: Aircraft[];
+  work_permits: EuCountry[];
 }
 
 export interface TechnicianQualificationRow {

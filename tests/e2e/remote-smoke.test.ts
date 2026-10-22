@@ -59,6 +59,8 @@ type Profile = {
   yearsExperience: number | null;
   currentStatus: string;
   visibility: string;
+  /** Package passport fields (declarations, private data), when the backend has them. */
+  [field: string]: unknown;
 };
 type Qualification = {
   id: string;
@@ -142,14 +144,16 @@ function expectNoOverlap(windows: Window[]) {
 const subOf = (token: string) =>
   String(JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString()).sub);
 
-const pick = (p: Profile) => ({
-  displayName: p.displayName,
-  baseLocation: p.baseLocation,
-  mobility: p.mobility,
-  yearsExperience: p.yearsExperience,
-  currentStatus: p.currentStatus,
-  visibility: p.visibility,
-});
+/**
+ * The editable passport = GET's `profile` without its version. Generic on purpose: the PATCH is a
+ * full replacement, and since package passport (20261023100*) it carries the v1.8 declarations and
+ * private fields too, so the same test works before and after that rollout.
+ */
+const pick = (p: Profile): Profile => {
+  const editable: Profile & { updatedAt?: string } = { ...p };
+  delete editable.updatedAt;
+  return editable;
+};
 
 describe.skipIf(!configured)(
   "remote E2E: deployed Edge Functions + RLS (production, guarded)",
@@ -311,14 +315,7 @@ describe.skipIf(!configured)(
       const before = await call("professional-profile", { token: tokenA });
       expect(before.status).toBe(200);
       const profile = before.body.data?.profile as Profile;
-      const editable: Profile = {
-        displayName: profile.displayName,
-        baseLocation: profile.baseLocation,
-        mobility: profile.mobility,
-        yearsExperience: profile.yearsExperience,
-        currentStatus: profile.currentStatus,
-        visibility: profile.visibility,
-      };
+      const editable = pick(profile);
       originalProfile = editable;
       const bBefore = (await call("professional-profile", { token: tokenB })).body.data
         ?.profile as Profile;

@@ -93,3 +93,21 @@ Recorded from the owner's answers in session (local implementation authorised; n
 | T-52 | Organization review: no «reject», evidence kept apart (platform admins only), audit without organization id; v1.8's confirmation gate for pending organizations is not ported                        | Smallest faithful port; the gate needs a new `CFA` reason (hiring)               |
 | T-53 | Platform figures: counts only; active = `open`/`covered`, not ended; AOG with vacancies includes started needs; demand = seats per hard licence; DEFINER RPC read, no Edge Function                  | v2 diff reading of ADM-02 #6-#13; owner to confirm the scope                     |
 | T-54 | Audit view: the whole trail paged by 50, newest first, actor/object ids and metadata as stored (v1.8: last 200, no actor or object); action codes untranslated                                       | Read-only and minimal (S-9); every row stays reachable                           |
+| T-30 | Passport catalog (N-01): 12 v1.8 categories, a main one (among them, required once any is declared, never `""`), 12 v1.8 aircraft; catalog + B1.2, B1.4, B3, MECHANIC, SHEET-METAL, HELPER           | v1.8 `business.js:7-8`; C-10/D-03; the empty-option bug is not copied            |
+| T-31 | Type ratings (N-02): aircraft × licence (8 licences, not the 4 trades), optional validity, restrictions ≤ 500; general restrictions ≤ 2000; ≤ 40; declarations only, matching unchanged              | v1.8 demo + connected `ratings`; C-10/D-02; BR-2 still verifies                  |
+| T-32 | English A1–C2, the 7 v1.8 engines, the 9 v1.8 capabilities and «own tools» are declared lists on the profile (N-05), not catalog qualifications                                                      | v1.8 chips; C-10; v1.8 has no evidence for them either                           |
+| T-33 | Minimum rate (N-06): ≥ 0.01, ≤ 100 000, EUR per hour or per day (default per day); owner-only, never shown to organizations; no money moves                                                          | v1.8 demo; OD-7 without real money                                               |
+| T-34 | Work permits (N-07): the 27 EU member states; the base stays free text plus a «País de la base» among the 27; matching does not check the country yet                                                | v1.8 connected `COUNTRIES`; OD-6/D-04; the demo listed the UK                    |
+| T-35 | Phone and employer owner-only (D-07). A block (N-08) removes the professional from THAT organization's external pool and counts; internal pool, opportunities, own applications unaffected           | v1.8 `server/app.mjs:56`; v1.8 also refuses applying (not copied)                |
+| T-36 | Completeness (N-16): the 10 v1.8 connected items (future windows only; course = held TRAINING; document only with the wallet on); verified qualification and visibility no longer count              | v1.8 `connectedModel.js:4`; R-D5; the 86 % production cap goes                   |
+| T-37 | Passport badge (N-25): «{%} completado · {n} evidencias», n = own wallet documents; without the wallet only the percentage                                                                           | v1.8 `Professional2.jsx:76`                                                      |
+
+Package passport, details of T-30…T-37 (local `20261023100000`…`100300`, BUSINESS_RULES BR-11 and BR-18): the
+catalog's new licences require an expiry like the others (BR-2.7) and the trades do not; a rating has no document
+link (the wallet keeps document → qualification, TEC-05); to name an employer or block one, professionals see the
+organizations that have published at least once, their own memberships and what they already chose — not every
+organization as v1.8 does (`list_blockable_organizations`; anyone can sign up as a professional); an organization
+is not told it was blocked (it can still infer it from its own pool: residual risk, SECURITY_PRIVACY T9); applying
+to a blocked organization stays possible (the professional's own act, S-7 exception) where v1.8 refuses it; the
+passport PATCH accepts bodies up to 128 KB (its largest valid body is ~80 KB); the C-10 matching defaults that read
+these fields are a separate package.

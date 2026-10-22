@@ -53,6 +53,19 @@ export async function listOwnDocumentExpiries(): Promise<DocumentExpiry[] | null
   return data.map((d) => ({ id: d.id, title: d.title, expiresAt: d.expires_at }));
 }
 
+/**
+ * How many documents the caller holds in the wallet (RLS: owner only) — v1.8 «evidencias» and the
+ * «Documento aportado» completeness item. `null` when the count fails (the caller then leaves the
+ * item out instead of claiming zero).
+ */
+export async function countOwnDocuments(): Promise<number | null> {
+  const supabase = await createServerSupabase();
+  const { count, error } = await supabase
+    .from("professional_documents")
+    .select("id", { count: "exact", head: true });
+  return error || count === null ? null : count;
+}
+
 export interface DocumentLink {
   qualificationId: string;
   title: string;

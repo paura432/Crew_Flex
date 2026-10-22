@@ -4,6 +4,7 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/i18n/format";
 import type { MatchResult } from "@/domain/matching";
+import { categoryKey, type CandidatePassport } from "@/domain/passport";
 import type { EvaluatedCandidate } from "@/types/api";
 import {
   explainAvailability,
@@ -31,6 +32,43 @@ function render(t: Translate, tDomain: TranslateDomain, locale: Locale, text: Ex
     date: p.date ? formatDate(locale, p.date) : "",
     status: p.status ? tDomain(`verification.${p.status}`).toLowerCase() : "",
   });
+}
+
+/**
+ * v1.8 card declarations (category, aircraft, English, work permits, «Restricciones declaradas») under
+ * the base line. Declarations, not evidence: matching does not use them yet (package passport, T-30…T-35).
+ * Never contact, employer, rate or the restriction text — the function does not return them.
+ */
+async function PassportFacts({ passport }: { passport: CandidatePassport }) {
+  const [t, tCategory] = await Promise.all([
+    getTranslations("passport.candidate"),
+    getTranslations("passport.categories"),
+  ]);
+  const categories = passport.categories.map((c) =>
+    c === passport.primaryCategory
+      ? t("primary", { category: tCategory(categoryKey(c)) })
+      : tCategory(categoryKey(c)),
+  );
+  const facts = [
+    ...categories,
+    ...passport.aircraft,
+    ...(passport.englishLevel ? [t("english", { level: passport.englishLevel })] : []),
+    ...(passport.workPermits.length > 0
+      ? [t("permits", { countries: passport.workPermits.join(", ") })]
+      : []),
+  ];
+  if (facts.length === 0 && !passport.hasRestrictions) return null;
+  return (
+    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+      {facts.length > 0 && (
+        <span className="break-words">
+          <span className="sr-only">{t("declared")} </span>
+          {facts.join(" · ")}
+        </span>
+      )}
+      {passport.hasRestrictions && <StatusChip tone="warn">{t("restrictions")}</StatusChip>}
+    </p>
+  );
 }
 
 /** Explainable result: verdict → per-qualification checklist → availability → blockers. */
@@ -61,6 +99,7 @@ export async function MatchCard({
             {candidate.yearsExperience !== null &&
               ` · ${t("years", { count: candidate.yearsExperience })}`}
           </p>
+          {candidate.passport && <PassportFacts passport={candidate.passport} />}
         </div>
         {match.eligible && (
           <p className="text-right text-sm text-muted">

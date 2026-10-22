@@ -16,6 +16,9 @@ demand, never persisted (no duplicated derived state).
 auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualifications *─1 qualification_types
                   │                        ├──────────1─* availability_windows
                   │                        └──────────1─* logbook_entries (owner only, M14)
+                  │                        ├──────────1─* technician_type_ratings (declared, package passport)
+                  │                        ├──────────1─0..1 technician_private_details (owner only)
+                  │                        └──────────1─* technician_organization_blocks *─1 organizations (owner only)
                   │
                   └─* organization_members *─1 organizations 1─* work_requirements 1─* work_requirement_qualifications *─1 qualification_types
                                                        └─* organization_reviews (evidence, platform admins only)
@@ -58,6 +61,44 @@ Created by trigger for `account_type = professional` only; API roles have no INS
 `visibility` also takes `verified_orgs` («Empresas verificadas», LOCAL `20261023500000`, BR-8): matchable only by
 organizations whose review is registered.
 
+**v1.8 passport declarations (`20261023100100`, LOCAL ONLY — package passport, BR-18, T-30…T-35).** Readable like
+the row (owner · own-organization admin/manager · platform admin); **no write grant**: written only by
+`save_professional_passport`. CHECKs repeat `src/domain/passport.ts`.
+
+| Column                 | Type                                                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `primary_category`     | text, nullable; one of `categories` (never `''`)                                                                  |
+| `categories`           | text[] ⊆ the 12 v1.8 categories (`B1.1`…`B3`, `CAT-A`, `CAT-C`, `MECHANIC`, `SHEET-METAL`, `NDT`, `HELPER`), `{}` |
+| `aircraft`             | text[] ⊆ the 12 v1.8 aircraft (`A320 Family` … `Robinson R44`), default `{}`                                      |
+| `engines`              | text[] ⊆ the 7 v1.8 engines, default `{}`                                                                         |
+| `skills`               | text[] ⊆ the 9 v1.8 capabilities (`line_maintenance` … `cabin_systems`), default `{}`                             |
+| `english_level`        | `A1`…`C2`, nullable                                                                                               |
+| `own_tools`            | boolean, default false                                                                                            |
+| `base_country`         | one of the 27 EU ISO codes, nullable                                                                              |
+| `work_permits`         | text[] ⊆ the 27 EU ISO codes, default `{}`                                                                        |
+| `general_restrictions` | text ≤ 2000, nullable, never blank                                                                                |
+
+### `technician_type_ratings` (`20261023100100`, LOCAL ONLY)
+
+Declared type ratings (v1.8 `ratings`), not the verified TYPE_RATING qualifications matching reads. `id`,
+`technician_profile_id` → `technician_profiles` on delete cascade, `aircraft` (12 v1.8 aircraft), `category` (the 8
+licence categories), `expires_at` date nullable, `restrictions` text ≤ 500 nullable (never blank), timestamps;
+unique (`technician_profile_id`, `aircraft`, `category`); ≤ 40 per professional (save function). RLS select: owner ·
+`can_view_member` · platform admin; no write grant.
+
+### `technician_private_details` (`20261023100100`, LOCAL ONLY) — owner only
+
+`profile_id` PK → `technician_profiles` on delete cascade, `phone` (≤ 32, digits/spaces/`().-`, optional leading
+`+`), `current_employer_id` → `organizations` on delete set null, `min_rate` numeric(10,2) 0.01–100 000 nullable,
+`rate_unit` `hour` · `day` (default `day`), timestamps. Created by the first passport save. RLS select: **owner
+only** (not the own organization, not platform admins); no write grant. D-07: no function returns it to anyone else.
+
+### `technician_organization_blocks` (`20261023100100`, LOCAL ONLY) — owner only
+
+PK (`technician_profile_id` → `technician_profiles`, `organization_id` → `organizations`), both on delete cascade,
+`created_at`; ≤ 200 per professional. RLS select: **owner only**; no write grant. Read server-side by
+`app_private.ranked_external_pool` to leave the professional out of that organization's external pool (T-35).
+
 ### `organizations`
 
 `id`, `name` (2–160), `type` (`mro` · `airline` · `operator` · `staffing_agency` · `other`),
@@ -89,7 +130,8 @@ Organization role is independent from `platform_role`.
 
 Reference catalog. `id`, `code` (unique, e.g. `B1.1`, `TR-A320`, `EWIS`), `name`, `category`
 (`LICENSE` · `TYPE_RATING` · `TRAINING` · `APPROVAL` · `SKILL`), `requires_expiry`, `created_at`.
-Written only by migrations/seed (no user write grant).
+Written only by migrations/seed (no user write grant). `20261023100000` (local, T-30) adds the v1.8 categories it
+lacked: `B1.2`, `B1.4`, `B3` (LICENSE, expiry required) and `MECHANIC`, `SHEET-METAL`, `HELPER` (SKILL).
 
 ### `technician_qualifications`
 
@@ -287,7 +329,10 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `create_work_requirement(...)`                                                                                                                                                           | INVOKER         | Atomic create, RLS enforced.                                                                                                                                                                                                                             |
 | `get_requirement_candidate_pool(requirement_id)`                                                                                                                                         | DEFINER         | Returns **matchable data only** for internal + external pools after checking the caller is admin/manager of the requirement's organization. External selection: hard-eligible first (`20261015130300`).                                                  |
 | `get_requirement_external_pool_summary(requirement_id)`                                                                                                                                  | DEFINER         | Counts only (`prefiltered`, `hard_eligible`, `cap`), same authorization: tells the UI whether the external evaluation is complete.                                                                                                                       |
-| `update_professional_profile(...)`                                                                                                                                                       | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`).                                                                                                                                                       |
+| `update_professional_profile(...)`                                                                                                                                                       | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`). Superseded locally by `save_professional_passport`; kept for the deployed function.                                                                   |
+| `save_professional_passport(passport jsonb, expected_updated_at)` (`20261023100200`, local only)                                                                                         | DEFINER         | Whole v1.8 passport in one transaction (5 tables, full replacement), `CF412`; professionals only (42501); exact keys, no repeats, ≤ 40 ratings, ≤ 200 blocks, ratings on declared values (22023). Sole writer of the new columns and tables.             |
+| `list_blockable_organizations()` (`20261023100200`, local only)                                                                                                                          | DEFINER, stable | Professionals only (42501): id + name of organizations that published (non-draft), own memberships, own blocks and employer (those first; ≤ 500), for «Empresa actual» and «Organizaciones bloqueadas».                                                  |
+| `get_requirement_candidate_passports(requirement_id)` (`20261023100300`, local only)                                                                                                     | DEFINER, stable | Pool authorization (admin/manager, 42501); exactly the rows of `get_requirement_candidate_pool` (calls it): ref, main category, categories, aircraft, English, permits, `has_restrictions`. Nothing private.                                             |
 | `create_work_requirement_idempotent` · `create_availability_window` · `declare_qualification` · `replace_availability_days` (`20261019120000`, 3-arg since `20261019140000`, local only) | INVOKER         | Idempotent creates (`Idempotency-Key`), key claimed in the same transaction (`app_private.idempotency_keys`).                                                                                                                                            |
 | `create_professional_document(key, kind, title, storage_path, mime_type, size_bytes, sha256, expires_at, qualification_id)` (`20261019160000`, local only)                               | INVOKER         | Idempotent document create (`document.create`); path must be `<uid>/<key>-<sha256[0:16]>` (`22023` otherwise); `CF409` same key, other request.                                                                                                          |
 | `create_logbook_entry(key, entry_date, aircraft, ata, hours, category, environment, description, cv_relevant)` (`20261023200000`, local only)                                            | INVOKER         | Idempotent logbook create (`logbook_entry.create`), owner = JWT subject; `CF409` same key, other request. The operation CHECK is re-created from its current definition (values are added, never dropped).                                               |

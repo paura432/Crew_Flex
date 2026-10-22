@@ -13,6 +13,8 @@ export interface ProfessionalOverview {
   profile: TechnicianProfileRow;
   qualifications: TechnicianQualificationRow[];
   availability: AvailabilityWindowRow[];
+  /** Owner-only declared minimum rate (T-33); `null` until declared. */
+  minRate: number | null;
 }
 
 /**
@@ -24,10 +26,12 @@ export async function getOwnProfessionalOverview(
   profileId: string,
 ): Promise<ProfessionalOverview | null> {
   const supabase = await createServerSupabase();
-  const [profile, qualifications, availability] = await Promise.all([
+  const [profile, qualifications, availability, privateDetails] = await Promise.all([
     supabase
       .from("technician_profiles")
-      .select("profile_id, base_location, mobility, years_experience, current_status, visibility")
+      .select(
+        "profile_id, base_location, mobility, years_experience, current_status, visibility, primary_category, aircraft, work_permits",
+      )
       .eq("profile_id", profileId)
       .maybeSingle()
       .overrideTypes<TechnicianProfileRow, { merge: false }>(),
@@ -44,19 +48,28 @@ export async function getOwnProfessionalOverview(
       .eq("technician_profile_id", profileId)
       .order("starts_at")
       .overrideTypes<AvailabilityWindowRow[], { merge: false }>(),
+    // Owner-only row (RLS), created on the first passport save.
+    supabase
+      .from("technician_private_details")
+      .select("min_rate")
+      .eq("profile_id", profileId)
+      .maybeSingle()
+      .overrideTypes<{ min_rate: number | string | null }, { merge: false }>(),
   ]);
-  if (profile.error || qualifications.error || availability.error) {
+  if (profile.error || qualifications.error || availability.error || privateDetails.error) {
     throw new Error("professional overview unavailable", {
-      cause: profile.error ?? qualifications.error ?? availability.error,
+      cause: profile.error ?? qualifications.error ?? availability.error ?? privateDetails.error,
     });
   }
   if (!profile.data) return null;
+  const minRate = privateDetails.data?.min_rate;
   return {
     profile: profile.data,
     qualifications: [...qualifications.data].sort((a, b) =>
       a.qualification_types.code.localeCompare(b.qualification_types.code),
     ),
     availability: availability.data,
+    minRate: minRate == null ? null : Number(minRate),
   };
 }
 

@@ -25,6 +25,7 @@ describe("getOwnProfessionalOverview (X-16)", () => {
     results.technician_profiles = { data: { profile_id: "p" }, error: null };
     results.technician_qualifications = { data: [], error: null };
     results.availability_windows = { data: [], error: null };
+    results.technician_private_details = { data: null, error: null };
   });
 
   it("no technician profile → null (an organization account)", async () => {
@@ -38,6 +39,16 @@ describe("getOwnProfessionalOverview (X-16)", () => {
   });
 
   it("own data otherwise", async () => {
-    expect(await getOwnProfessionalOverview("p")).toMatchObject({ profile: { profile_id: "p" } });
+    expect(await getOwnProfessionalOverview("p")).toMatchObject({
+      profile: { profile_id: "p" },
+      minRate: null,
+    });
+  });
+
+  it("the private row's rate arrives as a number (PostgREST may send numeric as text)", async () => {
+    results.technician_private_details = { data: { min_rate: "45.50" }, error: null };
+    expect((await getOwnProfessionalOverview("p"))?.minRate).toBe(45.5);
+    results.technician_private_details = { data: null, error: { message: "boom" } };
+    await expect(getOwnProfessionalOverview("p")).rejects.toThrow("unavailable");
   });
 });

@@ -41,6 +41,10 @@ as $$
                            where o.id = req.organization_id and o.review_status = 'reviewed')))
       and not exists (select 1 from public.organization_members om
                       where om.organization_id = req.organization_id and om.profile_id = tp.profile_id)
+      -- N-08 / T-35 (passport package, 20261023100300): the professional blocked this organization.
+      -- Kept here because this file replaces the pool AFTER that one (integration 2026-10-22).
+      and not exists (select 1 from public.technician_organization_blocks b
+                      where b.technician_profile_id = tp.profile_id and b.organization_id = req.organization_id)
       and exists (
         select 1 from public.technician_qualifications tq
         where tq.technician_profile_id = tp.profile_id

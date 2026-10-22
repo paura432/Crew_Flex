@@ -17,6 +17,11 @@ import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/d
 import type { LogbookCategory, LogbookEnvironment } from "../domain/logbook.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { OrganizationReviewStatus, OrganizationType } from "../domain/organization.ts";
+import type {
+  CandidatePassport,
+  PassportDeclarations,
+  PassportPrivate,
+} from "../domain/passport.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { Locale } from "../i18n/config.ts";
 import type {
@@ -66,6 +71,11 @@ export interface CandidateSummary {
   displayName: string | null;
   baseLocation: string | null;
   yearsExperience: number | null;
+  /**
+   * v1.8 card declarations (`get_requirement_candidate_passports`, same visibility and pseudonym
+   * rules as the pool). Absent where no card shows them (applications) or from older functions.
+   */
+  passport?: CandidatePassport | null;
 }
 
 export interface EvaluatedCandidate {
@@ -231,8 +241,22 @@ export interface LogbookDeleteResponse {
   id: string;
 }
 
+/**
+ * The whole passport as the owner edits it: V0 fields, v1.8 declarations and the owner-only data
+ * (phone, employer, rate, blocks — never returned to anyone else). Same keys as the PATCH body.
+ */
+export type ProfessionalPassport = ProfessionalProfile & PassportDeclarations & PassportPrivate;
+
+/** An organization the professional can name as employer or block (`list_blockable_organizations`). */
+export interface OrganizationOption {
+  id: string;
+  name: string;
+}
+
 export interface ProfessionalProfileResponse {
-  profile: ProfessionalProfile & { updatedAt: string };
+  profile: ProfessionalPassport & { updatedAt: string };
+  /** Organizations for «Empresa actual» and «Organizaciones bloqueadas», by name. */
+  organizations: OrganizationOption[];
 }
 
 /** A qualification declared by the professional. `verificationStatus` is read-only for them. */
