@@ -223,7 +223,7 @@
       "offline": "Se ha perdido la conexión. Tus cambios siguen aquí; comprueba la conexión y reintenta.",
       "reload": "Esta página es de una versión anterior de la aplicación. Recárgala y vuelve a intentarlo; tus cambios no se han guardado.",
       "gone": "Este elemento ya no existe. Recarga la página.",
-      "conflict": "Ya has declarado esta cualificación. Edita la existente."
+      "conflict": "Ese dato cambió o ya existe. Recarga para ver el estado actual."
     }
   },
   "v": {
@@ -622,7 +622,8 @@
     "validUntil": "Válida hasta el {date}",
     "noExpiry": "Sin caducidad",
     "group": "{category} ({count})",
-    "reviewReason": "Revisor: {reason}"
+    "reviewReason": "Revisor: {reason}",
+    "alreadyDeclared": "Ya has declarado esta cualificación. Edita la existente."
   },
   "availability": {
     "confirmDelete": "Sí, eliminarla",
@@ -805,7 +806,8 @@
         "resume": "Reanudar",
         "pausedDone": "Necesidad pausada: ya no se publica ni se evalúa.",
         "resumedDone": "Necesidad reanudada: vuelve a publicarse.",
-        "pausedNote": "Esta necesidad está pausada: no se publica como oportunidad ni se evalúan candidatos. Reanúdala para volver a publicarla."
+        "pausedNote": "Esta necesidad está pausada: no se publica como oportunidad ni se evalúan candidatos. Reanúdala para volver a publicarla.",
+        "conflict": "La necesidad cambió mientras tanto. Recarga para ver su estado actual."
       },
       "edit": "Editar necesidad"
     },
@@ -1376,6 +1378,8 @@
     "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual.",
     "orgOnlyTitle": "«Mis candidaturas» es para profesionales",
     "orgOnlyDescription": "Las candidaturas que recibe tu organización están en cada necesidad.",
-    "orgOnlyAction": "Ver necesidades"
+    "orgOnlyAction": "Ver necesidades",
+    "managersOnlyTitle": "Las candidaturas las gestionan administradores y managers",
+    "managersOnlyDescription": "Tu rol en la organización no permite ver ni mover candidaturas."
   }
 }

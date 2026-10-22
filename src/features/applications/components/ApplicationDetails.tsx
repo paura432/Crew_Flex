@@ -40,6 +40,10 @@ export async function ApplicationDetails({
           <div className="mt-2">
             <QualificationChips qualifications={proposal.terms.qualifications} />
           </div>
+          {/* R-08 / v1.8 «Una propuesta revisada requiere otra aceptación». */}
+          {proposal.version > 1 && !accepted && (
+            <p className="mt-2 text-sm text-warn">{t("proposal.newVersion")}</p>
+          )}
           <p className="mt-2 text-xs text-muted">{t("proposal.notice")}</p>
         </section>
       )}

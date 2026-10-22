@@ -34,22 +34,17 @@ const periodEndedNow = (r: Pick<WorkRequirement, "endsAt">) => canFinish(r, Date
 export default async function RequirementApplicationsPage({
   params,
 }: PageProps<"/app/organization/requirements/[id]/applications">) {
-  const [{ id }, { organization, canManage }, t, tMatching, tDashboard, tDomain, locale] =
-    await Promise.all([
-      params,
-      requireOrganizationContext(),
-      getTranslations("applications"),
-      getTranslations("matching"),
-      getTranslations("organization.dashboard"),
-      getTranslations("domain"),
-      getLocale(),
-    ]);
+  const [{ id }, { organization, canManage }, t, tMatching, tDomain, locale] = await Promise.all([
+    params,
+    requireOrganizationContext(),
+    getTranslations("applications"),
+    getTranslations("matching"),
+    getTranslations("domain"),
+    getLocale(),
+  ]);
   if (!canManage) {
     return (
-      <StateMessage
-        title={tDashboard("managersOnlyTitle")}
-        description={tDashboard("managersOnlyDescription")}
-      />
+      <StateMessage title={t("managersOnlyTitle")} description={t("managersOnlyDescription")} />
     );
   }
   const [requirementResult, applicationsResult] = await Promise.all([

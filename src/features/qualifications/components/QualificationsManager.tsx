@@ -90,7 +90,12 @@ export function QualificationsManager({
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(actionErrorCopy(tRoot, result));
+        // The only 409 here: the qualification is already declared (the generic copy is neutral).
+        setNotice(
+          result.code === "CONFLICT"
+            ? { tone: "danger", text: t("alreadyDeclared"), requestId: result.requestId }
+            : actionErrorCopy(tRoot, result),
+        );
       }
     });
   }

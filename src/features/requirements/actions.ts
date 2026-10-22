@@ -100,7 +100,15 @@ export async function updateRequirementAction(input: unknown): Promise<CreateReq
 }
 
 export type RequirementStatusResult =
-  { ok: true } | { ok: false; code: ApiErrorCode; message: string; requestId?: string };
+  | { ok: true }
+  | {
+      ok: false;
+      code: ApiErrorCode;
+      message: string;
+      requestId?: string;
+      /** 409 reason, e.g. ACTIVE_COMMITMENTS when closing with accepted/confirmed applications. */
+      reason?: ApplicationConflict;
+    };
 
 /**
  * Pause, resume or close (M05, V1.8 `job.status`). The Edge Function checks the lifecycle and the
@@ -119,6 +127,7 @@ export async function changeRequirementStatusAction(
       code: result.error.code,
       message: result.error.message,
       requestId: result.requestId,
+      reason: result.error.reason,
     };
   }
   revalidatePath("/app/organization", "layout");

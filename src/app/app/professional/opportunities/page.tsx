@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { buttonClass } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Field";
@@ -70,6 +71,11 @@ export default async function OpportunitiesPage({
     limit: OPPORTUNITIES_PAGE_SIZE,
   });
   const active = filters.eligible ? "eligible" : (filters.urgency ?? "all");
+  // `?page=` past the end lands on the last page, as the requirements list (X-04, v2 diff MKT-03).
+  if (result.ok && result.data.total > 0) {
+    const last = Math.ceil(result.data.total / OPPORTUNITIES_PAGE_SIZE);
+    if (page > last) redirect(opportunitiesHref(filters, { page: last }));
+  }
 
   return (
     <>

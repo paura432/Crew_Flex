@@ -223,7 +223,7 @@
       "offline": "The connection was lost. Your changes are still here — check your connection and retry.",
       "reload": "This page is from an earlier version of the app. Reload it and try again; your changes were not saved.",
       "gone": "This item no longer exists. Reload the page.",
-      "conflict": "You already declared this qualification. Edit the existing one instead."
+      "conflict": "That data changed or already exists. Reload to see the current state."
     }
   },
   "v": {
@@ -622,7 +622,8 @@
     "validUntil": "Valid until {date}",
     "noExpiry": "No expiry",
     "group": "{category} ({count})",
-    "reviewReason": "Reviewer: {reason}"
+    "reviewReason": "Reviewer: {reason}",
+    "alreadyDeclared": "You have already declared this qualification. Edit the existing one."
   },
   "availability": {
     "confirmDelete": "Yes, delete it",
@@ -805,7 +806,8 @@
         "resume": "Resume",
         "pausedDone": "Requirement paused: no longer published or evaluated.",
         "resumedDone": "Requirement resumed: published again.",
-        "pausedNote": "This requirement is paused: it is not published as an opportunity and no candidates are evaluated. Resume it to publish it again."
+        "pausedNote": "This requirement is paused: it is not published as an opportunity and no candidates are evaluated. Resume it to publish it again.",
+        "conflict": "The requirement changed in the meantime. Reload to see its current state."
       },
       "edit": "Edit requirement"
     },
@@ -1376,6 +1378,8 @@
     "stale": "The application changed in the meantime. Reload to see its current state.",
     "orgOnlyTitle": "«My applications» is for professionals",
     "orgOnlyDescription": "The applications your organization receives are on each requirement.",
-    "orgOnlyAction": "See requirements"
+    "orgOnlyAction": "See requirements",
+    "managersOnlyTitle": "Applications are handled by admins and managers",
+    "managersOnlyDescription": "Your role in the organization cannot see or move applications."
   }
 }

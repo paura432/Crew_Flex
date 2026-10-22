@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { canChangeRequirementStatus, type RequirementStatus } from "@/domain/work-requirement";
 import type { ChangeRequirementStatusInput } from "@/lib/validation/work-requirement";
+import { translateKey } from "@/i18n/validation";
 import { changeRequirementStatusAction } from "../actions";
 
 /**
@@ -51,7 +52,16 @@ export function RequirementStatusActions({
       setNotice(
         result.ok
           ? { tone: "ok", text: tStatus(next === "paused" ? "pausedDone" : "resumedDone") }
-          : actionErrorCopy(tRoot, result),
+          : result.code === "CONFLICT"
+            ? {
+                tone: "danger",
+                // v2 diff ORG-05: closing with active commitments showed the qualifications copy.
+                text: result.reason
+                  ? translateKey(tRoot, `applications.conflict.${result.reason}`)
+                  : tStatus("conflict"),
+                requestId: result.requestId,
+              }
+            : actionErrorCopy(tRoot, result),
       );
     });
 
