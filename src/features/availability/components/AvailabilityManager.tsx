@@ -263,6 +263,15 @@ export function AvailabilityManager({
       setErrors(toFieldErrors(parsed.error));
       return;
     }
+    // X-19, FORM ONLY: a new window, or one whose start moves, cannot start on a past day (as the
+    // calendar, W1-03). The shared schema, the Edge Function and the RPC still accept past windows,
+    // as v1.8 connected did: no backend rule changes here (docs/product/BUSINESS_RULES.md BR-4.6).
+    const startMoved =
+      !editing || Date.parse(parsed.data.startsAt) !== Date.parse(editing.startsAt);
+    if (startMoved && !isDayEditable(parsed.data.startsAt.slice(0, 10), today)) {
+      setErrors({ startsAt: "v.start.future" });
+      return;
+    }
     setErrors({});
     if (editing) run(t("windowUpdated"), () => updateWindowAction(editing.id, parsed.data));
     else
