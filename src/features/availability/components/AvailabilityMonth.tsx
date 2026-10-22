@@ -1,55 +1,59 @@
-import { getLocale, getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { formatMonth } from "@/i18n/format";
+import type { MiniDay } from "@/features/opportunities/home";
 import {
-  calendarDays,
+  ASSIGNED_STYLE,
   DAY_STYLE,
+  isDayEditable,
   monthOffset,
-  shiftMonth,
   WEEKDAYS,
-  type CalendarWindow,
   type DayState,
 } from "../calendar";
 
 const LEGEND: DayState[] = ["available", "aog_only", "unavailable", "mixed", "none"];
 
 /**
- * Read-only month of the professional's own availability (V1.8 TechnicianHome mini calendar):
- * day states with BR-4.8 precedence, today marked, month navigation by link. Editing stays on the
- * availability page.
+ * «Mi espacio» month (v1.8 `TechnicianHome.jsx:15` / `ConnectedHome.jsx:15`): own day states with BR-4.8
+ * precedence, «Asignado» on the days of a confirmed assignment, a red dot on days with opportunities.
+ * A day is a toggle (`aria-pressed`) that filters the feed next to it; past days are disabled (demo).
+ * Month navigation by link (`?month=`). Editing stays on the availability page.
  */
-export async function AvailabilityMonth({
-  windows,
+export function AvailabilityMonth({
+  title,
   month,
   today,
-  hrefFor,
+  days,
+  selected,
+  onSelect,
+  prevHref,
+  nextHref,
 }: {
-  windows: CalendarWindow[];
+  /** The month as a title, formatted on the server (X-18). */
+  title: string;
   month: string;
   today: string;
-  hrefFor: (month: string) => string;
+  days: MiniDay[];
+  selected: string | null;
+  onSelect: (date: string | null) => void;
+  prevHref: string;
+  nextHref: string;
 }) {
-  const [t, locale] = await Promise.all([getTranslations("availability"), getLocale()]);
-  const days = calendarDays(windows, month);
+  const t = useTranslations("availability");
+  const nav =
+    "grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas pointer-coarse:size-11";
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="font-semibold" aria-live="polite">
-          {formatMonth(locale, `${month}-01T00:00:00Z`)}
+          {title}
         </p>
         <div className="flex gap-1">
-          <Link
-            href={hrefFor(shiftMonth(month, -1))}
-            aria-label={t("prevMonth")}
-            className="grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas pointer-coarse:size-11"
-          >
+          <Link href={prevHref} aria-label={t("prevMonth")} className={nav}>
             ←
           </Link>
-          <Link
-            href={hrefFor(shiftMonth(month, 1))}
-            aria-label={t("nextMonth")}
-            className="grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas pointer-coarse:size-11"
-          >
+          <Link href={nextHref} aria-label={t("nextMonth")} className={nav}>
             →
           </Link>
         </div>
@@ -65,16 +69,37 @@ export async function AvailabilityMonth({
         {Array.from({ length: monthOffset(month) }, (_, i) => (
           <li key={`pad-${i}`} aria-hidden />
         ))}
-        {days.map((day) => (
-          <li
-            key={day.date}
-            aria-label={`${day.date}: ${t(`day.${day.state}`)}`}
-            aria-current={day.date === today ? "date" : undefined}
-            className={`grid min-h-9 place-items-center rounded-md border text-sm font-semibold tabular-nums ${DAY_STYLE[day.state]} ${day.date === today ? "ring-2 ring-accent" : ""} ${day.date < today ? "opacity-60" : ""}`}
-          >
-            {Number(day.date.slice(-2))}
-          </li>
-        ))}
+        {days.map((day) => {
+          const state = day.assigned ? t("assignedDay") : t(`day.${day.state}`);
+          const pressed = selected === day.date;
+          const isToday = day.date === today;
+          return (
+            <li key={day.date}>
+              <button
+                id={`mini-day-${day.date}`}
+                type="button"
+                disabled={!isDayEditable(day.date, today)}
+                aria-pressed={pressed}
+                aria-current={isToday ? "date" : undefined}
+                aria-label={t(day.potential ? "mini.offersPotential" : "mini.offers", {
+                  date: day.date,
+                  state,
+                  count: day.offers,
+                })}
+                onClick={() => onSelect(pressed ? null : day.date)}
+                className={`relative grid min-h-9 w-full place-items-center rounded-md border text-sm font-semibold tabular-nums enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11 ${day.assigned ? ASSIGNED_STYLE : DAY_STYLE[day.state]} ${pressed ? "ring-2 ring-navy" : isToday ? "ring-2 ring-accent" : ""}`}
+              >
+                {Number(day.date.slice(-2))}
+                {day.offers > 0 && (
+                  <span
+                    aria-hidden
+                    className="absolute top-1 right-1 size-1.5 rounded-full bg-danger"
+                  />
+                )}
+              </button>
+            </li>
+          );
+        })}
       </ol>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
         {LEGEND.map((state) => (
@@ -83,7 +108,16 @@ export async function AvailabilityMonth({
             {t(`day.${state}`)}
           </li>
         ))}
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden className={`size-3 rounded-sm border ${ASSIGNED_STYLE}`} />
+          {t("assignedDay")}
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden className="size-1.5 rounded-full bg-danger" />
+          {t("mini.legendOffers")}
+        </li>
       </ul>
+      <p className="mt-2 text-xs text-muted">{t("mini.note")}</p>
     </div>
   );
 }

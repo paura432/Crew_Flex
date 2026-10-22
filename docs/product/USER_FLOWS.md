@@ -44,6 +44,11 @@ withdraw / remove → `professional-qualifications`; review state read-only), `/
 (`professional-availability`). Every write goes through an Edge Function with the JWT subject as
 owner; the page re-reads after save, so a reload shows the persisted state.
 
+Overview month (v1.8 «Mi espacio», LOCAL 2026-10-22): «Asignado» on the days of a confirmed assignment, a red dot on
+days with opportunities (compatible, or «Posible en descanso» on rest days, BR-14.1); pressing a day filters
+«Oportunidades para ti» to it («Oportunidades · {día}», «Quitar selección de fecha»); past days are disabled. In
+`/availability` the days of a confirmed assignment are disabled and protected on the server too (BR-4.9).
+
 ## UF-6 Candidate Pack / application / coverage (PLANNED)
 
 From a match, the organization requests interest; the professional consents and shares a

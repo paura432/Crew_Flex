@@ -13,7 +13,6 @@ import {
   type CompletenessItem,
 } from "@/domain/professional";
 import { parseMonth } from "@/features/availability/calendar";
-import { AvailabilityMonth } from "@/features/availability/components/AvailabilityMonth";
 import { listOwnDocumentExpiries } from "@/features/documents/api";
 import { IdentityCard } from "@/features/professional/components/IdentityCard";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
@@ -151,7 +150,8 @@ export default async function ProfessionalOverviewPage({
             detail={tDomain(`visibility.${overview.profile.visibility}.detail`)}
           />
         </dl>
-        <ProfessionalActivity />
+        {/* v1.8: counters, the month (a day filters the feed) next to «Oportunidades para ti». */}
+        <ProfessionalActivity windows={windows} month={month} today={today} />
         {(awaiting > 0 || rejected > 0) && (
           <Panel title={t("overview.nextTitle")}>
             <ul className="space-y-3 text-sm">
@@ -268,29 +268,14 @@ export default async function ProfessionalOverviewPage({
             </details>
           </Panel>
           <Panel
-            title={t("overview.calendarTitle")}
+            title={t("overview.profile")}
             actions={
-              <ButtonLink href={`/app/professional/availability?month=${month}`}>
-                {t("overview.openAvailability")}
-              </ButtonLink>
+              <ButtonLink href="/app/professional/profile">{t("overview.editPassport")}</ButtonLink>
             }
           >
-            <AvailabilityMonth
-              windows={windows}
-              month={month}
-              today={today}
-              hrefFor={(m) => `/app/professional?month=${m}`}
-            />
+            <ProfileFacts profile={overview.profile} />
           </Panel>
         </div>
-        <Panel
-          title={t("overview.profile")}
-          actions={
-            <ButtonLink href="/app/professional/profile">{t("overview.editPassport")}</ButtonLink>
-          }
-        >
-          <ProfileFacts profile={overview.profile} />
-        </Panel>
       </div>
     </>
   );
