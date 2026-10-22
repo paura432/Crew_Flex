@@ -353,6 +353,108 @@ describe("organization review by a platform admin (review_organization)", () => 
     });
   });
 
+  it("leaving the organization first does not help: removals are audited and former members refused (500400)", async () => {
+    await asUser(db, SEED.platformAdmin, async (tx) => {
+      await saveAsAdmin(tx, SEED.platformAdmin, crewflexOrgId, {
+        taxId: "ESB11111111",
+        taxAddress: "Calle Ficticia 3, Madrid",
+      });
+      await actAs(tx, SEED.platformAdmin);
+      const { affectedRows } = await tx.query(
+        "delete from public.organization_members where organization_id = $1 and profile_id = $2",
+        [crewflexOrgId, SEED.platformAdmin],
+      );
+      expect(affectedRows).toBe(1);
+      const v = await version(tx, crewflexOrgId);
+      await actAs(tx, SEED.platformAdmin);
+      expect(await sqlState(tx, REVIEW, [crewflexOrgId, v, "self", null])).toBe("42501");
+      await tx.exec("reset role");
+      const audit = await tx.query<{ actor_profile_id: string; metadata: object }>(
+        "select actor_profile_id, metadata from public.audit_events where organization_id = $1 and action = 'organization.member_removed'",
+        [crewflexOrgId],
+      );
+      expect(audit.rows).toEqual([
+        {
+          actor_profile_id: SEED.platformAdmin,
+          metadata: { profile_id: SEED.platformAdmin, role: "admin" },
+        },
+      ]);
+      expect((await reviewState(tx, crewflexOrgId)).review_status).toBe("pending");
+    });
+  });
+
+  it("a former member removed by someone else, who never acted for it, is refused too", async () => {
+    await asUser(db, SEED.platformAdmin, async (tx) => {
+      await actAs(tx, null); // no JWT claims: auth.uid() is null for the owner's writes below
+      await tx.exec("reset role");
+      // Fiscal data written by the owner (no actor): the platform admin never acted for this organization.
+      await tx.query(
+        "update public.organizations set tax_id = 'ESB22222222', tax_address = 'Calle Ficticia 4, Madrid' where id = $1",
+        [crewflexOrgId],
+      );
+      await tx.query(
+        "insert into public.organization_members (organization_id, profile_id, role) values ($1, $2, 'admin')",
+        [crewflexOrgId, SEED.adminOther],
+      );
+      await actAs(tx, SEED.adminOther);
+      await tx.query(
+        "delete from public.organization_members where organization_id = $1 and profile_id = $2",
+        [crewflexOrgId, SEED.platformAdmin],
+      );
+      await tx.exec("reset role");
+      const acted = await tx.query(
+        "select 1 from public.audit_events where organization_id = $1 and actor_profile_id = $2",
+        [crewflexOrgId, SEED.platformAdmin],
+      );
+      expect(acted.rows).toHaveLength(0);
+      const v = await version(tx, crewflexOrgId);
+      await actAs(tx, SEED.platformAdmin);
+      expect(await sqlState(tx, REVIEW, [crewflexOrgId, v, "former member", null])).toBe("42501");
+    });
+  });
+
+  it("the removal audit never blocks an account deletion or an organization deletion (cascades)", async () => {
+    const closing = "00000000-0000-4000-9600-000000000001";
+    await asUser(db, closing, async (tx) => {
+      await tx.exec("reset role"); // the claims name the user being deleted (self-closure)
+      await tx.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         values ($1, 'closing@crewflex.test', '{"account_type":"organization","organization_name":"Closing Org"}')`,
+        [closing],
+      );
+      await tx.query(
+        "insert into public.organization_members (organization_id, profile_id, role) values ($1, $2, 'member')",
+        [otherOrgId, closing],
+      );
+      await tx.query("delete from auth.users where id = $1", [closing]);
+      const removed = await tx.query<{ actor_profile_id: string | null }>(
+        "select actor_profile_id from public.audit_events where organization_id = $1 and action = 'organization.member_removed'",
+        [otherOrgId],
+      );
+      expect(removed.rows).toEqual([{ actor_profile_id: null }]);
+      // An organization deleted with its admin still inside: the cascade skips the removal audit.
+      await tx.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         values ('00000000-0000-4000-9600-000000000002', 'keeper@crewflex.test',
+                 '{"account_type":"organization","organization_name":"Deleted Org"}')`,
+      );
+      const { affectedRows } = await tx.query(
+        "delete from public.organizations where name = 'Deleted Org'",
+      );
+      expect(affectedRows).toBe(1);
+      const skipped = await tx.query(
+        "select 1 from public.audit_events where action = 'organization.member_removed' and metadata ->> 'profile_id' = '00000000-0000-4000-9600-000000000002'",
+      );
+      expect(skipped.rows).toHaveLength(0);
+    });
+  });
+
+  it("anon reads nothing of the evidence table (no grant)", async () => {
+    await asUser(db, null, async (tx) => {
+      expect(await sqlState(tx, "select * from public.organization_reviews")).toBe("42501");
+    });
+  });
+
   it("organization roles and professionals cannot review (42501); anon has no EXECUTE", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       const v = await version(tx, mroId);

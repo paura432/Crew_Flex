@@ -1,4 +1,4 @@
-// Organization data, its review by a platform admin and «Empresas verificadas» (BR-8, BR-16).
+// Organization data, its review by a platform admin and «Empresas verificadas» (BR-8, BR-20).
 // Pure: no I/O, no framework imports. Shared by Next.js and Supabase Edge Functions.
 // The arrays mirror the database enums (`organization_type`, `organization_review_status`); the
 // generated types in `src/types/database.generated.ts` are the check.
@@ -26,7 +26,7 @@ export const TAX_ADDRESS_MAX = 400;
 export const ORGANIZATION_REVIEW_NOTE_MAX = 2000;
 
 /**
- * The 27 EU member states, v1.8 `server/rules.mjs` COUNTRIES (OD-6 default, T-16), in that order.
+ * The 27 EU member states, v1.8 `server/rules.mjs` COUNTRIES (OD-6 default, T-51), in that order.
  * The screen shows their names with `Intl.DisplayNames`; the code is what is stored (ISO 3166-1).
  */
 export const EU_COUNTRIES = [
@@ -68,7 +68,7 @@ export interface OrganizationReviewData {
 }
 
 /**
- * BR-16: a platform admin can register the review only of a `pending` organization whose fiscal data
+ * BR-20: a platform admin can register the review only of a `pending` organization whose fiscal data
  * is complete, and never of an organization they belong to (`review_organization` enforces the same).
  */
 export function reviewBlocker(

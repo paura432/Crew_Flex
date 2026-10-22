@@ -1752,6 +1752,186 @@ ok(
   await cleanup();
 }
 
+// PKG admin-org (v2 diff 10 #5, #9, #13, #15): «Organization», organization review, platform figures,
+// audit view and the «Verified organizations» visibility. Demo MRO Madrid's seed address is restored at
+// the end, which also returns it to «Pending» (the seed state).
+const AO_SEED_ADDRESS = "Calle Ficticia 1, 28042 Madrid";
+const [aoMro] = await seedRest(
+  "admin.mro@crewflex.test",
+  "organizations?select=id&name=eq.Demo%20MRO%20Madrid",
+);
+/** An interrupted earlier run may have left the smoke address (and a review): put the seed back. */
+async function aoRestoreMro() {
+  const current = await asSeedUser("admin.mro@crewflex.test", "organization-profile", {
+    query: { organizationId: aoMro.id },
+  });
+  const org = current.data?.organization;
+  if (!org) return false;
+  if (org.taxAddress !== AO_SEED_ADDRESS || org.reviewStatus !== "pending") {
+    // Two saves when only the review is left: a real change is what returns it to pending.
+    for (const taxAddress of org.taxAddress === AO_SEED_ADDRESS
+      ? [`${AO_SEED_ADDRESS} ·`, AO_SEED_ADDRESS]
+      : [AO_SEED_ADDRESS]) {
+      const latest = await asSeedUser("admin.mro@crewflex.test", "organization-profile", {
+        query: { organizationId: aoMro.id },
+      });
+      const o = latest.data.organization;
+      await asSeedUser("admin.mro@crewflex.test", "organization-profile", {
+        method: "PATCH",
+        body: {
+          organizationId: o.id,
+          expectedUpdatedAt: o.updatedAt,
+          name: o.name,
+          type: o.type,
+          country: o.country,
+          taxId: o.taxId,
+          taxAddress,
+        },
+      });
+    }
+  }
+  const after = await asSeedUser("admin.mro@crewflex.test", "organization-profile", {
+    query: { organizationId: aoMro.id },
+  });
+  return (
+    after.data?.organization.taxAddress === AO_SEED_ADDRESS &&
+    after.data?.organization.reviewStatus === "pending"
+  );
+}
+ok(
+  "PKG admin-org 0 precondition: Demo MRO Madrid has the seed data, pending",
+  await aoRestoreMro(),
+);
+
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/settings`);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG admin-org 1 «Organization» is in the menu, editable by the admin, pending review",
+  (await page.locator("aside a[href='/app/organization/settings']").count()) > 0 &&
+    /Pending/.test(await page.locator("main header").first().innerText()) &&
+    (await page.inputValue("#taxId")) === "ESB00000000" &&
+    (await page.locator("#country").inputValue()) === "ES",
+  "",
+);
+await responsiveShots("pkg-admin-org-organization");
+await page.fill("#taxAddress", `${AO_SEED_ADDRESS} (smoke)`);
+await page.getByRole("button", { name: "Save organization" }).click();
+await page.waitForSelector("[role=status]:has-text('Organization saved.')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG admin-org 1b saved and persisted; the activity lists the change",
+  (await page.inputValue("#taxAddress")) === `${AO_SEED_ADDRESS} (smoke)` &&
+    /Organization data changed/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+
+await login("manager.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/settings`);
+await page.waitForLoadState("networkidle");
+const aoManagerView = await page.locator("main").innerText();
+const aoDenied = [];
+for (const path of ["/app/admin/organizations", "/app/admin/audit"]) {
+  expectedErrorUrls.add(`${BASE}${path}`);
+  const response = await page.goto(`${BASE}${path}`);
+  aoDenied.push(response?.status());
+}
+ok(
+  "PKG admin-org 2 manager: read-only data; organization review and audit are HTTP 404",
+  /Only the organization's admin can change this data/.test(aoManagerView) &&
+    !/Save organization/.test(aoManagerView) &&
+    aoDenied.every((s) => s === 404),
+  JSON.stringify(aoDenied),
+);
+await logout();
+
+await login("platform.admin@crewflex.test");
+await page.waitForLoadState("networkidle");
+const aoHome = await page.locator("main").innerText();
+ok(
+  "PKG admin-org 3 Administration shows the platform figures (counts, no money) and demand",
+  /Your platform, in figures/.test(aoHome) &&
+    /Registered technicians/i.test(aoHome) &&
+    /AOG with vacancies/i.test(aoHome) &&
+    /Demand by licence/.test(aoHome) &&
+    !/€/.test(aoHome),
+  "",
+);
+await page.goto(`${BASE}/app/admin/organizations`);
+await page.waitForLoadState("networkidle");
+const aoCard = page.locator("main li").filter({ hasText: "Demo MRO Madrid" });
+const aoOwn = page.locator("main li").filter({ hasText: "CrewFlex Operaciones" });
+ok(
+  "PKG admin-org 4 review list: Demo MRO Madrid reviewable; own organization refused",
+  (await aoCard.locator("button:has-text('Register review')").count()) === 1 &&
+    /nobody reviews their own/.test(await aoOwn.innerText()),
+  "",
+);
+await responsiveShots("pkg-admin-org-reviews");
+await aoCard.locator("button:has-text('Register review')").click();
+ok(
+  "PKG admin-org 4b no evidence → refused before any request",
+  /Record the evidence of the review/.test(await aoCard.innerText()),
+  "",
+);
+await aoCard.locator("textarea[name=note]").fill("Smoke: companies register checked (synthetic)");
+await aoCard.locator("button:has-text('Register review')").click();
+await page.waitForSelector("[role=status]:has-text('Demo MRO Madrid: review registered.')", {
+  timeout: 15000,
+});
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG admin-org 4c review persisted (no form left on the card)",
+  /Review registered/.test(await aoCard.innerText()) &&
+    (await aoCard.locator("textarea").count()) === 0,
+  "",
+);
+await page.goto(`${BASE}/app/admin/audit`);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG admin-org 5 audit view lists the review, newest first, ids only",
+  /organization\.reviewed/.test(await page.locator("tbody tr").first().innerText()),
+  "",
+);
+await responsiveShots("pkg-admin-org-audit");
+await logout();
+
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/settings`);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG admin-org 6 the organization sees «Review registered»",
+  /Review registered/.test(await page.locator("main header").first().innerText()),
+  "",
+);
+await page.fill("#taxAddress", AO_SEED_ADDRESS);
+await page.getByRole("button", { name: "Save organization" }).click();
+await page.waitForSelector("[role=status]:has-text('Organization saved.')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG admin-org 6b changing a field sends it back to Pending (seed restored)",
+  /Pending/.test(await page.locator("main header").first().innerText()) &&
+    (await page.inputValue("#taxAddress")) === AO_SEED_ADDRESS,
+  "",
+);
+await logout();
+
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/professional/profile`);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG admin-org 7 passport: four visibility options, «Verified organizations» third (v1.8 order)",
+  (await page.locator("[role=radiogroup] [role=radio]").allInnerTexts())
+    .map((t) => t.split("\n")[0])
+    .join("|") === "Private|Anonymous|Verified organizations|Open",
+  "",
+);
+await logout();
+
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
 const touch = await browser.newContext({

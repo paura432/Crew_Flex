@@ -5,6 +5,7 @@
  */
 export const ACTIVITY_ACTIONS = [
   "organization.updated",
+  "organization.member_removed",
   "requirement.created",
   "requirement.updated",
   "requirement.status_changed",

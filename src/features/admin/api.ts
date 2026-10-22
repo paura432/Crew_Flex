@@ -12,7 +12,7 @@ import { AUDIT_PAGE_SIZE, auditOffset, toAuditEvent, toPlatformSummary } from ".
 
 /**
  * Platform figures, read by the Next.js server under the caller's JWT from the DEFINER RPC that
- * checks the platform role in its body (T-18: read-only, no Edge Function). `null` when the read
+ * checks the platform role in its body (T-53: read-only, no Edge Function). `null` when the read
  * fails (the page says so); a non-admin never gets here (the proxy and the page answer 404 first)
  * and would get 42501 anyway.
  */

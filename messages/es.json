@@ -993,6 +993,7 @@
         "note": "Últimos 15 eventos de tu organización: qué se hizo y cuándo, sin datos personales.",
         "actions": {
           "organization_updated": "Datos de la organización cambiados",
+          "organization_member_removed": "Miembro retirado de la organización",
           "requirement_created": "Necesidad creada",
           "requirement_updated": "Necesidad editada",
           "requirement_status_changed": "Estado de una necesidad cambiado",

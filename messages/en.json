@@ -993,6 +993,7 @@
         "note": "Your organization's last 15 events: what was done and when, without personal data.",
         "actions": {
           "organization_updated": "Organization data changed",
+          "organization_member_removed": "Member removed from the organization",
           "requirement_created": "Requirement created",
           "requirement_updated": "Requirement edited",
           "requirement_status_changed": "Requirement status changed",

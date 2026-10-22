@@ -1,6 +1,6 @@
 -- Crew Flex — the organization's own data («Organización») and its review by a platform admin
 -- (v2 diff 10 #5 / SH-03 #22 / ADM-03 #7, 30 ORG-07 #2-#8; OD-5 default = v1.8 connected
--- `server/app.mjs:83,189`, `Account.jsx:64`; technical defaults T-15…T-17).
+-- `server/app.mjs:83,189`, `Account.jsx:64`; technical defaults T-50…T-52).
 -- NON-DESTRUCTIVE: one enum, four nullable/defaulted columns (every existing organization becomes
 -- `pending`), one table, two triggers and two RPCs. No DROP, no data rewrite; existing grants and
 -- policies unchanged (one column grant added).

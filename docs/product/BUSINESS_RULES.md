@@ -117,11 +117,18 @@ reference unless the professional chose `open` visibility.
 
 ## BR-8 Visibility
 
-| Value       | Meaning                                                                  |
-| ----------- | ------------------------------------------------------------------------ |
-| `private`   | Default. Never appears in external matching.                             |
-| `anonymous` | Matchable. Qualifications shown, identity hidden (pseudonymous ref).     |
-| `open`      | Matchable. Display name visible. Contact still requires consent (LATER). |
+| Value           | Meaning                                                                                                                                                                                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `private`       | Default. Never appears in external matching.                                                                                                                                                                                                                                                               |
+| `anonymous`     | Matchable. Qualifications shown, identity hidden (pseudonymous ref).                                                                                                                                                                                                                                       |
+| `verified_orgs` | «Empresas verificadas» (OD-5 default = v1.8 «Perfil anónimo para organizaciones verificadas.», T-50; LOCAL `20261023500000`/`500200`). Matchable **only** by an organization whose review is registered (BR-20), always pseudonymous like `anonymous`; for any other organization it behaves as `private`. |
+| `open`          | Matchable. Display name visible. Contact still requires consent (LATER).                                                                                                                                                                                                                                   |
+
+Implemented in SQL by `app_private.ranked_external_pool` (the candidate filter of the external pool and its
+summary) and in `src/domain/organization.ts` `isExternallyMatchable(visibility, organizationReviewStatus)`; the
+parity for every visibility × review state is asserted in `tests/db/admin-org.test.ts`. Members of the
+requirement's organization are in the internal pool whatever their visibility. Applying is the professional's own
+act (S-7 exception): an applicant is visible to that organization whatever their visibility. IMPLEMENTED (local).
 
 ## BR-9 Roles
 
@@ -240,3 +247,18 @@ official record, a certification of experience or a release to service, and nobo
    read by nothing until the Candidate Pack exists (D-07, T-21); it never reaches the audit trail.
 
 IMPLEMENTED (local, 2026-10-22; migration `20261023200000`, `professional-logbook`, `/app/professional/logbook`).
+candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Availability edits after
+a confirmation are not blocked (T-13). IMPLEMENTED (local).
+
+## BR-20 Organization review (OD-5 default = v1.8 connected, T-50…T-52) — `reviewBlocker` / `review_organization`
+
+An organization is `pending` until a platform admin registers its review («Revisión registrada»). Its admin keeps
+the data on «Organización»: name («Razón social»), type, tax ID («Identificación fiscal», ≤ 80), registered address
+(«Domicilio fiscal», ≤ 400) and country (one of the 27 EU countries, T-51); every field is required on save. Any
+change of those fields returns a reviewed organization to `pending` (a save that changes nothing keeps the review).
+A platform admin may register the review only of a `pending` organization whose fiscal data and country are complete,
+for the version they looked at, with a mandatory evidence note (1–2000) — and never of an organization they belong to, belonged to (removals are audited) or acted for
+(«La empresa no puede verificarse a sí misma»). There is no «reject»: an organization stays `pending` until reviewed
+(v1.8 has only «Registrar revisión»). A registered review is what `verified_orgs` (BR-8) asks for; it gates nothing
+else yet (v1.8 also refused to confirm an assignment for a pending organization — not ported, see T-52). IMPLEMENTED
+(local).

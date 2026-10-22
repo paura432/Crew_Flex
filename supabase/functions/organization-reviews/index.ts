@@ -8,7 +8,7 @@
 //          data complete, evidence kept apart, audited with this request id)
 // The reviewer's role is read from profiles.platform_role (RLS: own row) — never from the JWT
 // metadata or the body. Reads run under the reviewer's JWT (RLS grants platform admins read access).
-// Not behind a flag: unlike the qualification review (OD-3) this is the OD-5 v1.8 default (T-15).
+// Not behind a flag: unlike the qualification review (OD-3) this is the OD-5 v1.8 default (T-50).
 import { z } from "zod";
 import { requireActor, type Actor } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";

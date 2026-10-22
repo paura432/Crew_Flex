@@ -18,6 +18,7 @@ auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualific
                   │                        └──────────1─* logbook_entries (owner only, M14)
                   │
                   └─* organization_members *─1 organizations 1─* work_requirements 1─* work_requirement_qualifications *─1 qualification_types
+                                                       └─* organization_reviews (evidence, platform admins only)
                                                                                  │
 technician_profiles 1─* applications *──────────────────────────────────────────┘  (one per technician × requirement, except withdrawn)
                           ├─* application_proposals (immutable versions, R-08)
@@ -54,12 +55,30 @@ or password). Created by trigger `on_auth_user_created`.
 | `visibility`       | `private` (default) · `anonymous` · `open`      |
 
 Created by trigger for `account_type = professional` only; API roles have no INSERT grant (`20261015120000`).
+`visibility` also takes `verified_orgs` («Empresas verificadas», LOCAL `20261023500000`, BR-8): matchable only by
+organizations whose review is registered.
 
 ### `organizations`
 
 `id`, `name` (2–160), `type` (`mro` · `airline` · `operator` · `staffing_agency` · `other`),
 `country` (ISO 3166-1 alpha-2, nullable), timestamps. Created at sign-up for
 `account_type = organization`, with the creator as `admin`.
+
+**«Organización» and its review (LOCAL `20261023500100`, OD-5 default = v1.8 connected, T-50…T-52).** Added:
+`tax_id` (≤ 80, nullable), `tax_address` (≤ 400, nullable) — organizations created at sign-up have neither —,
+`review_status` (`organization_review_status`: `pending` default · `reviewed`) and `reviewed_at` (set exactly when
+`reviewed`, CHECK). The admin edits name, type, country and the two fiscal fields through
+`update_organization_profile` (or the same column grants); `review_status` / `reviewed_at` have no grant and are
+set only by `review_organization`. Trigger `organizations_reset_review` (BEFORE UPDATE): any change of name, type,
+country, tax id or address returns the organization to `pending`; trigger `organizations_audit_change` (AFTER, DEFINER)
+writes `organization.updated` `{fields, review_reset}` with the organization id. The screen offers the 27 EU
+countries (T-51); the column still accepts any ISO code (sign-up).
+
+### `organization_reviews` (`20261023500100`, LOCAL ONLY)
+
+`id`, `organization_id` (cascade), `reviewed_by` → `profiles` (set null), `note` (evidence, 1–2000, v1.8 «Evidencia /
+observaciones de la revisión»), `organization_version` (the `updated_at` the reviewer saw), `created_at`. RLS select
+platform admin only; no write grant (written by `review_organization`). The organization never reads it.
 
 ### `organization_members`
 
@@ -252,6 +271,11 @@ not account-deletion cascades) — the last three since `20261015120000`; `docum
 never the selection flag, not even as a changed name: an update that only toggles it is not audited, because platform
 admins read every audit row; security review 2026-10-22). Like the document rows, logbook audit rows keep their
 entity and technician profile ids after an account deletion (the actor becomes null). Reserved: `organization.member_added`; the hiring
+(tombstone id, owner id, reason, `object_found`) since `20261019160200`. `organization.updated` (`{fields,
+review_reset}`, with the organization id: the organization's admin reads it in «Actividad de esta organización») and
+`organization.reviewed` (`{previous_review_status, review_status, note_provided, request_id}`, **no organization
+id**, so the reviewer's id never reaches the organization's trail; never the note) since `20261023500100` (LOCAL); `organization.member_removed` (`{profile_id, role}`, with the organization id, every removal path; skipped when the organization itself is deleted) since `20261023500400` (LOCAL).
+Reserved: `organization.member_added`; the hiring
 block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / `pack.document_url_issued`
 (`APPLICATIONS_STATE_MACHINE.md` §4.2 — `document.shared` and `candidate_pack.shared` are superseded).
 
@@ -280,6 +304,9 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `transition_application(id, to, expected_updated_at, key, reason, proposal_id, request_id)` (`20261022130300`, local only)                                                               | DEFINER         | Every other transition (`app_private.application_transitions`): locks, side from the DB, idempotent (`application.transition`), version `CF412`, proposals, confirm re-checks, covered ↔ open; event + audit.                                            |
 | `get_requirement_applications(requirement_id)` · `get_my_applications()` · `get_application_counts(org)` (`20261022130300`, local only)                                                  | DEFINER, stable | Org view (admin/manager, pool rules, 42501 otherwise) · own applications with the requirement card · counts per status (admin/manager).                                                                                                                  |
 | `protect_assignment_availability()` · `app_private.confirmed_assignment_overlaps(from, to)` (`20261023300000`, local only)                                                               | DEFINER         | BR-4.9: AFTER trigger on `availability_windows` (a write that leaves a confirmed assignment it reduces below 100 % → `CFV01`) · does a period overlap the caller's own confirmed assignment (`auth.uid()`).                                              |
+| `update_organization_profile(id, expected_updated_at, name, type, country, tax_id, tax_address)` (`20261023500100`, local only)                                                          | INVOKER         | «Organización» save: RLS decides (admin only; anyone else 42501), input checks (22023), version `CF412`, no write when nothing changed. Returns the new version.                                                                                         |
+| `review_organization(id, expected_updated_at, note, request_id)` (`20261023500100`, local only)                                                                                          | DEFINER         | Platform admin, never a current or former own organization (42501, `500400`), evidence 1–2000 (22023), row lock, pending + seen version + fiscal data complete (55000), P0002; sets `reviewed`, keeps the evidence, audit.                               |
+| `get_platform_summary()` (`20261023500300`, local only)                                                                                                                                  | DEFINER, stable | Platform admin only (42501): professional accounts, organizations, active needs, working now, AOG with vacancies, seats to fill per hard licence (`demand`). Counts only, no money (T-53).                                                               |
 | `set_updated_at()`                                                                                                                                                                       | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                                                                       |
 
 ### `app_private` schema (not exposed by PostgREST)
@@ -292,7 +319,8 @@ professionals may see (also the proposal terms), no grant (`20261022130200`). `h
 three agree), used at apply and confirm.
 `idempotency_keys(actor_id → profiles, operation, key uuid, request_hash, resource_id, created_at)`, PK
 (actor, operation, key), RLS own rows; `ranked_external_pool(requirement_id)` (ordering helper, no grant
-to API roles); `claim_idempotency_key` / `complete_idempotency_key`.
+to API roles; since `20261023500200` (LOCAL) it admits `verified_orgs` professionals only when the requirement's
+organization is `reviewed`, BR-8); `claim_idempotency_key` / `complete_idempotency_key`.
 
 ## Types
 

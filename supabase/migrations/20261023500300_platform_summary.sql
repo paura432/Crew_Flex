@@ -1,6 +1,6 @@
 -- Crew Flex — platform figures for `/app/admin` (v2 diff 10 #15 = ADM-02 #6-#11, #13; default v1.8
 -- connected `server/connected.mjs` operationsSummary / `Operations.jsx` «Tu plataforma, en cifras.»;
--- T-18). Counts only: no money (commissions, plans and invoices are SCOPE OUT), no names, no ids.
+-- T-53). Counts only: no money (commissions, plans and invoices are SCOPE OUT), no names, no ids.
 -- NON-DESTRUCTIVE: one SECURITY DEFINER function and its EXECUTE grant.
 --
 -- Definitions (v1.8 → this model):

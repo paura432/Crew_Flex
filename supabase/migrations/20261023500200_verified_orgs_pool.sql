@@ -1,5 +1,5 @@
 -- Crew Flex — «Empresas verificadas» in the external candidate pool (v2 diff 20 N-09 / 10 #13;
--- OD-5 default = v1.8 «Perfil anónimo para organizaciones verificadas.»; BR-8, T-15).
+-- OD-5 default = v1.8 «Perfil anónimo para organizaciones verificadas.»; BR-8, T-50).
 -- NON-DESTRUCTIVE: `create or replace` of app_private.ranked_external_pool with the SAME signature,
 -- return type, SECURITY INVOKER and (no) privileges; only the candidate filter changes. No data change.
 --

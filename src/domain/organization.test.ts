@@ -18,7 +18,7 @@ describe("isExternallyMatchable (BR-8)", () => {
   });
 });
 
-describe("reviewBlocker (BR-16)", () => {
+describe("reviewBlocker (BR-20)", () => {
   const complete = {
     country: "ES",
     taxId: "ESB0",
