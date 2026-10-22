@@ -110,6 +110,7 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
       organizationBlocks,
       logbook,
       candidatePacks,
+      noticePreferences,
     ] = await Promise.all([
       db
         .from("technician_qualifications")
@@ -154,6 +155,14 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
         .order("entry_date"),
       // The Candidate Pack copies sent with own applications (v2-15, T-43): own rows only (DEFINER, auth.uid()).
       db.rpc("get_my_application_packs"),
+      // PKG outreach (N-10): the caller's own notice preferences (owner-only, RLS).
+      db
+        .from("technician_notice_preferences")
+        .select(
+          "urgent_opt_in, aog_opt_in, mobilization_hours, time_zone, quiet_start, quiet_end, created_at, updated_at",
+        )
+        .eq("profile_id", actor.id)
+        .maybeSingle(),
     ]);
     professional = {
       profile: technicianProfile,
@@ -167,6 +176,7 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
       organizationBlocks: rows(organizationBlocks),
       logbook: rows(logbook),
       candidatePacks: rows(candidatePacks),
+      noticePreferences: one(noticePreferences),
     };
   }
 

@@ -8,6 +8,16 @@ import {
   AVAILABILITY_CONFLICTS,
   type AvailabilityConflict,
 } from "../../../src/domain/availability.ts";
+import { OUTREACH_CONFLICTS, type OutreachConflict } from "../../../src/domain/outreach.ts";
+
+/** Every `reason` a 409 can carry (one family per SQLSTATE prefix). */
+export type ConflictReason = ApplicationConflict | AvailabilityConflict | OutreachConflict;
+
+const CONFLICT_FAMILIES: Record<string, readonly ConflictReason[]> = {
+  A: APPLICATION_CONFLICTS,
+  V: AVAILABILITY_CONFLICTS,
+  O: OUTREACH_CONFLICTS,
+};
 
 export const ERROR_STATUS = {
   UNAUTHORIZED: 401,
@@ -46,10 +56,11 @@ export class ApiError extends Error {
     message: string = DEFAULT_MESSAGES[code],
     readonly issues?: FieldIssue[],
     /**
-     * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`) or
-     * availability (`AVAILABILITY_CONFLICTS`, BR-4.9).
+     * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`),
+     * availability (`AVAILABILITY_CONFLICTS`, BR-4.9) or the Urgent/AOG outreach (`OUTREACH_CONFLICTS`,
+     * BR-26).
      */
-    readonly reason?: ApplicationConflict | AvailabilityConflict,
+    readonly reason?: ConflictReason,
   ) {
     super(message);
     this.name = "ApiError";
@@ -70,16 +81,13 @@ interface PostgrestLikeError {
 /**
  * Our business conflicts: SQLSTATE `CFA01`…`CFA15` are the entries of `APPLICATION_CONFLICTS` in order
  * (20261022130300, 20261024100000; CFA14/CFA15 from the applications trigger of 20261023900200), `CFV01`… those of
- * `AVAILABILITY_CONFLICTS` (20261023300000). Custom codes,
- * never `40001` (PostgREST retries that one forever).
+ * `AVAILABILITY_CONFLICTS` (20261023300000), `CFO01`… those of `OUTREACH_CONFLICTS` (20261024400200). Custom
+ * codes, never `40001` (PostgREST retries that one forever).
  */
-export function conflictReason(
-  sqlstate: string | undefined,
-): ApplicationConflict | AvailabilityConflict | undefined {
-  const match = /^CF([AV])(\d{2})$/.exec(sqlstate ?? "");
+export function conflictReason(sqlstate: string | undefined): ConflictReason | undefined {
+  const match = /^CF([AVO])(\d{2})$/.exec(sqlstate ?? "");
   if (!match) return undefined;
-  const list = match[1] === "A" ? APPLICATION_CONFLICTS : AVAILABILITY_CONFLICTS;
-  return list[Number(match[2]) - 1];
+  return CONFLICT_FAMILIES[match[1]!]?.[Number(match[2]) - 1];
 }
 
 /** Maps PostgREST / Postgres errors to safe API errors. Never forwards the DB message. */

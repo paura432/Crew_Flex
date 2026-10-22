@@ -1,6 +1,8 @@
 // In-app notices («Avisos internos», v2-18; migration 20261023800000). Read and mark only: the database
 // writes every notice in the transaction of the event that causes it (triggers) and renders it from
 // the ids at read time, re-checking access. Any signed-in account (professional or organization).
+// Since 20261024400200 (package outreach, v2-17) a third kind, `outreach`, is written by
+// requirement_outreach(): about a requirement (no application), with the urgency it was sent for.
 // GET   /notifications?offset=&limit=   → NoticeListResponse { notices, total, unread }
 // GET   /notifications?view=count       → NoticeCountResponse { unread }   (the shell's bell)
 // PATCH /notifications { id }           → NoticeReadResponse { marked: 1, unread, notice }; 404 when
@@ -19,6 +21,7 @@ import {
   NOTICE_KINDS,
   NOTICE_REQUIREMENT_STATUSES,
 } from "../../../src/domain/notices.ts";
+import { OUTREACH_URGENCIES } from "../../../src/domain/outreach.ts";
 import { listNoticesQuery, markNoticesReadInput } from "../../../src/lib/validation/notices.ts";
 import type {
   Notice,
@@ -28,22 +31,33 @@ import type {
 } from "../../../src/types/api.ts";
 
 // Ids are checked as UUIDs: the server action builds the redirect from them (defence in depth).
-const noticeRow = z.object({
-  id: z.uuid(),
-  kind: z.enum(NOTICE_KINDS),
-  audience: z.enum(NOTICE_AUDIENCES),
-  created_at: z.string(),
-  read_at: z.string().nullable(),
-  application_id: z.uuid(),
-  application_status: z.enum(APPLICATION_STATUSES).nullable(),
-  requirement_status: z.enum(NOTICE_REQUIREMENT_STATUSES).nullable(),
-  requirement_id: z.uuid(),
-  requirement_title: z.string(),
-  organization_name: z.string().nullable(),
-  candidate_name: z.string().nullable(),
-  candidate_ref: z.string().nullable(),
-  total: z.number().int(),
-});
+const noticeRow = z
+  .object({
+    id: z.uuid(),
+    kind: z.enum(NOTICE_KINDS),
+    audience: z.enum(NOTICE_AUDIENCES),
+    created_at: z.string(),
+    read_at: z.string().nullable(),
+    // Null only for an outreach notice (v2-17, migration 20261024400200): it is about a requirement.
+    application_id: z.uuid().nullable(),
+    application_status: z.enum(APPLICATION_STATUSES).nullable(),
+    requirement_status: z.enum(NOTICE_REQUIREMENT_STATUSES).nullable(),
+    requirement_id: z.uuid(),
+    requirement_title: z.string(),
+    organization_name: z.string().nullable(),
+    candidate_name: z.string().nullable(),
+    candidate_ref: z.string().nullable(),
+    total: z.number().int(),
+    outreach_urgency: z.enum(OUTREACH_URGENCIES).nullish(),
+  })
+  // An outreach notice is the reader's own (technician side), with its urgency and no application;
+  // every other kind names an application.
+  .refine((r) =>
+    r.kind === "outreach"
+      ? r.audience === "technician" && r.application_id === null && !!r.outreach_urgency
+      : r.application_id !== null,
+  );
+const totalOf = z.number().int();
 
 /** One `get_my_notifications` row → the API contract (each side gets only its own fields). */
 export function toNotice(raw: unknown): Notice {
@@ -62,6 +76,7 @@ export function toNotice(raw: unknown): Notice {
     applicationStatus: r.kind === "application" ? r.application_status : null,
     requirementStatus: r.kind === "requirement" ? r.requirement_status : null,
     candidate: technician ? null : { name: r.candidate_name, ref: r.candidate_ref },
+    outreachUrgency: r.kind === "outreach" ? (r.outreach_urgency ?? null) : null,
   };
 }
 
@@ -70,8 +85,7 @@ export function toNoticePage(data: unknown): { notices: Notice[]; total: number 
   const rows = z.array(z.unknown()).parse(data);
   return {
     notices: rows.map(toNotice),
-    total:
-      rows.length === 0 ? 0 : noticeRow.shape.total.parse((rows[0] as { total: unknown }).total),
+    total: rows.length === 0 ? 0 : totalOf.parse((rows[0] as { total: unknown }).total),
   };
 }
 

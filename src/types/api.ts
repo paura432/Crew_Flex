@@ -31,6 +31,7 @@ import type {
   TypeRating,
 } from "../domain/passport.ts";
 import type { NoticeAudience, NoticeKind, NoticeRequirementStatus } from "../domain/notices.ts";
+import type { NoticePreferences, OutreachConflict, OutreachUrgency } from "../domain/outreach.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { Locale } from "../i18n/config.ts";
 import type {
@@ -70,9 +71,10 @@ export interface ApiErrorBody {
   issues?: { path: string; message: string }[];
   /**
    * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`) or an
-   * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`).
+   * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`) or a
+   * refused «Distribuir aviso Urgente / AOG» (BR-26; `OUTREACH_CONFLICTS`).
    */
-  reason?: ApplicationConflict | AvailabilityConflict;
+  reason?: ApplicationConflict | AvailabilityConflict | OutreachConflict;
 }
 
 export type ApiResponse<T> =
@@ -670,7 +672,8 @@ export interface Notice {
   audience: NoticeAudience;
   createdAt: string;
   readAt: string | null;
-  applicationId: string;
+  /** Null only for an `outreach` notice, which is about a requirement (v2-17). */
+  applicationId: string | null;
   requirementId: string;
   requirementTitle: string;
   /** Technician side only. */
@@ -681,6 +684,8 @@ export interface Notice {
   requirementStatus: NoticeRequirementStatus | null;
   /** Organization side only. */
   candidate: { name: string | null; ref: string | null } | null;
+  /** `outreach`: the urgency it was distributed for («Urgente» / «AOG»); null otherwise. */
+  outreachUrgency: OutreachUrgency | null;
 }
 
 export interface NoticeListResponse {
@@ -744,6 +749,8 @@ export interface AccountExport {
     logbook: ExportRecord[];
     /** The Candidate Pack copies frozen with own applications (`get_my_application_packs`, v2-15). */
     candidatePacks: ExportRecord[];
+    /** «Avisos de oportunidades» (PKG outreach, N-10); null while never saved. */
+    noticePreferences: ExportRecord | null;
   } | null;
   requirementsCreated: ExportRecord[];
   documents: ExportedDocument[];
@@ -772,4 +779,32 @@ export interface Invitation {
 
 export interface InvitationResponse {
   invitation: Invitation;
+}
+
+// --- Urgent/AOG outreach and notice preferences (package outreach, v2-17 / N-10; BR-26) -----------------
+
+/** The caller's own notice preferences (`notice-preferences`); `updatedAt` null = never saved. */
+export interface NoticePreferencesResponse {
+  preferences: NoticePreferences & { updatedAt: string | null };
+}
+
+/**
+ * The one distribution of a requirement, as its admins/managers see it: the urgency it was sent for,
+ * when and HOW MANY in-app notices it created — never who received them.
+ */
+export interface OutreachDistribution {
+  requirementId: string;
+  urgency: OutreachUrgency;
+  notified: number;
+  distributedAt: string;
+}
+
+/** GET `requirement-outreach?requirementId=`; null = not distributed yet. */
+export interface OutreachStatusResponse {
+  distribution: OutreachDistribution | null;
+}
+
+/** POST `requirement-outreach` (201). */
+export interface OutreachDistributeResponse {
+  distribution: OutreachDistribution;
 }

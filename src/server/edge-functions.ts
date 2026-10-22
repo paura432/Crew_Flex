@@ -21,7 +21,9 @@ export type EdgeFunctionName =
   | "organization-reviews"
   | "notifications"
   | "account"
-  | "invitations";
+  | "invitations"
+  | "notice-preferences"
+  | "requirement-outreach";
 
 interface InvokeOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";

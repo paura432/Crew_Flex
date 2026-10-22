@@ -3,8 +3,11 @@
 // T-70…T-73); this module names what it writes, for the Edge Function's row parsing and the UI. Pure.
 import type { RequirementStatus } from "./work-requirement.ts";
 
-/** `application`: an application reached a status · `requirement`: its requirement was paused/resumed/closed. */
-export const NOTICE_KINDS = ["application", "requirement"] as const;
+/**
+ * `application`: an application reached a status · `requirement`: its requirement was paused/resumed/closed ·
+ * `outreach`: «Distribuir aviso Urgente / AOG» chose the reader (v2-17, migration 20261024400200, BR-26).
+ */
+export const NOTICE_KINDS = ["application", "requirement", "outreach"] as const;
 export type NoticeKind = (typeof NOTICE_KINDS)[number];
 
 /**
