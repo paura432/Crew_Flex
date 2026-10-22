@@ -102,7 +102,7 @@ describe("i18n catalogs (es/en)", () => {
         expect(flatEs[key], key).toBeDefined();
       }
     }
-    for (const v of ["private", "anonymous", "open"]) {
+    for (const v of ["private", "anonymous", "verified_orgs", "open"]) {
       expect(flatEs[`domain.visibility.${v}.label`]).toBeDefined();
     }
   });

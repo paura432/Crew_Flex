@@ -270,7 +270,12 @@
       "id": "A valid window id is required"
     },
     "organization": {
-      "required": "Organization is required"
+      "required": "Organization is required",
+      "countryEu": "Choose a European Union country.",
+      "taxIdRequired": "Enter the tax ID",
+      "taxIdMax": "At most 80 characters",
+      "taxAddressRequired": "Enter the registered address",
+      "taxAddressMax": "At most 400 characters"
     },
     "title": {
       "required": "Title is required",
@@ -351,6 +356,10 @@
     "review": {
       "reasonRequired": "Give a reason to reject (the professional will read it).",
       "noteMax": "Use at most 500 characters"
+    },
+    "organizationReview": {
+      "noteRequired": "Record the evidence of the review",
+      "noteMax": "Use at most 2000 characters"
     },
     "day": {
       "invalid": "Choose a valid day"
@@ -453,6 +462,10 @@
       "anonymous": {
         "label": "Anonymous",
         "detail": "Your relevant qualifications can be matched; your identity stays hidden."
+      },
+      "verified_orgs": {
+        "label": "Verified organizations",
+        "detail": "Anonymous profile, only for organizations whose review the platform has registered."
       },
       "open": {
         "label": "Open",

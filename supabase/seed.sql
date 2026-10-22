@@ -72,6 +72,11 @@ insert into public.organizations (name, type, country) values ('CrewFlex Operaci
 insert into public.organization_members (organization_id, profile_id, role)
 select id, '00000000-0000-4000-8000-000000000031', 'admin' from public.organizations where name = 'CrewFlex Operaciones';
 
+-- Fiscal data of the «Organización» screen (OD-5 default, migration 20261023500100; synthetic values).
+-- Only Demo MRO Madrid has it, still pending review; the other organizations have yet to fill it in.
+update public.organizations set tax_id = 'ESB00000000', tax_address = 'Calle Ficticia 1, 28042 Madrid'
+where name = 'Demo MRO Madrid';
+
 -- Internal workforce of Demo MRO Madrid
 insert into public.organization_members (organization_id, profile_id, role)
 select o.id, m.profile_id::uuid, 'member'

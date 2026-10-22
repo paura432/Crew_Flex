@@ -1,4 +1,5 @@
 // Messages are i18n keys (`v.*`, messages/*.json) resolved by the UI (src/i18n/validation.ts).
+import { ORGANIZATION_TYPES } from "../../domain/organization.ts";
 import { z } from "./zod.ts";
 
 const email = z.email("v.email.invalid").max(254, "v.email.invalid");
@@ -9,13 +10,8 @@ export const signInInput = z.strictObject({
 });
 export type SignInInput = z.infer<typeof signInInput>;
 
-export const ORGANIZATION_TYPES = [
-  "mro",
-  "airline",
-  "operator",
-  "staffing_agency",
-  "other",
-] as const;
+/** One definition (src/domain/organization.ts); re-exported for the sign-up form. */
+export { ORGANIZATION_TYPES };
 
 /** Q-01 (owner, 2026-10-22): 12, as v1.8. Production Auth keeps its own minimum until the owner changes it. */
 export const PASSWORD_MIN = 12;

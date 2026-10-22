@@ -270,7 +270,12 @@
       "id": "Se necesita un identificador de ventana válido"
     },
     "organization": {
-      "required": "La organización es obligatoria"
+      "required": "La organización es obligatoria",
+      "countryEu": "Selecciona un país de la Unión Europea.",
+      "taxIdRequired": "Indica la identificación fiscal",
+      "taxIdMax": "Como máximo 80 caracteres",
+      "taxAddressRequired": "Indica el domicilio fiscal",
+      "taxAddressMax": "Como máximo 400 caracteres"
     },
     "title": {
       "required": "El título es obligatorio",
@@ -351,6 +356,10 @@
     "review": {
       "reasonRequired": "Indica un motivo para rechazar (el profesional lo leerá).",
       "noteMax": "Usa como máximo 500 caracteres"
+    },
+    "organizationReview": {
+      "noteRequired": "Indica la evidencia de la revisión",
+      "noteMax": "Usa como máximo 2000 caracteres"
     },
     "day": {
       "invalid": "Elige un día válido"
@@ -453,6 +462,10 @@
       "anonymous": {
         "label": "Anónimo",
         "detail": "Tus cualificaciones relevantes pueden emparejarse; tu identidad queda oculta."
+      },
+      "verified_orgs": {
+        "label": "Empresas verificadas",
+        "detail": "Perfil anónimo, solo para organizaciones con la revisión registrada por la plataforma."
       },
       "open": {
         "label": "Abierto",

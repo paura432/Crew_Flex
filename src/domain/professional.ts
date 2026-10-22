@@ -9,7 +9,8 @@ export type Mobility = (typeof MOBILITIES)[number];
 export const TECHNICIAN_STATUSES = ["employed", "contractor", "between_contracts"] as const;
 export type TechnicianStatus = (typeof TECHNICIAN_STATUSES)[number];
 
-export const PROFILE_VISIBILITIES = ["private", "anonymous", "open"] as const;
+/** v1.8 order: Privado · Anónimo · Empresas verificadas · Abierto (BR-8; `verified_orgs` since 20261023500000). */
+export const PROFILE_VISIBILITIES = ["private", "anonymous", "verified_orgs", "open"] as const;
 export type ProfileVisibility = (typeof PROFILE_VISIBILITIES)[number];
 
 export const DISPLAY_NAME_MAX = 120;
