@@ -678,7 +678,8 @@
       "error": {
         "customLength": "Elige entre 1 y 31 días.",
         "cycleTooLong": "El ciclo debe caber en 31 días.",
-        "invalidDate": "Elige un día 1 válido."
+        "invalidDate": "Elige un día 1 válido.",
+        "nothingGenerated": "No hay días que generar: todos los días desde hoy ya tienen ventanas guardadas. Marca «Reemplazar también…» o elige otro mes."
       },
       "unsaved": "sin guardar",
       "pending": "{count, plural, one {# día modificado} other {# días modificados}} sin guardar. Revisa el calendario y guarda o descarta para cambiar de mes.",

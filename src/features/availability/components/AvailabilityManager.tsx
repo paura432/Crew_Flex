@@ -186,6 +186,11 @@ export function AvailabilityManager({
   function onPreview(settings: CycleSettings) {
     try {
       const generated = planCycle(days, settings.pattern, { ...settings, today });
+      // X-15: every day from today already has windows and «replace» is off → say so, not silence.
+      if (Object.keys(generated).length === 0) {
+        setCycleError(t("cycle.error.nothingGenerated"));
+        return;
+      }
       changePlan((old) => ({ ...old, ...generated }));
       setGeneratedWith({
         pattern: settings.pattern,

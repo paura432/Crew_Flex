@@ -678,7 +678,8 @@
       "error": {
         "customLength": "Choose between 1 and 31 days.",
         "cycleTooLong": "The cycle must fit in 31 days.",
-        "invalidDate": "Choose a valid day 1."
+        "invalidDate": "Choose a valid day 1.",
+        "nothingGenerated": "No days to generate: every day from today already has saved windows. Tick «Also replace…» or choose another month."
       },
       "unsaved": "not saved",
       "pending": "{count, plural, one {# day changed} other {# days changed}} and not saved yet. Review the calendar, then save or discard to change month.",
