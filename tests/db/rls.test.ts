@@ -3922,7 +3922,7 @@ async function applyAs(
   await actAs(tx, technician);
   return (
     await tx.query<{ id: string; replayed: boolean }>(
-      "select * from public.apply_to_requirement($1, $2)",
+      "select * from public.apply_to_requirement($1, $2, true)",
       [requirementId, key],
     )
   ).rows[0]!;
@@ -4258,6 +4258,8 @@ describe("V. applications: the D-06 state machine in the database (migration 202
             "request_id",
             "requirement_id",
             "to",
+            // Applying records the explicit share consent of the form (a flag, never text).
+            ...(row.action === "application.received" ? ["share_consent"] : []),
           ].sort(),
         );
       }
@@ -4672,7 +4674,7 @@ describe("V. applications: the D-06 state machine in the database (migration 202
       const first = await applyAs(tx, SEED.delta, need);
       await actAs(tx, SEED.delta);
       const applyError = (requirementId: string) =>
-        sqlError(tx, "select * from public.apply_to_requirement($1, $2)", [
+        sqlError(tx, "select * from public.apply_to_requirement($1, $2, true)", [
           requirementId,
           randomUUID(),
         ]);
@@ -4743,7 +4745,7 @@ describe("V. applications: the D-06 state machine in the database (migration 202
       await actAs(tx, SEED.alpha);
       expect(
         (
-          await sqlError(tx, "select * from public.apply_to_requirement($1, $2)", [
+          await sqlError(tx, "select * from public.apply_to_requirement($1, $2, true)", [
             need,
             randomUUID(),
           ])
@@ -4927,12 +4929,15 @@ describe("V. applications: the D-06 state machine in the database (migration 202
         const need = await createNeed(owner, {
           org: mroId,
           createdBy: SEED.adminMro,
-          headcount: 2,
+          headcount: 1,
+          status: "covered",
         });
         const delta = await seedApplication(owner, need, SEED.delta, "confirmed");
         const echo = await seedApplication(owner, need, SEED.echo, "proposed");
         await owner.query("delete from auth.identities where user_id = $1", [SEED.delta]);
         await owner.query("delete from auth.users where id = $1", [SEED.delta]); // account deletion
+        // The confirmed seat went with the account: the requirement is open again (review LOW-2).
+        expect(await requirementStatus(owner, need)).toBe("open");
         expect(
           await rowCount(owner, "select 1 from public.applications where id = $1", [delta]),
         ).toBe(0);
@@ -4954,6 +4959,92 @@ describe("V. applications: the D-06 state machine in the database (migration 202
         throw new Error("rollback");
       })
       .catch((error: Error) => expect(error.message).toBe("rollback"));
+  });
+
+  it("no oracle on other organizations' requirements: a stranger's qualification insert is always RLS's 42501", async () => {
+    await asUser(db, SEED.echo, async (tx) => {
+      const withApplication = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      const without = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      const closed = await createNeed(tx, {
+        org: mroId,
+        createdBy: SEED.adminMro,
+        status: "closed",
+      });
+      await seedApplication(tx, withApplication, SEED.delta, "withdrawn");
+      const ewis = (
+        await tx.query<{ id: string }>(
+          "select id from public.qualification_types where code = 'EWIS'",
+        )
+      ).rows[0]!.id;
+      // Published ids reach every professional (D-12); other organizations may know them too.
+      for (const stranger of [SEED.echo, SEED.adminOther]) {
+        await actAs(tx, stranger);
+        const answers = [];
+        for (const id of [withApplication, without, closed])
+          answers.push(
+            await sqlError(
+              tx,
+              `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+               values ($1, $2, 'soft')`,
+              [id, ewis],
+            ),
+          );
+        expect(answers.map((a) => a.code)).toEqual(["42501", "42501", "42501"]);
+        expect(new Set(answers.map((a) => a.message)).size).toBe(1);
+      }
+      // The organization itself still gets the precise answers.
+      await actAs(tx, SEED.managerMro);
+      const insert = (id: string) =>
+        sqlError(
+          tx,
+          `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+           values ($1, $2, 'soft')`,
+          [id, ewis],
+        );
+      expect((await insert(withApplication)).code).toBe(conflict("HAS_APPLICATIONS"));
+      expect((await insert(closed)).code).toBe("55000");
+    });
+  });
+
+  it("applying requires the explicit share consent in the database too (review LOW-4)", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      await actAs(tx, SEED.delta);
+      for (const consent of [false, null])
+        expect(
+          (
+            await sqlError(tx, "select * from public.apply_to_requirement($1, $2, $3)", [
+              need,
+              randomUUID(),
+              consent,
+            ])
+          ).code,
+        ).toBe("22023");
+      await tx.exec("reset role");
+      expect(
+        await rowCount(tx, "select 1 from public.applications where requirement_id = $1", [need]),
+      ).toBe(0);
+    });
+  });
+
+  it("anon executes none of the application or edit RPCs (review LOW-5)", async () => {
+    await asUser(db, null, async (tx) => {
+      const id = randomUUID();
+      const at = "2031-01-01T00:00:00Z";
+      for (const [sql, params] of [
+        ["select * from public.apply_to_requirement($1, $2, true)", [id, id]],
+        ["select * from public.transition_application($1, 'shortlisted', $2, $3)", [id, at, id]],
+        ["select * from public.get_requirement_applications($1)", [id]],
+        ["select * from public.get_my_applications()", []],
+        ["select * from public.get_application_counts($1)", [id]],
+        [
+          "select * from public.update_work_requirement($1, $2, 'T', 'MAD', $2, $2, 'day', 1, 'planned', '[]'::jsonb)",
+          [id, at],
+        ],
+      ] as const)
+        expect((await sqlError(tx, sql, [...params])).message).toMatch(/permission denied/);
+    });
   });
 
   describe("M05 edit (update_work_requirement) and the freeze after the first application (CFA12)", () => {

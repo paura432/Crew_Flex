@@ -141,6 +141,7 @@ export const handler = createHandler("applications", {
     const { data, error } = await actor.client.rpc("apply_to_requirement", {
       p_requirement_id: input.requirementId,
       p_idempotency_key: key,
+      p_share_consent: input.shareConsent, // literal true (schema); the database requires it too
       p_request_id: ctx.requestId,
     });
     // P0002 → 404 · CFA01…CFA10 → 409 + reason · CF409 → 409 (key reused with another requirement)

@@ -2,7 +2,8 @@
 -- and the requirement edit (M05: only while it never received an application).
 -- NON-DESTRUCTIVE: new enum, three tables (RLS on in this migration), one private table, private
 -- helpers, RPCs and triggers; `create or replace` of guard_requirement_status (same signature, every
--- rule of 20261022130100 kept); the idempotency operation CHECK is widened (drop + add, as
+-- rule of 20261022130100 kept) and of guard_closed_requirement (same rule, no oracle for strangers);
+-- the idempotency operation CHECK is widened (drop + add, as
 -- 20261019160000 did). No DROP of tables, columns or data; existing grants unchanged.
 --
 -- Contract: docs/product/APPLICATIONS_STATE_MACHINE.md, src/domain/applications.ts (transition table,
@@ -321,6 +322,10 @@ revoke execute on function public.guard_requirement_status() from public, anon, 
 -- possible. The parent is locked before the check (serialises with apply, which locks it too); a
 -- parent deleted in the same transaction (organization deletion cascade) is not found, so the cascade
 -- still runs. Fires after the closed-requirement guard (trigger names sort after `…_closed_frozen`).
+-- No oracle (security review MEDIUM-1): BEFORE ROW triggers run before the RLS WITH CHECK, and D-12 hands
+-- every professional the ids of published requirements, so on qualifications the guard answers (and
+-- locks) only for a caller who may edit that requirement (admin/manager) or the owner (no JWT);
+-- anyone else gets RLS's 42501, whatever the requirement's applications.
 create function public.guard_requirement_with_applications()
 returns trigger
 language plpgsql
@@ -329,6 +334,7 @@ set search_path = ''
 as $$
 declare
   v_id uuid;
+  v_org uuid;
 begin
   if tg_table_name = 'work_requirements' then
     if (new.organization_id, new.title, new.location, new.starts_at, new.ends_at, new.shift,
@@ -342,8 +348,12 @@ begin
     return new;
   end if;
   foreach v_id in array array_remove(array[new.work_requirement_id, old.work_requirement_id], null) loop
+    select wr.organization_id into v_org from public.work_requirements wr where wr.id = v_id;
+    continue when not found; -- parent deleted in this transaction (cascade)
+    continue when (select auth.uid()) is not null
+      and not public.has_org_role(v_org, array['admin', 'manager']::public.organization_role[]);
     perform 1 from public.work_requirements wr where wr.id = v_id for update;
-    if found and exists (select 1 from public.applications a where a.requirement_id = v_id) then
+    if exists (select 1 from public.applications a where a.requirement_id = v_id) then
       raise exception 'a requirement that received applications cannot be edited' using errcode = 'CFA12';
     end if;
   end loop;
@@ -352,6 +362,70 @@ end;
 $$;
 revoke execute on function public.guard_requirement_with_applications() from public, anon, authenticated;
 revoke execute on function public.refuse_application_history_update() from public, anon, authenticated;
+
+-- The same oracle existed in the closed-requirement guard (20261020120100: 55000 before RLS on a
+-- qualification insert) and only matters now that requirement ids are published (D-12). Same body for
+-- work_requirements (UPDATE: RLS filters the rows first); on qualifications it answers only to a
+-- caller who may edit the requirement, or the owner.
+create or replace function public.guard_closed_requirement()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_org uuid;
+  v_status public.requirement_status;
+begin
+  if tg_table_name = 'work_requirements' then
+    if (new.organization_id, new.title, new.location, new.starts_at, new.ends_at, new.shift,
+        new.headcount, new.urgency, new.status)
+       is distinct from
+       (old.organization_id, old.title, old.location, old.starts_at, old.ends_at, old.shift,
+        old.headcount, old.urgency, old.status) then
+      raise exception 'a closed requirement cannot be changed' using errcode = '55000';
+    end if;
+    return new;
+  end if;
+  select wr.organization_id, wr.status into v_org, v_status
+  from public.work_requirements wr
+  where wr.id = coalesce(new.work_requirement_id, old.work_requirement_id);
+  if found and v_status = 'closed'
+     and ((select auth.uid()) is null
+          or public.has_org_role(v_org, array['admin', 'manager']::public.organization_role[])) then
+    raise exception 'a closed requirement cannot be changed' using errcode = '55000';
+  end if;
+  return coalesce(new, old);
+end;
+$$;
+revoke execute on function public.guard_closed_requirement() from public, anon, authenticated;
+
+-- Account deletion (security review LOW-2): a confirmed or finished application that disappears with
+-- its technician frees its seat, so a `covered` requirement goes back to `open` (system change, audited
+-- without an actor). A requirement deleted in the same transaction is simply not found.
+create function public.release_seat_on_application_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.status in ('confirmed', 'finished') then
+    perform set_config('crewflex.system_status', 'on', true);
+    update public.work_requirements wr set status = 'open'
+    where wr.id = old.requirement_id
+      and wr.status = 'covered'
+      and (select count(*) from public.applications a
+           where a.requirement_id = wr.id and a.status in ('confirmed', 'finished')) < wr.headcount;
+    perform set_config('crewflex.system_status', 'off', true);
+  end if;
+  return old;
+end;
+$$;
+revoke execute on function public.release_seat_on_application_delete() from public, anon, authenticated;
+create trigger applications_release_seat
+  after delete on public.applications
+  for each row execute function public.release_seat_on_application_delete();
 
 create trigger work_requirements_with_applications_frozen
   before update on public.work_requirements
@@ -500,12 +574,15 @@ $$;
 -- replay returns its own result whatever happened since), then: open (CFA01), not started (CFA02),
 -- no application that is not withdrawn — active → CFA09, rejected/cancelled/finished → CFA10 (Q5,
 -- T-09) — and eligible now (T-08: CFA03 qualifications, CFA04 availability). The unique index is the
--- backstop. Audit `application.received` without an organization id (the actor is the technician:
--- their profile id must not reach the organization's audit trail, T-04).
+-- backstop. Applying discloses the applicant to that organization (S-7 exception), so the explicit
+-- share consent of the form is required here too (security review LOW-4: a direct RPC call cannot skip
+-- it) and recorded as a flag in the audit row. Audit `application.received` without an organization
+-- id (the actor is the technician: their profile id must not reach the organization's audit trail, T-04).
 -- ---------------------------------------------------------------------------------------------
 create function public.apply_to_requirement(
   p_requirement_id uuid,
   p_idempotency_key uuid,
+  p_share_consent boolean,
   p_request_id uuid default null
 )
 returns table (id uuid, replayed boolean)
@@ -526,6 +603,9 @@ begin
   end if;
   if p_idempotency_key is null then
     raise exception using errcode = '22023', message = 'idempotency key is required';
+  end if;
+  if p_share_consent is distinct from true then
+    raise exception using errcode = '22023', message = 'the share consent is required';
   end if;
 
   select * into v_req from public.work_requirements wr where wr.id = p_requirement_id for update;
@@ -576,7 +656,8 @@ begin
   insert into public.audit_events (actor_profile_id, organization_id, action, entity_type, entity_id, metadata)
   values (v_uid, null, 'application.received', 'application', v_id,
     jsonb_build_object('from', null, 'to', 'received', 'actor', 'technician', 'requirement_id', v_req.id,
-                       'proposal_version', null, 'reason_provided', false, 'request_id', p_request_id));
+                       'proposal_version', null, 'reason_provided', false, 'share_consent', true,
+                       'request_id', p_request_id));
   perform app_private.complete_idempotency_key('application.create', p_idempotency_key, v_id);
   return query select v_id, false;
 end;
@@ -981,7 +1062,7 @@ $$;
 revoke execute on function
   public.update_work_requirement(uuid, timestamptz, text, text, timestamptz, timestamptz,
     public.shift_type, integer, public.requirement_urgency, jsonb),
-  public.apply_to_requirement(uuid, uuid, uuid),
+  public.apply_to_requirement(uuid, uuid, boolean, uuid),
   public.transition_application(uuid, public.application_status, timestamptz, uuid, text, uuid, uuid),
   public.get_requirement_applications(uuid),
   public.get_my_applications(),
@@ -990,7 +1071,7 @@ from public, anon;
 grant execute on function
   public.update_work_requirement(uuid, timestamptz, text, text, timestamptz, timestamptz,
     public.shift_type, integer, public.requirement_urgency, jsonb),
-  public.apply_to_requirement(uuid, uuid, uuid),
+  public.apply_to_requirement(uuid, uuid, boolean, uuid),
   public.transition_application(uuid, public.application_status, timestamptz, uuid, text, uuid, uuid),
   public.get_requirement_applications(uuid),
   public.get_my_applications(),

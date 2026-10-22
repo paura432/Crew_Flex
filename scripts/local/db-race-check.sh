@@ -318,7 +318,7 @@ apply_vs_edit() {
   : >"$OUT_A"; : >"$OUT_B"
   race_available "$DELTA"
   local req; req="$(race_need 'Demo Aero Services Lisbon' 1)"
-  printf "begin;\nselect replayed from public.apply_to_requirement('%s', gen_random_uuid());\nselect pg_sleep(1.5);\ncommit;\n" "$req" \
+  printf "begin;\nselect replayed from public.apply_to_requirement('%s', gen_random_uuid(), true);\nselect pg_sleep(1.5);\ncommit;\n" "$req" \
     | psql_as "$DELTA" >"$OUT_A" &
   local pa=$!
   sleep 0.4

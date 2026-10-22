@@ -60,6 +60,15 @@ requirement**. Display name only if visibility = `open`. No email, phone, docume
 ## Privacy by design
 
 - Default visibility `private`. The profile never becomes a public directory automatically.
+- Applying is the professional's own act of disclosure (D-06/D-12, LOCAL `20261022130300`): the applicant becomes
+  visible to **that** organization for **that** requirement only, under the candidate-pool rules (per-requirement
+  pseudonym unless internal, name only for internal or `open`, relevant qualifications and overlapping windows; no
+  contact data, no documents — D-07 not activated). `private` professionals are still never in the external pool.
+- Professionals read published requirements only through a fixed projection (`list_opportunities`: organization
+  name, no ids of people or organizations, no counts of other applicants).
+- Application audit rows whose actor is the technician carry no organization id, and covered ↔ open status
+  changes made by an application carry no actor, so an organization's audit trail never holds an applicant's
+  profile id (T-04).
 - Internal workforce data visible to own organization admins/managers only (OD-4).
 - Audit metadata contains ids and counts, not personal data.
 

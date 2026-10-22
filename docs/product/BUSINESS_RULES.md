@@ -176,6 +176,6 @@ A professional may apply when the requirement is `open` and has not started, the
 not `withdrawn` (an active one → `ALREADY_APPLIED`; one that ended `rejected`, `cancelled` or `finished` →
 `REAPPLY_NOT_ALLOWED`: re-applying is allowed only after `withdrawn`), and they are eligible **now** (hard
 qualifications and availability, T-08). One application covers the requirement's single period (Q6). Applying needs
-the explicit share consent of the form; it reserves nothing in the calendar, and nothing is shared beyond the
+the explicit share consent of the form (required by the database too and recorded as a flag in the audit row); it reserves nothing in the calendar, and nothing is shared beyond the
 candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Availability edits after
 a confirmation are not blocked (T-13). IMPLEMENTED (local).
