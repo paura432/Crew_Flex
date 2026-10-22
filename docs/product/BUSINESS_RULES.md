@@ -352,13 +352,14 @@ only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) is not part
 
 v1.8 demo «Archivar» / «Papelera» / «Restaurar» (`Professional2.jsx:210-219`), on the owner's own documents only:
 
-| Rule    | Statement                                                                                                                                                                                                          |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| BR-24.1 | «Archivar» moves a document to the trash: `archived_at` is set by the database clock (a client value is ignored; archiving again keeps the first date); «Restaurar» clears it. Both audited, ids only.             |
-| BR-24.2 | A document in the trash counts for nothing else: not in the wallet list, the 60-day review list (BR-12), the evidence count and «Documento aportado» (BR-11, T-36/T-37) or a qualification's evidence (T-101).     |
-| BR-24.3 | It stays restorable for `archive_retention` (default **30 days**, T-100, a database setting); from `archived_at + retention` the platform-admin maintenance may delete it and its file (`trash_expired`, audited). |
-| BR-24.4 | «Eliminar definitivamente» (in the trash) deletes the row and its file at once (`owner_delete`, as before); the API `DELETE` still accepts any own document (erasure).                                             |
-| BR-24.5 | The type filter (N-20, T-102) offers «Todos», «Licencias», «Cursos», «Otros» (`all` + the three kinds) in the wallet and the trash; the panel counter is the number of documents the list shows.                   |
+| Rule    | Statement                                                                                                                                                                                                                |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| BR-24.1 | «Archivar» moves a document to the trash: `archived_at` is set by the database clock (a client value is ignored; archiving again keeps the first date); «Restaurar» clears it. Both audited, ids only.                   |
+| BR-24.2 | A document in the trash counts for nothing else: not in the wallet list, the 60-day review list (BR-12), the evidence count and «Documento aportado» (BR-11, T-36/T-37) or a qualification's evidence (T-101).           |
+| BR-24.3 | It stays restorable for `archive_retention` (default **30 days**, T-100, a database setting); from `archived_at + retention` the platform-admin maintenance may delete it and its file (`trash_expired`, audited).       |
+| BR-24.4 | «Eliminar definitivamente» (in the trash) deletes the row and its file at once (`owner_delete`, as before); the API `DELETE` still accepts any own document (erasure).                                                   |
+| BR-24.5 | The type filter (N-20, T-102) offers «Todos», «Licencias», «Cursos», «Otros» (`all` + the three kinds) in the wallet and the trash; the panel counter is the number of documents the list shows.                         |
+| BR-24.6 | Data rights (account package, T-42/T-43): closing the account erases trashed documents with the rest (`owner_delete`, due at once; nothing left to restore or expire); the export includes them, marked by `archivedAt`. |
 
 Display and storage only: no rule here changes eligibility (qualifications decide, BR-2/BR-3), and nothing is shared
 (D-07/D-10). IMPLEMENTED (local, `20261024200000`).

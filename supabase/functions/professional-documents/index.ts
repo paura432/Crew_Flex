@@ -68,8 +68,10 @@ const DEFINITIVE_RPC_ERRORS = new Set([
   "42501",
 ]);
 
-const SELECT =
+/** The columns `toDocument` reads; the `account` export selects these too (plus `storage_path`). */
+export const DOCUMENT_SELECT =
   "id, kind, title, mime_type, size_bytes, sha256, expires_at, qualification_id, scan_status, archived_at, created_at, updated_at";
+const SELECT = DOCUMENT_SELECT;
 
 const row = z.object({
   id: z.string(),

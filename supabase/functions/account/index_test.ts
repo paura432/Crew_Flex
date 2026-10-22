@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
-import { handler, toBase64 } from "./index.ts";
+import { DOCUMENT_COLUMNS, handler, toBase64 } from "./index.ts";
+import { toDocument } from "../professional-documents/index.ts";
 import { closeAccountInput } from "../../../src/lib/validation/account.ts";
 
 const silence = () => {
@@ -58,3 +59,29 @@ Deno.test("toBase64 round-trips small and multi-chunk files", () => {
   }
   assertEquals(toBase64(new TextEncoder().encode("%PDF-1.4")), btoa("%PDF-1.4"));
 });
+
+Deno.test(
+  "export rows carry every column toDocument reads (wallet-extras: a trashed document keeps its archivedAt)",
+  () => {
+    const columns = DOCUMENT_COLUMNS.split(",").map((c) => c.trim());
+    const value: Record<string, unknown> = {
+      id: "d1",
+      kind: "other",
+      title: "CV",
+      mime_type: "application/pdf",
+      size_bytes: 3,
+      sha256: "c".repeat(64),
+      expires_at: null,
+      qualification_id: null,
+      scan_status: "not_scanned",
+      archived_at: "2026-10-22T08:00:00+00:00",
+      created_at: "2026-10-20T08:00:00+00:00",
+      updated_at: "2026-10-22T08:00:00+00:00",
+      storage_path: "x/y",
+    };
+    // Exactly the selected columns, as PostgREST returns them.
+    const raw = Object.fromEntries(columns.map((c) => [c, value[c]]));
+    assertEquals(columns.includes("storage_path"), true);
+    assertEquals(toDocument(raw).archivedAt, "2026-10-22T08:00:00.000Z");
+  },
+);

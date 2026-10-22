@@ -338,6 +338,63 @@ describe("N-19 wallet trash (migration 20261024200000)", () => {
     });
   });
 
+  it("account closure (20261023400100) erases trashed documents like any other: due `owner_delete`, nothing left to restore or expire", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const recent = await createDoc(
+        tx,
+        SEED.delta,
+        "a1b2c3d4-0000-4000-8000-00000000000b",
+        "%PDF-trash-recent",
+      );
+      const expired = await createDoc(
+        tx,
+        SEED.delta,
+        "a1b2c3d4-0000-4000-8000-00000000000c",
+        "%PDF-trash-expired",
+      );
+      const active = await createDoc(
+        tx,
+        SEED.delta,
+        "a1b2c3d4-0000-4000-8000-00000000000d",
+        "%PDF-active-closure",
+      );
+      await tx.query("update public.professional_documents set archived_at = now() where id = $1", [
+        recent.id,
+      ]);
+      await archivedDaysAgo(tx, SEED.delta, expired.id, 45);
+      const paths = (
+        await tx.query<{ storage_path: string }>("select * from public.close_my_account(null)")
+      ).rows.map((r) => r.storage_path);
+      expect(paths.sort()).toEqual([recent.path, expired.path, active.path].sort());
+      await tx.exec("reset role");
+      const left = await tx.query(
+        "select 1 from public.professional_documents where owner_id = $1",
+        [SEED.delta],
+      );
+      expect(left.rows).toHaveLength(0);
+      const tombs = await tx.query<{ reason: string; due: boolean }>(
+        `select reason, purge_after <= now() as due from app_private.document_object_tombstones
+         where storage_path = any($1) order by storage_path`,
+        [paths],
+      );
+      expect(tombs.rows).toEqual(paths.map(() => ({ reason: "owner_delete", due: true })));
+      // No `document.trash_expired` for the closure (the person asked for the erasure), and the sweep
+      // has no row to expire or restore afterwards.
+      const expiredAudit = await tx.query(
+        "select 1 from public.audit_events where action = 'document.trash_expired' and entity_id = any($1)",
+        [[recent.id, expired.id]],
+      );
+      expect(expiredAudit.rows).toHaveLength(0);
+      await become(tx, SEED.platformAdmin);
+      const sweep = await tx.query<{ storage_path: string; action: string }>(
+        "select * from public.document_maintenance_batch(false, 50)",
+      );
+      expect(
+        sweep.rows.filter((r) => r.action === "would_expire" && paths.includes(r.storage_path)),
+      ).toEqual([]);
+    });
+  });
+
   it("the tombstone reason CHECK accepts `trash_expired` and still refuses anything else", async () => {
     await db.transaction(async (tx) => {
       await tx.query(

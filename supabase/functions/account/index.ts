@@ -14,7 +14,7 @@ import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { logEvent } from "../_shared/logger.ts";
 import { parseJsonBody } from "../_shared/validation.ts";
-import { BUCKET, toDocument } from "../professional-documents/index.ts";
+import { BUCKET, DOCUMENT_SELECT, toDocument } from "../professional-documents/index.ts";
 import { filesToEmbed } from "../../../src/domain/account.ts";
 import { closeAccountInput } from "../../../src/lib/validation/account.ts";
 import type {
@@ -26,8 +26,12 @@ import type {
 
 const FN = "account";
 
-const DOCUMENT_COLUMNS =
-  "id, kind, title, mime_type, size_bytes, sha256, expires_at, qualification_id, scan_status, created_at, updated_at, storage_path";
+/**
+ * Every column `toDocument` reads (one list, owned by professional-documents) + the path for the bytes.
+ * Documents in the wallet's trash are exported too, marked by `archivedAt` (T-101: they are still the
+ * person's stored data until purged).
+ */
+export const DOCUMENT_COLUMNS = `${DOCUMENT_SELECT}, storage_path`;
 
 /** Standard base64 of bytes (chunked: no argument-count limit on large files). */
 export function toBase64(bytes: Uint8Array): string {

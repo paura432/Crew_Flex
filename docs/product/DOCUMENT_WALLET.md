@@ -196,6 +196,9 @@ v1.8 demo parity (`Professional2.jsx:159-219`) under the owner's DEFAULTS rule; 
   writes `trash_expired` tombstones due at once; the same run then purges those objects (re-check, service-role
   Storage delete, `document.purged`). `documents-maintenance` reports `expired`. Legal holds, re-checks and the
   10-attempt cap apply unchanged. Still manual and unscheduled (§6).
+- **Data rights.** Account closure (`close_my_account`) deletes trashed documents with the others (`owner_delete`,
+  due at once; nothing to restore or expire afterwards); the account export lists them with `archivedAt` and embeds
+  their bytes under the same 3 MiB rule (BR-24.6).
 - **Type filter (N-20, T-102).** Chips with `aria-pressed`: «Todos», «Licencias», «Cursos», «Otros»; the panel
   counter is what the list shows; «No hay documentos de este tipo.» when a filter empties it.
 - **Viewer (N-21, T-103).** «Abrir» opens a `<dialog>` (Escape or «Cerrar»; the focus returns to «Abrir»): a fresh

@@ -142,3 +142,8 @@ other edit of one's own documents; the API `DELETE` still works on any own docum
 Storage CORS answer `Access-Control-Allow-Origin` for the app origin (local Kong: `*`; to check on the hosted project
 before the wallet ships). The availability floor counts only Data API writes (`current_user = authenticated`), so
 historic windows of seeds and operators stay possible; v1.8's interval editor accepted past starts (✗ not copied).
+With the account package (T-42/T-43): `close_my_account` deletes trashed documents like the others (tombstones
+`owner_delete`, due at once — no `trash_expired`, nothing can be restored afterwards), and the export includes them,
+marked by `archivedAt`: they are still the person's stored data until purged (T-101 «count for nothing else» is
+about the product's own lists and counts, not about data rights). The export reads the same column list as the
+wallet (`DOCUMENT_SELECT`).
