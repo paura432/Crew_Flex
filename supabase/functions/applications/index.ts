@@ -10,6 +10,9 @@
 // GET   /applications?organizationId=<uuid>&view=byRequirement → { requirements: [{ requirementId,
 //                                                        headcount, startsAt, endsAt, shiftCount, counts }] }
 //                                                        (admin/manager; v2-05 tabs, v2-08 coverage)
+// GET   /applications?view=pack&applicationId=<uuid>     → { pack | null } (the applicant or the requirement
+//                                                        organization's admin/manager; 404 otherwise)
+// GET   /applications?view=pack-preview                  → { pack } (the caller's copy if they applied now)
 // POST  /applications { requirementId, shareConsent: true }        → 201 { application } · 200 replay
 // PATCH /applications { applicationId, to, expectedUpdatedAt, reason?, proposalId?, acceptTerms? }
 //                                                      → { transition, replayed }
@@ -37,6 +40,12 @@ import {
   type TransitionInput,
   transitionInput,
 } from "../../../src/lib/validation/applications.ts";
+import {
+  applicationPackQuery,
+  isPackView,
+  packPreviewQuery,
+} from "../../../src/lib/validation/candidate-pack.ts";
+import { loadApplicationPack, loadPackPreview } from "./pack.ts";
 import type {
   ApplicationCountsResponse,
   ApplicationResponse,
@@ -166,6 +175,17 @@ async function loadMine(actor: Actor): Promise<MyApplication[]> {
 export const handler = createHandler("applications", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
+    // Candidate Pack copy (v2-15 + v2-04): two views of their own, parsed by their own strict schemas, so the
+    // existing routes and their query contract stay exactly as they were.
+    const view = ctx.url.searchParams.get("view");
+    if (isPackView(view)) {
+      if (view === "pack") {
+        const { applicationId } = parseQuery(ctx.url, applicationPackQuery);
+        return { data: await loadApplicationPack(actor, applicationId) };
+      }
+      parseQuery(ctx.url, packPreviewQuery);
+      return { data: await loadPackPreview(actor) };
+    }
     const query = parseQuery(ctx.url, listApplicationsQuery);
     assertListParams(query);
 

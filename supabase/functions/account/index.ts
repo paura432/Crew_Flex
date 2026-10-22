@@ -109,6 +109,7 @@ async function exportFor(actor: Actor): Promise<AccountExport> {
       privateDetails,
       organizationBlocks,
       logbook,
+      candidatePacks,
     ] = await Promise.all([
       db
         .from("technician_qualifications")
@@ -151,6 +152,8 @@ async function exportFor(actor: Actor): Promise<AccountExport> {
         )
         .eq("technician_profile_id", actor.id)
         .order("entry_date"),
+      // The Candidate Pack copies sent with own applications (v2-15, T-43): own rows only (DEFINER, auth.uid()).
+      db.rpc("get_my_application_packs"),
     ]);
     professional = {
       profile: technicianProfile,
@@ -163,6 +166,7 @@ async function exportFor(actor: Actor): Promise<AccountExport> {
       privateDetails: one(privateDetails),
       organizationBlocks: rows(organizationBlocks),
       logbook: rows(logbook),
+      candidatePacks: rows(candidatePacks),
     };
   }
 

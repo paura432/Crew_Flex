@@ -17,10 +17,18 @@ import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/d
 import type { LogbookCategory, LogbookEnvironment } from "../domain/logbook.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { OrganizationReviewStatus, OrganizationType } from "../domain/organization.ts";
+import type { PackExperience, PackQualification } from "../domain/candidate-pack.ts";
 import type {
+  Aircraft,
   CandidatePassport,
+  Engine,
+  EnglishLevel,
   PassportDeclarations,
   PassportPrivate,
+  ProfessionalCategory,
+  RateUnit,
+  Skill,
+  TypeRating,
 } from "../domain/passport.ts";
 import type { NoticeAudience, NoticeKind, NoticeRequirementStatus } from "../domain/notices.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
@@ -242,7 +250,10 @@ export interface LogbookEntry {
   category: LogbookCategory;
   environment: LogbookEnvironment;
   description: string;
-  /** «Seleccionable para expediente»: stored only, nothing reads it until D-07. */
+  /**
+   * «Seleccionable para expediente»: when the professional applies, the selected, active entries are copied
+   * into that application's Candidate Pack copy (v2-04, T-112; BR-25). Nothing else reads it.
+   */
   cvRelevant: boolean;
   archived: boolean;
   createdAt: string;
@@ -603,6 +614,45 @@ export interface ApplicationTransitionResponse {
   replayed: boolean;
 }
 
+/**
+ * The Candidate Pack copy (v2-15 + v2-04, BR-25): the professional's technical profile frozen when they
+ * applied (`get_application_pack`), or what it would be now (`get_my_candidate_pack_preview`). Never
+ * identity, contact, employer, blocked organizations or documents (D-07, `PACK_ACTIVATION` off).
+ */
+export interface CandidatePackCopy {
+  /** The application this copy belongs to; null for the preview. */
+  applicationId: string | null;
+  /** When the copy was frozen (the preview: the moment it was read). */
+  copiedAt: string;
+  primaryCategory: ProfessionalCategory | null;
+  categories: ProfessionalCategory[];
+  yearsExperience: number | null;
+  englishLevel: EnglishLevel | null;
+  baseLocation: string | null;
+  baseCountry: EuCountry | null;
+  aircraft: Aircraft[];
+  engines: Engine[];
+  skills: Skill[];
+  workPermits: EuCountry[];
+  generalRestrictions: string | null;
+  /** v1.8 «Mínimo declarado» (T-111: shown to this organization only, previewed before the consent). */
+  minRate: { amount: number; unit: RateUnit } | null;
+  typeRatings: TypeRating[];
+  qualifications: PackQualification[];
+  /** Logbook entries marked «Seleccionable para expediente» (≤ 20, newest first, T-112). */
+  experience: PackExperience[];
+}
+
+/** `GET /applications?view=pack&applicationId=`: null = this application has no copy (withdrawn, or older). */
+export interface ApplicationPackResponse {
+  pack: CandidatePackCopy | null;
+}
+
+/** `GET /applications?view=pack-preview`: the caller's copy as it would be frozen now. */
+export interface CandidatePackPreviewResponse {
+  pack: CandidatePackCopy;
+}
+
 // --- In-app notices («Avisos internos», v2-18; SCOPE-2 LATER, migration 20261023800000) -------------
 
 /**
@@ -689,6 +739,8 @@ export interface AccountExport {
     privateDetails: ExportRecord | null;
     organizationBlocks: ExportRecord[];
     logbook: ExportRecord[];
+    /** The Candidate Pack copies frozen with own applications (`get_my_application_packs`, v2-15). */
+    candidatePacks: ExportRecord[];
   } | null;
   requirementsCreated: ExportRecord[];
   documents: ExportedDocument[];
