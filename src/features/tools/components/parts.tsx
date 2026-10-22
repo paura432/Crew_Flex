@@ -175,7 +175,7 @@ export function References({ children }: { children: ReactNode }) {
           href={UNIT_SOURCE}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-[#076e73] underline"
+          className="inline-flex items-center gap-1 text-[#076e73] underline pointer-coarse:min-h-11"
         >
           {t("nistLink")} <ExternalIcon size={13} />
         </a>

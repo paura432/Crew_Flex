@@ -197,7 +197,10 @@ export function RequirementForm({
                           checked={level !== undefined}
                           onChange={(e) => toggle(q.id, e.target.checked)}
                         />
-                        <label htmlFor={checkboxId} className="min-w-0 flex-1 text-sm">
+                        <label
+                          htmlFor={checkboxId}
+                          className="min-w-0 flex-1 text-sm pointer-coarse:py-3"
+                        >
                           <span className="font-mono font-semibold">{q.code}</span>{" "}
                           <span className="text-muted">{q.name}</span>
                         </label>

@@ -74,7 +74,10 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
         <NavDrawer
           label={t("menu")}
           brand={
-            <Link href="/app" className="flex items-center gap-2.5 text-white">
+            <Link
+              href="/app"
+              className="flex items-center gap-2.5 text-white pointer-coarse:min-h-11"
+            >
               <span
                 aria-hidden
                 className="grid size-9 place-items-center rounded-lg bg-accent font-black text-navy"
@@ -118,7 +121,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
           <form action={signOutAction}>
             <button
               type="submit"
-              className="mt-1 text-sm text-[#c4d3e1] hover:text-white hover:underline"
+              className="mt-1 text-sm text-[#c4d3e1] hover:text-white hover:underline pointer-coarse:min-h-11"
             >
               {t("signOut")}
             </button>

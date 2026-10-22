@@ -65,7 +65,7 @@ export function LocaleSwitcher({
             // aria-disabled, not disabled: a disabled button drops keyboard focus mid-switch.
             aria-disabled={pending}
             onClick={() => choose(value)}
-            className={`min-h-8 pointer-coarse:min-h-11 rounded-md border px-2 font-semibold uppercase aria-disabled:opacity-60 ${
+            className={`min-h-8 pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-md border px-2 font-semibold uppercase aria-disabled:opacity-60 ${
               onDark
                 ? "border-white/40 text-white aria-checked:border-white aria-checked:bg-white aria-checked:text-navy"
                 : "border-line bg-white text-muted aria-checked:border-navy aria-checked:bg-navy aria-checked:text-white"

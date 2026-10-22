@@ -27,7 +27,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
       )}
       <LoginForm next={typeof next === "string" ? next : undefined} />
       <p className="mt-4 text-sm">
-        <Link href="/forgot-password" className="font-semibold text-blue hover:underline">
+        <Link
+          href="/forgot-password"
+          className="inline-flex items-center font-semibold text-blue hover:underline pointer-coarse:min-h-11"
+        >
           {t("forgot")}
         </Link>
       </p>

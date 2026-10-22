@@ -73,7 +73,10 @@ export async function RequirementsList({ requirements }: { requirements: WorkReq
               <UrgencyChip urgency={r.urgency} />
               <RequirementStatusChip requirement={r} />
             </div>
-            <Link href={detailHref(r.id)} className="block font-semibold text-blue hover:underline">
+            <Link
+              href={detailHref(r.id)}
+              className="block font-semibold text-blue hover:underline pointer-coarse:py-2.5"
+            >
               {r.title}
             </Link>
             <p className="text-sm text-muted tabular-nums">

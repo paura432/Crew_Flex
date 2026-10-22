@@ -1154,11 +1154,38 @@ const touch = await browser.newContext({
   isMobile: true,
 });
 const tp = await touch.newPage();
+// Controls under 44 px (height, or width for the ES/EN radios). X-09 adds checkbox labels and links
+// that stand alone (a link inside a sentence is the WCAG 2.5.8 exception), the brand and ES/EN.
+const measureTouch = () =>
+  tp.evaluate(() =>
+    [
+      ...document.querySelectorAll(
+        "button, select, input:not([type=checkbox]):not([type=radio]):not([type=hidden]), nav a, a[aria-label], summary, label:has(input[type=checkbox]), label[for], main a, aside a",
+      ),
+    ]
+      .filter((el) => el.offsetParent !== null)
+      .filter(
+        (el) => el.tagName !== "A" || el.parentElement.textContent.trim() === el.textContent.trim(),
+      )
+      .filter((el) => {
+        const box = el.getBoundingClientRect();
+        return box.height < 43.5 || (el.getAttribute("role") === "radio" && box.width < 43.5);
+      })
+      .map(
+        (el) =>
+          `${location.pathname} ${el.tagName} «${(el.textContent || el.getAttribute("name") || "").trim().slice(0, 20)}» ${Math.round(el.getBoundingClientRect().width)}×${Math.round(el.getBoundingClientRect().height)}`,
+      ),
+  );
+const small = [];
+for (const path of ["/", "/login", "/forgot-password"]) {
+  await tp.goto(`${BASE}${path}`);
+  await tp.waitForLoadState("networkidle");
+  small.push(...(await measureTouch()));
+}
 await tp.goto(`${BASE}/login`);
 await tp.fill("#email", "delta@crewflex.test");
 await tp.fill("#password", "crewflex-local-only");
 await Promise.all([tp.waitForURL(/\/app/), tp.click("form button[type=submit]")]);
-const small = [];
 for (const path of [
   "/app/professional",
   "/app/professional/availability",
@@ -1168,27 +1195,33 @@ for (const path of [
 ]) {
   await tp.goto(`${BASE}${path}`);
   await tp.waitForLoadState("networkidle");
+  if (path === "/app/tools/convert") {
+    await tp.locator("label:has(input[type=checkbox])").first().click(); // range toggle
+    await tp.locator("summary").first().click(); // NIST link inside «Formula, sources and scope»
+  }
   await tp.getByRole("button", { name: "Menu" }).click(); // measure the nav links too
-  small.push(
-    ...(await tp.evaluate(() =>
-      [
-        ...document.querySelectorAll(
-          // + month arrows (labelled links) and disclosure summaries (W3-04).
-          "button, select, input:not([type=checkbox]):not([type=radio]):not([type=hidden]), nav a, a[aria-label], summary",
-        ),
-      ]
-        .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height < 43.5)
-        .map(
-          (el) =>
-            `${location.pathname} ${el.tagName} «${(el.textContent || el.getAttribute("name") || "").trim().slice(0, 20)}» ${Math.round(el.getBoundingClientRect().height)}px`,
-        ),
-    )),
-  );
+  small.push(...(await measureTouch()));
+}
+// A landscape tablet shows the desktop sidebar with its footer sign-out (X-09).
+await tp.setViewportSize({ width: 1024, height: 768 });
+await tp.goto(`${BASE}/app/professional`);
+await tp.waitForLoadState("networkidle");
+small.push(...(await measureTouch()));
+await touch.clearCookies();
+await tp.setViewportSize({ width: 390, height: 844 });
+await tp.goto(`${BASE}/login`);
+await tp.fill("#email", "admin.mro@crewflex.test");
+await tp.fill("#password", "crewflex-local-only");
+await Promise.all([tp.waitForURL(/\/app/), tp.click("form button[type=submit]")]);
+for (const path of ["/app/organization/requirements", "/app/organization/requirements/new"]) {
+  await tp.goto(`${BASE}${path}`);
+  await tp.waitForLoadState("networkidle");
+  small.push(...(await measureTouch()));
 }
 ok(
-  "25 touch targets ≥ 44 px on a touch screen (overview, availability, passport, converter, tools home, nav)",
+  "25 touch targets ≥ 44 px on a touch screen (landing, auth, professional, tools, requirements, nav, 1024 sidebar)",
   small.length === 0,
-  small.slice(0, 5).join(" | "),
+  small.slice(0, 6).join(" | "),
 );
 await touch.close();
 

@@ -143,7 +143,7 @@ export function CyclePlanner({
       )}
 
       <div className="mt-4 flex flex-col gap-2 text-sm">
-        <label className="flex items-start gap-2">
+        <label className="flex items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
           <input
             type="checkbox"
             className="mt-0.5 size-4"
@@ -157,7 +157,7 @@ export function CyclePlanner({
         <p id="cycle-publish-rest-hint" className="-mt-1 pl-6 text-xs text-muted">
           {t("publishRestHint")}
         </p>
-        <label className="flex items-start gap-2">
+        <label className="flex items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
           <input
             type="checkbox"
             className="mt-0.5 size-4"

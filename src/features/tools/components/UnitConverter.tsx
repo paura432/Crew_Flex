@@ -214,7 +214,7 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
 
           {RANGE_GROUPS.includes(group) && (
             <>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm pointer-coarse:min-h-11">
                 <input
                   type="checkbox"
                   className="size-[17px] shrink-0 accent-tool"
