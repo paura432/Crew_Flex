@@ -179,3 +179,19 @@ qualifications and availability, T-08). One application covers the requirement's
 the explicit share consent of the form (required by the database too and recorded as a flag in the audit row); it reserves nothing in the calendar, and nothing is shared beyond the
 candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Availability edits after
 a confirmation are not blocked (T-13). IMPLEMENTED (local).
+
+## BR-16 Daily learning challenge (SCOPE-2, v1.8 default) — `src/domain/learning.ts`
+
+Tools only: a learning streak or medal is never a qualification, never shown to an organization and never read by
+matching (BR-3). The challenge of a day is **5** (default) **or 10** questions from a fixed editorial bank of 158
+(`src/features/tools/learning/questions.ts`, catalogue 2026-10-13.1, pending formal review), chosen as v1.8
+`progress.js` does: each group (Fundamentos, ATA, Inglés, Siglas) shuffled by a 32-bit FNV-1a hash of `date + id`
+and interleaved in that order, so the first 5 of the 10 are the 5; each question shows its answer and 3 distinct
+distractors of its group, ordered by hash (parity test on three dates). The **day** is the calendar day in
+`Europe/Madrid` (v1.8 default, TOOL-07 #3) — an exception to BR-10, which governs operational times only. A day
+counts once every question is answered, right or wrong; a completed day cannot be repeated, and a challenge left
+open when the day changes is closed (the page says so) and does not count. Streaks: **current** = consecutive
+completed days up to today (today not yet done does not break it until tomorrow), **best** = longest run,
+**total** = completed days up to today; medals at best ≥ 1, 7 and 30 days. Progress stays in the browser
+(`localStorage` key `crewflex-learning-<user id>`, the authenticated user only), with question ids and chosen
+answers only. IMPLEMENTED (local).

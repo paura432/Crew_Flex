@@ -1,0 +1,238 @@
+{
+  "2026-10-22": [
+    {
+      "id": "fact-9",
+      "options": [
+        "A qué configuración o aeronave se aplica",
+        "No, es un logro de aprendizaje",
+        "Identificar piezas y referencias",
+        "Aircraft Maintenance Manual"
+      ]
+    },
+    {
+      "id": "ata-80",
+      "options": ["Agua y residuos", "Oxígeno", "Neumático", "Arranque"]
+    },
+    {
+      "id": "term-30",
+      "options": [
+        "Sello / junta / sellar",
+        "Sustituido por una revisión posterior",
+        "Revisión",
+        "Precaución"
+      ]
+    },
+    {
+      "id": "term-102",
+      "options": [
+        "Aircraft Maintenance Manual",
+        "Estimated Time of Arrival / Departure",
+        "Coordinated Universal Time",
+        "Line Replaceable Unit"
+      ]
+    },
+    {
+      "id": "fact-8",
+      "options": [
+        "No, es un logro de aprendizaje",
+        "Identificar piezas y referencias",
+        "Coordinated Universal Time",
+        "A qué configuración o aeronave se aplica"
+      ]
+    },
+    {
+      "id": "ata-78",
+      "options": ["Escape", "Energía hidráulica", "Combustible", "Acondicionamiento de aire"]
+    },
+    {
+      "id": "term-31",
+      "options": ["Rozamiento con desgaste", "Continuidad", "Junta tórica", "Aislamiento"]
+    },
+    {
+      "id": "term-100",
+      "options": [
+        "Coordinated Universal Time",
+        "Line Replaceable Unit",
+        "Forward / Aft",
+        "Estimated Time of Arrival / Departure"
+      ]
+    },
+    {
+      "id": "fact-3",
+      "options": [
+        "Aircraft Maintenance Manual",
+        "A qué configuración o aeronave se aplica",
+        "Una unidad individual",
+        "Identificar piezas y referencias"
+      ]
+    },
+    {
+      "id": "ata-09",
+      "options": [
+        "Remolque y rodaje",
+        "Comunicaciones",
+        "Acondicionamiento de aire",
+        "Prácticas generales de célula"
+      ]
+    }
+  ],
+  "2027-01-01": [
+    {
+      "id": "fact-1",
+      "options": [
+        "Coordinated Universal Time",
+        "Una unidad individual",
+        "Aircraft Maintenance Manual",
+        "No, es un logro de aprendizaje"
+      ]
+    },
+    {
+      "id": "ata-38",
+      "options": [
+        "Vuelo automático",
+        "Comunicaciones",
+        "Acondicionamiento de aire",
+        "Agua y residuos"
+      ]
+    },
+    {
+      "id": "term-18",
+      "options": ["Asegurarse de", "Fuga", "En sentido horario", "Verificar"]
+    },
+    {
+      "id": "term-95",
+      "options": [
+        "Left Hand / Right Hand",
+        "Structural Repair Manual",
+        "Clockwise / Counterclockwise",
+        "Illustrated Parts Catalog"
+      ]
+    },
+    {
+      "id": "fact-0",
+      "options": [
+        "Identificar piezas y referencias",
+        "A qué configuración o aeronave se aplica",
+        "Una unidad individual",
+        "Aircraft Maintenance Manual"
+      ]
+    },
+    {
+      "id": "ata-29",
+      "options": [
+        "Marcas e identificación",
+        "Estacionamiento y almacenamiento",
+        "Servicios",
+        "Energía hidráulica"
+      ]
+    },
+    {
+      "id": "term-61",
+      "options": [
+        "Sustituido por una revisión posterior",
+        "Retirar combustible",
+        "Comprobar",
+        "Probar / prueba"
+      ]
+    },
+    {
+      "id": "term-96",
+      "options": [
+        "Maintenance, Repair and Overhaul",
+        "Auxiliary Power Unit",
+        "Ground Support Equipment",
+        "Forward / Aft"
+      ]
+    },
+    {
+      "id": "fact-3",
+      "options": [
+        "A qué configuración o aeronave se aplica",
+        "Identificar piezas y referencias",
+        "Una unidad individual",
+        "Aircraft Maintenance Manual"
+      ]
+    },
+    {
+      "id": "ata-28",
+      "options": ["Fuselaje", "Energía hidráulica", "Prácticas de estructuras", "Combustible"]
+    }
+  ],
+  "2026-03-29": [
+    {
+      "id": "fact-4",
+      "options": [
+        "Coordinated Universal Time",
+        "Aircraft Maintenance Manual",
+        "No, es un logro de aprendizaje",
+        "La versión vigente y la sustituida"
+      ]
+    },
+    {
+      "id": "ata-71",
+      "options": ["Arranque", "Puertas", "Planta de potencia", "Fuselaje"]
+    },
+    {
+      "id": "term-13",
+      "options": [
+        "Precaución",
+        "Revisión",
+        "En sentido antihorario",
+        "Sustituido por una revisión posterior"
+      ]
+    },
+    {
+      "id": "term-75",
+      "options": [
+        "Structural Repair Manual",
+        "Service Bulletin",
+        "Illustrated Parts Catalog",
+        "Aircraft Maintenance Manual"
+      ]
+    },
+    {
+      "id": "fact-5",
+      "options": [
+        "Una unidad individual",
+        "Identificar piezas y referencias",
+        "Aircraft Maintenance Manual",
+        "Un factor de 12"
+      ]
+    },
+    {
+      "id": "ata-70",
+      "options": ["Prácticas de motor", "Puertas", "Góndolas y pilones", "Fuselaje"]
+    },
+    {
+      "id": "term-63",
+      "options": ["Perno / tornillo", "Precaución", "Apto para servicio", "Elemento de fijación"]
+    },
+    {
+      "id": "term-66",
+      "options": [
+        "Fault Isolation Manual",
+        "Master Minimum Equipment List",
+        "Configuration Deviation List",
+        "Illustrated Parts Catalog"
+      ]
+    },
+    {
+      "id": "fact-6",
+      "options": [
+        "A qué configuración o aeronave se aplica",
+        "Identificar piezas y referencias",
+        "Volumen multiplicado por densidad",
+        "Aircraft Maintenance Manual"
+      ]
+    },
+    {
+      "id": "ata-73",
+      "options": [
+        "Estacionamiento y almacenamiento",
+        "Combustible y control de motor",
+        "Servicios",
+        "Marcas e identificación"
+      ]
+    }
+  ]
+}
