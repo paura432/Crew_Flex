@@ -308,7 +308,29 @@
     },
     "requirement": {
       "maxDays": "A requirement can last at most 366 days",
-      "id": "A valid requirement id is required"
+      "id": "A valid requirement id is required",
+      "country": "Select a European Union country.",
+      "timeZone": "Invalid time zone.",
+      "description": "The description can have at most 4000 characters",
+      "shifts": {
+        "hours": "Base hours must be between 0.25 and 24",
+        "endBeforeStart": "Each shift must end after it starts",
+        "tooLong": "Split multi-day work into shifts of up to 24 hours.",
+        "hoursExceed": "The base hours exceed the length of the interval.",
+        "overlap": "Shifts cannot overlap.",
+        "sameLocalDay": "Only one shift per local start date is allowed.",
+        "tooMany": "At most 366 shifts.",
+        "envelope": "The period must run from the start of the first shift to the end of the last one"
+      },
+      "conditions": {
+        "hourlyRate": "Hourly rate: invalid value.",
+        "overtimeRate": "Overtime: invalid value.",
+        "perDiem": "Per diem: invalid value.",
+        "shiftHours": "Hours per shift: invalid value.",
+        "contractType": "Choose a contract type",
+        "mobilization": "Maximum mobilisation must be a whole number from 1 to 168 hours",
+        "arrival": "Incorporation must have between 1 and 160 characters"
+      }
     },
     "qualifications": {
       "min": "Add at least one qualification",

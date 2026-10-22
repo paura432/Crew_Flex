@@ -4,7 +4,9 @@ import {
   createWorkRequirementInput,
   evaluateRequirementInput,
   listWorkRequirementsQuery,
+  patchRequirementInput,
   updateWorkRequirementInput,
+  viableCandidatesInput,
 } from "./work-requirement.ts";
 
 const B11 = "11111111-1111-4111-8111-000000000001";
@@ -165,5 +167,132 @@ describe("updateWorkRequirementInput (M05 edit, owner 2026-10-22)", () => {
       { status: "open" },
     ])
       expect(updateWorkRequirementInput.safeParse({ ...edit, ...extra }).success).toBe(false);
+  });
+
+  it("a draft is saved incomplete; publishing it applies every creation rule", () => {
+    const draft = { ...edit, qualifications: [], startsAt: "2026-10-14T12:00:00Z" };
+    expect(errors({ ...draft, intent: "draft" })).toEqual({});
+    expect(errors({ ...draft, intent: "publish" })).toMatchObject({
+      startsAt: "v.start.future",
+      qualifications: "v.qualifications.min",
+    });
+  });
+});
+
+describe("requirement builder terms (v2-09/10/12/14)", () => {
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+  const nov = [10, 11, 12].map((d) => ({
+    startsAt: `2026-11-${d}T08:00:00.000Z`,
+    endsAt: `2026-11-${d}T16:00:00.000Z`,
+    baseHours: 8,
+  }));
+  const withShifts = {
+    ...valid,
+    startsAt: "2026-11-10T08:00:00.000Z",
+    endsAt: "2026-11-12T16:00:00.000Z",
+    country: "ES",
+    timeZone: "Europe/Madrid",
+    shifts: nov,
+  };
+
+  it("accepts the v2-09 example and the v1.8 default conditions", () => {
+    expect(
+      errorsFor({
+        ...withShifts,
+        description: "Line support",
+        conditions: {
+          hourlyRate: 50,
+          overtimeRate: 60,
+          perDiem: 30,
+          shiftHours: 8,
+          contractType: "contractor",
+          budgetMandatory: false,
+          maxMobilizationHours: 48,
+          arrival: "Antes del inicio del turno",
+          flights: true,
+          accommodation: true,
+          localTransport: true,
+          meals: false,
+          ownTools: false,
+        },
+      }),
+    ).toEqual({});
+  });
+
+  it("the period must be the envelope of the shifts", () => {
+    expect(errorsFor({ ...withShifts, endsAt: "2026-11-13T16:00:00.000Z" }).shifts).toBe(
+      "v.requirement.shifts.envelope",
+    );
+  });
+
+  it("an overlap and two shifts on one local date are refused with the v1.8 reasons", () => {
+    const overlap = [
+      nov[0]!,
+      {
+        ...nov[0]!,
+        startsAt: "2026-11-10T15:00:00.000Z",
+        endsAt: "2026-11-10T20:00:00.000Z",
+        baseHours: 5,
+      },
+    ];
+    expect(
+      errorsFor({ ...withShifts, endsAt: "2026-11-10T20:00:00.000Z", shifts: overlap }).shifts,
+    ).toBe("v.requirement.shifts.overlap");
+    const sameDay = [
+      nov[0]!,
+      { startsAt: "2026-11-10T17:00:00.000Z", endsAt: "2026-11-10T20:00:00.000Z", baseHours: 3 },
+    ];
+    expect(
+      errorsFor({ ...withShifts, endsAt: "2026-11-10T20:00:00.000Z", shifts: sameDay }).shifts,
+    ).toBe("v.requirement.shifts.sameLocalDay");
+  });
+
+  it("refuses a country outside the EU, an unknown zone, 4001 characters and commission fields", () => {
+    expect(errorsFor({ ...withShifts, country: "GB" }).country).toBe("v.requirement.country");
+    expect(errorsFor({ ...withShifts, timeZone: "America/New_York" }).timeZone).toBe(
+      "v.requirement.timeZone",
+    );
+    expect(errorsFor({ ...withShifts, description: "x".repeat(4001) }).description).toBe(
+      "v.requirement.description",
+    );
+    expect(errorsFor({ ...withShifts, conditions: { commissionRate: 0.023 } })).toHaveProperty(
+      "conditions",
+    );
+    expect(errorsFor({ ...withShifts, conditions: { hourlyRate: 0 } }).conditions).toBe(
+      "v.requirement.conditions.hourlyRate",
+    );
+  });
+
+  it("the live count takes a period, an urgency and 1–20 hard qualifications only", () => {
+    const ok = {
+      organizationId: valid.organizationId,
+      startsAt: "2026-11-10T08:00:00.000Z",
+      endsAt: "2026-11-12T16:00:00.000Z",
+      urgency: "planned",
+      hardQualificationTypeIds: [B11],
+    };
+    expect(viableCandidatesInput.safeParse(ok).success).toBe(true);
+    expect(viableCandidatesInput.safeParse({ ...ok, hardQualificationTypeIds: [] }).success).toBe(
+      false,
+    );
+    expect(viableCandidatesInput.safeParse({ ...ok, endsAt: ok.startsAt }).success).toBe(false);
+    expect(viableCandidatesInput.safeParse({ ...ok, profileId: B11 }).success).toBe(false);
+  });
+
+  it("PATCH takes a status change or the archive, nothing else; the list filters archived ones", () => {
+    const id = "33333333-3333-4333-8333-000000000001";
+    expect(patchRequirementInput.safeParse({ id, status: "closed" }).success).toBe(true);
+    expect(patchRequirementInput.safeParse({ id, archive: true }).success).toBe(true);
+    expect(patchRequirementInput.safeParse({ id, archive: false }).success).toBe(false);
+    expect(patchRequirementInput.safeParse({ id, status: "archived" }).success).toBe(false);
+    expect(listWorkRequirementsQuery.parse({}).archived).toBe("include");
+    expect(listWorkRequirementsQuery.safeParse({ archived: "only" }).success).toBe(true);
+    expect(listWorkRequirementsQuery.safeParse({ archived: "yes" }).success).toBe(false);
   });
 });

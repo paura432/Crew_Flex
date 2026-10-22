@@ -4045,6 +4045,12 @@ describe("U. opportunities for every professional (M07, D-12, migration 20261022
           "title",
           "total",
           "urgency",
+          // requirement builder terms (20261023600000; tests/db/requirement-builder.test.ts)
+          "conditions",
+          "country",
+          "description",
+          "shifts",
+          "time_zone",
         ].sort(),
       );
       expect(rows[0]!.organization_name).toBe("Demo MRO Madrid");
@@ -4382,6 +4388,12 @@ describe("V. applications: the D-06 state machine in the database (migration 202
           "startsAt",
           "title",
           "urgency",
+          // requirement builder terms (20261023600000), frozen per version too
+          "conditions",
+          "country",
+          "description",
+          "shifts",
+          "timeZone",
         ].sort(),
       );
       await step(tx, SEED.delta, id, "accepted", { proposalId: v2.proposal_id });

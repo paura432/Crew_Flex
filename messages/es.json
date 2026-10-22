@@ -308,7 +308,29 @@
     },
     "requirement": {
       "maxDays": "Una necesidad puede durar como máximo 366 días",
-      "id": "Se necesita un identificador de necesidad válido"
+      "id": "Se necesita un identificador de necesidad válido",
+      "country": "Selecciona un país de la Unión Europea.",
+      "timeZone": "Zona horaria no válida.",
+      "description": "La descripción admite como máximo 4000 caracteres",
+      "shifts": {
+        "hours": "Las horas base deben estar entre 0,25 y 24",
+        "endBeforeStart": "Cada jornada debe terminar después de empezar",
+        "tooLong": "Divide los trabajos de varios días en jornadas de hasta 24 horas.",
+        "hoursExceed": "Las horas base superan la duración del intervalo.",
+        "overlap": "Las jornadas no pueden solaparse.",
+        "sameLocalDay": "Solo se admite una jornada por fecha local de inicio.",
+        "tooMany": "Máximo 366 jornadas.",
+        "envelope": "El periodo debe ir del inicio de la primera jornada al fin de la última"
+      },
+      "conditions": {
+        "hourlyRate": "Tarifa por hora: valor no válido.",
+        "overtimeRate": "Hora extra: valor no válido.",
+        "perDiem": "Dietas: valor no válido.",
+        "shiftHours": "Horas por jornada: valor no válido.",
+        "contractType": "Elige un tipo de contrato",
+        "mobilization": "La movilización máxima debe ser un número entero de 1 a 168 horas",
+        "arrival": "La incorporación debe tener entre 1 y 160 caracteres"
+      }
     },
     "qualifications": {
       "min": "Añade al menos una cualificación",
