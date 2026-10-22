@@ -45,14 +45,15 @@ describe("password recovery inputs", () => {
   });
 
   it("reset: same rules as sign-up and both entries must match", () => {
+    // Q-01 (owner, 2026-10-22): 12 characters is the boundary (was 10)
     expect(
-      resetPasswordInput.safeParse({ password: "0123456789", confirm: "0123456789" }).success,
+      resetPasswordInput.safeParse({ password: "0123456789ab", confirm: "0123456789ab" }).success,
     ).toBe(true);
-    const short = resetPasswordInput.safeParse({ password: "short", confirm: "short" });
+    const short = resetPasswordInput.safeParse({ password: "0123456789a", confirm: "0123456789a" });
     expect(short.error?.issues[0]?.message).toBe("v.password.min");
     const mismatch = resetPasswordInput.safeParse({
-      password: "0123456789",
-      confirm: "0123456780",
+      password: "0123456789ab",
+      confirm: "0123456789ac",
     });
     expect(mismatch.error?.issues.map((i) => [i.path.join("."), i.message])).toEqual([
       ["confirm", "v.password.mismatch"],

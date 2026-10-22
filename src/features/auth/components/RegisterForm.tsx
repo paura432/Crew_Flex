@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { resolveFieldErrors } from "@/i18n/validation";
-import { ORGANIZATION_TYPES } from "@/lib/validation/auth";
+import { ORGANIZATION_TYPES, PASSWORD_MAX, PASSWORD_MIN } from "@/lib/validation/auth";
 import { signUpAction } from "../actions";
 import { initialAuthState } from "../state";
 import { FormAlert } from "./FormAlert";
@@ -36,6 +36,9 @@ export function RegisterForm() {
         autoComplete={props.autoComplete}
         defaultValue={props.type === "password" ? undefined : values[id]}
         required
+        // Native hint for password managers; the server action validates (noValidate form).
+        minLength={props.type === "password" ? PASSWORD_MIN : undefined}
+        maxLength={props.type === "password" ? PASSWORD_MAX : undefined}
         className={controlClass}
         aria-invalid={Boolean(errors[id])}
         aria-describedby={describedBy(id, errors[id], props.hint)}

@@ -126,7 +126,7 @@
       "yourName": "Tu nombre",
       "email": "Correo electrónico",
       "password": "Contraseña",
-      "passwordHint": "Al menos 10 caracteres.",
+      "passwordHint": "Al menos 12 caracteres.",
       "organizationName": "Nombre de la organización",
       "organizationType": "Tipo de organización",
       "country": "País (código ISO)",
@@ -165,7 +165,7 @@
       "resetLead": "Al guardarla se cerrarán todas tus sesiones, también esta.",
       "newPassword": "Contraseña nueva",
       "confirmPassword": "Repite la contraseña nueva",
-      "passwordHint": "Al menos 10 caracteres.",
+      "passwordHint": "Al menos 12 caracteres.",
       "save": "Guardar contraseña",
       "saving": "Guardando…",
       "noSession": "Esta página necesita un enlace de restablecimiento válido.",
@@ -228,7 +228,7 @@
     },
     "password": {
       "required": "Introduce tu contraseña",
-      "min": "Usa al menos 10 caracteres",
+      "min": "Usa al menos 12 caracteres",
       "max": "Usa como máximo 72 caracteres",
       "mismatch": "Las contraseñas no coinciden."
     },

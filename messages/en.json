@@ -126,7 +126,7 @@
       "yourName": "Your name",
       "email": "Email",
       "password": "Password",
-      "passwordHint": "At least 10 characters.",
+      "passwordHint": "At least 12 characters.",
       "organizationName": "Organization name",
       "organizationType": "Organization type",
       "country": "Country (ISO code)",
@@ -165,7 +165,7 @@
       "resetLead": "Saving it signs out all your sessions, this one included.",
       "newPassword": "New password",
       "confirmPassword": "Repeat the new password",
-      "passwordHint": "At least 10 characters.",
+      "passwordHint": "At least 12 characters.",
       "save": "Save new password",
       "saving": "Saving…",
       "noSession": "This page needs a valid reset link.",
@@ -228,7 +228,7 @@
     },
     "password": {
       "required": "Enter your password",
-      "min": "Use at least 10 characters",
+      "min": "Use at least 12 characters",
       "max": "Use at most 72 characters",
       "mismatch": "The passwords do not match."
     },
