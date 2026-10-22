@@ -1,5 +1,6 @@
 "use client";
 
+import { callAction } from "@/components/ui/Notice";
 import { useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
@@ -69,7 +70,9 @@ export function RequirementForm({
     }
     setErrors({});
     startTransition(async () => {
-      const result = await createRequirementAction(parsed.data, idempotency.keyFor(parsed.data));
+      const result = await callAction(() =>
+        createRequirementAction(parsed.data, idempotency.keyFor(parsed.data)),
+      );
       // On success the action redirects; we only get here on failure.
       if (result.status === "error") {
         setErrors(result.fieldErrors ?? {});

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { useRovingRadio } from "@/components/ui/radio-group";
 import {
@@ -59,7 +59,7 @@ export function ProfileForm({ profile }: { profile: ProfessionalProfile & { upda
     }
     setErrors({});
     startTransition(async () => {
-      const result = await updateProfileAction(parsed.data);
+      const result = await callAction(() => updateProfileAction(parsed.data));
       if (result.ok) {
         setNotice({ tone: "ok", text: t("saved") });
       } else {

@@ -213,6 +213,7 @@
     "action": {
       "sessionExpired": "Your session expired. Sign in again.",
       "unreachable": "The service could not be reached. Nothing was saved — retry.",
+      "offline": "The connection was lost. Your changes are still here — check your connection and retry.",
       "gone": "This item no longer exists. Reload the page.",
       "conflict": "You already declared this qualification. Edit the existing one instead."
     }

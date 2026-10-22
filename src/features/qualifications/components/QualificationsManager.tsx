@@ -5,7 +5,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { EXPIRY_TONE, StatusChip, type Tone } from "@/components/ui/StatusChip";
 import { documentExpiryState } from "@/domain/documents";
@@ -82,7 +82,7 @@ export function QualificationsManager({
   function run(label: string, task: () => Promise<ProfileActionResult>) {
     setNotice(null);
     startTransition(async () => {
-      const result = await task();
+      const result = await callAction(task);
       if (result.ok) {
         idempotency.release();
         setNotice({ tone: "ok", text: label });

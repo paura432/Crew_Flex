@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { Metric } from "@/components/ui/Metric";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { AvailabilityStatus } from "@/domain/availability";
@@ -120,7 +120,7 @@ export function AvailabilityManager({
   ) {
     setNotice(null);
     startTransition(async () => {
-      const result = await task();
+      const result = await callAction(task);
       if (result.ok) {
         idempotency.release();
         onOk?.();

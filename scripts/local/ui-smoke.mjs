@@ -293,6 +293,27 @@ const before = await page.locator("li:has(button:has-text('Delete'))").count();
 await page.fill("#startsAt", "2031-05-10T08:00");
 await page.fill("#endsAt", "2031-05-12T08:00");
 await page.selectOption("#status", "available");
+// 2h (X-02): the first save fails at the network → alert, page alive, form keeps the draft.
+const dropAction = (route) =>
+  route.request().method() === "POST" && route.request().headers()["next-action"]
+    ? route.abort("internetdisconnected")
+    : route.continue();
+await page.route("**/app/professional/availability", dropAction);
+await page.click("form button[type=submit]:has-text('Add')");
+const offlineAlert = await page
+  .getByRole("alert")
+  .filter({ hasText: "connection was lost" })
+  .waitFor({ timeout: 15000 })
+  .then(() => true)
+  .catch(() => false);
+ok(
+  "2h save without network: alert, no error page, draft kept",
+  offlineAlert &&
+    (await page.locator("#startsAt").inputValue()) === "2031-05-10T08:00" &&
+    !/could not be displayed/i.test(await page.locator("body").innerText()),
+  "",
+);
+await page.unroute("**/app/professional/availability", dropAction);
 await page.click("form button[type=submit]:has-text('Add')");
 await page.waitForTimeout(2500);
 let after = await page.locator("li:has(button:has-text('Delete'))").count();

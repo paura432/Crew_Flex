@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { closeRequirementAction } from "../actions";
 
 /** V1.8 `job.status` → closed, with an explicit second step because it cannot be undone. */
@@ -16,7 +16,7 @@ export function CloseRequirement({ id }: { id: string }) {
 
   const close = () =>
     startTransition(async () => {
-      const result = await closeRequirementAction(id);
+      const result = await callAction(() => closeRequirementAction(id));
       setConfirming(false);
       // Success re-renders the page as closed (its note replaces this component).
       if (!result.ok) setNotice(actionErrorCopy(tRoot, result));

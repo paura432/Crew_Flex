@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { EXPIRY_TONE, StatusChip } from "@/components/ui/StatusChip";
 import {
@@ -108,7 +108,7 @@ export function DocumentWallet({
         idempotency.release();
         setFormKey((k) => k + 1);
         setNotice({ tone: "ok", text: t("uploaded") });
-        await refreshDocumentsAction();
+        await callAction(refreshDocumentsAction);
         router.refresh();
         return;
       }
@@ -129,7 +129,7 @@ export function DocumentWallet({
     // Opened before the await so popup blockers allow it; the link is valid for 60 seconds.
     const tab = window.open("", "_blank");
     startTransition(async () => {
-      const result = await documentUrlAction(id);
+      const result = await callAction(() => documentUrlAction(id));
       if (result.ok && result.data && tab) {
         tab.opener = null;
         tab.location.href = result.data;
@@ -155,7 +155,7 @@ export function DocumentWallet({
     }
     setErrors({});
     startTransition(async () => {
-      const result = await updateDocumentAction(document.id, parsed.data);
+      const result = await callAction(() => updateDocumentAction(document.id, parsed.data));
       if (result.ok) {
         setEditing(null);
         setNotice({ tone: "ok", text: t("updated") });
@@ -168,7 +168,7 @@ export function DocumentWallet({
 
   function onDelete(id: string) {
     startTransition(async () => {
-      const result = await deleteDocumentAction(id);
+      const result = await callAction(() => deleteDocumentAction(id));
       setConfirmDelete(null);
       setNotice(result.ok ? { tone: "ok", text: t("deleted") } : actionErrorCopy(tRoot, result));
     });

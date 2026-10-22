@@ -213,6 +213,7 @@
     "action": {
       "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
       "unreachable": "No se ha podido contactar con el servicio. No se ha guardado nada; reintenta.",
+      "offline": "Se ha perdido la conexión. Tus cambios siguen aquí; comprueba la conexión y reintenta.",
       "gone": "Este elemento ya no existe. Recarga la página.",
       "conflict": "Ya has declarado esta cualificación. Edita la existente."
     }

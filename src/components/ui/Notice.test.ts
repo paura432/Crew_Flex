@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MessageResolver } from "@/i18n/validation";
-import { actionErrorCopy } from "./Notice";
+import { redirect } from "next/navigation";
+import { actionErrorCopy, callAction } from "./Notice";
 
 // Echo translator: the text says which catalog key was chosen.
 const t: MessageResolver = (key: string) => `«${key}»`;
@@ -29,5 +30,18 @@ describe("actionErrorCopy", () => {
       "«api.action.unreachable»",
     );
     expect(copy("UNAUTHORIZED", "Sign in to continue.")).toBe("«api.action.sessionExpired»");
+  });
+});
+
+describe("callAction (X-02)", () => {
+  it("a failed request becomes NETWORK_ERROR with the «offline» copy instead of throwing", async () => {
+    const result = await callAction(() => Promise.reject(new TypeError("Failed to fetch")));
+    expect(result).toMatchObject({ ok: false, status: "error", code: "NETWORK_ERROR" });
+    expect(actionErrorCopy(t, result).text).toBe("«api.action.offline»");
+  });
+
+  it("passes results through and lets Next's redirect propagate", async () => {
+    expect(await callAction(async () => ({ ok: true }))).toEqual({ ok: true });
+    await expect(callAction(async () => redirect("/app"))).rejects.toThrow("NEXT_REDIRECT");
   });
 });

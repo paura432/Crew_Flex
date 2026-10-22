@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { useRovingRadio } from "@/components/ui/radio-group";
 import { LOCALES, type Locale } from "@/i18n/config";
 import { setLocaleAction } from "../actions";
@@ -37,7 +37,7 @@ export function LocaleSwitcher({
     setError(null);
     setSaved(false);
     startTransition(async () => {
-      const result = await setLocaleAction({ locale: next });
+      const result = await callAction(() => setLocaleAction({ locale: next }));
       if (result.ok) {
         router.refresh();
         if (variant === "cards") setSaved(true);

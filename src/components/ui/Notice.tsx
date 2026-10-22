@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { isValidationKey, translateKey, type MessageResolver } from "@/i18n/validation";
 
 // Codes with an `api.<CODE>.description` entry in the catalog.
@@ -43,6 +44,30 @@ export function Notice({
   );
 }
 
+/** What a server action call returns when the request itself failed (offline, dropped connection). */
+const OFFLINE = {
+  ok: false,
+  status: "error",
+  code: "NETWORK_ERROR",
+  message: "api.action.offline",
+  fieldErrors: undefined,
+  requestId: undefined,
+} as const;
+
+/**
+ * Calls a server action without ever throwing (X-02): a failed request becomes `NETWORK_ERROR` with
+ * the «offline» copy instead of reaching the error boundary, so the page and the user's draft stay.
+ * Next's own redirect/notFound errors still propagate. Both result shapes (`ok` and `status`) match.
+ */
+export async function callAction<T>(task: () => Promise<T>): Promise<T | typeof OFFLINE> {
+  try {
+    return await task();
+  } catch (error) {
+    unstable_rethrow(error);
+    return OFFLINE;
+  }
+}
+
 /**
  * User-facing copy for the error codes a user can hit while saving their own data.
  * `t` is a root translator (full keys); server messages that are `v.*` keys are resolved too. A raw
@@ -58,7 +83,7 @@ export function actionErrorCopy(
     result.code === "UNAUTHORIZED"
       ? k("api.action.sessionExpired")
       : result.code === "NETWORK_ERROR"
-        ? k("api.action.unreachable")
+        ? k(result.message === OFFLINE.message ? OFFLINE.message : "api.action.unreachable")
         : result.code === "NOT_FOUND"
           ? k("api.action.gone")
           : result.code === "CONFLICT"

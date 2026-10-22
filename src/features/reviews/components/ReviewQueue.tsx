@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";
@@ -43,12 +43,14 @@ function ReviewCard({
     }
     setErrors({});
     startTransition(async () => {
-      const result = await reviewQualificationAction({
-        qualificationId: item.id,
-        decision,
-        note,
-        expectedUpdatedAt: item.updatedAt,
-      });
+      const result = await callAction(() =>
+        reviewQualificationAction({
+          qualificationId: item.id,
+          decision,
+          note,
+          expectedUpdatedAt: item.updatedAt,
+        }),
+      );
       if (result.ok) {
         onDecided({
           tone: "ok",
