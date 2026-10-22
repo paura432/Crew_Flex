@@ -14,7 +14,8 @@ import {
 } from "@/domain/applications";
 import { useIdempotencyKey } from "@/lib/idempotency";
 import { transitionApplicationAction } from "../actions";
-import { applicationErrorCopy, transitionLabelKey } from "../view";
+import { applicationErrorCopy } from "../error-copy";
+import { transitionLabelKey } from "../view";
 
 /**
  * The buttons of one application for one side (D-06): which ones come from the domain table, the

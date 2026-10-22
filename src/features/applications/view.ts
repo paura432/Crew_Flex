@@ -1,12 +1,6 @@
-// Presentation decisions for applications (M08), kept out of JSX. Pure; client-safe.
-import { actionErrorCopy, type NoticeState } from "@/components/ui/Notice";
+// Presentation decisions for applications (M08), kept out of JSX. Pure; server- and client-safe.
 import type { Tone } from "@/components/ui/StatusChip";
-import type {
-  ApplicationConflict,
-  ApplicationStatus,
-  ApplicationTransition,
-} from "@/domain/applications";
-import { translateKey, type MessageResolver } from "@/i18n/validation";
+import type { ApplicationStatus, ApplicationTransition } from "@/domain/applications";
 
 export const APPLICATION_TONE: Record<ApplicationStatus, Tone> = {
   received: "info",
@@ -33,17 +27,4 @@ export function transitionLabelKey(t: Pick<ApplicationTransition, "from" | "to">
   if (t.to === "cancelled") return t.from === "confirmed" ? "cancelAssignment" : "cancelAccepted";
   if (t.to === "received") throw new Error("no transition into received");
   return t.to;
-}
-
-/** A refused transition names the server check (409 + reason); anything else as every form does. */
-export function applicationErrorCopy(
-  t: MessageResolver,
-  result: { code: string; message: string; reason?: ApplicationConflict; requestId?: string },
-): NoticeState {
-  if (result.code === "CONFLICT") {
-    // Without a reason: the optimistic version check (another tab or the other party moved first).
-    const key = result.reason ? `applications.conflict.${result.reason}` : "applications.stale";
-    return { tone: "danger", text: translateKey(t, key), requestId: result.requestId };
-  }
-  return actionErrorCopy(t, result);
 }

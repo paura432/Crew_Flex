@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { APPLICATION_TRANSITIONS } from "@/domain/applications";
-import { applicationErrorCopy, transitionLabelKey } from "./view";
+import { applicationErrorCopy } from "./error-copy";
+import { transitionLabelKey } from "./view";
 
 describe("applications view helpers", () => {
   it("one label per transition; re-proposal and the two cancellations are told apart", () => {

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import type { ApplicationStatus, ApplyBlocker } from "@/domain/applications";
 import { applyAction } from "@/features/applications/actions";
-import { applicationErrorCopy } from "@/features/applications/view";
+import { applicationErrorCopy } from "@/features/applications/error-copy";
 import { useIdempotencyKey } from "@/lib/idempotency";
 
 /**
