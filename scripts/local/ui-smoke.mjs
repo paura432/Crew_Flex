@@ -3126,6 +3126,140 @@ await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
   body: { id: v18Id, status: "closed" },
 });
 
+// PKG outreach (N-10, v2-17; migrations 20261024400000…400200): Delta's «Opportunity notices» in Settings
+// (v1.8 errors, then a valid save), «Distribute Urgent / AOG notice» on an AOG need (ICU plural result, the
+// button gone, the count kept), and Delta's «AOG: {title}» notice leading to the opportunity. Setup and
+// restore through the local API: the need is closed, the window deleted and Delta's preferences put back
+// (never saved before = the defaults, which reach nobody).
+const outreachTitle = `Local UI check · outreach ${Date.now()}`;
+const outreachBefore = (await asSeedUser("delta@crewflex.test", "notice-preferences")).data
+  .preferences;
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/settings`);
+await page.waitForLoadState("networkidle");
+const prefsPanel = page.locator("#notice-preferences");
+const prefsSave = prefsPanel.getByRole("button", { name: "Save notice preferences" });
+await prefsPanel.getByLabel("IANA time zone for notices").fill("Mars/Olympus");
+await prefsPanel.getByLabel("Quiet from (optional)").fill("22:00");
+await prefsPanel.getByLabel("Quiet until (optional)").fill("");
+await prefsSave.click();
+const prefsErrors = await prefsPanel.innerText();
+ok(
+  "PKG outreach a: the v1.8 errors «Invalid time zone.» and «Invalid quiet hours.» show next to their fields",
+  /Invalid time zone\./.test(prefsErrors) && /Invalid quiet hours\./.test(prefsErrors),
+  "",
+);
+await prefsPanel.getByLabel("I want in-app AOG notices").check();
+await prefsPanel.getByLabel("Minimum hours you need to mobilise").fill("12");
+await prefsPanel.getByLabel("IANA time zone for notices").fill("Europe/Madrid");
+await prefsPanel.getByLabel("Quiet from (optional)").fill("");
+await prefsSave.click();
+ok(
+  "PKG outreach b: a valid form saves («Notice preferences saved.»), with v1.8's note on mobilisation and quiet hours",
+  await prefsPanel
+    .getByRole("status")
+    .filter({ hasText: "Notice preferences saved." })
+    .waitFor({ timeout: 15000 })
+    .then(() => true)
+    .catch(() => false),
+  "",
+);
+await logout();
+const outreachNeed = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: mroOrg.id,
+    title: outreachTitle,
+    location: "Madrid (MAD)",
+    startsAt: "2027-01-11T06:00:00.000Z",
+    endsAt: "2027-01-12T18:00:00.000Z",
+    shift: "day",
+    headcount: 1,
+    urgency: "aog",
+    qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const outreachNeedId = outreachNeed.data.requirement.id;
+const outreachWindow = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    startsAt: "2027-01-11T00:00:00.000Z",
+    endsAt: "2027-01-13T00:00:00.000Z",
+    status: "available",
+  },
+});
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements/${outreachNeedId}`);
+await page.waitForLoadState("networkidle");
+const distribution = page
+  .locator("section")
+  .filter({ has: page.getByRole("heading", { name: "AOG distribution" }) })
+  .last();
+await distribution.getByRole("button", { name: "Distribute Urgent / AOG notice" }).click();
+const distributed = await distribution
+  .getByRole("status")
+  .filter({
+    hasText:
+      /^[1-9]\d* in-app notices? created\. Consent, availability and quiet hours are respected\. No e-mails were sent\./,
+  })
+  .waitFor({ timeout: 20000 })
+  .then(() => true)
+  .catch(() => false);
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG outreach c: «Distribute Urgent / AOG notice» reports the count (ICU plural), then the button is gone and the count stays",
+  distributed &&
+    (await distribution.getByRole("button", { name: "Distribute Urgent / AOG notice" }).count()) ===
+      0 &&
+    /Distributed on .*: [1-9]\d* in-app notices?\./.test(await distribution.innerText()),
+  "",
+);
+await logout();
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/notices`);
+await page.waitForLoadState("networkidle");
+const outreachCard = page.locator("main article", { hasText: `AOG: ${outreachTitle}` });
+const outreachCardText = (await outreachCard.count()) ? await outreachCard.innerText() : "";
+await outreachCard.getByRole("button", { name: "View opportunity" }).click();
+ok(
+  "PKG outreach d: Delta reads «AOG: {title} · Demo MRO Madrid · Check the conditions…» and opens the opportunity",
+  /Demo MRO Madrid · Check the conditions and decide whether you want to apply\./.test(
+    outreachCardText,
+  ) &&
+    (await page
+      .waitForURL((u) => u.pathname === `/app/professional/opportunities/${outreachNeedId}`, {
+        timeout: 20000,
+      })
+      .then(() => true)
+      .catch(() => false)),
+  "",
+);
+await logout();
+// Restore: Delta's preferences as they were, the window, the need (closed) and the notices read.
+await asSeedUser("delta@crewflex.test", "notice-preferences", {
+  method: "PUT",
+  body: {
+    urgentOptIn: outreachBefore.urgentOptIn,
+    aogOptIn: outreachBefore.aogOptIn,
+    mobilizationHours: outreachBefore.mobilizationHours,
+    timeZone: outreachBefore.timeZone,
+    quietStart: outreachBefore.quietStart,
+    quietEnd: outreachBefore.quietEnd,
+  },
+});
+await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "DELETE",
+  query: { id: outreachWindow.data.window.id },
+});
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: outreachNeedId, status: "closed" },
+});
+await asSeedUser("delta@crewflex.test", "notifications", { method: "PATCH", body: { all: true } });
+
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
 const touch = await browser.newContext({

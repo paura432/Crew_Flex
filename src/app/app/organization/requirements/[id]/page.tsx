@@ -20,6 +20,7 @@ import {
   type WorkRequirement,
 } from "@/domain/work-requirement";
 import { listRequirementApplications } from "@/features/applications/api";
+import { OutreachPanel } from "@/features/outreach/components/OutreachPanel";
 import { CoverageMeter } from "@/features/requirements/components/CoverageMeter";
 import { requireOrganizationContext } from "@/server/session";
 
@@ -30,6 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Request time (dynamic page), as RequirementBadges: render must stay pure for React's lint. */
 const expiredNow = (r: Pick<WorkRequirement, "status" | "endsAt">) => isExpired(r, Date.now());
+const requestTime = () => Date.now();
 
 export default async function RequirementDetailPage({
   params,
@@ -152,6 +154,8 @@ export default async function RequirementDetailPage({
             </div>
           )}
         </Panel>
+        {/* PKG outreach (v2-17): «Distribución Urgente/AOG», admin/manager, never on planned needs. */}
+        <OutreachPanel requirement={requirement} canManage={canManage} now={requestTime()} />
         {!evaluable ? null : !capacity ? (
           <StateMessage
             title={tDashboard("managersOnlyTitle")}

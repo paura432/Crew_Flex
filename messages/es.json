@@ -503,6 +503,11 @@
       "blocks": {
         "max": "Como máximo 200 organizaciones bloqueadas."
       }
+    },
+    "outreach": {
+      "mobilization": "Indica entre 0 y 720 horas, sin decimales.",
+      "timeZone": "Zona horaria no válida.",
+      "quietHours": "Horas de silencio no válidas."
     }
   },
   "domain": {
@@ -1275,7 +1280,8 @@
           "application_rejected": "Candidatura rechazada",
           "application_confirmed": "Asignación confirmada",
           "application_cancelled": "Candidatura cancelada",
-          "application_finished": "Asignación finalizada"
+          "application_finished": "Asignación finalizada",
+          "requirement_outreach_distributed": "Aviso Urgente/AOG distribuido"
         }
       }
     }
@@ -2290,5 +2296,45 @@
       "prepare": "Preparar candidatura",
       "applied": "Ya presentada"
     }
+  },
+  "outreach": {
+    "preferences": {
+      "title": "Avisos de oportunidades",
+      "description": "Decide qué avisos internos de necesidades urgentes o AOG quieres recibir. Una organización solo puede avisarte si eres visible para ella, cumples los requisitos y tu disponibilidad cubre las fechas; nunca sabe quién lo ha recibido.",
+      "consents": "Avisos que aceptas",
+      "urgent": "Quiero avisos internos de trabajos urgentes",
+      "aog": "Quiero avisos internos AOG",
+      "mobilization": "Horas mínimas que necesitas para movilizarte",
+      "mobilizationHint": "De 0 a 720 horas. Déjalo vacío si no quieres declararlo.",
+      "timeZone": "Zona horaria IANA para avisos",
+      "timeZoneHint": "Por ejemplo Europe/Madrid, Europe/Lisbon o UTC.",
+      "quietStart": "Silencio desde (opcional)",
+      "quietEnd": "Silencio hasta (opcional)",
+      "note": "Sin movilización declarada no se distribuyen avisos. El silencio también se respeta para AOG; no se envían correos o SMS.",
+      "save": "Guardar preferencias de avisos",
+      "saved": "Preferencias de avisos guardadas."
+    },
+    "distribution": {
+      "title": "Distribución {urgency}",
+      "explain": "Crea un aviso interno, una sola vez, para cada profesional que acepta avisos de esta urgencia, es visible para tu organización y no la ha bloqueado, no declara restricciones en la habilitación pedida, cumple los requisitos, está disponible todo el periodo, ha declarado una movilización que el inicio respeta y no está en sus horas de silencio. Solo sabrás cuántos avisos se han creado, nunca a quién.",
+      "button": "Distribuir aviso Urgente / AOG",
+      "result": "{count, plural, one {# aviso interno creado} other {# avisos internos creados}}. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.",
+      "done": "Distribuida el {date}: {count, plural, one {# aviso interno} other {# avisos internos}}.",
+      "notOffered": "La distribución solo está disponible mientras la necesidad está publicada y no ha empezado.",
+      "conflict": {
+        "OUTREACH_NOT_OPEN": "Publica o reanuda la necesidad primero.",
+        "OUTREACH_PLANNED": "Las necesidades planificadas no se distribuyen.",
+        "OUTREACH_ALREADY_SENT": "Esta necesidad ya se distribuyó.",
+        "OUTREACH_STARTED": "La necesidad ya ha empezado: ya no se distribuye."
+      }
+    },
+    "notice": {
+      "outreachUrgent": "Urgente: {title}",
+      "outreachAog": "AOG: {title}",
+      "description": "Consulta las condiciones y decide si quieres presentar candidatura.",
+      "open": "Ver oportunidad"
+    },
+    "noticesHint": "Los avisos Urgente y AOG siguen tus preferencias de urgencia, movilización y silencio.",
+    "noticesHintLink": "Configurar avisos"
   }
 }

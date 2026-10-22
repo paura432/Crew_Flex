@@ -18,6 +18,7 @@ const notice = (over: Partial<Notice>): Notice => ({
   applicationStatus: "shortlisted",
   requirementStatus: null,
   candidate: null,
+  outreachUrgency: null,
   ...over,
 });
 
@@ -48,6 +49,19 @@ describe("notice view (v2-18)", () => {
     expect(noticeHref(notice({ audience: "organization" }))).toBe(
       `/app/organization/requirements/${REQ}/applications#a-${APP}`,
     );
+  });
+
+  it("names an Urgent/AOG distribution by its mode and leads to the opportunity (PKG outreach)", () => {
+    const outreach = (urgency: "urgent" | "aog") =>
+      notice({
+        kind: "outreach",
+        applicationId: null,
+        applicationStatus: null,
+        outreachUrgency: urgency,
+      });
+    expect(noticeTitleKey(outreach("urgent"))).toBe("outreachUrgent");
+    expect(noticeTitleKey(outreach("aog"))).toBe("outreachAog");
+    expect(noticeHref(outreach("aog"))).toBe(`/app/professional/opportunities/${REQ}`);
   });
 
   it("introduces the page by what the account receives", () => {

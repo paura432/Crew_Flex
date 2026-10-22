@@ -503,6 +503,11 @@
       "blocks": {
         "max": "At most 200 blocked organizations."
       }
+    },
+    "outreach": {
+      "mobilization": "Enter between 0 and 720 whole hours.",
+      "timeZone": "Invalid time zone.",
+      "quietHours": "Invalid quiet hours."
     }
   },
   "domain": {
@@ -1275,7 +1280,8 @@
           "application_rejected": "Application rejected",
           "application_confirmed": "Assignment confirmed",
           "application_cancelled": "Application cancelled",
-          "application_finished": "Assignment finished"
+          "application_finished": "Assignment finished",
+          "requirement_outreach_distributed": "Urgent/AOG notice distributed"
         }
       }
     }
@@ -2290,5 +2296,45 @@
       "prepare": "Prepare application",
       "applied": "Already applied"
     }
+  },
+  "outreach": {
+    "preferences": {
+      "title": "Opportunity notices",
+      "description": "Choose which in-app notices about urgent or AOG needs you want. An organization can only notify you if you are visible to it, meet the requirements and your availability covers the dates; it never learns who received them.",
+      "consents": "Notices you accept",
+      "urgent": "I want in-app notices about urgent jobs",
+      "aog": "I want in-app AOG notices",
+      "mobilization": "Minimum hours you need to mobilise",
+      "mobilizationHint": "From 0 to 720 hours. Leave it empty if you prefer not to declare it.",
+      "timeZone": "IANA time zone for notices",
+      "timeZoneHint": "For example Europe/Madrid, Europe/Lisbon or UTC.",
+      "quietStart": "Quiet from (optional)",
+      "quietEnd": "Quiet until (optional)",
+      "note": "Without a declared mobilisation no notices are distributed. Quiet hours also apply to AOG; no e-mails or text messages are sent.",
+      "save": "Save notice preferences",
+      "saved": "Notice preferences saved."
+    },
+    "distribution": {
+      "title": "{urgency} distribution",
+      "explain": "Creates one in-app notice, only once, for each professional who accepts notices of this urgency, is visible to your organization and has not blocked it, declares no restrictions on the required rating, meets the requirements, is available for the whole period, has declared a mobilisation the start respects and is not in their quiet hours. You only learn how many notices were created, never to whom.",
+      "button": "Distribute Urgent / AOG notice",
+      "result": "{count, plural, one {# in-app notice created} other {# in-app notices created}}. Consent, availability and quiet hours are respected. No e-mails were sent.",
+      "done": "Distributed on {date}: {count, plural, one {# in-app notice} other {# in-app notices}}.",
+      "notOffered": "Distribution is only available while the need is published and has not started.",
+      "conflict": {
+        "OUTREACH_NOT_OPEN": "Publish or resume the need first.",
+        "OUTREACH_PLANNED": "Planned needs are not distributed.",
+        "OUTREACH_ALREADY_SENT": "This need was already distributed.",
+        "OUTREACH_STARTED": "The need has already started: it is no longer distributed."
+      }
+    },
+    "notice": {
+      "outreachUrgent": "Urgent: {title}",
+      "outreachAog": "AOG: {title}",
+      "description": "Check the conditions and decide whether you want to apply.",
+      "open": "View opportunity"
+    },
+    "noticesHint": "Urgent and AOG notices follow your urgency, mobilisation and quiet-hour preferences.",
+    "noticesHintLink": "Set up notices"
   }
 }
