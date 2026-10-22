@@ -1709,6 +1709,10 @@ ok(
   await page.fill("#edit-hours", "2");
   await page.getByRole("button", { name: "Save changes" }).click();
   await page.waitForSelector("[role=status]:has-text('Logbook updated')", { timeout: 15000 });
+  await row
+    .filter({ hasText: "ATA 32 · 2 h ·" })
+    .waitFor({ timeout: 15000 })
+    .catch(() => {});
   ok(
     "PKG logbook: inline edit saves (2 h)",
     /ATA 32 · 2 h ·/.test(await row.innerText()),

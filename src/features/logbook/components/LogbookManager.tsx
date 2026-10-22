@@ -236,14 +236,18 @@ export function LogbookManager({
     setNotice(null);
     startTransition(async () => {
       const result = await callAction(() => createLogbookEntryAction(parsed.data, key));
-      if (result.ok) {
-        idempotency.release();
-        setFormKey((k) => k + 1); // v1.8 demo empties the form (the connected beta did not: ✗ row 16)
-        setNotice({ tone: "ok", text: t("saved") });
-        return;
-      }
-      setErrors(result.fieldErrors ?? {});
-      setNotice(actionErrorCopy(tRoot, result));
+      // Updates after an `await` are not part of the transition unless wrapped again: this way the
+      // outcome commits together with the refreshed list instead of a moment before it.
+      startTransition(() => {
+        if (result.ok) {
+          idempotency.release();
+          setFormKey((k) => k + 1); // v1.8 demo empties the form (the connected beta did not: ✗ row 16)
+          setNotice({ tone: "ok", text: t("saved") });
+          return;
+        }
+        setErrors(result.fieldErrors ?? {});
+        setNotice(actionErrorCopy(tRoot, result));
+      });
     });
   }
 
@@ -263,13 +267,15 @@ export function LogbookManager({
       const result = await callAction(() =>
         updateLogbookEntryAction(entry.id, { ...parsed.data, ata: parsed.data.ata ?? null }),
       );
-      if (result.ok) {
-        setEditing(null);
-        setNotice({ tone: "ok", text: t("updated") });
-        return;
-      }
-      setEditErrors(result.fieldErrors ?? {});
-      setNotice(actionErrorCopy(tRoot, result));
+      startTransition(() => {
+        if (result.ok) {
+          setEditing(null);
+          setNotice({ tone: "ok", text: t("updated") });
+          return;
+        }
+        setEditErrors(result.fieldErrors ?? {});
+        setNotice(actionErrorCopy(tRoot, result));
+      });
     });
   }
 
@@ -277,14 +283,18 @@ export function LogbookManager({
     startTransition(async () => {
       if ("cvRelevant" in change) setSelectable({ id, cvRelevant: change.cvRelevant });
       const result = await callAction(() => updateLogbookEntryAction(id, change));
-      setNotice(result.ok ? { tone: "ok", text: t("updated") } : actionErrorCopy(tRoot, result));
+      startTransition(() =>
+        setNotice(result.ok ? { tone: "ok", text: t("updated") } : actionErrorCopy(tRoot, result)),
+      );
     });
   }
 
   function onDelete(id: string) {
     startTransition(async () => {
       const result = await callAction(() => deleteLogbookEntryAction(id));
-      setNotice(result.ok ? { tone: "ok", text: t("deleted") } : actionErrorCopy(tRoot, result));
+      startTransition(() =>
+        setNotice(result.ok ? { tone: "ok", text: t("deleted") } : actionErrorCopy(tRoot, result)),
+      );
     });
   }
 
