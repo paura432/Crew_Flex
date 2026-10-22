@@ -430,11 +430,15 @@ SQL
     elif [ "$first" = sweep ] && [ "$row" = gone ] && [ "$tomb" = trash_expired ] && [ "$audit" = 1 ]; then
       pass "sweep first: expired once (trash_expired tombstone, audited); the late restore found nothing"
     else fail "$first first: row=$row tombstone=$tomb audit=$audit"; cat "$OUT_A" "$OUT_B"; fi
+    # The object row was inserted above without a blob; Storage refuses direct deletes unless allowed.
     psql_owner >/dev/null <<SQL
+begin;
+set local storage.allow_delete_query = 'true';
 delete from public.professional_documents where id = '$doc';
 delete from app_private.document_object_tombstones
   where storage_path = '$path' or (reason = 'orphan_upload' and deleted_at >= '$since');
 delete from storage.objects where bucket_id = 'professional-documents' and name = '$path';
+commit;
 SQL
   done
 }
