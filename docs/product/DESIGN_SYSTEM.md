@@ -44,7 +44,10 @@ prototype `styles/v13.css` (`.toolbox`, `.tb-*`) so the workbench keeps its own 
 `#e8f3f1`. Radii 13/18 px as in the prototype. Deviations kept on purpose: Inter instead of the
 system font, the global focus ring (one style for the whole app: a 2 px navy ring inside a 3 px orange
 outline, ≥ 3:1 on white, canvas and the navy sidebar), and the Tools link in
-the shared "Account" nav section because both professional and organization accounts use it.
+the shared "Account" nav section because both professional and organization accounts use it. The learning medals
+(`LearningMedals`, also in Mi espacio) keep v1.8 `.cf-medal`: earned `#916413` on `#fff7e4` (4.9:1), locked `muted` on
+`#f0f3f5`, dashed. A disclosure `<summary>` styled `flex` draws its own «▸/▾» with empty alternative text, so the glyph
+is not part of its accessible name (T-3).
 
 Typography: Inter (via `next/font`; V1.8 named Inter/Outfit but never loaded them). Body 15px/1.6, never below
 12px, with V1.8 micro-labels kept at 11 px, and only these (a design test lists the files): table headers, sidebar

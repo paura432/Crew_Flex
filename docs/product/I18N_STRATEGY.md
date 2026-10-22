@@ -30,6 +30,12 @@ Crew Flex is bilingual, Spanish and English, with full functional coverage in bo
 | Codes, acronyms, names, user data (B1.1, TR-A320, EWIS, HF, FTS, SMS, AOG, MRO, EASA, Part-66, display names, locations, organization names, titles)                                                                              | **Never translated** (glossary: `AVIATION_GLOSSARY_ES_EN.md`).                                                                                                                                                                                                                                               |
 | Dates and times                                                                                                                                                                                                                   | `src/i18n/format.ts`: day · month · year in both languages (`en-GB` / `es-ES` patterns), always **UTC** (BR-10). Timestamps are never altered.                                                                                                                                                               |
 
+Editorial banks of the tools workbench — the ES/EN dictionary, ATA index and sources
+(`src/features/tools/knowledge/data.ts`), the ES/EN/FR translator repertoire (`src/features/tools/translator/phrases.ts`)
+and the daily-challenge questions (`src/features/tools/learning/questions.ts`) — are versioned **data** in their source
+languages (v1.8 catalogue 2026-10-13.1, pending formal review), not catalog entries: they read the same in both
+interfaces and carry `lang` attributes. Only the interface around them is in the catalogs.
+
 ## 3. Locale precedence (`src/i18n/resolve.ts`, tested)
 
 1. **Persisted preference** of the authenticated user (`profiles.preferred_locale`, es/en, nullable).

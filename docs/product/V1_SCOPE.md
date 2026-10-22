@@ -64,6 +64,10 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 - Urgent / AOG outreach intensity, opt-in priority contact.
 - Recruiter workspace and client representation (platform admins see a «Próximamente» placeholder since 2026-10-22, D-13).
 - Tools hub beyond D-11: fuel sheet (after a technical review of its wording), glossary/ATA, daily challenge, translator; logbook from the prototype. Contractor calculators stay OUT.
+  Glossary/ATA («English and acronyms», `/app/tools/knowledge`), translator (`/app/tools/translator`) and the daily
+  challenge with its learning medals (`/app/tools/daily`, «Learning achievements» in Mi espacio, BR-16): IMPLEMENTED
+  (local, 2026-10-22, area-40 v2 backlog L-1…L-4); editorial banks of v1.8 2026-10-13.1, pending formal review. Fuel
+  sheet and logbook: not started.
 - Rates, logistics and contract conditions on requirements.
 
 ## OUT (not this product phase)
