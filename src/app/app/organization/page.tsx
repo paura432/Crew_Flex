@@ -58,7 +58,8 @@ export default async function OrganizationDashboard() {
     getTranslations("organization.dashboard"),
   ]);
   const [result, open, counts] = await Promise.all([
-    listRequirements(organization.id),
+    // Archived needs (v1.8 «Archivada», T-64) leave the working lists.
+    listRequirements(organization.id, { archived: "exclude" }),
     listFocusCandidates(organization.id),
     canManage ? getApplicationCounts(organization.id) : null,
   ]);
