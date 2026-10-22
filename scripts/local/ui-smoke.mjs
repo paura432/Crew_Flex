@@ -920,6 +920,7 @@ ok(
   "",
 );
 // 6b. The review queue is not reachable for organization roles (404) and not in their navigation
+expectedErrorUrls.add(`${BASE}/app/admin/verifications`); // a real HTTP 404 since X-11
 await page.goto(`${BASE}/app/admin/verifications`);
 await page.waitForLoadState("networkidle");
 ok(
@@ -987,10 +988,15 @@ await page.goto(`${BASE}/app/admin`);
 await page.waitForLoadState("networkidle");
 await viewSwitcher.locator("a[href='/app/recruiter']").click();
 await page.waitForURL(/\/app\/recruiter$/);
-await page.waitForLoadState("networkidle"); // the /app loading skeleton streams first
+// The /app loading skeleton shows until the RSC payload streams in: wait for the text itself.
 ok(
   "20b Recruiter view is the «coming later» placeholder",
-  /Coming later/.test(await page.locator("main").innerText()),
+  await page
+    .locator("main")
+    .getByText("Coming later")
+    .waitFor({ timeout: 15000 })
+    .then(() => true)
+    .catch(() => false),
   "",
 );
 await viewSwitcher.locator("a[href='/app/organization']").click();
