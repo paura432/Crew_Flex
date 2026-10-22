@@ -20,6 +20,8 @@ export default defineConfig([
     "build/**",
     "coverage/**",
     "tmp/**",
+    // Agent worktrees (Claude Code `isolation: worktree`) are other checkouts, linted in their own tree.
+    ".claude/worktrees/**",
     "next-env.d.ts",
     // Deno code: checked with `deno check` / `deno lint`.
     "supabase/functions/**",
