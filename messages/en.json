@@ -386,6 +386,26 @@
       "reasonNotAllowed": "This change takes no reason",
       "proposal": "The proposal version is missing",
       "acceptTerms": "Confirm that you accept these terms"
+    },
+    "logbook": {
+      "date": {
+        "invalid": "Enter a valid date",
+        "future": "The logbook records work you have done, not future work."
+      },
+      "aircraft": {
+        "required": "Enter the aircraft",
+        "max": "The aircraft allows up to 100 characters"
+      },
+      "ata": "The ATA allows up to 10 characters",
+      "hours": "Hours: invalid value. From 0 to 24, in steps of 0.1.",
+      "category": "Choose a category from the list",
+      "environment": "Choose an environment from the list",
+      "description": {
+        "required": "Describe the task you did",
+        "max": "The description allows up to 3000 characters"
+      },
+      "empty": "There are no changes to save",
+      "id": "A valid entry identifier is required"
     }
   },
   "domain": {

@@ -14,7 +14,8 @@ demand, never persisted (no duplicated derived state).
 
 ```
 auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualifications *─1 qualification_types
-                  │                        └──────────1─* availability_windows
+                  │                        ├──────────1─* availability_windows
+                  │                        └──────────1─* logbook_entries (owner only, M14)
                   │
                   └─* organization_members *─1 organizations 1─* work_requirements 1─* work_requirement_qualifications *─1 qualification_types
                                                                                  │
@@ -195,6 +196,31 @@ Inserts go through `create_professional_document` and require the owner-only fla
 `app_private.feature_flags('document_wallet')` (`20261019160200`; reads, edits and deletes do not). The insert trigger also requires the Storage object to
 exist with the declared size, so direct PostgREST inserts cannot create rows without bytes.
 
+### `logbook_entries` (`20261023200000`, LOCAL ONLY — M14/N-12, BUSINESS_RULES BR-17)
+
+The professional's personal, **self-declared** logbook (v1.8 «Logbook personal»; FD-25: never an official record).
+
+| Column                      | Type                                                                                         | Writable by owner       |
+| --------------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
+| `id`                        | uuid PK                                                                                      | –                       |
+| `technician_profile_id`     | → `technician_profiles(profile_id)` on delete cascade                                        | insert only (= JWT sub) |
+| `entry_date`                | date; never after today in Europe/Madrid (trigger `enforce_logbook_entry_date`, 23514, T-19) | yes                     |
+| `aircraft`                  | text 1–100, not blank (free text; the 12 v1.8 models are UI suggestions)                     | yes                     |
+| `ata`                       | text ≤ 10, nullable, not blank                                                               | yes                     |
+| `hours`                     | numeric(3,1) 0–24                                                                            | yes                     |
+| `category`                  | `logbook_category`: the 6 v1.8 categories, default `defect_rectification`                    | yes                     |
+| `environment`               | `logbook_environment`: the 5 v1.8 environments, default `line_maintenance`                   | yes                     |
+| `description`               | text 1–3000, not blank                                                                       | yes                     |
+| `cv_relevant`               | boolean, default false («Seleccionable para expediente»; read by nothing until D-07)         | yes                     |
+| `archived`                  | boolean, default false (v1.8 «Archivar» / «Restaurar»)                                       | update only             |
+| `created_at` / `updated_at` | timestamptz (`set_updated_at`)                                                               | –                       |
+
+RLS: own rows only (select/insert/update/delete); **no organization, manager or platform-admin policy** — unlike the
+passport and availability (OD-4), the technician's own organization cannot read it. No status column: every entry is
+self-declared (v1.8 `status: 'self-declared'`) and nothing can verify one. Creates go through
+`create_logbook_entry` (idempotent); direct PostgREST writes are held to the same CHECKs and date trigger.
+Account deletion cascades (auth user → profile → technician profile → entries; keys through the profile).
+
 ### `app_private.document_object_tombstones` · `app_private.document_retention_settings` (`20261019160200`, LOCAL ONLY)
 
 Tombstones (`id`, `storage_path`, `owner_id` (no FK), `reason` `owner_delete` · `account_deleted` · `operator_delete` ·
@@ -220,7 +246,10 @@ review decision with previous/new status, `note_provided`, `request_id`; since `
 not account-deletion cascades) — the last three since `20261015120000`; `document.uploaded`,
 `document.updated` (with the changed field names) and `document.deleted` (owner delete only) since
 `20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path); `document.purged`
-(tombstone id, owner id, reason, `object_found`) since `20261019160200`. Reserved: `organization.member_added`; the hiring
+(tombstone id, owner id, reason, `object_found`) since `20261019160200`; `logbook.created`, `logbook.updated`
+(`changed` field names, `archived`, `cv_relevant`) and `logbook.deleted` (owner delete only, not account-deletion
+cascades) since `20261023200000` (LOCAL ONLY; metadata: ids and flags — never the aircraft, ATA, hours, category,
+environment or description). Reserved: `organization.member_added`; the hiring
 block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / `pack.document_url_issued`
 (`APPLICATIONS_STATE_MACHINE.md` §4.2 — `document.shared` and `candidate_pack.shared` are superseded).
 
@@ -235,6 +264,7 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `update_professional_profile(...)`                                                                                                                                                       | INVOKER         | Atomic passport save (two tables, one transaction) with optional optimistic concurrency (`CF412`).                                                                                                                                                       |
 | `create_work_requirement_idempotent` · `create_availability_window` · `declare_qualification` · `replace_availability_days` (`20261019120000`, 3-arg since `20261019140000`, local only) | INVOKER         | Idempotent creates (`Idempotency-Key`), key claimed in the same transaction (`app_private.idempotency_keys`).                                                                                                                                            |
 | `create_professional_document(key, kind, title, storage_path, mime_type, size_bytes, sha256, expires_at, qualification_id)` (`20261019160000`, local only)                               | INVOKER         | Idempotent document create (`document.create`); path must be `<uid>/<key>-<sha256[0:16]>` (`22023` otherwise); `CF409` same key, other request.                                                                                                          |
+| `create_logbook_entry(key, entry_date, aircraft, ata, hours, category, environment, description, cv_relevant)` (`20261023200000`, local only)                                            | INVOKER         | Idempotent logbook create (`logbook_entry.create`), owner = JWT subject; `CF409` same key, other request. The operation CHECK is re-created from its current definition (values are added, never dropped).                                               |
 | `is_feature_enabled(name)` (`20261019160200`, local only)                                                                                                                                | DEFINER, stable | Whitelisted owner flags (`document_wallet`) for the Next.js server; signed-in users only.                                                                                                                                                                |
 | `document_maintenance_batch(apply, limit)` · `document_purge_recheck(tombstone)` · `document_purge_record(tombstone, outcome, error)` (`20261019160200`, local only)                     | DEFINER         | Platform admin only (re-checked in the body): orphan reconciliation + due tombstones (≤ 100), per-object re-check under row lock, outcome + audit `document.purged`. Never delete objects themselves.                                                    |
 | `review_qualification(id, decision, expected_updated_at, note, request_id)`                                                                                                              | DEFINER         | Requires `app_private.feature_flags('qualification_review')`; platform admin only, never own, `pending` → `verified`/`rejected` for the version the reviewer saw, row lock, audit `qualification.reviewed`.                                              |

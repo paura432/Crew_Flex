@@ -14,6 +14,7 @@ import type {
 } from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/documents.ts";
+import type { LogbookCategory, LogbookEnvironment } from "../domain/logbook.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { Locale } from "../i18n/config.ts";
@@ -187,6 +188,44 @@ export interface DocumentUrlResponse {
 }
 
 export interface DocumentDeleteResponse {
+  deleted: true;
+  id: string;
+}
+
+/**
+ * Personal logbook (`professional-logbook`, M14/N-12, LOCAL ONLY). Owner-only and self-declared: no
+ * organization, manager or platform-admin access; never an official record.
+ */
+export interface LogbookEntry {
+  id: string;
+  /** YYYY-MM-DD, never after today in Madrid (BR-16). */
+  entryDate: string;
+  aircraft: string;
+  /** ATA chapter, free text ≤ 10. */
+  ata: string | null;
+  /** 0–24 in steps of 0.1. */
+  hours: number;
+  category: LogbookCategory;
+  environment: LogbookEnvironment;
+  description: string;
+  /** «Seleccionable para expediente»: stored only, nothing reads it until D-07. */
+  cvRelevant: boolean;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LogbookListResponse {
+  entries: LogbookEntry[];
+  /** Entries in this view; more than `entries.length` when the list was cut at `limit`. */
+  total: number;
+}
+
+export interface LogbookEntryResponse {
+  entry: LogbookEntry;
+}
+
+export interface LogbookDeleteResponse {
   deleted: true;
   id: string;
 }

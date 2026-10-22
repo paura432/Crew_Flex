@@ -9,6 +9,7 @@ invariant protects what**. Never copy rule text here — link the BR id.
 ```
 auth.users 1─1 profiles ─┬─1 technician_profiles 1─* technician_qualifications *─1 qualification_types
                           │                       1─* availability_windows
+                          │                       1─* logbook_entries (owner only, LOCAL, BR-17)
                           └─* organization_members *─1 organizations 1─* work_requirements 1─* work_requirement_qualifications *─1 qualification_types
 audit_events (append-only, written by triggers / DEFINER RPCs)
 app_private.idempotency_keys · app_private.feature_flags   (not exposed by PostgREST)
@@ -20,6 +21,7 @@ app_private.idempotency_keys · app_private.feature_flags   (not exposed by Post
 | Qualification         | `technician_qualifications` | catalog type                      | BR-2.6 (only platform admin verifies; no grant on `verification_status`); BR-2.7 (`enforce_qualification_expiry`); BR-2.8 (re-dating resets review, type immutable) |
 | Availability          | `availability_windows`      | —                                 | BR-4.1–4.6; ≤ 366 days (DB check)                                                                                                                                   |
 | Work requirement      | `work_requirements`         | `work_requirement_qualifications` | BR-1.1–1.3 (checks); **BR-1.4 ≥1 hard, ≤20 — deferred constraint trigger for `open`/`covered`** (E-3); BR-1.8 (RLS manager/admin); BR-1.9 never deleted             |
+| Personal logbook      | `logbook_entries`           | —                                 | BR-17 (no future date: trigger `enforce_logbook_entry_date`; CHECK limits; owner-only RLS)                                                                          |
 | Organization          | `organizations`             | `organization_members`            | BR-9; one org per user in the UI (`requireOrganizationContext`)                                                                                                     |
 
 ## States
@@ -62,7 +64,8 @@ must update both and keep section M green.
 Documents/Storage, consents, Candidate Pack, applications (D-06), proposals, confirmations,
 assignments/day coverage (D-08), organization verification/KYB (C-14, OD-5), recruiter clients (D-12),
 rating restrictions (D-02), min experience as hard rule (D-03), work-permit countries (D-04), AOG-only
-availability (C-8, D-05), requirement terms/rates (C-9), tools/logbook (D-11), notifications, billing (OD-7).
+availability (C-8, D-05), requirement terms/rates (C-9), tools beyond D-11, notifications, billing (OD-7). (The logbook exists locally since
+`20261023200000`, BR-16.)
 
 ## Pending functional decisions that change rules
 

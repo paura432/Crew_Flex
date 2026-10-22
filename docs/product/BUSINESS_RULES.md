@@ -219,3 +219,24 @@ completed days up to today (today not yet done does not break it until tomorrow)
 **total** = completed days up to today; medals at best ≥ 1, 7 and 30 days. Progress stays in the browser
 (`localStorage` key `crewflex-learning-<user id>`, the authenticated user only), with question ids and chosen
 answers only. IMPLEMENTED (local).
+
+## BR-17 Personal logbook (M14, N-12; SCOPE-2) — `src/domain/logbook.ts`
+
+A professional keeps a private, **self-declared** record of work done (v1.8 «Logbook personal»; FD-25: it is not an
+official record, a certification of experience or a release to service, and nobody validates it).
+
+1. **Fields** (union of v1.8 connected and demo, T-20): task date; aircraft, free text 1–100 (the 12 v1.8 models are
+   suggestions); ATA chapter, optional, ≤ 10; hours 0–24 in steps of 0.1; task category (6 v1.8 values, default
+   «Defect Rectification»); environment (5 v1.8 values, default «Line Maintenance»); private technical description
+   1–3000; «Seleccionable para expediente» (default off). Text is trimmed; blank is empty.
+2. **No future dates:** the date may not be after **today in Europe/Madrid** (v1.8 `localDay('Europe/Madrid')`,
+   T-19) — «El logbook registra actividad realizada, no futura.» Checked by the shared schema, the Edge Function and
+   a database trigger (also when an entry is re-dated).
+3. **Lifecycle:** create (idempotent), edit any field, archive and restore (v1.8 «Archivar» / «Restaurar»); the list
+   shows the active or the archived entries, newest first (date, then creation), at most 500 per view with the total.
+   An archived entry can be deleted permanently by its owner (T-22; v1.8 had no delete).
+4. **Privacy:** owner only — no organization (not even the technician's own), manager or platform admin reads an
+   entry; the audit trail keeps ids, flags and changed field names only. The selection flag is stored and read by
+   nothing until the Candidate Pack exists (D-07, T-21).
+
+IMPLEMENTED (local, 2026-10-22; migration `20261023200000`, `professional-logbook`, `/app/professional/logbook`).

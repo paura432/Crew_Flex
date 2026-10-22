@@ -42,6 +42,7 @@ authorization. Review every DEFINER for S-10 and test the "other organization" a
 | Review reason                        | `review_note`                                                      | owner (`own_qualification_reviews`) · platform admin                                                                                                                |
 | Contact data                         | **not stored** (D-07)                                              | —                                                                                                                                                                   |
 | Applications (D-06, LOCAL ONLY)      | `applications`, `application_proposals`, `application_events`      | technician: own rows · organization admin/manager: only via `get_requirement_applications` (pool rules) · platform admin: read · nobody writes directly (RPCs only) |
+| Logbook (M14, LOCAL ONLY)            | `logbook_entries`                                                  | owner only (no organization — not even the technician's own — manager or platform-admin policy); audit rows ids/flags only                                          |
 | Documents (D-10, LOCAL ONLY)         | `professional_documents` + private bucket `professional-documents` | owner only (no org/admin policy; no third-party sharing without a scanner)                                                                                          |
 
 ## Multi-tenancy

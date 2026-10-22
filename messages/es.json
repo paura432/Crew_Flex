@@ -386,6 +386,26 @@
       "reasonNotAllowed": "Este cambio no lleva motivo",
       "proposal": "Falta la versión de la propuesta",
       "acceptTerms": "Confirma que aceptas estas condiciones"
+    },
+    "logbook": {
+      "date": {
+        "invalid": "Introduce una fecha válida",
+        "future": "El logbook registra actividad realizada, no futura."
+      },
+      "aircraft": {
+        "required": "Indica la aeronave",
+        "max": "La aeronave admite hasta 100 caracteres"
+      },
+      "ata": "El ATA admite hasta 10 caracteres",
+      "hours": "Horas: valor no válido. De 0 a 24, en pasos de 0,1.",
+      "category": "Elige una categoría de la lista",
+      "environment": "Elige un entorno de la lista",
+      "description": {
+        "required": "Describe la tarea realizada",
+        "max": "La descripción admite hasta 3000 caracteres"
+      },
+      "empty": "No hay cambios que guardar",
+      "id": "Se necesita un identificador de entrada válido"
     }
   },
   "domain": {
