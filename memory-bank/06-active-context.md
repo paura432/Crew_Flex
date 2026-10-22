@@ -4,22 +4,18 @@ _Last updated 2026-10-22 CEST. Keep under ~60 lines; replace, don't append histo
 
 ## Current task
 
-2026-10-22 loop (owner brief «DESBLOQUEAR MIGRACIÓN V1.8»): the xhigh diff backlog X-01…X-22 and the decisions
-the owner ratified that day (D-12 visibility, D-06 Q2–Q7, M05 lifecycle, D-07 P1/P2/P4 direction with P3 open,
-Q-01 password 12 — `docs/integration/crewflex-v13/08-product-decisions.md` §2026-10-22, defaults T-08…T-14).
-Backlog and evidence: `docs/integration/crewflex-v13/15-autonomous-migration-backlog.md` §6. Branch
-`feat/v18-html-parity` (local, not pushed). Source diff (outside the repo):
-`C:\Users\perfo\Downloads\CrewFlex_DIFF_HTML_v18_vs_Next_2026-10-22-xhigh\`.
-
-- X-01…X-22: done (X-21 NOT_A_GAP), independent review R-X fixed (`f37a231`). Gates at `b8258d9`: check 0,
-  build 0, E2E 42/42, ui-smoke 113 PASS (the 2 FAIL were the smoke itself / an in-progress edit; fixed).
-- X-01 is a P1 LIVE in production: hotfix candidate branch `hotfix/x01-landing-signin` `15eb913` (3 files,
-  verified on `next start`) — **push needs the owner**.
-- M05 pause/resume done (`9868253`, migrations `20261022130000/130100`, applied to the local DB in place).
-- M07/M08: contract committed (`984112f`); backend (migrations `20261022130200/130300`, RPCs, the `opportunities`
-  and `applications` functions, PGlite suites U/V/W) in progress on an agent worktree branch; UI written against
-  the contract (uncommitted until the backend is merged and E2E runs). M09: rules prepared, switched off
-  (`a1e1223`).
+2026-10-22 (owner): «copiarlo todo» — SCOPE-2 (NOW+NEXT+LATER locally, OUT out) and DEFAULTS (open decisions → v1.8
+behaviour as a documented T-xx), recorded in `08-product-decisions.md`. Done today on `feat/v18-html-parity` (local,
+not pushed): X-01…X-22 + review, M05 pause/resume/edit, M07 opportunities, M08 applications (agent backend merged),
+M09 rules (off), exhaustive **diff v2** (`C:\Users\perfo\Downloads\CrewFlex_DIFF_HTML_v18_vs_Next_2026-10-22-v2\`:
+1 587 rows, v1.8 demo + connected in execution, parity 56,1 %, unified backlog by packages).
+Implementation packages (one worktree each, merged one by one; table in `15-autonomous-migration-backlog.md` §6.3):
+MERGED learning, calendar, logbook; IN_PROGRESS passport, account, admin-org, requirement-builder, notices; queued
+matching-v18, directory, pack-view, hiring-polish, outreach, recruiter, shell-visual, wallet-extras, server-floor.
+Last full gate (HEAD `7682e92`): check 0 (665), E2E 48/48, race 11/11, ui-smoke 152/152 on `next build`.
+Local DB: every migration up to `20261023300000` applied in place (logbook needed `migration up --include-all`
+because its file sorts before the calendar one); restart `functions serve` after each migration batch.
+X-01 is a P1 LIVE in production: hotfix branch `hotfix/x01-landing-signin` `15eb913` waits for the owner.
 
 ## State
 
