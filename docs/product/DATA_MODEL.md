@@ -247,9 +247,11 @@ not account-deletion cascades) — the last three since `20261015120000`; `docum
 `document.updated` (with the changed field names) and `document.deleted` (owner delete only) since
 `20261019160000` (LOCAL ONLY; metadata: ids, kind, mime, size, sha256 — never title or path); `document.purged`
 (tombstone id, owner id, reason, `object_found`) since `20261019160200`; `logbook.created`, `logbook.updated`
-(`changed` field names, `archived`, `cv_relevant`) and `logbook.deleted` (owner delete only, not account-deletion
-cascades) since `20261023200000` (LOCAL ONLY; metadata: ids and flags — never the aircraft, ATA, hours, category,
-environment or description). Reserved: `organization.member_added`; the hiring
+(`changed` field names) and `logbook.deleted` (owner delete only, not account-deletion cascades) since
+`20261023200000` (LOCAL ONLY; metadata: the technician profile id and the changed field names — never a value, and
+never the selection flag, not even as a changed name: an update that only toggles it is not audited, because platform
+admins read every audit row; security review 2026-10-22). Like the document rows, logbook audit rows keep their
+entity and technician profile ids after an account deletion (the actor becomes null). Reserved: `organization.member_added`; the hiring
 block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / `pack.document_url_issued`
 (`APPLICATIONS_STATE_MACHINE.md` §4.2 — `document.shared` and `candidate_pack.shared` are superseded).
 

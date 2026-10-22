@@ -236,7 +236,7 @@ official record, a certification of experience or a release to service, and nobo
    shows the active or the archived entries, newest first (date, then creation), at most 500 per view with the total.
    An archived entry can be deleted permanently by its owner (T-22; v1.8 had no delete).
 4. **Privacy:** owner only — no organization (not even the technician's own), manager or platform admin reads an
-   entry; the audit trail keeps ids, flags and changed field names only. The selection flag is stored and read by
-   nothing until the Candidate Pack exists (D-07, T-21).
+   entry; the audit trail keeps ids and changed field names only, never a value. The selection flag is stored and
+   read by nothing until the Candidate Pack exists (D-07, T-21); it never reaches the audit trail.
 
 IMPLEMENTED (local, 2026-10-22; migration `20261023200000`, `professional-logbook`, `/app/professional/logbook`).

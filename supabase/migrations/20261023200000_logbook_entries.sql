@@ -100,10 +100,13 @@ create trigger logbook_entries_enforce_date
   before insert or update of entry_date on public.logbook_entries
   for each row execute function public.enforce_logbook_entry_date();
 
--- Audit (S-9): ids, flags and changed field names only — never the aircraft, ATA, hours,
--- category, environment or description. A removal is audited when the owner deletes the row, not
--- when an account deletion cascades: by then the owner's technician profile is already gone, and
--- inserting an audit row for a profile being deleted would make the whole deletion fail.
+-- Audit (S-9): ids and changed field names only — never a value (aircraft, ATA, hours, category,
+-- environment, description, archive state). The selection flag never reaches the audit trail, not
+-- even as a changed field name: platform admins read every audit row, and the flag is private
+-- (security review 2026-10-22, MEDIUM-1). An update that only toggles it writes no audit row.
+-- A removal is audited when the owner deletes the row, not when an account deletion cascades: by
+-- then the owner's technician profile is already gone, and inserting an audit row for a profile
+-- being deleted would make the whole deletion fail.
 create function public.audit_logbook_entry()
 returns trigger
 language plpgsql
@@ -117,8 +120,7 @@ begin
   if tg_op = 'INSERT' then
     insert into public.audit_events (actor_profile_id, organization_id, action, entity_type, entity_id, metadata)
     values (v_actor, null, 'logbook.created', 'logbook_entry', new.id,
-      jsonb_build_object('technician_profile_id', new.technician_profile_id,
-                         'cv_relevant', new.cv_relevant));
+      jsonb_build_object('technician_profile_id', new.technician_profile_id));
     return new;
   elsif tg_op = 'UPDATE' then
     v_changed := array_remove(array[
@@ -129,15 +131,13 @@ begin
       case when new.category is distinct from old.category then 'category' end,
       case when new.environment is distinct from old.environment then 'environment' end,
       case when new.description is distinct from old.description then 'description' end,
-      case when new.cv_relevant is distinct from old.cv_relevant then 'cv_relevant' end,
       case when new.archived is distinct from old.archived then 'archived' end
     ], null);
     if cardinality(v_changed) > 0 then
       insert into public.audit_events (actor_profile_id, organization_id, action, entity_type, entity_id, metadata)
       values (v_actor, null, 'logbook.updated', 'logbook_entry', new.id,
         jsonb_build_object('technician_profile_id', new.technician_profile_id,
-                           'changed', to_jsonb(v_changed), 'archived', new.archived,
-                           'cv_relevant', new.cv_relevant));
+                           'changed', to_jsonb(v_changed)));
     end if;
     return new;
   else
@@ -146,8 +146,7 @@ begin
     ) then
       insert into public.audit_events (actor_profile_id, organization_id, action, entity_type, entity_id, metadata)
       values (v_actor, null, 'logbook.deleted', 'logbook_entry', old.id,
-        jsonb_build_object('technician_profile_id', old.technician_profile_id,
-                           'archived', old.archived));
+        jsonb_build_object('technician_profile_id', old.technician_profile_id));
     end if;
     return old;
   end if;
@@ -177,8 +176,9 @@ begin
   from pg_constraint c
   where c.conrelid = 'app_private.idempotency_keys'::regclass
     and c.conname = 'idempotency_keys_operation_check';
-  select array_agg(distinct t.m[1]) into v_ops
-  from regexp_matches(coalesce(v_def, ''), '''([a-z_]+\.[a-z_]+)''', 'g') as t(m);
+  -- Every quoted literal, whatever its characters ('' is an escaped quote), so no value is lost.
+  select array_agg(distinct replace(t.m[1], '''''', '''')) into v_ops
+  from regexp_matches(coalesce(v_def, ''), '''((?:[^'']|'''')*)''', 'g') as t(m);
   if v_ops is null or not v_ops @> array['work_requirement.create', 'document.create'] then
     raise exception 'idempotency_keys_operation_check has an unexpected definition: %', v_def;
   end if;

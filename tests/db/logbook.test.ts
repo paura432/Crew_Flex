@@ -192,17 +192,20 @@ describe("logbook: owner CRUD", () => {
     });
   });
 
-  it("every change is audited with ids, flags and field names only — never the text", async () => {
+  it("every change is audited with ids and field names only — never a value, never the selection flag", async () => {
     await asUser(db, SEED.delta, async (tx) => {
       const { id } = await createEntry(tx, KEY, {
         aircraft: "SECRET-AIRCRAFT",
         description: "SECRET-DESCRIPTION",
+        cvRelevant: true,
       });
       await tx.query(
-        "update public.logbook_entries set description = 'SECRET-EDIT', archived = true where id = $1",
+        "update public.logbook_entries set description = 'SECRET-EDIT', archived = true, cv_relevant = false where id = $1",
         [id],
       );
       await tx.query("update public.logbook_entries set archived = archived where id = $1", [id]); // no-op
+      // Toggling only the selection flag writes no audit row (MEDIUM-1, security review 2026-10-22).
+      await tx.query("update public.logbook_entries set cv_relevant = true where id = $1", [id]);
       await tx.query("delete from public.logbook_entries where id = $1", [id]);
       await tx.exec("reset role");
       const { rows } = await tx.query<{
@@ -223,14 +226,30 @@ describe("logbook: owner CRUD", () => {
       for (const r of rows) {
         expect(r.actor).toBe(SEED.delta);
         expect(r.org).toBeNull(); // an organization's audit trail never sees it
-        expect(JSON.stringify(r.metadata)).not.toMatch(/SECRET|EC-Q|wheel/);
+        expect(JSON.stringify(r.metadata)).not.toMatch(/SECRET|EC-Q|wheel|cv_relevant|true|false/);
       }
       expect(rows.find((r) => r.action === "logbook.updated")!.metadata).toEqual({
         technician_profile_id: SEED.delta,
         changed: ["description", "archived"],
-        archived: true,
-        cv_relevant: false,
       });
+    });
+  });
+
+  it("a platform admin reading the audit trail learns nothing about the selection flag", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const { id } = await createEntry(tx, crypto.randomUUID(), { cvRelevant: true });
+      await tx.query("update public.logbook_entries set cv_relevant = false where id = $1", [id]);
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: SEED.platformAdmin, role: "authenticated" }),
+      ]);
+      const { rows } = await tx.query<{ metadata: unknown }>(
+        "select metadata from public.audit_events where entity_type = 'logbook_entry' and entity_id = $1",
+        [id],
+      );
+      expect(rows).toHaveLength(1); // the creation only: the toggle left no trace
+      expect(JSON.stringify(rows)).not.toMatch(/cv_relevant|true|false/);
+      // …and the entry itself stays invisible to the platform admin.
+      expect(await count(tx, "select 1 from public.logbook_entries where id = $1", [id])).toBe(0);
     });
   });
 });
@@ -299,6 +318,22 @@ describe("logbook: database backstops (BR-17)", () => {
       }
       expect((await createEntry(tx, crypto.randomUUID(), { hours: 0 })).replayed).toBe(false);
       expect((await createEntry(tx, crypto.randomUUID(), { hours: 24 })).replayed).toBe(false);
+    });
+  });
+
+  it("the owner cannot rewrite the id or the timestamps", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const { id } = await createEntry(tx);
+      for (const set of [
+        "id = gen_random_uuid()",
+        "created_at = now() - interval '1 year'",
+        "updated_at = now() - interval '1 year'",
+      ]) {
+        expect(
+          await queryError(tx, `update public.logbook_entries set ${set} where id = $1`, [id]),
+          set,
+        ).toMatch(/permission denied/);
+      }
     });
   });
 
