@@ -16,7 +16,13 @@ import {
   type WorkRequirement,
 } from "../../../src/domain/work-requirement.ts";
 import type { CandidatePassport } from "../../../src/domain/passport.ts";
-import { toCandidate, toCandidatePassport } from "../../../src/lib/candidate-pool.ts";
+import {
+  PROFILE_RULES_SELECT,
+  profileRulesColumns,
+  toCandidate,
+  toCandidatePassport,
+  toProfileRules,
+} from "../../../src/lib/candidate-pool.ts";
 import {
   requirementConditionsRow,
   requirementShiftInput,
@@ -27,9 +33,11 @@ import type { CandidateSummary, ExternalPoolCoverage } from "../../../src/types/
 import type { Actor } from "./auth.ts";
 import { ApiError, fromDatabaseError } from "./errors.ts";
 
+// The v1.8 profile requirements (matching-v18, 20261023900000; `country` is the builder's) travel with the
+// requirement so every evaluateMatch on it (matching, capacity, applications) applies them.
 export const REQUIREMENT_SELECT = `
   id, organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_at,
-  updated_at, country, timezone, description, shifts, conditions, archived_at,
+  updated_at, country, timezone, description, shifts, conditions, archived_at, ${PROFILE_RULES_SELECT},
   work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) )
 `;
 
@@ -82,6 +90,7 @@ const requirementRow = z.object({
   ...termsColumns,
   timezone: timeZoneColumn,
   archived_at: z.string().nullish(),
+  ...profileRulesColumns,
   work_requirement_qualifications: z.array(
     z.object({
       requirement_level: z.enum(REQUIREMENT_LEVELS),
@@ -121,6 +130,7 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
       .sort(byLevelThenCode),
     ...toTerms(row, row.timezone),
     archivedAt: row.archived_at ? toIso(row.archived_at) : null,
+    ...toProfileRules(row),
   };
 }
 

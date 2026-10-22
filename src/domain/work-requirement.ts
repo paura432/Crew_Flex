@@ -1,4 +1,5 @@
 import { EU_COUNTRIES, type EuCountry } from "./organization.ts";
+import type { Aircraft, Engine, ProfessionalCategory, Skill } from "./passport.ts";
 
 export const SHIFTS = ["day", "night", "split", "flexible"] as const;
 export type Shift = (typeof SHIFTS)[number];
@@ -128,7 +129,35 @@ export interface RequiredQualification {
   level: RequirementLevel;
 }
 
-export interface WorkRequirement {
+/**
+ * v1.8 profile requirements of a need (`server/rules.mjs:27` connected `eligible`, `src/business.js:140-150`
+ * demo `matching`; C-10/D-02/D-03/OD-6 defaults T-80…T-86, BUSINESS_RULES BR-3.7–3.13), checked against the
+ * professional's own passport declarations (BR-18). Every field is optional and «not required» when absent,
+ * null or empty, so a requirement that states none keeps exactly its qualification + availability verdict.
+ * Columns of `work_requirements` (`country` from the builder, 20261023600000; the rest 20261023900000), same
+ * names as v1.8.
+ */
+export interface RequirementProfileRules {
+  /** Country of the job (builder, T-61): the professional must declare a work permit for it (BR-3.7). */
+  country?: EuCountry | null;
+  /** The professional must declare this category (v1.8 `job.category`). */
+  category?: ProfessionalCategory | null;
+  /** «Aeronaves aceptadas»: the professional must declare at least one (v1.8 demo `aircraft.some`). */
+  aircraft?: Aircraft[];
+  /**
+   * «Exigir habilitación de tipo»: a declared type rating of `category` on one of `aircraft`, valid for the
+   * whole period (BR-2) and without restrictions (v1.8 `requiresLicense` / `requireType`).
+   */
+  requiresTypeRating?: boolean;
+  /** «Motores»: at least one declared (v1.8 demo `engines.some`). */
+  engines?: Engine[];
+  /** «Experiencia mínima (años)», 0–60; an undeclared experience counts as 0 (v1.8 `profile.years||0`). */
+  minYears?: number | null;
+  /** «Capacidades obligatorias»: every one declared (v1.8 `requiredSkills` / `hardSkills`). */
+  requiredSkills?: Skill[];
+}
+
+export interface WorkRequirement extends RequirementProfileRules {
   id: string;
   organizationId: string;
   title: string;

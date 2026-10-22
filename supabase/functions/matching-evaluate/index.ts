@@ -37,6 +37,8 @@ export const handler = createHandler("matching-evaluate", {
         p_ends_at: input.endsAt,
         p_urgency: input.urgency,
         p_hard_type_ids: [...new Set(input.hardQualificationTypeIds)],
+        // matching-v18: the same profile rules as apply and confirm (only the country is in the form yet).
+        p_country: input.country ?? null,
       });
       if (error) throw fromDatabaseError(error); // 42501 → 403, 22023 → 400
       if (typeof data !== "number") throw new ApiError("INTERNAL_ERROR");

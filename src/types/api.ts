@@ -43,6 +43,7 @@ import type {
   EuCountry,
   RequiredQualification,
   RequirementConditions,
+  RequirementProfileRules,
   RequirementShift,
   RequirementStatus,
   RequirementTimeZone,
@@ -448,9 +449,11 @@ export interface DocumentsMaintenanceResponse {
 
 /**
  * What a professional may see of a published requirement (D-12): the fixed projection of
- * `list_opportunities` — organization NAME only, no ids of people, no counts of other applicants.
+ * `list_opportunities` — organization NAME only, no ids of people, no counts of other applicants — plus
+ * its v1.8 profile requirements (`get_requirement_profile_rules`, package matching-v18). The rules are
+ * optional: a frozen proposal copy and older functions do not carry them.
  */
-export interface OpportunityRequirement {
+export interface OpportunityRequirement extends RequirementProfileRules {
   id: string;
   organizationName: string;
   title: string;

@@ -89,11 +89,18 @@ Deterministic UUIDs `00000000-0000-4000-8000-0000000000NN`. Names are NATO alpha
 Work requirements: `B1.1 · A320 line maintenance reinforcement` (MAD, 18–22 Oct night, 2 ×, hard B1.1 +
 TR-A320 + EWIS + HF + FTS, soft SMS → required 2, internally eligible 1, gap 1, external eligible 3 of 10),
 `B2 · A330 avionics check support` (LIS, 2–6 Nov, 1 × → gap 0), `B1.1 · B737 AOG recovery` (BCN, 25–26 Oct,
-AOG, 1 × → gap 1, Juliett eligible, Quebec not available), `CAT-A · line support (cancelled)` (status demo).
+AOG, 1 × → gap 1, Juliett eligible, Quebec not available), `CAT-A · line support (cancelled)` (status demo),
+`B1.1 · A320 / B737 NG line check (v1.8 profile rules)` (Demo Airline Ops Barcelona, BCN, 12–16 Oct — already ended,
+so it is in no opportunities list or dashboard focus; hard B1.1 + EWIS + HF; work permit ES, category B1.1, aircraft
+A320 Family or B737 NG, type rating required, ≥ 5 years, Line Maintenance → Delta the only eligible one; Echo
+restricted rating + capability; Foxtrot no B1.1 rating on those aircraft + capability; Golf pending B1.1, 4 years;
+BR-3.7–3.13, package matching-v18). The other requirements state no profile rule, so their outcomes above are
+unchanged; soft scores now also count English B2+ and base/mobility (BR-5.6): Foxtrot keeps 100 on MAD, Echo and
+Delta score 67 there.
 
 Row counts after `db reset`: 22 users/profiles, 19 technician profiles, 4 organizations, 9 memberships,
-17 qualification types, 74 technician qualifications, 17 availability windows, 4 requirements,
-12 requirement qualifications, 4 audit events.
+17 qualification types, 74 technician qualifications, 17 availability windows, 5 requirements,
+15 requirement qualifications, 4 audit events.
 
 ## 5. Verification executed on 2026-10-10 (local only)
 

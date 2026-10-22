@@ -6,6 +6,7 @@ import {
   toOrganizationApplication,
   toOrgApplication,
 } from "../_shared/applications.ts";
+import type { RequirementRuleColumns } from "../../../src/lib/candidate-pool.ts";
 import { toCandidate } from "../_shared/requirements.ts";
 import { idempotencyKey, parseValue } from "../_shared/validation.ts";
 import { APPLICATION_CONFLICTS } from "../../../src/domain/applications.ts";
@@ -129,7 +130,7 @@ Deno.test("transition arguments carry the request, never an identity or a side",
 });
 
 Deno.test(
-  "CFA01…CFA13 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
+  "CFA01…CFA15 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
   () => {
     APPLICATION_CONFLICTS.forEach((reason, i) => {
       const code = `CFA${String(i + 1).padStart(2, "0")}`;
@@ -141,7 +142,10 @@ Deno.test(
       assertFalse(error.message.includes("internal detail"));
     });
     assertEquals(fromDatabaseError({ code: "CFA13" }).reason, "OWN_ORGANIZATION"); // v2-27, T-90
-    assertEquals(fromDatabaseError({ code: "CFA14" }).code, "INTERNAL_ERROR");
+    assertEquals(fromDatabaseError({ code: "CFA14" }).reason, "PROFILE_REQUIREMENTS_UNMET"); // matching-v18
+    assertEquals(fromDatabaseError({ code: "CFA15" }).reason, "RESTRICTIONS_DECLARED"); // T-87
+    const unknown = `CFA${String(APPLICATION_CONFLICTS.length + 1).padStart(2, "0")}`;
+    assertEquals(fromDatabaseError({ code: unknown }).code, "INTERNAL_ERROR");
     assertEquals(fromDatabaseError({ code: "CF412" }).reason, undefined);
   },
 );
@@ -261,7 +265,39 @@ const candidateColumns = (verificationStatus: string) => ({
       status: "available",
     },
   ],
+  candidate_declarations: {
+    primaryCategory: "B1.1",
+    categories: ["B1.1"],
+    aircraft: ["A320 Family"],
+    engines: [],
+    skills: [],
+    englishLevel: "B2",
+    mobility: "national",
+    workPermits: ["ES"],
+    typeRatings: [],
+    hasRestrictions: true,
+  },
 });
+
+/** Requirement r1 states no v1.8 profile rule (get_requirement_profile_rules row). */
+const NO_RULES: RequirementRuleColumns = {
+  category: null,
+  aircraft: [],
+  requiresTypeRating: false,
+  engines: [],
+  minYears: null,
+  requiredSkills: [],
+};
+const RULES = new Map([["r1", NO_RULES]]);
+/** The same rules as the columns of a get_organization_applications() row. */
+const RULE_COLUMNS = {
+  category: null,
+  aircraft: [],
+  requires_type_rating: false,
+  engines: [],
+  min_years: null,
+  required_skills: [],
+};
 
 Deno.test(
   "my application: the card (any status), proposal vN, timeline and my own eligibility",
@@ -270,6 +306,7 @@ Deno.test(
     const mine = toMyApplication(
       { ...applicationRow, requirement_id: "r1", requirement: card },
       own,
+      RULES,
     );
     assertEquals(mine.updatedAt, "2030-12-02T10:00:00.123Z"); // the version sent back, ms
     assertEquals(mine.requirement.status, "paused");
@@ -312,10 +349,45 @@ Deno.test(
       displayName: null,
       baseLocation: "Madrid (MAD)",
       yearsExperience: 5,
+      // The pool card's v1.8 declarations (HIRE-01 #7): «restrictions declared», never their text.
+      passport: {
+        primaryCategory: "B1.1",
+        categories: ["B1.1"],
+        aircraft: ["A320 Family"],
+        englishLevel: "B2",
+        workPermits: ["ES"],
+        hasRestrictions: true,
+      },
     });
     assertEquals(theirs.requirementId, "r1");
     assertFalse(theirs.match.eligible);
     assertEquals(theirs.match.blockers[0]?.code, "HARD_QUALIFICATION_NOT_VERIFIED");
+    // The requirement's profile rules are part of the verdict (matching-v18).
+    const withRules = toOrgApplication(
+      { ...applicationRow, ...candidateColumns("verified") },
+      { ...requirement, country: "FR", minYears: 8 },
+    );
+    assertEquals(
+      withRules.match.blockers.map((b) => b.code),
+      ["MISSING_WORK_PERMIT", "INSUFFICIENT_EXPERIENCE"],
+    );
+  },
+);
+
+Deno.test(
+  "my application is judged with its requirement's profile rules; missing rules fail loudly",
+  () => {
+    const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });
+    const row = { ...applicationRow, requirement_id: "r1", requirement: card };
+    const strict = toMyApplication(row, own, new Map([["r1", { ...NO_RULES, minYears: 10 }]]));
+    assertFalse(strict.match.eligible);
+    assertEquals(strict.match.blockers, [
+      { code: "INSUFFICIENT_EXPERIENCE", minYears: 10, years: 5 },
+    ]);
+    assertEquals(strict.requirement.minYears, 10);
+    const error = assertThrows(() => toMyApplication(row, own, new Map()));
+    assert(error instanceof ApiError);
+    assertEquals(error.code, "INTERNAL_ERROR");
   },
 );
 
@@ -354,6 +426,7 @@ Deno.test(
         requirement: { ...card, ...builder },
       },
       own,
+      RULES,
     );
     assertEquals(mine.currentProposal?.terms.conditions, builder.conditions);
     assertEquals(mine.currentProposal?.terms.shifts?.length, 2);
@@ -361,6 +434,7 @@ Deno.test(
     const older = toMyApplication(
       { ...applicationRow, requirement_id: "r1", requirement: card },
       own,
+      RULES,
     );
     assertEquals(
       [older.currentProposal?.terms.conditions, older.currentProposal?.terms.shifts],
@@ -379,6 +453,7 @@ Deno.test(
           requirement: card,
         },
         own,
+        RULES,
       ),
     );
   },
@@ -390,6 +465,7 @@ Deno.test(
     const { application, total } = toOrganizationApplication({
       ...applicationRow,
       ...candidateColumns("verified"),
+      ...RULE_COLUMNS,
       requirement_id: "r1",
       requirement: card,
       total: 7,
@@ -416,12 +492,39 @@ Deno.test(
       candidate_years_experience: null,
       candidate_qualifications: null,
       candidate_availability: null,
+      candidate_declarations: null,
+      ...RULE_COLUMNS,
       requirement_id: "r1",
       requirement: card,
       total: 1,
     }).application;
     assertEquals([closed.candidate, closed.match, closed.status], [null, null, "finished"]);
     assertEquals(closed.history.length, 2);
+    // matching-v18 (20261024100900): the requirement's profile rules come with the row and decide.
+    const strict = toOrganizationApplication({
+      ...applicationRow,
+      ...candidateColumns("verified"),
+      ...RULE_COLUMNS,
+      min_years: 10,
+      requirement_id: "r1",
+      requirement: card,
+      total: 1,
+    }).application;
+    assertEquals(strict.requirement.minYears, 10);
+    assertEquals(
+      strict.match?.blockers.map((b) => b.code),
+      ["INSUFFICIENT_EXPERIENCE"],
+    );
+    assertEquals(strict.candidate?.passport?.hasRestrictions, true);
+    assertThrows(() =>
+      toOrganizationApplication({
+        ...applicationRow,
+        ...candidateColumns("verified"),
+        requirement_id: "r1",
+        requirement: card,
+        total: 1,
+      }),
+    ); // without the rule columns: fails loudly, never «no rule»
   },
 );
 

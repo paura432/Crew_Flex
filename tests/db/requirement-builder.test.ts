@@ -869,6 +869,8 @@ describe("opportunity projection and proposal terms carry the new terms (D-12 fi
 
 describe("live count of viable candidates (v2-13, T-66)", () => {
   const COUNT = "select public.count_viable_candidates($1, $2, $3, $4, $5::uuid[]) as n";
+  const COUNT_WITH_COUNTRY =
+    "select public.count_viable_candidates($1, $2, $3, $4, $5::uuid[], p_country => $6) as n";
 
   it("counts internal members and visible professionals who pass the hard filters — never private ones", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
@@ -927,7 +929,8 @@ describe("live count of viable candidates (v2-13, T-66)", () => {
                 + (select count(*)::int from public.organization_members m
                    join public.technician_profiles tp on tp.profile_id = m.profile_id
                    cross join lateral app_private.hard_eligibility($1, tp.profile_id) e
-                   where m.organization_id = $2 and e.qualifications_ok and e.availability_ok) as n`,
+                   where m.organization_id = $2 and e.qualifications_ok and e.availability_ok
+                     and e.profile_ok) as n`,
           [id, mroId],
         );
         return rows[0]!.n;
@@ -935,14 +938,18 @@ describe("live count of viable candidates (v2-13, T-66)", () => {
       const count = async () => {
         await actAs(tx, SEED.managerMro);
         return (
-          await tx.query<{ n: number }>(COUNT, [
-            mroId,
-            envelope.startsAt,
-            envelope.endsAt,
-            "planned",
-            [b11, a320],
-          ])
-        ).rows[0]!.n;
+          // The form sends the job's country (ES by default): matching-v18 work-permit rule (BR-3.7).
+          (
+            await tx.query<{ n: number }>(COUNT_WITH_COUNTRY, [
+              mroId,
+              envelope.startsAt,
+              envelope.endsAt,
+              "planned",
+              [b11, a320],
+              "ES",
+            ])
+          ).rows[0]!.n
+        );
       };
       const base = await count();
       expect(base).toBe(await poolTruth());
@@ -954,9 +961,10 @@ describe("live count of viable candidates (v2-13, T-66)", () => {
       );
       expect(await count()).toBe(base - 1);
       expect(await count()).toBe(await poolTruth());
-      // BR-8: hotel as «verified_orgs» counts only once the organization's review is registered.
+      // BR-8: hotel as «verified_orgs» counts only once the organization's review is registered. Hotel
+      // declares a Spanish work permit: the job's country is ES (matching-v18 work-permit rule, BR-3.7).
       await tx.query(
-        "update public.technician_profiles set visibility = 'verified_orgs' where profile_id = $1",
+        "update public.technician_profiles set visibility = 'verified_orgs', work_permits = '{ES}' where profile_id = $1",
         [SEED.hotelPrivate],
       );
       await tx.query(

@@ -1322,7 +1322,43 @@
       "expired": "{code} expired on {date}",
       "expiresDuring": "{code} expires during the requirement ({date})",
       "notAvailable": "Not available on the requirement dates",
-      "partial": "Available for only {percent, number}% of the requirement period"
+      "partial": "Available for only {percent, number}% of the requirement period",
+      "workPermit": "No work permit declared for {country}",
+      "category": "The category does not match: {category} is required",
+      "aircraft": "The aircraft is not declared in the profile ({list})",
+      "typeRatingMissing": "No declared, valid and unrestricted {category} · {list} type rating",
+      "typeRatingNotValid": "The {category} · {list} type rating is valid only until {date}",
+      "typeRatingRestricted": "The {category} · {list} type rating declares restrictions",
+      "engine": "None of the required engines is declared ({list})",
+      "experience": "Below the minimum experience ({count, plural, one {# year} other {# years}})",
+      "skill": "Required capability: {skill}"
+    },
+    "profileTitle": "Profile requirements",
+    "affinityTitle": "Affinity (soft score)",
+    "profile": {
+      "workPermit": "Work permit: {country}",
+      "category": "Category {category}",
+      "aircraft": "Aircraft: {list}",
+      "typeRating": "Type rating {category} · {list}",
+      "engine": "Engine: {list}",
+      "minYears": "Minimum experience: {count, plural, one {# year} other {# years}}",
+      "skill": "Capability: {skill}",
+      "declared": "Declared in the profile",
+      "notDeclared": "Not declared in the profile",
+      "typeRatingMet": "Declared, valid and unrestricted",
+      "typeRatingMissing": "Not declared",
+      "typeRatingNotValid": "Valid only until {date}",
+      "typeRatingRestricted": "Restrictions declared",
+      "yearsDeclared": "{count, plural, one {# year declared} other {# years declared}}",
+      "yearsUndeclared": "Experience not declared"
+    },
+    "affinity": {
+      "english": "Technical English",
+      "englishLevel": "Level {level}",
+      "englishNone": "Level not declared",
+      "base": "Usual base or accepts travel",
+      "baseMet": "Same base or accepts travel",
+      "baseNotMet": "Another base and no travel"
     }
   },
   "settings": {
@@ -1951,7 +1987,7 @@
       "reasonLabel": "Reason (required)",
       "reasonHint": "The other party will see it. At most 1000 characters.",
       "acceptTerms": "I accept exactly these terms (version {version}).",
-      "confirmHint": "The server checks qualifications, availability, seats and overlaps again before confirming.",
+      "confirmHint": "The server checks qualifications, profile requirements, restrictions, availability, seats and overlaps again before confirming.",
       "finishHint": "Available after the last day.",
       "withdrawHint": "Your application will be withdrawn. You can apply again while the requirement stays open.",
       "proposeHint": "A fixed copy of the published terms will be sent; the professional must accept it.",
@@ -1971,7 +2007,9 @@
       "REAPPLY_NOT_ALLOWED": "Cannot apply again: the previous application ended.",
       "ACTIVE_COMMITMENTS": "Resolve the active assignments first (accepted or confirmed).",
       "HAS_APPLICATIONS": "This requirement already received applications: it cannot be edited.",
-      "OWN_ORGANIZATION": "You cannot apply to a requirement of your own organization."
+      "OWN_ORGANIZATION": "You cannot apply to a requirement of your own organization.",
+      "PROFILE_REQUIREMENTS_UNMET": "The profile does not meet the requirement's profile requirements (work permit, category, aircraft, type rating, engines, experience or capabilities).",
+      "RESTRICTIONS_DECLARED": "The professional declares general restrictions: the assignment cannot be confirmed."
     },
     "stale": "The application changed in the meantime. Reload to see its current state.",
     "orgOnlyTitle": "«My applications» is for professionals",

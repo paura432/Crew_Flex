@@ -161,6 +161,19 @@ internal members plus the external pool's candidates (`anonymous`/`open`, `verif
 organization, never `private` (S-7) nor a professional who blocked it) passing the hard filters — no identities: the same people matching already shows pseudonymously for a saved requirement. Professionals see the new terms
 only through the fixed projection of `list_opportunities` and the proposal `terms` (no ids, no `archived_at`).
 
+**v1.8 profile requirements (package matching-v18, LOCAL `20261023900000…200`).** The six new requirement columns
+(`category`, `aircraft`, `requires_type_rating`, `engines`, `min_years`, `required_skills`) have no INSERT or
+UPDATE grant (seed / owner only until the builder adopts them) and are frozen by both guards. Professionals read them
+only through `get_requirement_profile_rules(ids)` (DEFINER): professional accounts only (42501), ≤ 200 ids, and only
+for requirements they may already see — published and current (D-12) or applied to; any other id is silently
+absent, so it is no existence oracle beyond `list_opportunities`. The candidate rows organizations already read
+(`get_requirement_candidate_pool`, `get_requirement_applications`, same checks) gain `candidate_declarations`:
+the passport-card fields plus, minimised to the requirement (T-85), the engines and capabilities it asks for, the type
+ratings of its category on its aircraft (validity and a `restricted` flag — never the restriction text) and the
+mobility; never contact, employer, rate, blocks or general-restriction text. `own_candidate_profile` returns the
+caller's own declarations in full (INVOKER, own rows). Apply and confirm re-check the rules in a DEFINER trigger on
+`applications` (`guard_application_profile_rules`, CFA14 / CFA15); identity and side still come from the RPCs.
+
 ## Edge Function checklist
 
 Every protected handler, in order:

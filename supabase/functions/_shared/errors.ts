@@ -68,8 +68,9 @@ interface PostgrestLikeError {
 }
 
 /**
- * Our business conflicts: SQLSTATE `CFA01`…`CFA13` are the entries of `APPLICATION_CONFLICTS` in order
- * (migrations 20261022130300, 20261024100000), `CFV01`… those of `AVAILABILITY_CONFLICTS` (20261023300000). Custom codes,
+ * Our business conflicts: SQLSTATE `CFA01`…`CFA15` are the entries of `APPLICATION_CONFLICTS` in order
+ * (20261022130300, 20261024100000; CFA14/CFA15 from the applications trigger of 20261023900200), `CFV01`… those of
+ * `AVAILABILITY_CONFLICTS` (20261023300000). Custom codes,
  * never `40001` (PostgREST retries that one forever).
  */
 export function conflictReason(

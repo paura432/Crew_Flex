@@ -19,6 +19,13 @@ import {
   SHIFTS,
   URGENCIES,
 } from "../../../src/domain/work-requirement.ts";
+import {
+  passportOf,
+  profileRulesColumns,
+  type RequirementRuleColumns,
+  toProfileRules,
+  toProfileRulesById,
+} from "../../../src/lib/candidate-pool.ts";
 import type {
   ApplicationEvent,
   ApplicationProposal,
@@ -178,10 +185,24 @@ function toCardRequirement(raw: z.infer<typeof card>) {
   };
 }
 
-/** A row of `get_my_applications()`, evaluated on the caller's own data. */
-export function toMyApplication(raw: unknown, own: Candidate): MyApplication {
+/** The `requirement_id` of each `get_my_applications()` row (to load their rules in one call). */
+export const myApplicationRequirementIds = (rows: readonly unknown[]) =>
+  rows.map((r) => z.object({ requirement_id: z.string() }).parse(r).requirement_id);
+
+/**
+ * A row of `get_my_applications()`, evaluated on the caller's own data against the requirement's card and
+ * its v1.8 profile rules (`get_requirement_profile_rules` always returns them for an own application:
+ * missing rules are an invariant break, never «no rule»).
+ */
+export function toMyApplication(
+  raw: unknown,
+  own: Candidate,
+  rules: ReadonlyMap<string, RequirementRuleColumns>,
+): MyApplication {
   const row = myRow.parse(raw);
-  const requirement = toCardRequirement(row.requirement);
+  const profileRules = rules.get(row.requirement_id);
+  if (!profileRules) throw new ApiError("INTERNAL_ERROR");
+  const requirement = { ...toCardRequirement(row.requirement), ...profileRules };
   return {
     ...base(row, row.requirement_id),
     requirement,
@@ -193,7 +214,8 @@ const orgRow = z.object(applicationColumns);
 
 /**
  * A row of `get_requirement_applications()`: the applicant as the candidate pool shows them (pseudonym
- * unless internal, name for internal or `open`), evaluated against the requirement.
+ * unless internal, name for internal or `open`), with the v1.8 card declarations of the pool card
+ * (BR-18: never restriction text, contact, employer, rate or blocks), evaluated against the requirement.
  */
 export function toOrgApplication(
   raw: unknown,
@@ -203,7 +225,7 @@ export function toOrgApplication(
   const candidate = toCandidate(raw);
   return {
     ...base(row, requirement.id),
-    candidate: toCandidateSummary(candidate),
+    candidate: toCandidateSummary(candidate, passportOf(candidate.declarations)),
     match: evaluateMatch(requirement, candidate),
   };
 }
@@ -212,26 +234,58 @@ const organizationRow = z.object({
   ...applicationColumns,
   requirement_id: z.string(),
   requirement: card,
+  ...profileRulesColumns,
   total: z.number(),
   candidate_ref: z.string().nullable(),
 });
 
 /**
  * A row of `get_organization_applications()` (v2-05): the same applicant columns as
- * `get_requirement_applications()` plus its requirement card, evaluated against that requirement. A
- * technician who closed the account (no applicant columns) is `candidate: null, match: null`.
+ * `get_requirement_applications()` plus its requirement card and v1.8 profile rules (matching-v18,
+ * 20261024100900), evaluated against that requirement. A technician who closed the account (no applicant
+ * columns) is `candidate: null, match: null`.
  */
 export function toOrganizationApplication(raw: unknown): {
   application: OrganizationApplication;
   total: number;
 } {
   const row = organizationRow.parse(raw);
-  const requirement = toCardRequirement(row.requirement);
+  const requirement = { ...toCardRequirement(row.requirement), ...toProfileRules(row) };
   const application: OrganizationApplication =
     row.candidate_ref === null
       ? { ...base(row, requirement.id), candidate: null, match: null, requirement }
       : { ...toOrgApplication(raw, requirement), requirement };
   return { application, total: row.total };
+}
+
+/**
+ * The v1.8 profile rules of requirements the caller (a professional) may read: published and current, or
+ * applied to (`get_requirement_profile_rules`, DEFINER; 42501 when not a professional). One call.
+ */
+export async function loadProfileRules(
+  actor: Actor,
+  requirementIds: readonly string[],
+): Promise<Map<string, RequirementRuleColumns>> {
+  if (requirementIds.length === 0) return new Map();
+  const { data, error } = await actor.client.rpc("get_requirement_profile_rules", {
+    p_requirement_ids: [...new Set(requirementIds)],
+  });
+  if (error) throw fromDatabaseError(error);
+  return toProfileRulesById(z.array(z.unknown()).parse(data));
+}
+
+/**
+ * Each listed opportunity with its profile rules. One the rules call no longer returns stopped being
+ * published between the two reads (closed, paused or ended): it is left out, never evaluated without rules.
+ */
+export function withProfileRules(
+  requirements: readonly OpportunityRequirement[],
+  rules: ReadonlyMap<string, RequirementRuleColumns>,
+): OpportunityRequirement[] {
+  return requirements.flatMap((r) => {
+    const profileRules = rules.get(r.id);
+    return profileRules ? [{ ...r, ...profileRules }] : [];
+  });
 }
 
 export interface OwnApplication {

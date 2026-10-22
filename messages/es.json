@@ -1322,7 +1322,43 @@
       "expired": "{code} caducó el {date}",
       "expiresDuring": "{code} caduca durante la necesidad ({date})",
       "notAvailable": "No disponible en las fechas de la necesidad",
-      "partial": "Disponible solo el {percent, number}% del periodo de la necesidad"
+      "partial": "Disponible solo el {percent, number}% del periodo de la necesidad",
+      "workPermit": "Falta declarar permiso de trabajo para {country}",
+      "category": "La categoría no coincide: se pide {category}",
+      "aircraft": "La aeronave no está declarada en el perfil ({list})",
+      "typeRatingMissing": "Falta habilitación de tipo {category} · {list} declarada y vigente, sin restricciones",
+      "typeRatingNotValid": "La habilitación de tipo {category} · {list} solo está vigente hasta el {date}",
+      "typeRatingRestricted": "La habilitación de tipo {category} · {list} tiene restricciones declaradas",
+      "engine": "No declara ninguno de los motores pedidos ({list})",
+      "experience": "No alcanza la experiencia mínima ({count, plural, one {# año} other {# años}})",
+      "skill": "Capacidad requerida: {skill}"
+    },
+    "profileTitle": "Requisitos del perfil",
+    "affinityTitle": "Afinidad (puntuación deseable)",
+    "profile": {
+      "workPermit": "Permiso de trabajo: {country}",
+      "category": "Categoría {category}",
+      "aircraft": "Aeronave: {list}",
+      "typeRating": "Habilitación de tipo {category} · {list}",
+      "engine": "Motor: {list}",
+      "minYears": "Experiencia mínima: {count, plural, one {# año} other {# años}}",
+      "skill": "Capacidad: {skill}",
+      "declared": "Declarado en el perfil",
+      "notDeclared": "No declarado en el perfil",
+      "typeRatingMet": "Declarada, vigente y sin restricciones",
+      "typeRatingMissing": "No declarada",
+      "typeRatingNotValid": "Vigente solo hasta el {date}",
+      "typeRatingRestricted": "Con restricciones declaradas",
+      "yearsDeclared": "{count, plural, one {# año declarado} other {# años declarados}}",
+      "yearsUndeclared": "Experiencia no declarada"
+    },
+    "affinity": {
+      "english": "Inglés técnico",
+      "englishLevel": "Nivel {level}",
+      "englishNone": "Nivel no declarado",
+      "base": "Base habitual o movilidad aceptada",
+      "baseMet": "Misma base o acepta desplazamientos",
+      "baseNotMet": "Otra base y sin desplazamientos"
     }
   },
   "settings": {
@@ -1951,7 +1987,7 @@
       "reasonLabel": "Motivo (obligatorio)",
       "reasonHint": "Lo verá la otra parte. Máximo 1000 caracteres.",
       "acceptTerms": "Acepto exactamente estas condiciones (versión {version}).",
-      "confirmHint": "El servidor vuelve a comprobar cualificaciones, disponibilidad, plazas y solapes antes de confirmar.",
+      "confirmHint": "El servidor vuelve a comprobar cualificaciones, requisitos del perfil, restricciones, disponibilidad, plazas y solapes antes de confirmar.",
       "finishHint": "Disponible después de la última jornada.",
       "withdrawHint": "Se retirará tu candidatura. Podrás volver a presentarte mientras la necesidad siga abierta.",
       "proposeHint": "Se enviará una copia fija de las condiciones publicadas; el profesional tendrá que aceptarla.",
@@ -1971,7 +2007,9 @@
       "REAPPLY_NOT_ALLOWED": "No se puede volver a presentar: la candidatura anterior terminó.",
       "ACTIVE_COMMITMENTS": "Resuelve antes las asignaciones activas (aceptadas o confirmadas).",
       "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar.",
-      "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización."
+      "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización.",
+      "PROFILE_REQUIREMENTS_UNMET": "El perfil no cumple los requisitos de la necesidad (permiso de trabajo, categoría, aeronave, habilitación de tipo, motores, experiencia o capacidades).",
+      "RESTRICTIONS_DECLARED": "El profesional declara restricciones generales: no se puede confirmar (perfil o restricciones pendientes de revisión)."
     },
     "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual.",
     "orgOnlyTitle": "«Mis candidaturas» es para profesionales",

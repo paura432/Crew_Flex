@@ -24,6 +24,8 @@ import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import {
   loadOwnCandidate,
+  loadProfileRules,
+  myApplicationRequirementIds,
   periodOf,
   toMyApplication,
   toOrganizationApplication,
@@ -168,8 +170,12 @@ async function loadMine(actor: Actor): Promise<MyApplication[]> {
     const { startsAt, endsAt } = req.parse(r).requirement;
     return { startsAt: toIso(startsAt), endsAt: toIso(endsAt) };
   });
-  const own = await loadOwnCandidate(actor, periodOf(requirements));
-  return rows.map((r) => toMyApplication(r, own));
+  // Own data and each requirement's v1.8 profile rules (matching-v18), one call each.
+  const [own, rules] = await Promise.all([
+    loadOwnCandidate(actor, periodOf(requirements)),
+    loadProfileRules(actor, myApplicationRequirementIds(rows)),
+  ]);
+  return rows.map((r) => toMyApplication(r, own, rules));
 }
 
 export const handler = createHandler("applications", {
@@ -248,7 +254,7 @@ export const handler = createHandler("applications", {
       p_share_consent: input.shareConsent, // literal true (schema); the database requires it too
       p_request_id: ctx.requestId,
     });
-    // P0002 → 404 · CFA01…CFA10, CFA13 → 409 + reason · CF409 → 409 (key reused with another requirement)
+    // P0002 → 404 · CFA01…CFA10, CFA13, CFA14 → 409 + reason · CF409 → 409 (key reused with another requirement)
     if (error) throw fromDatabaseError(error);
     const { id, replayed } = createdRow(data);
     const application = (await loadMine(actor)).find((a) => a.id === id);
