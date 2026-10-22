@@ -104,6 +104,17 @@ pool rules (T-04). The table has no grant to any API role (owner-only policies s
 through `get_my_notifications`, marks through `mark_notifications_read` (own rows, `read_at` only). The event
 trigger share-locks the memberships it notifies, so a concurrent demotion waits and then deletes the new notice.
 
+**Requirement builder (v2 diff area 30, LOCAL `20261023600000/600100`).** The new `work_requirements` columns
+(`country`, `timezone`, `description`, `shifts`, `conditions`) are INSERT-only for `authenticated` (the create RPC is
+SECURITY INVOKER under the existing admin/manager insert policy, which already allows `draft`); nobody holds UPDATE on
+them — edits go through `update_work_requirement` (DEFINER, admin/manager in the body) — and `archived_at` has no grant
+at all: only `archive_work_requirement` (DEFINER, admin/manager of the requirement's organization in the body; missing
+and not allowed are the same 42501) writes it, one way. CHECK constraints validate every write path, the table owner
+included. `count_viable_candidates` (DEFINER) answers admins/managers of the given organization only, with a count of
+internal members plus `anonymous`/`open` professionals passing the hard filters — no identities, never `private`
+(S-7): the same people matching already shows pseudonymously for a saved requirement. Professionals see the new terms
+only through the fixed projection of `list_opportunities` and the proposal `terms` (no ids, no `archived_at`).
+
 ## Edge Function checklist
 
 Every protected handler, in order:

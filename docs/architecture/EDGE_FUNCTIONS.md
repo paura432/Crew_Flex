@@ -29,6 +29,28 @@ in `supabase/functions/`. Shared code in `_shared/`; business logic imported fro
 
 No directories are created for PLANNED functions (no ghost code). `createHandler` accepts GET/POST/PATCH/PUT/DELETE.
 
+### Requirement builder (v2 diff area 30, LOCAL `20261023600000/600100`, not deployed; BR-1.10…BR-1.15)
+
+- **`work-requirements`** — POST and PUT take the optional terms `country` (EU-27), `timeZone` (EU IANA zones),
+  `description` (≤ 4000), `shifts` (1–366, the period must be their envelope) and `conditions` (known keys only, no
+  money flow), plus `intent`: `draft` saves a draft (R-D4: qualifications 0–20, no start-in-the-future rule),
+  `publish` (or nothing on create) applies every rule; on PUT `publish` turns a draft into `open`. A PUT is a full
+  replacement: a term not sent is cleared. They call the new RPC overloads (`create_work_requirement_idempotent` /
+  `update_work_requirement` with `p_status, p_country, p_time_zone, p_description, p_shifts, p_conditions`); the old
+  overloads stay for the deployed functions. Body limit **128 KB** for POST/PUT (366 shifts + a description do not fit
+  in 32 KB; 413 above it). PATCH also takes `{ id, archive: true }` → `archive_work_requirement` (one way, closed or
+  draft; 409 otherwise), and publishing a draft through `{ id, status: "open" }` first applies the creation rules to
+  what the draft holds (400 with `issues`). GET adds `archived=include|exclude|only` (default `include`, as before) and
+  every requirement carries `country`, `timeZone`, `description`, `shifts`, `conditions`, `archivedAt` (null = not
+  stated). Drafts are not evaluable: `capacity-evaluate` / `matching-evaluate` answer 409 for them.
+- **`matching-evaluate`** — POST `{ organizationId, startsAt, endsAt, urgency, hardQualificationTypeIds }` (strict,
+  `viableCandidatesInput`) → `ViableCandidatesResponse { viable }`: the builder's live count (T-66) from RPC
+  `count_viable_candidates` (DEFINER, admin/manager of that organization, a number only, never `private`
+  professionals). `{ requirementId }` keeps its meaning; a body with both is 400.
+- **`opportunities` / `applications`** — the requirement projection (`list_opportunities`, the card of
+  `get_my_applications`) and every proposal's `terms` written since carry the same terms; older proposal versions read
+  them as not stated (null). The shared schemas parse them, so an unknown key (a commission) fails loudly.
+
 ## Response contract (`src/types/api.ts`)
 
 ```json

@@ -202,6 +202,26 @@ answer only to an admin/manager of the requirement's organization (or the owner)
 inside `transition_application` (transaction-local flag read by `guard_requirement_status`); closing is refused
 while an application is `accepted` or `confirmed` (`CFA11`, T-12).
 
+**Requirement builder (v2 diff area 30, LOCAL `20261023600000/600100`, BR-1.10…BR-1.15, defaults T-60…T-66).**
+Six nullable columns (NULL = not stated, which every older row is):
+
+| Column        | Type / check                                                                                                                                                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `country`     | text, one of the 27 EU ISO codes (`work_requirements_country_eu` = `EU_COUNTRIES`)                                                                                                                                                                                                    |
+| `timezone`    | text, one of the EU IANA zones or `UTC` (`work_requirements_timezone_known` = `REQUIREMENT_TIME_ZONES`); only tells local dates apart                                                                                                                                                 |
+| `description` | text 1–4000                                                                                                                                                                                                                                                                           |
+| `shifts`      | jsonb `[{startsAt, endsAt, baseHours}]`, canonical ISO UTC (ms), sorted; CHECK `app_private.requirement_shifts_valid(shifts, timezone, starts_at, ends_at)`: 1–366, ≤ 24 h each, 0.25–24 base hours ≤ the duration, no overlap, one per local start date, the period = their envelope |
+| `conditions`  | jsonb of known keys only (rates, per diem, hours per shift, contract, budget flag, mobilisation, incorporation, logistics); CHECK `app_private.requirement_conditions_valid`; informative, no money flow (OD-7)                                                                       |
+| `archived_at` | timestamptz, only on a `closed` row (`work_requirements_archived_closed`), one way; written by `archive_work_requirement` only                                                                                                                                                        |
+
+API roles get INSERT on the first five (the create RPC is SECURITY INVOKER) and no UPDATE on any of them: edits go
+through `update_work_requirement`. Both freeze guards (`guard_closed_requirement`, `guard_requirement_with_applications`)
+cover them too, and `archived_at` can never be cleared. Shifts are a validated list on the row, not a table: no shift ids
+until partial coverage (v2-30) needs them (T-60). Drafts (`draft`, created by the new create overload) may lack
+qualifications; BR-1.4 still applies when they are published. The opportunity projection (`list_opportunities`,
+`app_private.requirement_cards`) and therefore every proposal's `terms` carry `country`, `timeZone`, `description`,
+`shifts`, `conditions` — still no ids of people or organizations, never `archived_at`.
+
 ### `work_requirement_qualifications`
 
 `id`, `work_requirement_id`, `qualification_type_id` (unique per requirement), `requirement_level`
@@ -327,7 +347,9 @@ Both: RLS on, no policy, no grant — DEFINER functions only. Retention rules: `
 grant for API roles; rows are written by SECURITY DEFINER triggers.
 
 Actions in use: `requirement.created`, `requirement.status_changed` (`{from,to}`; covered ↔ open set by an
-application carry `system: true` and no actor, since `20261022130300`), `requirement.updated` (`{fields}`, M05 edit),
+application carry `system: true` and no actor, since `20261022130300`), `requirement.updated` (`{fields}`, M05 edit;
+since `20261023600100` also `country`, `timeZone`, `description`, `shifts`, `conditions`), `requirement.archived`
+(`{from}`, `20261023600100`),
 `application.<status>` (`received` … `cancelled`, one per successful apply/transition, metadata `from`, `to`,
 `actor` side, `requirement_id`, `proposal_version`, `reason_provided`, `request_id` — never the reason; rows whose
 actor is the technician have **no organization id**, so an organization's audit trail never carries an applicant's
@@ -375,6 +397,10 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `list_opportunities(id, urgency, q, limit)` (`20261022130200`, local only)                                                                                                               | DEFINER, stable | D-12: published, current requirements (`open`, `ends_at > now()`) for professional accounts only (42501 otherwise), fixed projection (organization name, no ids of people/organizations, no counts), ≤ 200 rows, `total`.                                |
 | `own_candidate_profile(from, to)` (`20261022130200`, local only)                                                                                                                         | INVOKER, stable | The caller's own matchable data in the candidate-pool column shape (`toCandidate`), for their own eligibility.                                                                                                                                           |
 | `update_work_requirement(id, expected_updated_at, …, qualifications)` (`20261022130300`, local only)                                                                                     | DEFINER         | M05 edit (see `work_requirements`): admin/manager, creation validations, `CF412`, `CFA12` after any application, `55000` closed, no-op when unchanged, audit `requirement.updated`.                                                                      |
+| `create_work_requirement(…, status, country, time_zone, description, shifts, conditions)` + `…_idempotent` (`20261023600100`, local only)                                                | INVOKER         | New overloads (the old ones stay): `draft` (0–20 qualifications) or `open` (1–20 with a hard one); terms normalised (`normalize_requirement_shifts/conditions`); the key's hash covers them.                                                             |
+| `update_work_requirement(…, status, country, time_zone, description, shifts, conditions)` (`20261023600100`, local only)                                                                 | DEFINER         | New overload: as the M05 edit plus the terms; `status` NULL keeps it, `draft` saves a draft (only a draft), `open` publishes a draft; changed names include the terms.                                                                                   |
+| `archive_work_requirement(id)` (`20261023600100`, local only)                                                                                                                            | DEFINER         | v1.8 «Archivar» (T-64): admin/manager; closed → archived, draft → closed + archived, else `55000`; twice = no-op; 42501 for anyone else; audit `requirement.archived`.                                                                                   |
+| `count_viable_candidates(org, starts_at, ends_at, urgency, hard_type_ids)` (`20261023600100`, local only)                                                                                | DEFINER, stable | Builder live count (T-66): admin/manager of `org`; members + `anonymous`/`open` professionals passing `app_private.hard_eligibility_for`; a number only.                                                                                                 |
 | `apply_to_requirement(requirement_id, key, share_consent, request_id)` (`20261022130300`, local only)                                                                                    | DEFINER         | ∅ → `received`: technician only, idempotent (`application.create`), open (`CFA01`), not started (`CFA02`), Q5/T-09 (`CFA09`/`CFA10`), eligible now (T-08: `CFA03`/`CFA04`); the share consent must be `true` (22023), recorded as a flag; event + audit. |
 | `transition_application(id, to, expected_updated_at, key, reason, proposal_id, request_id)` (`20261022130300`, local only)                                                               | DEFINER         | Every other transition (`app_private.application_transitions`): locks, side from the DB, idempotent (`application.transition`), version `CF412`, proposals, confirm re-checks, covered ↔ open; event + audit.                                            |
 | `get_requirement_applications(requirement_id)` · `get_my_applications()` · `get_application_counts(org)` (`20261022130300`, local only)                                                  | DEFINER, stable | Org view (admin/manager, pool rules, 42501 otherwise) · own applications with the requirement card · counts per status (admin/manager).                                                                                                                  |
@@ -395,7 +421,11 @@ professionals may see (also the proposal terms), no grant (`20261022130200`). `h
 — BR-2/BR-3/BR-4.8 for one professional, the same expressions as `ranked_external_pool` (rls suite W proves the
 three agree), used at apply and confirm. Notices (`20261023800000`): `notification_retention()` (180 days),
 `candidate_pseudonym(requirement, profile)` (the pool's `CF-…` expression; the notices suite proves they agree),
-`prune_notifications(recipients)`, `visible_notifications()` — no grants.
+`prune_notifications(recipients)`, `visible_notifications()` — no grants. Since `20261023600100` it delegates to
+`hard_eligibility_for(starts_at, ends_at, urgency, hard_type_ids, profile)` — the same expressions on explicit
+parameters, also used by the builder's live count — and the requirement builder's validators
+`requirement_shifts_valid`, `requirement_conditions_valid`, `normalize_requirement_shifts/conditions` live here
+(EXECUTE for `authenticated`: CHECK constraints run with the writer's privileges; pure functions).
 `idempotency_keys(actor_id → profiles, operation, key uuid, request_hash, resource_id, created_at)`, PK
 (actor, operation, key), RLS own rows; `ranked_external_pool(requirement_id)` (ordering helper, no grant
 to API roles; since `20261023500200` (LOCAL) it admits `verified_orgs` professionals only when the requirement's

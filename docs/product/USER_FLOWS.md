@@ -21,7 +21,10 @@ Sign out from the app shell.
    next open requirement: Required · Internally eligible · Gap · Coverage + required
    qualifications.
 2. `/app/organization/requirements/new`: title, location, start/end, shift, headcount, urgency,
-   qualifications (each hard/soft). Client + server validation (Zod).
+   qualifications (each hard/soft). Client + server validation (Zod). LOCAL (requirement builder, BR-1.10…1.15):
+   country and zone, optional shifts with base hours, terms and logistics, description; «Revisar antes de publicar»
+   (summary, live count of viable candidates, preview); «Guardar borrador» or «Publicar necesidad»; the form
+   autosaves in the browser. `?from=<id>` duplicates a requirement into the builder.
 3. Submit → server action → Edge Function `work-requirements` (POST) → validation → authorization
    (JWT actor, org role from DB) → RPC `create_work_requirement` under RLS → audit
    `requirement.created` → typed response.
