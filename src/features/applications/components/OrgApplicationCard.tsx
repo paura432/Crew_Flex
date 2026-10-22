@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { canFinish } from "@/domain/applications";
+import { hasPackCopy } from "@/domain/candidate-pack";
 import type { MatchResult } from "@/domain/matching";
 import type { RequirementStatus, WorkRequirement } from "@/domain/work-requirement";
 import { MatchExplanation } from "@/features/matching/components/MatchCard";
@@ -11,6 +12,7 @@ import type { CandidateSummary, OrgApplication } from "@/types/api";
 import { APPLICATION_TONE } from "../view";
 import { ApplicationActions } from "./ApplicationActions";
 import { ApplicationDetails } from "./ApplicationDetails";
+import { PackDisclosure } from "./PackDisclosure";
 
 type CardRequirement = Pick<
   WorkRequirement,
@@ -39,22 +41,30 @@ const periodEndedNow = (r: Pick<WorkRequirement, "endsAt">) => canFinish(r, Date
  * their live eligibility, proposal, history and the admin/manager actions. On the organization-wide
  * «Candidaturas» (v2-05, `showRequirement`) the heading is the requirement, as v1.8 `Workflow.jsx:57`,
  * with its period and status note; on a requirement's own page it is the applicant. A closed account
- * keeps its status and history and shows «Cuenta cerrada» instead of an applicant.
+ * keeps its status and history and shows «Cuenta cerrada» instead of an applicant (and has no Candidate
+ * Pack copy). Both pages pass `pack` for «Ver expediente» (v2-15, BR-25).
  */
 export async function OrgApplicationCard({
   application,
   requirement,
   showRequirement = false,
+  pack,
 }: {
   application: CardApplication;
   requirement: CardRequirement;
   showRequirement?: boolean;
+  /**
+   * v2-15 «Ver expediente»: whether this card's Candidate Pack copy is open (`?pack=` names it) and the page
+   * URL to toggle it on. Shown while the application keeps a copy (T-113) and its applicant has an account.
+   */
+  pack?: { open: boolean; baseHref: string };
 }) {
-  const [t, tHiring, tMatching, tDomain, locale] = await Promise.all([
+  const [t, tHiring, tMatching, tDomain, tPack, locale] = await Promise.all([
     getTranslations("applications"),
     getTranslations("hiring.applications"),
     getTranslations("matching"),
     getTranslations("domain"),
+    getTranslations("candidatePack"),
     getLocale() as Promise<Locale>,
   ]);
   const { candidate, match } = application;
@@ -114,6 +124,14 @@ export async function OrgApplicationCard({
       )}
       {match && <MatchExplanation match={match} />}
       <ApplicationDetails application={application} />
+      {pack && candidate && hasPackCopy(application.status) && (
+        <PackDisclosure
+          applicationId={application.id}
+          open={pack.open}
+          baseHref={pack.baseHref}
+          intro={tPack("orgIntro")}
+        />
+      )}
       {/* A closed account's applications are terminal (account closure), so no button shows. */}
       <ApplicationActions
         applicationId={application.id}

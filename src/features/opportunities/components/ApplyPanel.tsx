@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import type { ApplicationStatus, ApplyBlocker } from "@/domain/applications";
@@ -12,19 +12,27 @@ import { useIdempotencyKey } from "@/lib/idempotency";
 
 /**
  * «Presentar candidatura» (D-06 ∅ → received). The technician authorises, explicitly and for this
- * requirement only, that its organization sees what the candidate pool shows (v1.8 consent; D-07
- * keeps contact and documents locked). The server re-checks every rule (T-08, Q5, Q6).
+ * requirement only, that its organization sees what the candidate pool shows plus the dated Candidate Pack
+ * copy previewed above the consent (v1.8 consent; D-07 keeps identity, contact and documents locked). The
+ * server re-checks every rule (T-08, Q5, Q6).
  */
 export function ApplyPanel({
   requirementId,
   organizationName,
   blocker,
   myStatus,
+  packPreview,
 }: {
   requirementId: string;
   organizationName: string;
   blocker: ApplyBlocker | null;
   myStatus: ApplicationStatus | null;
+  /**
+   * v2-15/v2-04 «Qué compartes»: the server-rendered preview of the Candidate Pack copy the organization will
+   * receive (same database builder as the copy). Null = it could not be loaded: then nothing can be sent,
+   * because the professional must see the copy's content before consenting (T-111).
+   */
+  packPreview: ReactNode | null;
 }) {
   const t = useTranslations("opportunities.apply");
   const tDomain = useTranslations("domain");
@@ -84,17 +92,23 @@ export function ApplyPanel({
           <li>{t("notShared")}</li>
         </ul>
       </div>
+      {packPreview ?? <p className="text-sm text-danger">{tRoot("candidatePack.previewError")}</p>}
       <label className="flex items-start gap-2 text-sm pointer-coarse:min-h-11 pointer-coarse:items-center">
         <input
           type="checkbox"
           className="mt-0.5 size-4"
           checked={consent}
-          disabled={pending}
+          disabled={pending || !packPreview}
           onChange={(e) => setConsent(e.target.checked)}
         />
         {t("consent", { organization: organizationName })}
       </label>
-      <Button type="submit" variant="primary" disabled={pending || !consent} aria-busy={pending}>
+      <Button
+        type="submit"
+        variant="primary"
+        disabled={pending || !consent || !packPreview}
+        aria-busy={pending}
+      >
         {pending ? t("sending") : t("submit")}
       </Button>
       <Notice

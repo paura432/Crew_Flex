@@ -7,7 +7,8 @@
 //   DELETE /professional-logbook?id=<uuid>
 // User-JWT client ONLY (no service role): the table's owner-only RLS is the authorization and the
 // owner is the JWT subject — the body never carries it. No organization, manager or platform-admin
-// path exists: the logbook is private and self-declared (FD-25); `cvRelevant` is stored only.
+// path exists: the logbook is private and self-declared (FD-25); `cvRelevant` is read only by the
+// Candidate Pack copy the database freezes when the owner applies (BR-25, migration 20261024300000).
 import { z } from "zod";
 import { requireActor, requireTechnician } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";

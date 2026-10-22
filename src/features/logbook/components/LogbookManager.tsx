@@ -2,8 +2,8 @@
 
 // Personal logbook (M14, N-12; v1.8 `src/components/v11/Logbook2.jsx` + connected `Account.jsx`
 // `Logbook`). Owner only: new entry, history with edit, «Seleccionable para expediente», archive,
-// restore and (archived only) delete. Nothing here shares an entry with anyone: the Candidate Pack
-// that would read the selection flag is not active (D-07).
+// restore and (archived only) delete. Nothing here shares an entry with anyone: only applying copies the
+// entries marked «Seleccionable para expediente» into that application's Candidate Pack copy (BR-25).
 import { useLocale, useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition, type FormEvent } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";

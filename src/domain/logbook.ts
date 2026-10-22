@@ -4,8 +4,9 @@
 // date» rule (migration 20261023200000), so a direct PostgREST write cannot bypass them.
 //
 // A logbook entry is self-declared, private to its owner and never an official record (FD-25): no
-// organization, manager or platform admin reads it, and nothing shares it (the Candidate Pack, which
-// would read `cvRelevant`, waits for D-07).
+// organization, manager or platform admin reads it. Only the owner's own act shares entries: applying
+// copies the ones marked `cvRelevant` (and not archived) into that application's Candidate Pack copy
+// (BR-25, T-112; `PACK_EXPERIENCE_MAX` in ./candidate-pack.ts).
 
 /** v1.8 demo «Categoría de tarea» (first = default). Codes; labels live in the catalogs. */
 export const LOGBOOK_CATEGORIES = [

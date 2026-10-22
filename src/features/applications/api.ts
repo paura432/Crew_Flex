@@ -3,7 +3,9 @@ import type { ApplicationStatus } from "@/domain/applications";
 import type { ApplyInput, TransitionInput } from "@/lib/validation/applications";
 import { invokeEdgeFunction } from "@/server/edge-functions";
 import type {
+  ApplicationPackResponse,
   ApplicationResponse,
+  CandidatePackPreviewResponse,
   ApplicationTransitionResponse,
   MyApplicationListResponse,
   OrganizationApplicationsResponse,
@@ -19,6 +21,21 @@ export const listMyApplications = () =>
 export const listRequirementApplications = (requirementId: string) =>
   invokeEdgeFunction<RequirementApplicationsResponse>("applications", {
     query: { requirementId },
+  });
+
+/**
+ * The Candidate Pack copy of one application (v2-15, BR-25): its two parties only (404 for anyone else);
+ * `pack: null` when the application has no copy (withdrawn, rejected, cancelled, account closed, or older).
+ */
+export const getApplicationPack = (applicationId: string) =>
+  invokeEdgeFunction<ApplicationPackResponse>("applications", {
+    query: { view: "pack", applicationId },
+  });
+
+/** What the caller's copy would contain if they applied now (the apply panel's «Qué compartes»). */
+export const getPackPreview = () =>
+  invokeEdgeFunction<CandidatePackPreviewResponse>("applications", {
+    query: { view: "pack-preview" },
   });
 
 export const applyToRequirement = (input: ApplyInput, idempotencyKey: string) =>

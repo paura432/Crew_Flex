@@ -148,6 +148,11 @@ export default async function OrganizationApplicationsPage({
                 application={application}
                 requirement={application.requirement}
                 showRequirement
+                pack={{
+                  // v2-15 «Ver expediente»: only a card of this page opens (`?pack=` matched against it).
+                  open: search.pack === application.id,
+                  baseHref: organizationApplicationsHref(filters, { page: filters.page }),
+                }}
               />
             ))}
           </div>

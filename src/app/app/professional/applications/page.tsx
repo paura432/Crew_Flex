@@ -7,9 +7,11 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { APPLICATION_STATUSES, type ApplicationStatus } from "@/domain/applications";
+import { hasPackCopy } from "@/domain/candidate-pack";
 import { listMyApplications } from "@/features/applications/api";
 import { ApplicationActions } from "@/features/applications/components/ApplicationActions";
 import { ApplicationDetails } from "@/features/applications/components/ApplicationDetails";
+import { PackDisclosure } from "@/features/applications/components/PackDisclosure";
 import { APPLICATION_TONE } from "@/features/applications/view";
 import type { Locale } from "@/i18n/config";
 import { formatPeriod } from "@/i18n/format";
@@ -26,17 +28,22 @@ const REQUIREMENT_NOTE = {
   covered: "requirementCovered",
 } as const;
 
-/** M08, technician side (v1.8 «Mis candidaturas»): every own application, its proposal and history. */
+/**
+ * M08, technician side (v1.8 «Mis candidaturas»): every own application, its proposal and history, and the
+ * Candidate Pack copy the organization received («Ver expediente», v2-15).
+ */
 export default async function MyApplicationsPage({
   searchParams,
 }: PageProps<"/app/professional/applications">) {
-  const [{ status: statusParam }, actor, t, tDomain, locale] = await Promise.all([
-    searchParams,
-    requireSessionActor(),
-    getTranslations("applications"),
-    getTranslations("domain"),
-    getLocale() as Promise<Locale>,
-  ]);
+  const [{ status: statusParam, pack: packParam }, actor, t, tDomain, tPack, locale] =
+    await Promise.all([
+      searchParams,
+      requireSessionActor(),
+      getTranslations("applications"),
+      getTranslations("domain"),
+      getTranslations("candidatePack"),
+      getLocale() as Promise<Locale>,
+    ]);
   const header = (
     <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
   );
@@ -149,6 +156,18 @@ export default async function MyApplicationsPage({
                     )}
                   </div>
                   <ApplicationDetails application={application} />
+                  {hasPackCopy(application.status) && (
+                    <PackDisclosure
+                      applicationId={application.id}
+                      open={packParam === application.id}
+                      baseHref={
+                        status
+                          ? `/app/professional/applications?status=${status}`
+                          : "/app/professional/applications"
+                      }
+                      intro={tPack("ownIntro", { organization: r.organizationName })}
+                    />
+                  )}
                   <ApplicationActions
                     applicationId={application.id}
                     status={application.status}
