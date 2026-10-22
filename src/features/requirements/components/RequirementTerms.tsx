@@ -40,7 +40,14 @@ export function RequirementTerms({
   const tDomain = useTranslations("domain");
   const locale = useLocale() as Locale;
   const euro = (value: number) => formatEuro(locale, value);
-  const c = terms.conditions ?? null;
+  // The builder's preview passes what is being typed: a number that does not parse yet is not shown.
+  const c = terms.conditions
+    ? (Object.fromEntries(
+        Object.entries(terms.conditions).filter(
+          ([, value]) => typeof value !== "number" || Number.isFinite(value),
+        ),
+      ) as RequirementConditions)
+    : null;
   const shifts = sortShifts(terms.shifts ?? []);
 
   const rows: [string, string][] = [];

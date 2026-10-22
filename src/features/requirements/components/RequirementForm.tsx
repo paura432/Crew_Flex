@@ -308,7 +308,10 @@ export function RequirementForm({
     hourlyRate?: number;
     shiftHours?: number;
   };
-  const daily = dayRate(conditions);
+  const daily =
+    Number.isFinite(conditions.hourlyRate) && Number.isFinite(conditions.shiftHours)
+      ? dayRate(conditions)
+      : null;
   const periodValid =
     !Number.isNaN(Date.parse(period.startsAt)) &&
     !Number.isNaN(Date.parse(period.endsAt)) &&
