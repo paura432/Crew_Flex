@@ -275,6 +275,63 @@ export type Database = {
           },
         ];
       };
+      logbook_entries: {
+        Row: {
+          aircraft: string;
+          archived: boolean;
+          ata: string | null;
+          category: Database["public"]["Enums"]["logbook_category"];
+          created_at: string;
+          cv_relevant: boolean;
+          description: string;
+          entry_date: string;
+          environment: Database["public"]["Enums"]["logbook_environment"];
+          hours: number;
+          id: string;
+          technician_profile_id: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          aircraft: string;
+          archived?: boolean;
+          ata?: string | null;
+          category?: Database["public"]["Enums"]["logbook_category"];
+          created_at?: string;
+          cv_relevant?: boolean;
+          description: string;
+          entry_date: string;
+          environment?: Database["public"]["Enums"]["logbook_environment"];
+          hours: number;
+          id?: string;
+          technician_profile_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          aircraft?: string;
+          archived?: boolean;
+          ata?: string | null;
+          category?: Database["public"]["Enums"]["logbook_category"];
+          created_at?: string;
+          cv_relevant?: boolean;
+          description?: string;
+          entry_date?: string;
+          environment?: Database["public"]["Enums"]["logbook_environment"];
+          hours?: number;
+          id?: string;
+          technician_profile_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "logbook_entries_technician_profile_id_fkey";
+            columns: ["technician_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
+          },
+        ];
+      };
       organization_members: {
         Row: {
           created_at: string;
@@ -705,6 +762,23 @@ export type Database = {
           replayed: boolean;
         }[];
       };
+      create_logbook_entry: {
+        Args: {
+          p_aircraft: string;
+          p_ata: string;
+          p_category: Database["public"]["Enums"]["logbook_category"];
+          p_cv_relevant: boolean;
+          p_description: string;
+          p_entry_date: string;
+          p_environment: Database["public"]["Enums"]["logbook_environment"];
+          p_hours: number;
+          p_idempotency_key: string;
+        };
+        Returns: {
+          id: string;
+          replayed: boolean;
+        }[];
+      };
       create_professional_document: {
         Args: {
           p_expires_at: string;
@@ -994,6 +1068,19 @@ export type Database = {
       availability_status: "available" | "unavailable" | "aog_only";
       document_kind: "license" | "course" | "other";
       document_scan_status: "not_scanned" | "clean" | "infected";
+      logbook_category:
+        | "defect_rectification"
+        | "inspection"
+        | "component_replacement"
+        | "troubleshooting"
+        | "sheet_metal_structures"
+        | "cabin_interiors";
+      logbook_environment:
+        | "line_maintenance"
+        | "base_maintenance"
+        | "engine_bay_check"
+        | "aog_intervention"
+        | "workshop";
       mobility: "local" | "national" | "international";
       organization_role: "member" | "manager" | "admin";
       organization_type: "mro" | "airline" | "operator" | "staffing_agency" | "other";
@@ -1133,6 +1220,21 @@ export const Constants = {
       availability_status: ["available", "unavailable", "aog_only"],
       document_kind: ["license", "course", "other"],
       document_scan_status: ["not_scanned", "clean", "infected"],
+      logbook_category: [
+        "defect_rectification",
+        "inspection",
+        "component_replacement",
+        "troubleshooting",
+        "sheet_metal_structures",
+        "cabin_interiors",
+      ],
+      logbook_environment: [
+        "line_maintenance",
+        "base_maintenance",
+        "engine_bay_check",
+        "aog_intervention",
+        "workshop",
+      ],
       mobility: ["local", "national", "international"],
       organization_role: ["member", "manager", "admin"],
       organization_type: ["mro", "airline", "operator", "staffing_agency", "other"],
