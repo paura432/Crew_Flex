@@ -394,6 +394,12 @@ await page.getByRole("button", { name: "Yes, delete it" }).click(); // W1-10 ask
 await page.waitForTimeout(2500);
 after = await page.locator("li:has(button:has-text('Delete'))").filter({ hasText: "2031" }).count();
 ok("5 delete window", after === 0, `${after} rows with 2031 left`);
+// X-08: the row is gone; focus lands on the outcome notice, not <body>
+ok(
+  "5b focus after confirming a delete is on the notice",
+  await page.evaluate(() => document.activeElement?.getAttribute("role") === "status"),
+  "",
+);
 
 // 1b. Passport: edit → save → reload persists → restore seed values
 await page.goto(`${BASE}/app/professional/profile`);

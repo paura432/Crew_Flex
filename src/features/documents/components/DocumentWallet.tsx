@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
@@ -67,7 +68,6 @@ export function DocumentWallet({
   const [pending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
   const [editing, setEditing] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const idempotency = useIdempotencyKey();
   const qualificationLabel = new Map(qualifications.map((q) => [q.id, q.label]));
 
@@ -169,7 +169,6 @@ export function DocumentWallet({
   function onDelete(id: string) {
     startTransition(async () => {
       const result = await callAction(() => deleteDocumentAction(id));
-      setConfirmDelete(null);
       setNotice(result.ok ? { tone: "ok", text: t("deleted") } : actionErrorCopy(tRoot, result));
     });
   }
@@ -399,40 +398,19 @@ export function DocumentWallet({
                           disabled={pending}
                           onClick={() => {
                             setEditing(d.id);
-                            setConfirmDelete(null);
                             setErrors({});
                           }}
                         >
                           {tRoot("common.edit")}
                         </Button>
-                        {confirmDelete === d.id ? (
-                          <>
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              disabled={pending}
-                              onClick={() => onDelete(d.id)}
-                            >
-                              {t("confirmDelete")}
-                            </Button>
-                            <Button
-                              size="sm"
-                              disabled={pending}
-                              onClick={() => setConfirmDelete(null)}
-                            >
-                              {tRoot("common.cancel")}
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            disabled={pending}
-                            onClick={() => setConfirmDelete(d.id)}
-                          >
-                            {tRoot("common.delete")}
-                          </Button>
-                        )}
+                        <ConfirmButton
+                          size="sm"
+                          disabled={pending}
+                          label={tRoot("common.delete")}
+                          confirmLabel={t("confirmDelete")}
+                          cancelLabel={tRoot("common.cancel")}
+                          onConfirm={() => onDelete(d.id)}
+                        />
                       </div>
                     </div>
                   )}

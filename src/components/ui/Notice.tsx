@@ -1,4 +1,5 @@
 import { unstable_rethrow } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { isValidationKey, translateKey, type MessageResolver } from "@/i18n/validation";
 
 // Codes with an `api.<CODE>.description` entry in the catalog.
@@ -28,9 +29,19 @@ export function Notice({
   notice: NoticeState | null;
   referenceLabel: string;
 }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  // X-08: an outcome that arrives after the focus was lost (the confirmed row is gone, or its button
+  // was disabled while pending) takes it, instead of leaving keyboard users on <body>. Never steals
+  // focus from a control.
+  useEffect(() => {
+    const active = document.activeElement;
+    if (notice && (!active || active === document.body)) ref.current?.focus();
+  }, [notice]);
   if (!notice) return null;
   return (
     <p
+      ref={ref}
+      tabIndex={-1}
       role={notice.tone === "danger" ? "alert" : "status"}
       className={`rounded-lg border px-4 py-3 text-sm ${
         notice.tone === "danger"
