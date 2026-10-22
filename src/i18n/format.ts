@@ -37,3 +37,7 @@ export const formatPeriod = (locale: Locale, startsAt: string, endsAt: string) =
 
 export const formatMonth = (locale: Locale, iso: string) =>
   fmt(locale, { month: "long", year: "numeric" }).format(new Date(iso));
+
+/** «48,78%» in Spanish, «48.78%» in English: the locale's decimal mark, `%` glued as in the catalog (X-05). */
+export const formatPercent = (locale: Locale, value: number) =>
+  `${new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 2 }).format(value)}%`;

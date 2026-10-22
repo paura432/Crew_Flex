@@ -18,7 +18,7 @@ import { listOwnDocumentExpiries } from "@/features/documents/api";
 import { IdentityCard } from "@/features/professional/components/IdentityCard";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
 import { loadProfessionalContext } from "@/features/professional/load";
-import { formatDate } from "@/i18n/format";
+import { formatDate, formatPercent } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
 import { isDocumentWalletEnabled } from "@/server/feature-flags";
 
@@ -123,7 +123,7 @@ export default async function ProfessionalOverviewPage({
           {/* Completeness of the profile items (BR-11) is not a verification status (8.2). */}
           <Metric
             label={t("overview.passport")}
-            value={`${completeness.percent}%`}
+            value={formatPercent(locale, completeness.percent)}
             detail={nextStep ? t(`hint.${nextStep}`) : t("overview.complete")}
             tone={completeness.percent === 100 ? "ok" : "neutral"}
           />

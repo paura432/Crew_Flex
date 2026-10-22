@@ -458,8 +458,8 @@
     "overview": {
       "eyebrow": "Mi espacio",
       "headline": "Tu perfil. Tu tiempo. <br></br>Tu próxima oportunidad.",
-      "progressLead": "Tu pasaporte está al {percent}%",
-      "progressLabel": "Perfil completado al {percent} por ciento",
+      "progressLead": "Tu pasaporte está al {percent, number}%",
+      "progressLabel": "Perfil completado al {percent, number} por ciento",
       "toComplete": "{count, plural, one {# apartado} other {# apartados}} por completar",
       "progressNote": "Completar los datos te ayuda a encontrar oportunidades. El porcentaje no equivale a una revisión documental.",
       "passport": "Perfil completado",
@@ -477,7 +477,7 @@
       "awaitingNext": "{count, plural, one {# cualificación espera a un revisor. Hasta que se verifique no cuenta para los requisitos obligatorios.} other {# cualificaciones esperan a un revisor. Hasta que se verifiquen no cuentan para los requisitos obligatorios.}}",
       "openQualifications": "Abrir cualificaciones",
       "doIt": "Completar",
-      "checklistTitle": "Perfil completado · {percent}%",
+      "checklistTitle": "Perfil completado · {percent, number}%",
       "itemDone": "hecho",
       "itemPending": "pendiente",
       "calendarTitle": "Tu disponibilidad",
@@ -862,7 +862,7 @@
     "availability": {
       "full": "Cubre toda la necesidad",
       "none": "No disponible",
-      "partial": "Cubre el {percent}% del periodo"
+      "partial": "Cubre el {percent, number}% del periodo"
     },
     "blocker": {
       "missing": "Falta {code}",
@@ -870,7 +870,7 @@
       "expired": "{code} caducó el {date}",
       "expiresDuring": "{code} caduca durante la necesidad ({date})",
       "notAvailable": "No disponible en las fechas de la necesidad",
-      "partial": "Disponible solo el {percent}% del periodo de la necesidad"
+      "partial": "Disponible solo el {percent, number}% del periodo de la necesidad"
     }
   },
   "settings": {

@@ -458,8 +458,8 @@
     "overview": {
       "eyebrow": "My space",
       "headline": "Your profile. Your time. <br></br>Your next opportunity.",
-      "progressLead": "Your passport is {percent}% complete",
-      "progressLabel": "Profile {percent} percent complete",
+      "progressLead": "Your passport is {percent, number}% complete",
+      "progressLabel": "Profile {percent, number} percent complete",
       "toComplete": "{count, plural, one {# item} other {# items}} to complete",
       "progressNote": "Completing your details helps you find opportunities. The percentage is not a document review.",
       "passport": "Profile completeness",
@@ -477,7 +477,7 @@
       "awaitingNext": "{count, plural, one {# qualification is waiting for a reviewer. Until it is verified it does not count for hard requirements.} other {# qualifications are waiting for a reviewer. Until they are verified they do not count for hard requirements.}}",
       "openQualifications": "Open qualifications",
       "doIt": "Complete",
-      "checklistTitle": "Profile completeness · {percent}%",
+      "checklistTitle": "Profile completeness · {percent, number}%",
       "itemDone": "done",
       "itemPending": "pending",
       "calendarTitle": "Your availability",
@@ -862,7 +862,7 @@
     "availability": {
       "full": "Covers the entire requirement",
       "none": "Not available",
-      "partial": "Covers {percent}% of the period"
+      "partial": "Covers {percent, number}% of the period"
     },
     "blocker": {
       "missing": "Missing {code}",
@@ -870,7 +870,7 @@
       "expired": "{code} expired on {date}",
       "expiresDuring": "{code} expires during the requirement ({date})",
       "notAvailable": "Not available on the requirement dates",
-      "partial": "Available for only {percent}% of the requirement period"
+      "partial": "Available for only {percent, number}% of the requirement period"
     }
   },
   "settings": {

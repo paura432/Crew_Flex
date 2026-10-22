@@ -3,7 +3,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Metric } from "@/components/ui/Metric";
 import type { CapacityResult } from "@/domain/capacity";
 import type { WorkRequirement } from "@/domain/work-requirement";
-import { formatPeriod } from "@/i18n/format";
+import { formatPercent, formatPeriod } from "@/i18n/format";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
 
 /**
@@ -57,7 +57,7 @@ export async function CapacityOverview({
           tone={hasGap ? "danger" : "ok"}
           detail={hasGap ? t("gapDetail", { count: capacity.gap }) : t("coveredInternally")}
         />
-        <Metric label={t("coverage")} value={`${capacity.coveragePercent}%`} />
+        <Metric label={t("coverage")} value={formatPercent(locale, capacity.coveragePercent)} />
       </dl>
 
       <footer className="flex flex-wrap gap-3 border-t border-line px-5 py-4 sm:px-6">

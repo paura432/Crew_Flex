@@ -1,8 +1,10 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Field";
 import { StatusChip } from "@/components/ui/StatusChip";
+import type { Locale } from "@/i18n/config";
+import { formatPercent } from "@/i18n/format";
 import type { EvaluatedCandidate } from "@/types/api";
 import { explainAvailability, explainCheck } from "../explain";
 import { MAX_COMPARE, MATCH_SORTS, type MatchListQuery } from "../list";
@@ -148,9 +150,10 @@ export async function CompareTable({
   truncated: boolean;
   clearHref: string;
 }) {
-  const [t, tm] = await Promise.all([
+  const [t, tm, locale] = await Promise.all([
     getTranslations("organization.matches.list"),
     getTranslations("matching"),
+    getLocale() as Promise<Locale>,
   ]);
   const labels = [
     ...new Set(items.flatMap((i) => i.match.qualificationChecks.map((c) => explainCheck(c).label))),
@@ -248,7 +251,7 @@ export async function CompareTable({
               {items.map(({ candidate, match }) => (
                 <td key={candidate.id} className="py-2 pr-3">
                   {explainAvailability(match.availability.coveredPercent).met ? "✓" : "✗"}{" "}
-                  {match.availability.coveredPercent}%
+                  {formatPercent(locale, match.availability.coveredPercent)}
                 </td>
               ))}
             </tr>
