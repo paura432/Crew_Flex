@@ -34,7 +34,7 @@ export async function AvailabilityMonth({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="font-semibold first-letter:uppercase" aria-live="polite">
+        <p className="font-semibold" aria-live="polite">
           {formatMonth(locale, `${month}-01T00:00:00Z`)}
         </p>
         <div className="flex gap-1">

@@ -35,8 +35,11 @@ export const formatDateTime = (locale: Locale, iso: string) =>
 export const formatPeriod = (locale: Locale, startsAt: string, endsAt: string) =>
   `${formatShortDate(locale, startsAt)} → ${formatShortDate(locale, endsAt)}`;
 
-export const formatMonth = (locale: Locale, iso: string) =>
-  fmt(locale, { month: "long", year: "numeric" }).format(new Date(iso));
+/** A month as a title: «Octubre de 2026» (Spanish month names are lower case mid-sentence; X-18). */
+export const formatMonth = (locale: Locale, iso: string) => {
+  const month = fmt(locale, { month: "long", year: "numeric" }).format(new Date(iso));
+  return month.charAt(0).toUpperCase() + month.slice(1);
+};
 
 /** «48,78%» in Spanish, «48.78%» in English: the locale's decimal mark, `%` glued as in the catalog (X-05). */
 export const formatPercent = (locale: Locale, value: number) =>
