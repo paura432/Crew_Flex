@@ -1388,10 +1388,6 @@ await asSeedUser("delta@crewflex.test", "professional-availability", {
   method: "DELETE",
   query: { id: deltaWindow.data.window.id },
 });
-await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
-  method: "PATCH",
-  body: { id: hiringId, status: "closed" },
-});
 // 27 (M05 edit, owner 2026-10-22): a need with applications cannot be edited; one without can.
 await login("admin.mro@crewflex.test");
 await page.goto(`${BASE}/app/organization/requirements/${hiringId}/edit`);
@@ -1427,12 +1423,16 @@ await page.waitForLoadState("networkidle");
 ok(
   "27 edit: refused with applications; without them the form saves (title, headcount)",
   editRefused && /Local UI check · edited/.test(await page.locator("main").innerText()),
-  "",
+  JSON.stringify({ editRefused, url: page.url() }),
 );
 await logout();
 await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
   method: "PATCH",
   body: { id: editableId, status: "closed" },
+});
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: hiringId, status: "closed" },
 });
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
