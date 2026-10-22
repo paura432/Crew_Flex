@@ -47,23 +47,25 @@ outline, ≥ 3:1 on white, canvas and the navy sidebar), and the Tools link in
 the shared "Account" nav section because both professional and organization accounts use it.
 
 Typography: Inter (via `next/font`; V1.8 named Inter/Outfit but never loaded them). Body 15px/1.6, never below
-12px, with three V1.8 micro-labels kept at 11 px: table headers, sidebar section titles and the «AVIATION» brand
-tag. The tools workbench follows the 12 px rule too (a design test guards it). Headings tight tracking. Numbers
+12px, with V1.8 micro-labels kept at 11 px, and only these (a design test lists the files): table headers, sidebar
+section titles (including «Ver como»), the «AVIATION» brand tag, the weekday row of the mini calendar and the state
+label inside an availability day cell. The tools workbench follows the 12 px rule with no exception (a design
+test guards it). Headings tight tracking. Numbers
 in metrics use tabular figures.
 
 ## Components (`src/components/ui`)
 
-| Component               | Purpose                                                                                                                                                                                      |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Button` / `ButtonLink` | Real `<button>` / `<a>`. Variants: primary (accent), secondary, ghost, danger. Min height 40px (44 on touch).                                                                                |
-| `StatusChip`            | Small bold sentence-case chip (v1.8 `.pill`, 12 px, never uppercase); tones: neutral, ok, warn, danger, info.                                                                                |
-| Table header            | `thead`: canvas background, 11 px, muted, sentence case (styled after v1.8 `v11.css` `th`, which no rendered V1.8 screen used: it had no tables). Uppercase stays for eyebrows/kickers only. |
-| Nav icons               | Inline 18 px stroke icons per entry (v1.8 lucide map); the active entry's icon is accent.                                                                                                    |
-| `Panel`                 | Single-level white surface with border. No nested panels.                                                                                                                                    |
-| `Metric`                | Label + large tabular number + optional detail.                                                                                                                                              |
-| `Field`                 | Label + control + hint + error, wired with `aria-describedby`.                                                                                                                               |
-| `StateMessage`          | Loading / empty / error states with a clear next action.                                                                                                                                     |
-| `ConfirmButton`         | Two-step destructive row action: confirm + cancel, focus on cancel, back to the trigger when cancelled.                                                                                      |
+| Component               | Purpose                                                                                                                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button` / `ButtonLink` | Real `<button>` / `<a>`. Variants: primary (accent), secondary, ghost, danger, inverse (navy landing). Sizes md (40 px) and sm (32 px); 44 on touch. Colour and size only through props (X-01). |
+| `StatusChip`            | Small bold sentence-case chip (v1.8 `.pill`, 12 px, never uppercase); tones: neutral, ok, warn, danger, info.                                                                                   |
+| Table header            | `thead`: canvas background, 11 px, muted, sentence case (styled after v1.8 `v11.css` `th`, which no rendered V1.8 screen used: it had no tables). Uppercase stays for eyebrows/kickers only.    |
+| Nav icons               | Inline 18 px stroke icons per entry (v1.8 lucide map); the active entry's icon is accent.                                                                                                       |
+| `Panel`                 | Single-level white surface with border. No nested panels.                                                                                                                                       |
+| `Metric`                | Label + large tabular number + optional detail.                                                                                                                                                 |
+| `Field`                 | Label + control + hint + error, wired with `aria-describedby`.                                                                                                                                  |
+| `StateMessage`          | Loading / empty / error states with a clear next action.                                                                                                                                        |
+| `ConfirmButton`         | Two-step destructive row action: confirm + cancel, focus on cancel, back to the trigger when cancelled.                                                                                         |
 
 ## Patterns
 
@@ -77,7 +79,10 @@ in metrics use tabular figures.
 
 ## Responsive
 
-Desktop (`lg`, ≥ 1024 px): sticky navy sidebar with the name, account type/role and sign-out at the bottom. Below
+Desktop (`lg`, ≥ 1024 px): sticky navy sidebar with the name, account type/role (platform admins: the platform
+role) and sign-out at the bottom; the menu scrolls inside the screen when it is taller than the viewport (X-03).
+Platform admins get a «Ver como» switcher above the menu (D-13): four links (Técnico, Empresa, Recruiter,
+Administración) over their own account, each showing that view's sections. Below
 `lg`: the sidebar becomes a navy top bar (brand, «Cerrar sesión», «Menú») and the sections fold behind the «Menú»
 disclosure, which closes on navigation. No bottom dock (C-12). Tables become stacked lists below `md`; no accidental
 horizontal scroll at 390 px. Touch targets 44 px on coarse pointers.

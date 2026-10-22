@@ -90,6 +90,19 @@ describe("reduced motion", () => {
 });
 
 describe("type scale", () => {
+  it("11 px only in the V1.8 micro-labels DESIGN_SYSTEM lists (X-20)", () => {
+    const allowed = [
+      "src/app/app/admin/verifications/page.tsx", // table header
+      "src/components/layout/AppShell.tsx", // «AVIATION» brand tag
+      "src/components/layout/ViewSwitcher.tsx", // sidebar section titles, «Ver como»
+      "src/features/availability/components/AvailabilityManager.tsx", // day-cell state label
+      "src/features/availability/components/AvailabilityMonth.tsx", // mini calendar weekdays
+      "src/features/matching/components/MatchList.tsx", // table header
+      "src/features/requirements/components/RequirementsList.tsx", // table header
+    ];
+    expect(tsxFiles("src").filter((path) => read(path).includes("text-[11px]"))).toEqual(allowed);
+  });
+
   it("tools text is never below 12 px (DESIGN_SYSTEM «never below 12px», NX-05)", () => {
     const dir = "src/features/tools/components";
     const offenders = readdirSync(join(root, dir))

@@ -309,7 +309,6 @@ export function hoursToClock(value: string | number): string {
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
-/** Presentation rounding only. */
 /** The locale's decimal mark («,» in es, «.» in en). */
 export function decimalSeparator(locale: string): string {
   return (
@@ -333,6 +332,7 @@ export function ambiguousReading(input: string, locale: string): number | null {
   }
 }
 
+/** Presentation rounding only. */
 export function formatNumber(locale: string, n: number, maximumFractionDigits = 6): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits, minimumFractionDigits: 0 }).format(
     n,
