@@ -1,5 +1,11 @@
 // Edge Function response contracts. Type-only module shared by Next.js and the Deno functions.
 // Envelope: docs/architecture/EDGE_FUNCTIONS.md
+import type {
+  ApplicationActor,
+  ApplicationConflict,
+  ApplicationStatus,
+  ApplyBlocker,
+} from "../domain/applications.ts";
 import type { AvailabilityStatus, CycleDay, Rotation } from "../domain/availability.ts";
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/documents.ts";
@@ -12,7 +18,13 @@ import type {
   QualificationType,
   VerificationStatus,
 } from "../domain/qualification.ts";
-import type { WorkRequirement } from "../domain/work-requirement.ts";
+import type {
+  RequiredQualification,
+  RequirementStatus,
+  Shift,
+  Urgency,
+  WorkRequirement,
+} from "../domain/work-requirement.ts";
 
 export type ApiErrorCode =
   | "UNAUTHORIZED"
@@ -30,6 +42,8 @@ export interface ApiErrorBody {
   code: ApiErrorCode;
   message: string;
   issues?: { path: string; message: string }[];
+  /** Which server check refused a 409 on applications/opportunities (D-06; `APPLICATION_CONFLICTS`). */
+  reason?: ApplicationConflict;
 }
 
 export type ApiResponse<T> =
@@ -250,4 +264,119 @@ export interface DocumentsMaintenanceResponse {
   absent: number;
   skipped: { tombstoneId: string; why: string }[];
   failed: number;
+}
+
+// --- M07 opportunities (D-12) and M08 applications (D-06), owner 2026-10-22 -------------------------
+
+/**
+ * What a professional may see of a published requirement (D-12): the fixed projection of
+ * `list_opportunities` — organization NAME only, no ids of people, no counts of other applicants.
+ */
+export interface OpportunityRequirement {
+  id: string;
+  organizationName: string;
+  title: string;
+  location: string;
+  startsAt: string;
+  endsAt: string;
+  shift: Shift;
+  headcount: number;
+  urgency: Urgency;
+  createdAt: string;
+  qualifications: RequiredQualification[];
+}
+
+export interface Opportunity {
+  requirement: OpportunityRequirement;
+  /** The caller's own eligibility (shared engine), whatever their visibility; never a ranking. */
+  match: MatchResult;
+  /** The caller's latest application to this requirement, if any. */
+  myApplication: { id: string; status: ApplicationStatus } | null;
+  /** Why «Presentar candidatura» is unavailable now; null = may apply. */
+  applyBlocker: ApplyBlocker | null;
+}
+
+export interface OpportunityListResponse {
+  opportunities: Opportunity[];
+  /** Matches of the filters across all pages. */
+  total: number;
+  /** Published requirements considered (the function evaluates at most `cap` of them). */
+  considered: number;
+  cap: number;
+}
+
+export interface OpportunityResponse {
+  opportunity: Opportunity;
+}
+
+/** One step of an application's history, readable by both parties (no free text, no person ids). */
+export interface ApplicationEvent {
+  from: ApplicationStatus | null;
+  to: ApplicationStatus;
+  actor: ApplicationActor;
+  at: string;
+  /** Proposal version created or accepted by this step. */
+  proposalVersion: number | null;
+}
+
+/** R-08: an immutable snapshot of the requirement's published terms (T-11), version n per application. */
+export interface ApplicationProposal {
+  id: string;
+  version: number;
+  createdAt: string;
+  terms: Omit<OpportunityRequirement, "id" | "createdAt">;
+}
+
+interface ApplicationBase {
+  id: string;
+  requirementId: string;
+  status: ApplicationStatus;
+  createdAt: string;
+  /** Optimistic version: send it back as `expectedUpdatedAt` (ms precision). */
+  updatedAt: string;
+  /** Reject/cancel reason (T-10: visible to both parties). */
+  reason: string | null;
+  currentProposal: ApplicationProposal | null;
+  acceptedProposalId: string | null;
+  history: ApplicationEvent[];
+}
+
+/** The technician's view of their own application. */
+export interface MyApplication extends ApplicationBase {
+  requirement: OpportunityRequirement & { status: RequirementStatus };
+  match: MatchResult;
+}
+
+/** The organization's view: the applicant as the candidate pool shows them (pseudonym rules, T-04). */
+export interface OrgApplication extends ApplicationBase {
+  candidate: CandidateSummary;
+  match: MatchResult;
+}
+
+export interface MyApplicationListResponse {
+  applications: MyApplication[];
+}
+
+export interface RequirementApplicationsResponse {
+  requirementId: string;
+  applications: OrgApplication[];
+}
+
+/** Dashboard counters for one organization: applications per status over its requirements. */
+export interface ApplicationCountsResponse {
+  counts: Partial<Record<ApplicationStatus, number>>;
+}
+
+export interface ApplicationResponse {
+  application: MyApplication;
+}
+
+export interface ApplicationTransitionResponse {
+  transition: {
+    applicationId: string;
+    status: ApplicationStatus;
+    updatedAt: string;
+    proposalId: string | null;
+  };
+  replayed: boolean;
 }

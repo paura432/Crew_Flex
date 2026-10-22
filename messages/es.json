@@ -369,6 +369,15 @@
         "tooLarge": "El archivo supera los 5 MB",
         "form": "No se pudo leer la subida. Inténtalo de nuevo."
       }
+    },
+    "application": {
+      "id": "Candidatura no válida",
+      "consent": "Autoriza compartir tus datos con la organización de esta necesidad para presentar la candidatura",
+      "reason": "Indica el motivo",
+      "reasonMax": "El motivo admite como máximo 1000 caracteres",
+      "reasonNotAllowed": "Este cambio no lleva motivo",
+      "proposal": "Falta la versión de la propuesta",
+      "acceptTerms": "Confirma que aceptas estas condiciones"
     }
   },
   "domain": {

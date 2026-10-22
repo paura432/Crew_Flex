@@ -369,6 +369,15 @@
         "tooLarge": "The file is larger than 5 MB",
         "form": "The upload could not be read. Try again."
       }
+    },
+    "application": {
+      "id": "Invalid application",
+      "consent": "Authorise sharing your data with this requirement's organization to apply",
+      "reason": "Give a reason",
+      "reasonMax": "The reason can be at most 1000 characters",
+      "reasonNotAllowed": "This change takes no reason",
+      "proposal": "The proposal version is missing",
+      "acceptTerms": "Confirm that you accept these terms"
     }
   },
   "domain": {
