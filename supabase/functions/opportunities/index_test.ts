@@ -4,7 +4,7 @@ import { ApiError } from "../_shared/errors.ts";
 import { toCandidate } from "../_shared/requirements.ts";
 import { parseValue } from "../_shared/validation.ts";
 import { listOpportunitiesQuery } from "../../../src/lib/validation/applications.ts";
-import { fitFilter, handler, OPPORTUNITY_CAP } from "./index.ts";
+import { assertNetworkParams, fitFilter, handler, OPPORTUNITY_CAP } from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -242,3 +242,19 @@ Deno.test("v2-20 network view: strict query, no eligibility filters, a token fir
   restore();
   assertEquals(res.status, 401);
 });
+
+Deno.test(
+  "v2-20 network view refuses the eligibility filters (400); the professional view keeps them",
+  () => {
+    for (const filter of [{ eligible: "1" }, { rest: "1" }]) {
+      const error = assertThrows(
+        () =>
+          assertNetworkParams(parseValue({ view: "network", ...filter }, listOpportunitiesQuery)),
+        ApiError,
+      );
+      assertEquals(error.code, "VALIDATION_ERROR");
+      assertNetworkParams(parseValue(filter, listOpportunitiesQuery)); // no view: allowed
+    }
+    assertNetworkParams(parseValue({ view: "network", urgency: "aog" }, listOpportunitiesQuery));
+  },
+);

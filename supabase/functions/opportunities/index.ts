@@ -50,6 +50,12 @@ export const fitFilter =
     Boolean(query.eligible && o.match.eligible) ||
     Boolean(query.rest && o.possibleOnRest);
 
+/** Organizations get no eligibility, so «Compatibles» / «Posible en descanso» are refused (400). */
+export function assertNetworkParams(query: ListOpportunitiesQuery): void {
+  if (query.view === "network" && (query.eligible || query.rest))
+    throw new ApiError("VALIDATION_ERROR");
+}
+
 /** «Ofertas en la red» (v2-20): any membership, read under RLS (own rows). */
 async function requireMembership(actor: Actor): Promise<void> {
   const { data, error } = await actor.client
@@ -84,7 +90,7 @@ export const handler = createHandler("opportunities", {
 
     if (query.view === "network") {
       // Organizations see the published projection only: no eligibility, no «Compatibles».
-      if (query.eligible || query.rest) throw new ApiError("VALIDATION_ERROR");
+      assertNetworkParams(query);
       await requireMembership(actor);
       const requirements = await listPublished(actor, query);
       if (query.id)

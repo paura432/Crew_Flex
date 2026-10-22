@@ -2530,17 +2530,22 @@ await logout();
   );
   await logout();
 
-  // v2-26: card buttons as v1.8 and the search by a required qualification's code.
+  // v2-26: the search by a required qualification's code (API, 50 rows: the need is far in the future)
+  // and the card buttons as v1.8.
+  const hpByCode = await asSeedUser("delta@crewflex.test", "opportunities", {
+    query: { q: "tr-a320", limit: "50" },
+  });
   await login("delta@crewflex.test");
-  await page.goto(`${BASE}/app/professional/opportunities?q=tr-a320`);
+  await page.goto(`${BASE}/app/professional/opportunities?q=${encodeURIComponent(hpTitle)}`);
   await page.waitForLoadState("networkidle");
   const hpCard = page.locator("main article", { hasText: hpTitle }).first();
   ok(
     "PKG hiring-polish 2 «Opportunities»: found by «tr-a320»; «View details» + «Already applied» (disabled)",
-    (await hpCard.count()) === 1 &&
+    (hpByCode.data?.opportunities ?? []).some((o) => o.requirement.id === hpId) &&
+      (await hpCard.count()) === 1 &&
       (await hpCard.getByRole("link", { name: "View details" }).count()) === 1 &&
       (await hpCard.getByRole("button", { name: "Already applied" }).isDisabled()),
-    "",
+    `${hpByCode.data?.total ?? JSON.stringify(hpByCode.error)} found by code`,
   );
   await logout();
 

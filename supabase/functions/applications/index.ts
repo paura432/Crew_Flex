@@ -141,6 +141,14 @@ async function loadOrganizationApplications(
   return { applications: rows.map((r) => r.application), total };
 }
 
+/** `status` filters the organization-wide list only (400 anywhere else). */
+export function assertListParams(query: ListApplicationsQuery): void {
+  if (query.status && query.view !== "list") throw new ApiError("VALIDATION_ERROR");
+  if (query.view === "list" && !query.organizationId) throw new ApiError("VALIDATION_ERROR");
+  if (query.view === "byRequirement" && (!query.organizationId || query.requirementId))
+    throw new ApiError("VALIDATION_ERROR");
+}
+
 async function loadMine(actor: Actor): Promise<MyApplication[]> {
   const { data, error } = await actor.client.rpc("get_my_applications");
   if (error) throw fromDatabaseError(error); // 42501 → 403 (not a professional account)
@@ -159,17 +167,15 @@ export const handler = createHandler("applications", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
     const query = parseQuery(ctx.url, listApplicationsQuery);
-    if (query.status && query.view !== "list") throw new ApiError("VALIDATION_ERROR");
+    assertListParams(query);
 
-    if (query.view === "list") {
+    if (query.view === "list" && query.organizationId) {
       const { organizationId } = query;
-      if (!organizationId) throw new ApiError("VALIDATION_ERROR");
       await requireOrganizationRole(actor, organizationId, ["admin", "manager"]);
       return { data: await loadOrganizationApplications(actor, { ...query, organizationId }) };
     }
 
-    if (query.view === "byRequirement") {
-      if (!query.organizationId || query.requirementId) throw new ApiError("VALIDATION_ERROR");
+    if (query.view === "byRequirement" && query.organizationId) {
       await requireOrganizationRole(actor, query.organizationId, ["admin", "manager"]);
       const { data, error } = await actor.client.rpc("get_requirement_application_counts", {
         p_organization_id: query.organizationId,

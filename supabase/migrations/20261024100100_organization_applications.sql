@@ -11,7 +11,9 @@
 --   columns are read with the same private helpers; plus the requirement card
 --   (app_private.requirement_cards, the projection professionals see). An application whose technician
 --   closed the account (technician_profile_id NULL, 20261023400100) is still listed — its seat and
---   history stay true — with every applicant column NULL. A requirement of another organization
+--   history stay true — with every applicant column NULL and no reason (the reject/cancel text may be the
+--   technician's own words: it does not outlive the account here; security review LOW-1). A requirement of
+--   another organization
 --   filters to nothing (no oracle).
 -- get_requirement_application_counts(org)
 --   Applications per status of each of the organization's requirements that has any, with the
@@ -76,7 +78,8 @@ begin
     from (select distinct p.requirement_id from page p) r
     cross join lateral public.get_requirement_applications(r.requirement_id) ra
   )
-  select a.id, a.requirement_id, a.status, a.created_at, a.updated_at, a.reason,
+  select a.id, a.requirement_id, a.status, a.created_at, a.updated_at,
+         case when s.application_id is null then null else a.reason end,
          app_private.proposal_json(a.current_proposal_id), a.accepted_proposal_id,
          app_private.application_history(a.id),
          s.candidate_ref, s.candidate_pool, s.candidate_display_name, s.candidate_base_location,

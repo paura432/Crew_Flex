@@ -15,6 +15,7 @@ import {
   transitionInput,
 } from "../../../src/lib/validation/applications.ts";
 import {
+  assertListParams,
   handler,
   toCounts,
   toRequirementCounts,
@@ -490,3 +491,26 @@ Deno.test("the organization-wide views also need a valid token before anything e
   }
   restore();
 });
+
+Deno.test(
+  "view rules: `status` only with view=list; list and byRequirement need the organization",
+  () => {
+    const ORG = "00000000-0000-4000-8000-0000000000bb";
+    const ok = (raw: Record<string, string | undefined>) =>
+      assertListParams(parseValue(raw, listApplicationsQuery));
+    ok({ organizationId: ORG, view: "list", status: "received" });
+    ok({ organizationId: ORG, view: "list", requirementId: ID });
+    ok({ organizationId: ORG, view: "byRequirement" });
+    for (const bad of [
+      { requirementId: ID, status: "received" },
+      { organizationId: ORG, view: "counts", status: "received" },
+      { status: "received" },
+      { view: "list" },
+      { view: "byRequirement" },
+      { organizationId: ORG, view: "byRequirement", requirementId: ID },
+    ]) {
+      const error = assertThrows(() => ok(bad), ApiError);
+      assertEquals(error.code, "VALIDATION_ERROR");
+    }
+  },
+);

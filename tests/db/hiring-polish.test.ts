@@ -444,7 +444,8 @@ describe("get_organization_applications: one page of the organization's applicat
   it("a technician who closed the account stays listed (status, history, seat) without an applicant", async () => {
     await asUser(db, SEED.managerMro, async (tx) => {
       const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 2 });
-      const gone = await seedApplication(tx, need, SEED.echo, "finished");
+      // Cancelled by the technician with their own words, then the account closes.
+      const gone = await seedApplication(tx, need, SEED.echo, "cancelled");
       const live = await seedApplication(tx, need, SEED.delta, "received");
       await tx.exec("reset role");
       // Account closure (20261023400100): the application outlives the profile (technician → NULL).
@@ -468,7 +469,8 @@ describe("get_organization_applications: one page of the organization's applicat
       ]);
       expect(rows.map((r) => r.application_id).sort()).toEqual([gone, live].sort());
       const closed = rows.find((r) => r.application_id === gone)!;
-      expect(closed.status).toBe("finished");
+      expect(closed.status).toBe("cancelled");
+      expect(closed.reason).toBeNull(); // the free text does not outlive the account (review LOW-1)
       for (const column of Object.keys(closed).filter((k) => k.startsWith("candidate_")))
         expect(closed[column], column).toBeNull();
       expect(Number(closed.total)).toBe(2);
@@ -476,7 +478,8 @@ describe("get_organization_applications: one page of the organization's applicat
         "select counts from public.get_requirement_application_counts($1) where requirement_id = $2",
         [mroId, need],
       );
-      expect(seatsTaken(counts.rows[0]!.counts)).toBe(1); // the finished seat stays true
+      expect(counts.rows[0]!.counts).toEqual({ cancelled: 1, received: 1 }); // still counted
+      expect(seatsTaken(counts.rows[0]!.counts)).toBe(0);
     });
   });
 
@@ -536,7 +539,7 @@ describe("get_requirement_application_counts: per-requirement counters and confi
         ["counts", "ends_at", "headcount", "requirement_id", "shift_count", "starts_at"].sort(),
       );
 
-      for (const user of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+      for (const user of [SEED.charlieMember, SEED.adminOther, SEED.delta, SEED.platformAdmin]) {
         await actAs(tx, user);
         expect(
           (
@@ -546,6 +549,12 @@ describe("get_requirement_application_counts: per-requirement counters and confi
           ).code,
         ).toBe("42501");
       }
+    });
+    await asUser(db, null, async (tx) => {
+      expect(
+        (await sqlError(tx, "select * from public.get_requirement_application_counts($1)", [mroId]))
+          .message,
+      ).toMatch(/permission denied/);
     });
   });
 });

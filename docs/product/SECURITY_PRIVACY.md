@@ -71,7 +71,11 @@ flag — still no contact, employer, rate, blocks or restriction text.
   pseudonym unless internal, name only for internal or `open`, relevant qualifications and overlapping windows; no
   contact data, no documents — D-07 not activated). `private` professionals are still never in the external pool.
 - Professionals read published requirements only through a fixed projection (`list_opportunities`: organization
-  name, no ids of people or organizations, no counts of other applicants).
+  name, no ids of people or organizations, no counts of other applicants). **Accepted (T-95, LOCAL
+  `20261024100000`):** members of any organization — plain `member`s included — read the same projection as
+  «Ofertas en la red», so competitors see each other's published description and informative terms (rates, per
+  diem, logistics; no commission exists). Nothing else is exposed: no eligibility, no applicants, never the caller's
+  own organization's requirements; while sign-up is open anyone could already read it as a professional.
 - Application audit rows whose actor is the technician carry no organization id, and covered ↔ open status
   changes made by an application carry no actor, so an organization's audit trail never holds an applicant's
   profile id (T-04).
@@ -118,7 +122,9 @@ tombstone purged by `documents-maintenance` (`DOCUMENT_WALLET.md` §6). An opera
 keeps the wallet's `account_deleted` grace (30 days, owner proposal).
 
 **Kept, without the profile** (to settle the operational history, v1.8): applications (status, proposal versions,
-timeline; `technician_profile_id` NULL — nobody can link them to a person any more except through the ids below),
+timeline; `technician_profile_id` NULL — nobody can link them to a person any more except through the ids below;
+the organization's «Candidaturas» lists them as «Cuenta cerrada» without applicant data and without the free-text
+reason, T-96, LOCAL `20261024100100`),
 requirements the person created (`created_by` NULL), the organization and its other members, and **audit rows**:
 their actor becomes NULL; ids already in metadata (application, requirement, the closed profile's own id in
 `account.closed`, `technician_profile_id` in `qualification.*` and `document.*` rows) stay. Audit rows hold ids and
