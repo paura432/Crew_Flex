@@ -139,7 +139,11 @@ export async function signUpAction(
     if (invitationOnly && code && (await readInvitation(code, input.email)).status !== "valid") {
       return { status: "error", code: "INVITATION_INVALID", values };
     }
-    return { status: "error", ...mapAuthError(error), values };
+    const mapped = mapAuthError(error);
+    // T-41: an existing address gets the new-address answer (no enumeration). Auth only obfuscates
+    // it itself when neither e-mail nor SMS autoconfirm is on, so the app does not rely on that.
+    if (mapped.code === "USER_EXISTS") return { status: "check_email", email: input.email };
+    return { status: "error", ...mapped, values };
   }
   if (!data.session) return { status: "check_email", email: input.email };
 

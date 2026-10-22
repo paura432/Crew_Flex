@@ -53,6 +53,16 @@ describe("open sign-up (flag off)", () => {
     expect(rpc).not.toHaveBeenCalledWith("invitation_status", expect.anything());
   });
 
+  it("an existing address gets the new-address answer even when Auth says user_already_exists (T-41)", async () => {
+    answers(false);
+    signUp.mockResolvedValueOnce({
+      data: { session: null },
+      error: { name: "AuthApiError", status: 422, code: "user_already_exists", message: "x" },
+    });
+    const state = await signUpAction(initialAuthState, form(professional));
+    expect(state).toEqual({ status: "check_email", email: professional.email });
+  });
+
   it("ignores an invitation code: the form's type and no code in the metadata", async () => {
     answers(false);
     signUp.mockResolvedValueOnce({ data: { session: null }, error: null });
