@@ -511,6 +511,8 @@ outreach_flood() {
   : >"$OUT_A"; : >"$OUT_B"
   race_available "$DELTA"
   outreach_opt_in
+  # The 3-per-24 h delivery bound counts earlier notices too (ui-smoke «PKG outreach» leaves one): start clean.
+  echo "delete from public.notifications where kind = 'outreach' and recipient_id = '$DELTA';" | psql_owner >/dev/null
   local needs=() i
   for i in 1 2 3 4; do needs+=("$(aog_need)"); done
   printf "begin;\nselect notified from public.requirement_outreach('%s');\nselect pg_sleep(1.5);\ncommit;\n" "${needs[0]}" \
