@@ -1,6 +1,6 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import { fromDatabaseError } from "../_shared/errors.ts";
-import { CLIENT_SELECT, handler, toDecision, toRepresentedClient } from "./index.ts";
+import { handler, toDecision, toRepresentedClient } from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -48,11 +48,8 @@ Deno.test(
 );
 
 Deno.test(
-  "rows map to the contract; the select names its columns (no evidence, no creator)",
+  "rows map to the contract (no evidence, no creator; a member's row has no e-mail)",
   () => {
-    assertEquals(CLIENT_SELECT.includes("*"), false);
-    for (const column of ["note", "created_by", "reviewed_by"])
-      assertEquals(CLIENT_SELECT.includes(column), false, column);
     assertEquals(
       toRepresentedClient({
         id: CLIENT,

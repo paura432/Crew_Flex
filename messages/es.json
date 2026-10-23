@@ -1375,11 +1375,11 @@
       "formTitle": "Añadir un cliente",
       "name": "Nuevo cliente",
       "email": "Correo del cliente",
-      "emailHint": "Opcional. Solo lo ve tu agencia.",
+      "emailHint": "Opcional. Solo lo ven los managers y administradores de tu agencia.",
       "add": "Añadir cliente",
       "adding": "Añadiendo…",
       "added": "Cliente guardado. Queda pendiente hasta que la administración de Crew Flex registre la evidencia de la representación.",
-      "duplicate": "Ese cliente ya está en la cartera, o la cartera está completa (200 clientes pendientes o activos).",
+      "duplicate": "Ese cliente ya está en la cartera, o la cartera está completa (50 pendientes o 200 clientes pendientes o activos).",
       "notAgency": "Solo una agencia de personal representa a clientes.",
       "revoke": "Revocar",
       "revoking": "Revocando…",
@@ -1400,7 +1400,8 @@
       "noActive": "No hay clientes activos. Añádelos en la cartera; se activan cuando la administración registra la evidencia.",
       "manage": "Ir a la cartera de clientes",
       "note": "El recruiter gestiona la oferta y confirma en nombre del cliente. Los destinatarios están identificados en la candidatura. No hay contrato legal ni envío externo.",
-      "summary": "Para el cliente {client}"
+      "summary": "Para el cliente {client}",
+      "fixed": "Fijado al publicar: el cliente que leen los profesionales es quien recibe las candidaturas. Para otro cliente, crea otra necesidad."
     },
     "requirement": {
       "client": "Cliente",

@@ -14,7 +14,8 @@
 --   revoked  — the agency's admin/manager ended it; final (a client is added again as a new row). Revocation stops
 --              new actions for that client at once (20261024500100): no publish/resume, no apply, no forward step
 --              of an application; history and winding down (reject, withdraw, cancel, finish, close) stay.
--- Who reads a portfolio: every member of the agency (it names the requirements' clients) and platform admins.
+-- Who reads a portfolio: every member of the agency (it names the requirements' clients) and platform admins; the
+-- contact e-mail only its admins/managers and platform admins (list_represented_clients).
 -- Nobody writes the tables directly: the RPCs below are their only writers, each audited (ids and flags only, S-9).
 
 create type public.representation_status as enum ('pending', 'active', 'revoked');
@@ -55,7 +56,11 @@ create trigger represented_clients_set_updated_at before update on public.repres
 
 create policy represented_clients_select on public.represented_clients for select to authenticated
   using (public.is_org_member(agency_id) or public.is_platform_admin());
-grant select on public.represented_clients to authenticated;
+-- Column grant: the contact e-mail is a third party's business contact — admins/managers and platform admins read it
+-- through list_represented_clients below (security review LOW-4); plain members and the requirement embed
+-- (`represented_clients ( id, name, status )`) get the other columns.
+grant select (id, agency_id, name, status, created_at, updated_at, activated_at, revoked_at)
+  on public.represented_clients to authenticated;
 
 -- The evidence of each activation, apart from the client row (as organization_reviews, T-52): platform admins only.
 create table public.represented_client_reviews (
@@ -116,8 +121,10 @@ begin
   -- Serialises adds of one agency so the cap holds under concurrency.
   perform pg_advisory_xact_lock(hashtextextended('represented_clients:' || p_organization_id::text, 0));
   if (select count(*) from public.represented_clients rc
-      where rc.agency_id = p_organization_id and rc.status <> 'revoked') >= 200 then
-    raise exception using errcode = '55000', message = 'too many live clients';
+      where rc.agency_id = p_organization_id and rc.status <> 'revoked') >= 200
+     or (select count(*) from public.represented_clients rc
+         where rc.agency_id = p_organization_id and rc.status = 'pending') >= 50 then
+    raise exception using errcode = '55000', message = 'too many live or pending clients';
   end if;
 
   insert into public.represented_clients (agency_id, name, contact_email, created_by)
@@ -242,13 +249,94 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------------------------
+-- The portfolio (v1.8 «Cartera de clientes»), newest first, ≤ 200: every member of the agency and platform admins;
+-- the contact e-mail only for the agency's admins/managers and platform admins (plain members get NULL). Anyone
+-- else: 42501.
+-- ---------------------------------------------------------------------------------------------
+create function public.list_represented_clients(p_organization_id uuid)
+returns table (
+  id uuid,
+  agency_id uuid,
+  name text,
+  contact_email text,
+  status public.representation_status,
+  created_at timestamptz,
+  activated_at timestamptz,
+  revoked_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+  v_uid uuid := (select auth.uid());
+  v_full boolean;
+begin
+  if v_uid is null then
+    raise exception using errcode = '42501', message = 'not authorized';
+  end if;
+  v_full := public.is_platform_admin()
+    or public.has_org_role(p_organization_id, array['admin', 'manager']::public.organization_role[]);
+  if not v_full and not public.is_org_member(p_organization_id) then
+    raise exception using errcode = '42501', message = 'not authorized';
+  end if;
+  return query
+  select rc.id, rc.agency_id, rc.name, case when v_full then rc.contact_email end, rc.status, rc.created_at,
+         rc.activated_at, rc.revoked_at
+  from public.represented_clients rc
+  where rc.agency_id = p_organization_id
+  order by rc.created_at desc, rc.id
+  limit 200;
+end;
+$$;
+
+-- The platform admin's review queue: pending first (newest first within a state), ≤ 200, with the agency's name.
+create function public.list_representation_reviews()
+returns table (
+  id uuid,
+  agency_id uuid,
+  agency_name text,
+  name text,
+  contact_email text,
+  status public.representation_status,
+  created_at timestamptz,
+  activated_at timestamptz,
+  revoked_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+#variable_conflict use_column
+begin
+  if (select auth.uid()) is null or not public.is_platform_admin() then
+    raise exception using errcode = '42501', message = 'not authorized';
+  end if;
+  return query
+  select rc.id, rc.agency_id, o.name, rc.name, rc.contact_email, rc.status, rc.created_at, rc.activated_at,
+         rc.revoked_at
+  from public.represented_clients rc
+  join public.organizations o on o.id = rc.agency_id
+  order by rc.status, rc.created_at desc, rc.id
+  limit 200;
+end;
+$$;
+
 revoke execute on function
   public.add_represented_client(uuid, text, text, uuid),
   public.revoke_represented_client(uuid, uuid),
-  public.activate_represented_client(uuid, text, uuid)
+  public.activate_represented_client(uuid, text, uuid),
+  public.list_represented_clients(uuid),
+  public.list_representation_reviews()
 from public, anon;
 grant execute on function
   public.add_represented_client(uuid, text, text, uuid),
   public.revoke_represented_client(uuid, uuid),
-  public.activate_represented_client(uuid, text, uuid)
+  public.activate_represented_client(uuid, text, uuid),
+  public.list_represented_clients(uuid),
+  public.list_representation_reviews()
 to authenticated;

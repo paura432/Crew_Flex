@@ -10,8 +10,9 @@
 //   PATCH /represented-clients { id, action: "revoke" }           → the agency's admin/manager (final)
 //   PATCH /represented-clients { id, action: "activate", note }   → a platform admin, with evidence (never for an
 //         agency they belong, belonged to or acted for)
-// Every write is one SECURITY DEFINER RPC (role in its body, audited with this request id); the function acts with
-// the caller's JWT, no service role. The client's contact e-mail never leaves the agency and the platform admins.
+// Every read and write is one SECURITY DEFINER RPC (role in its body, writes audited with this request id); the function
+// acts with the caller's JWT, no service role. The client's contact e-mail reaches the agency's admins/managers and the
+// platform admins only (a plain member gets null).
 import { z } from "zod";
 import { type Actor, requireActor, requireOrganizationRole } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
@@ -30,10 +31,8 @@ import type {
   RepresentedClientResponse,
 } from "../../../src/types/api.ts";
 
+/** Both lists are SQL-capped at 200 rows (`list_represented_clients`, `list_representation_reviews`). */
 export const LIST_LIMIT = 200;
-
-export const CLIENT_SELECT =
-  "id, agency_id, name, contact_email, status, created_at, activated_at, revoked_at";
 
 const iso = (value: string) => new Date(value).toISOString();
 
@@ -81,7 +80,7 @@ async function isPlatformAdmin(actor: Actor): Promise<boolean> {
   return data?.platform_role === "platform_admin";
 }
 
-const withAgency = z.object({ organizations: z.object({ name: z.string() }) });
+const withAgency = z.object({ agency_name: z.string() });
 
 export const handler = createHandler("represented-clients", {
   GET: async (ctx) => {
@@ -90,14 +89,9 @@ export const handler = createHandler("represented-clients", {
 
     if ("view" in query) {
       if (!(await isPlatformAdmin(actor))) throw new ApiError("FORBIDDEN");
+      // The RPC re-checks the platform role; pending first, newest first, ≤ 200.
       const [clients, own] = await Promise.all([
-        actor.client
-          .from("represented_clients")
-          .select(`${CLIENT_SELECT}, organizations ( name )`)
-          .order("status", { ascending: true }) // enum order: pending first
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: true })
-          .limit(LIST_LIMIT),
+        actor.client.rpc("list_representation_reviews"),
         actor.client
           .from("organization_members")
           .select("organization_id")
@@ -108,30 +102,30 @@ export const handler = createHandler("represented-clients", {
       const mine = new Set((own.data ?? []).map((m) => String(m.organization_id)));
       return {
         data: {
-          clients: (clients.data ?? []).map((raw) => {
-            const client = toRepresentedClient(raw);
-            return {
-              ...client,
-              agencyName: withAgency.parse(raw).organizations.name,
-              ownAgency: mine.has(client.organizationId),
-            };
-          }),
+          clients: z
+            .array(z.unknown())
+            .parse(clients.data)
+            .map((raw) => {
+              const client = toRepresentedClient(raw);
+              return {
+                ...client,
+                agencyName: withAgency.parse(raw).agency_name,
+                ownAgency: mine.has(client.organizationId),
+              };
+            }),
         } satisfies RepresentationReviewListResponse,
       };
     }
 
     await requireOrganizationRole(actor, query.organizationId, ["admin", "manager", "member"]);
-    const { data, error } = await actor.client
-      .from("represented_clients")
-      .select(CLIENT_SELECT)
-      .eq("agency_id", query.organizationId)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: true })
-      .limit(LIST_LIMIT);
+    // The RPC re-checks the membership and hands the contact e-mail to admins/managers only (null for a member).
+    const { data, error } = await actor.client.rpc("list_represented_clients", {
+      p_organization_id: query.organizationId,
+    });
     if (error) throw fromDatabaseError(error);
     return {
       data: {
-        clients: (data ?? []).map(toRepresentedClient),
+        clients: z.array(z.unknown()).parse(data).map(toRepresentedClient),
       } satisfies RepresentedClientListResponse,
     };
   },

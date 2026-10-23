@@ -237,12 +237,15 @@ column, `on_behalf_of_client_id` → `represented_clients` (NULL = no client, ev
 UPDATE grant: the create overload with `p_on_behalf_of_client_id` (INVOKER) hands it to its insert through the
 transaction-local setting `crewflex.requirement_client` (the `crewflex.system_status` pattern; API clients cannot call
 `set_config`), the edit overload (DEFINER) writes it. BEFORE trigger `work_requirements_with_client`
-(`guard_requirement_client`, every path): the client is an `active` representation of the requirement's organization
-(22023 / `CFR02`); a staffing agency's insert as non-draft, draft → open, paused → open or client change leaves a
-client (`CFR01`); the client is frozen once applied to (`CFA12`) and when closed (55000). Changes audited
+(`guard_requirement_client`, every path): for a caller who is not admin/manager of the organization the rules stay silent and RLS answers 42501 (no oracle); the client is an `active` representation of the requirement's organization (22023 / `CFR02`); a staffing
+agency's insert as non-draft, draft → open, paused → open or client change leaves a client (`CFR01`); the client changes
+only on a draft (55000 once published or closed; `CFA12` once applied to). BEFORE trigger `organizations_type_clients`
+(`guard_organization_type_clients`): no type change to or from `staffing_agency` while published requirements or live
+clients would end outside these rules (55000, BR-27.7). Changes audited
 `requirement.client_changed {client_id, previous_client_id}` (agency as organization). BEFORE trigger
 `applications_client_active` (`guard_application_client`) refuses an application and every forward step (shortlisted,
-proposed, accepted, confirmed) while the representation is not active (`CFR02`). `list_opportunities` returns
+proposed, accepted, confirmed) while the representation is not active (`CFA01` for the new application — the applicant
+learns only «not open» —, `CFR02` for the agency's steps). `list_opportunities` returns
 `client_name` (active representations only; the others are not listed); `app_private.requirement_cards` is unchanged.
 
 ### `represented_clients` (`20261024500000`, LOCAL ONLY — recruiter, D-12 provisional, BR-27)
@@ -250,8 +253,10 @@ proposed, accepted, confirmed) while the representation is not active (`CFR02`).
 `id`, `agency_id` → `organizations` (cascade), `name` (2–120, trimmed), `contact_email` (nullable, lower-case),
 `status` `representation_status` (`pending` · `active` · `revoked`, with the matching `activated_at` / `revoked_at`
 CHECK), `created_by` → `profiles` (set null), `created_at`, `updated_at`. One live (pending/active) client per name
-per agency (unique index on `lower(name)` where not revoked); ≤ 200 live per agency (in the add RPC). RLS select:
-members of the agency, platform admins; no write grant — `add_represented_client` (admin/manager of a staffing
+per agency (unique index on `lower(name)` where not revoked); ≤ 50 pending and ≤ 200 live per agency (in the add RPC).
+RLS select: members of the agency, platform admins, **column-limited** (no grant on `contact_email`: the agency's
+admins/managers and platform admins read it through `list_represented_clients(org)`, a plain member gets null;
+`list_representation_reviews()` is the platform admin's queue with the agency's name); no write grant — `add_represented_client` (admin/manager of a staffing
 agency), `revoke_represented_client` (admin/manager, final), `activate_represented_client` (platform admin with
 evidence, never their own agency) are the only writers.
 
@@ -510,7 +515,8 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `before_account_deleted()` · `audit_account_closed()` · `guard_application_technician_removed()` (`20261023400100`, local only)                                                          | DEFINER trigger | Closure rules for every deletion path · `account.closed` · no application in progress loses its technician.                                                                                                                                                                                                                                                                                               |
 | `add_represented_client(org, name, email, req)` · `revoke_represented_client(id, req)` · `activate_represented_client(id, note, req)` (`20261024500000`, local)                          | DEFINER         | Recruiter portfolio: add (admin/manager of a staffing agency, pending), revoke (final), activate (platform admin with evidence, never own agency); audited `client.added` / `client.revoked` / `client.activated`                                                                                                                                                                                         |
 | `create_work_requirement(…, on_behalf_of_client_id)` + `…_idempotent` · `update_work_requirement(…, on_behalf_of_client_id)` (`20261024500100`, local)                                   | INVOKER/DEFINER | The builder overloads with the represented client; they call the `20261023600100` overloads (rules unchanged)                                                                                                                                                                                                                                                                                             |
-| `guard_requirement_client()` · `audit_requirement_client()` · `guard_application_client()` (`20261024500100`, local)                                                                     | DEFINER         | Triggers: the client rules (BR-27.3–27.5) on every path, `requirement.client_changed` audit                                                                                                                                                                                                                                                                                                               |
+| `list_represented_clients(org)` · `list_representation_reviews()` (`20261024500000`, local)                                                                                              | DEFINER, stable | The portfolio (members; e-mail for admins/managers and platform admins) and the platform admin's review queue, ≤ 200                                                                                                                                                                                                                                                                                      |
+| `guard_requirement_client()` · `audit_requirement_client()` · `guard_application_client()` · `guard_organization_type_clients()` (`20261024500100`, local)                               | DEFINER         | Triggers: the client rules (BR-27.3–27.5, BR-27.7) on every path, `requirement.client_changed` audit                                                                                                                                                                                                                                                                                                      |
 | `set_updated_at()`                                                                                                                                                                       | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                                                                                                                                                                                                                        |
 
 ### `app_private` schema (not exposed by PostgREST)

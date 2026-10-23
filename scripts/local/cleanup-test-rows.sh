@@ -19,8 +19,15 @@ bash scripts/local/sb-local.sh db query "delete from public.work_requirements wh
 # an MRO if an interrupted run left it a staffing agency (no-ops before migration 20261024500000).
 bash scripts/local/sb-local.sh db query "do \$\$ begin
   if to_regclass('public.represented_clients') is not null then
+    update public.represented_clients set status = 'revoked', revoked_at = now()
+      where name like 'Smoke client %' and status <> 'revoked';
+    update public.work_requirements set status = 'closed'
+      where title like 'Local UI check · recruiter %' and status not in ('closed', 'draft');
     delete from public.represented_clients rc where rc.name like 'Smoke client %'
       and not exists (select 1 from public.work_requirements wr where wr.on_behalf_of_client_id = rc.id);
   end if;
   update public.organizations set type = 'mro' where name = 'Demo Aero Services Lisbon' and type <> 'mro';
+  update public.work_requirements wr set status = 'open'
+    from public.organizations o where o.id = wr.organization_id and o.name = 'Demo Aero Services Lisbon'
+    and wr.status = 'paused' and wr.title = 'B2 · A330 avionics check support';
 end \$\$"

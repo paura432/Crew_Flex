@@ -292,6 +292,13 @@ export function RequirementForm({
     });
   }
   const primaryIntent: Intent = initial && isDraft ? "publish" : undefined;
+  // BR-27.4: the client a professional reads on a published requirement is the one who receives the data.
+  const clientFixed = Boolean(initial && !isDraft);
+  const clientHint = clientFixed
+    ? tRecruiter("fixed")
+    : recruiter?.clients.length
+      ? tRecruiter("hint")
+      : tRecruiter("noActive");
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     submit(primaryIntent);
@@ -466,7 +473,7 @@ export function RequirementForm({
               <Field
                 id="onBehalfOfClientId"
                 label={tRecruiter("client")}
-                hint={recruiter.clients.length ? tRecruiter("hint") : tRecruiter("noActive")}
+                hint={clientHint}
                 error={errors.onBehalfOfClientId}
               >
                 <select
@@ -474,8 +481,9 @@ export function RequirementForm({
                   aria-describedby={describedBy(
                     "onBehalfOfClientId",
                     errors.onBehalfOfClientId,
-                    recruiter.clients.length ? tRecruiter("hint") : tRecruiter("noActive"),
+                    clientHint,
                   )}
+                  disabled={clientFixed}
                   value={draft.clientId}
                   onChange={(e) => set("clientId", e.target.value)}
                 >
@@ -487,7 +495,7 @@ export function RequirementForm({
                   ))}
                 </select>
               </Field>
-              {!recruiter.clients.length && (
+              {!recruiter.clients.length && !clientFixed && (
                 <Link
                   href="/app/recruiter#clients"
                   className="mt-1 inline-flex items-center text-sm font-semibold text-blue hover:underline pointer-coarse:min-h-11"

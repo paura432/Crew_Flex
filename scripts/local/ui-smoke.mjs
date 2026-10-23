@@ -2903,9 +2903,17 @@ const rcCall = (fn, init = {}) => {
 };
 const rcClient = `Smoke client ${Date.now()}`;
 const rcTitle = `Local UI check · recruiter ${Date.now()}`;
+// An organization becomes an agency only without published requirements lacking a client (MEDIUM-1 guard): the
+// seed's open requirement is paused for the block and resumed at the end.
+const rcPaused = (
+  await rcCall("work-requirements", { query: { organizationId: rcAgency.id, status: "open" } })
+).data.requirements.map((r) => r.id);
+for (const id of rcPaused)
+  await rcCall("work-requirements", { method: "PATCH", body: { id, status: "paused" } });
 ok(
-  "PKG recruiter 0 Lisbon is a staffing agency for this block",
+  "PKG recruiter 0 Lisbon is a staffing agency for this block (its open requirements paused)",
   await rcSetType("staffing_agency"),
+  `${rcPaused.length} paused`,
 );
 
 await login(RC_ADMIN);
@@ -3067,12 +3075,19 @@ const rcWindowRemoved = await asSeedUser("delta@crewflex.test", "professional-av
   method: "DELETE",
   query: { id: rcWindow.data?.window?.id ?? "" },
 });
+const rcTypeBack = await rcSetType("mro");
+const rcResumed = [];
+for (const id of rcPaused)
+  rcResumed.push(
+    (await rcCall("work-requirements", { method: "PATCH", body: { id, status: "open" } })).ok,
+  );
 ok(
-  "PKG recruiter 9 restored: requirement closed and archived after the revocation; Delta's window removed; Lisbon is an MRO again",
+  "PKG recruiter 9 restored: requirement closed and archived after the revocation; Delta's window removed; Lisbon is an MRO again with its requirements resumed",
   rcClosed.ok === true &&
     rcArchived.ok === true &&
     rcWindowRemoved.ok === true &&
-    (await rcSetType("mro")),
+    rcTypeBack &&
+    rcResumed.every(Boolean),
   JSON.stringify(rcClosed.error ?? rcArchived.error ?? rcWindowRemoved.error ?? {}),
 );
 

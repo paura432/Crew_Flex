@@ -60,8 +60,17 @@ async function commitCheck(tx: Transaction) {
 /** Owner-side: Lisbon becomes an agency and gets a manager; optionally Barcelona becomes one too. */
 async function setUpAgency(tx: Transaction, { second = false } = {}) {
   await tx.exec("reset role");
+  // Owner-side writes without a JWT subject (the harness keeps the test user's claim; the triggers' role checks
+  // would otherwise judge the seed updates as that user).
+  await tx.query("select set_config('request.jwt.claims', '', true)");
+  const orgs = second ? [agencyId, otherAgencyId] : [agencyId];
+  // The seed organizations publish without a client: paused first (MEDIUM-1 guard), as the smoke does.
+  await tx.query(
+    "update public.work_requirements set status = 'paused' where organization_id = any($1) and status = 'open'",
+    [orgs],
+  );
   await tx.query("update public.organizations set type = 'staffing_agency' where id = any($1)", [
-    second ? [agencyId, otherAgencyId] : [agencyId],
+    orgs,
   ]);
   await tx.query(
     "insert into public.organization_members (organization_id, profile_id, role) values ($1, $2, 'manager')",
@@ -279,8 +288,47 @@ describe("represented clients: portfolio of an agency (20261024500000)", () => {
         return (await tx.query("select id from public.represented_clients where id = $1", [id]))
           .rows.length;
       };
+      const LIST = "select contact_email from public.list_represented_clients($1)";
       for (const user of [SEED.adminOther, AGENCY_MANAGER, AGENCY_MEMBER, SEED.platformAdmin])
         expect(await visible(user), user).toBe(1);
+      // The contact e-mail (security review LOW-4): no column grant; admins/managers and platform admins read
+      // it through list_represented_clients, a plain member gets null, anyone else 42501.
+      await actAs(tx, AGENCY_MEMBER);
+      expect(
+        (
+          await sqlError(tx, "select contact_email from public.represented_clients where id = $1", [
+            id,
+          ])
+        ).message,
+      ).toMatch(/permission denied/);
+      expect((await tx.query<{ contact_email: string | null }>(LIST, [agencyId])).rows).toEqual([
+        { contact_email: null },
+      ]);
+      for (const user of [SEED.adminOther, AGENCY_MANAGER, SEED.platformAdmin]) {
+        await actAs(tx, user);
+        expect(
+          (await tx.query<{ contact_email: string | null }>(LIST, [agencyId])).rows,
+          user,
+        ).toEqual([{ contact_email: "ops@client.test" }]);
+      }
+      for (const user of [SEED.adminAirline, SEED.delta]) {
+        await actAs(tx, user);
+        expect((await sqlError(tx, LIST, [agencyId])).code, user).toBe("42501");
+        expect(
+          (await sqlError(tx, "select * from public.list_representation_reviews()")).code,
+          user,
+        ).toBe("42501");
+      }
+      await actAs(tx, SEED.platformAdmin);
+      const review = (
+        await tx.query<{ agency_name: string; name: string }>(
+          "select agency_name, name from public.list_representation_reviews() where id = $1",
+          [id],
+        )
+      ).rows;
+      expect(review).toEqual([
+        { agency_name: "Demo Aero Services Lisbon", name: "Operador cliente 1" },
+      ]);
       for (const user of [
         SEED.adminAirline,
         SEED.adminMro,
@@ -311,7 +359,7 @@ describe("represented clients: portfolio of an agency (20261024500000)", () => {
     });
   });
 
-  it("validation: name 2-120, a valid e-mail, one live client per name (revoked ones may come back), cap 200", async () => {
+  it("validation: name 2-120, a valid e-mail, one live client per name (revoked ones may come back), caps 50 pending / 200 live", async () => {
     await asUser(db, SEED.adminOther, async (tx) => {
       await setUpAgency(tx);
       await actAs(tx, SEED.adminOther);
@@ -328,11 +376,25 @@ describe("represented clients: portfolio of an agency (20261024500000)", () => {
       await tx.exec("reset role");
       await tx.query(
         `insert into public.represented_clients (agency_id, name)
-         select $1, 'Bulk ' || g from generate_series(1, 199) g`,
+         select $1, 'Bulk ' || g from generate_series(1, 49) g`,
         [agencyId],
       );
       await actAs(tx, SEED.adminOther);
-      expect((await sqlError(tx, ADD, [agencyId, "One too many", null])).code).toBe("55000");
+      expect((await sqlError(tx, ADD, [agencyId, "One pending too many", null])).code).toBe(
+        "55000",
+      );
+      await tx.exec("reset role");
+      await tx.query(
+        "update public.represented_clients set status = 'active', activated_at = now() where agency_id = $1 and status = 'pending'",
+        [agencyId],
+      );
+      await tx.query(
+        `insert into public.represented_clients (agency_id, name, status, activated_at)
+         select $1, 'Bulk active ' || g, 'active', now() from generate_series(1, 150) g`,
+        [agencyId],
+      );
+      await actAs(tx, SEED.adminOther);
+      expect((await sqlError(tx, ADD, [agencyId, "One live too many", null])).code).toBe("55000");
     });
   });
 
@@ -438,17 +500,19 @@ describe("represented clients: portfolio of an agency (20261024500000)", () => {
     });
   });
 
-  it("activate: refused once the organization is no longer a staffing agency", async () => {
+  it("an agency with a pending client cannot stop being one (the activation's agency check is a backstop)", async () => {
     await asUser(db, SEED.adminOther, async (tx) => {
       await setUpAgency(tx);
       const { id } = await addClient(tx, SEED.adminOther, agencyId, "Operador cliente 1");
       await tx.exec("reset role");
-      await tx.query("update public.organizations set type = 'mro' where id = $1", [agencyId]);
-      await actAs(tx, SEED.platformAdmin);
       expect(
-        (await sqlError(tx, "select * from public.activate_represented_client($1, 'x')", [id]))
-          .code,
+        (
+          await sqlError(tx, "update public.organizations set type = 'mro' where id = $1", [
+            agencyId,
+          ])
+        ).code,
       ).toBe("55000");
+      expect((await activate(tx, id)).status).toBe("active");
     });
   });
 });
@@ -612,14 +676,15 @@ describe("requirements on behalf of a client (20261024500100)", () => {
     });
   });
 
-  it("edit: the client changes like any field (CF412, CFA12, closed) and an agency cannot drop it", async () => {
+  it("edit: the client of a draft changes like any field (CF412, 42501); an agency cannot drop it; frozen once published", async () => {
     await asUser(db, SEED.adminOther, async (tx) => {
       await setUpAgency(tx);
       const first = await activeClient(tx, "Cliente A");
       const second = await activeClient(tx, "Cliente B");
-      const id = await createAs(tx, SEED.adminOther, agencyId, { client: first });
+      const id = await createAs(tx, SEED.adminOther, agencyId, { status: "draft", client: first });
 
-      let [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: null });
+      // A draft may drop its client; publishing without one is «Indica el cliente representado.».
+      let [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: null, status: "open" });
       expect((await sqlError(tx, sql, [...args])).code).toBe("CFR01");
       [sql, args] = await updateAs(tx, SEED.adminOther, id, {
         client: second,
@@ -631,12 +696,27 @@ describe("requirements on behalf of a client (20261024500100)", () => {
       [sql, args] = await updateAs(tx, SEED.adminAirline, id, { client: second });
       expect((await sqlError(tx, sql, [...args])).code).toBe("42501");
 
-      [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: second });
+      [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: second, status: "draft" });
       const changed = (await tx.query<{ changed: string[] }>(sql, [...args])).rows[0]!.changed;
       expect(changed).toEqual(["onBehalfOfClientId"]);
-      [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: second });
+      [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: second, status: "draft" });
       expect((await tx.query<{ changed: string[] }>(sql, [...args])).rows[0]!.changed).toEqual([]);
+      // Published: the client a professional reads is the one who receives the data (LOW-2).
+      [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: second, status: "open" });
+      await tx.query(sql, [...args]);
       await commitCheck(tx);
+      [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: first });
+      expect((await sqlError(tx, sql, [...args])).code).toBe("55000");
+      await tx.exec("reset role"); // even for the owner
+      expect(
+        (
+          await sqlError(
+            tx,
+            "update public.work_requirements set on_behalf_of_client_id = $2 where id = $1",
+            [id, first],
+          )
+        ).code,
+      ).toBe("55000");
       const events = await audit(tx, "requirement.client_changed", id);
       expect(events.map((e) => e.metadata)).toEqual(
         expect.arrayContaining([{ client_id: second, previous_client_id: first }]),
@@ -667,22 +747,54 @@ describe("requirements on behalf of a client (20261024500100)", () => {
         ).rows[0],
       ).toEqual({ on_behalf_of_client_id: second });
 
-      // Once applied to, the client is frozen (the applicant consented for THIS client).
+      // Applied to: still frozen (the applicant consented for THIS client) — the RPC answers the M05 reason first.
       await makeAvailable(tx, [SEED.delta]);
       await actAs(tx, SEED.delta);
       await tx.query(APPLY, [id, randomUUID()]);
       [sql, args] = await updateAs(tx, SEED.adminOther, id, { client: first });
       expect((await sqlError(tx, sql, [...args])).code).toBe("CFA12");
-      await tx.exec("reset role"); // even for the owner
-      expect(
-        (
-          await sqlError(
-            tx,
-            "update public.work_requirements set on_behalf_of_client_id = $2 where id = $1",
-            [id, first],
-          )
-        ).code,
-      ).toBe("CFA12");
+    });
+  });
+
+  it("no oracle: a stranger's create for an agency gets RLS's 42501, whatever the type or the client", async () => {
+    await asUser(db, SEED.adminOther, async (tx) => {
+      await setUpAgency(tx);
+      const { id: pending } = await addClient(tx, SEED.adminOther, agencyId, "Pendiente SA");
+      const active = await activeClient(tx);
+      const quals = await QUALS(tx);
+      for (const user of [SEED.delta, SEED.adminMro, AGENCY_MEMBER]) {
+        await actAs(tx, user);
+        for (const client of [null, pending, active, randomUUID()])
+          expect(
+            (await sqlError(tx, CREATE, [randomUUID(), agencyId, quals, "open", client])).code,
+            `${user} ${client}`,
+          ).toBe("42501");
+      }
+    });
+  });
+
+  it("the organization type is no way around the rules (security review MEDIUM-1)", async () => {
+    await asUser(db, SEED.adminOther, async (tx) => {
+      // Lisbon (an MRO with the seed's open requirement) cannot become an agency while it publishes without a client…
+      await actAs(tx, SEED.adminOther);
+      const TYPE = "update public.organizations set type = $2 where id = $1";
+      expect((await sqlError(tx, TYPE, [agencyId, "staffing_agency"])).code).toBe("55000");
+      // …but may once those are paused or closed (resuming re-applies CFR01).
+      await tx.query(
+        "update public.work_requirements set status = 'paused' where organization_id = $1 and status = 'open'",
+        [agencyId],
+      );
+      await tx.query(TYPE, [agencyId, "staffing_agency"]);
+      const client = await activeClient(tx);
+      const id = await createAs(tx, SEED.adminOther, agencyId, { client });
+      // An agency with live clients, or with a published requirement for one, stays an agency.
+      await actAs(tx, SEED.adminOther);
+      expect((await sqlError(tx, TYPE, [agencyId, "mro"])).code).toBe("55000");
+      await tx.query("select * from public.revoke_represented_client($1)", [client]);
+      expect((await sqlError(tx, TYPE, [agencyId, "mro"])).code).toBe("55000");
+      await tx.query("update public.work_requirements set status = 'closed' where id = $1", [id]);
+      await tx.query(TYPE, [agencyId, "mro"]);
+      await commitCheck(tx);
     });
   });
 
@@ -820,7 +932,8 @@ describe("what professionals learn, and no action for a revoked client", () => {
       }
       await makeAvailable(tx, [SEED.alpha]);
       await actAs(tx, SEED.alpha);
-      expect((await sqlError(tx, APPLY, [id, randomUUID()])).code).toBe("CFR02");
+      // The professional learns only that it takes no application (CFA01, as a paused one; LOW-3).
+      expect((await sqlError(tx, APPLY, [id, randomUUID()])).code).toBe("CFA01");
 
       let [sql, args] = await transition(tx, SEED.adminOther, delta, "shortlisted");
       expect((await sqlError(tx, sql, [...args])).code).toBe("CFR02");

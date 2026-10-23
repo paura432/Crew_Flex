@@ -46,9 +46,12 @@ read only by the members of its agency and platform admins; nobody writes `repre
 `work_requirements.on_behalf_of_client_id` directly — the DEFINER RPCs check role and organization type in the body
 (missing = not allowed, 42501), activation is a platform admin's act with evidence apart, never for an agency they
 belong(ed) to or acted for. BEFORE triggers bind every path: only an active representation of the requirement's own
-organization, an agency never publishes or resumes without one (CFR01/CFR02), frozen once applied to, no application
-or forward step while not active. Professionals and other organizations get the client's name only (via
-`list_opportunities`), never its e-mail or id. Proof: `tests/db/recruiter.test.ts`, `db-race-check.sh recruiter`.
+organization, an agency never publishes or resumes without one (CFR01/CFR02), the client changes only on a draft,
+no application (CFA01 to the applicant) or forward step (CFR02) while not active, a stranger gets 42501 before any of
+it (no oracle), and the organization type cannot flip around the rules (BR-27.7). The contact e-mail has no column
+grant (admins/managers and platform admins through `list_represented_clients`). Professionals and other organizations
+get the client's name only (via `list_opportunities`), never its e-mail or id. Proof: `tests/db/recruiter.test.ts`,
+`db-race-check.sh recruiter`.
 
 S-7 also binds the applicant label of organization-side notices (`get_my_notifications`, LOCAL `20261023800000`):
 the same pool rules as `get_requirement_applications`, applied at read time (`tests/db/notices.test.ts`).

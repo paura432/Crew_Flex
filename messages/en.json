@@ -1375,11 +1375,11 @@
       "formTitle": "Add a client",
       "name": "New client",
       "email": "Client e-mail",
-      "emailHint": "Optional. Only your agency sees it.",
+      "emailHint": "Optional. Only your agency's managers and administrators see it.",
       "add": "Add client",
       "adding": "Adding…",
       "added": "Client saved. It stays pending until the Crew Flex administration records the evidence of the representation.",
-      "duplicate": "That client is already in the portfolio, or the portfolio is full (200 pending or active clients).",
+      "duplicate": "That client is already in the portfolio, or the portfolio is full (50 pending or 200 pending or active clients).",
       "notAgency": "Only a staffing agency represents clients.",
       "revoke": "Revoke",
       "revoking": "Revoking…",
@@ -1400,7 +1400,8 @@
       "noActive": "No active clients. Add them in the portfolio; they become active once the administration records the evidence.",
       "manage": "Go to the client portfolio",
       "note": "The recruiter manages the requirement and confirms on behalf of the client. The recipients are identified in the application. There is no legal contract and nothing is sent outside.",
-      "summary": "For the client {client}"
+      "summary": "For the client {client}",
+      "fixed": "Fixed at publication: the client professionals read is who receives the applications. For another client, create another requirement."
     },
     "requirement": {
       "client": "Client",

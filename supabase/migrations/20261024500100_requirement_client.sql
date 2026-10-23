@@ -14,8 +14,8 @@
 --
 -- Rules (BEFORE ROW triggers, so they hold for every write path, direct PostgREST included):
 --   R1 a client set on a requirement is a representation OF THAT organization and `active` (22023 / CFR02);
---   R2 the client cannot change once the requirement received an application (CFA12, the M05 rule — the applicant
---      consented to share with THAT agency for THAT client) nor when closed (55000);
+--   R2 the client changes only while the requirement is a draft (55000 afterwards; CFA12 once applied to, the M05
+--      rule): the client a professional reads on a published requirement is the one who receives the data;
 --   R3 a staffing agency publishes (insert as non-draft, draft → open), resumes (paused → open) or keeps published
 --      only with a client (CFR01) whose representation is active (CFR02); pausing, closing, archiving and the
 --      automatic covered ↔ open are never refused for it (a winding-down agency must be able to stop);
@@ -49,6 +49,14 @@ declare
   v_changed boolean := true; -- an INSERT sets the client
   v_publishes boolean;
 begin
+  -- No oracle (security review LOW-1): a BEFORE ROW trigger runs before the RLS WITH CHECK, so for an API caller who
+  -- may not write this organization's requirements the rules stay silent and RLS gives its usual answer (42501)
+  -- whatever the type or the client — the pattern of guard_requirement_with_applications. The owner (no JWT) is
+  -- always judged.
+  if (select auth.uid()) is not null
+     and not public.has_org_role(new.organization_id, array['admin', 'manager']::public.organization_role[]) then
+    return new;
+  end if;
   if tg_op = 'INSERT' then
     v_handed := nullif(current_setting('crewflex.requirement_client', true), '');
     if v_handed is not null then
@@ -61,6 +69,11 @@ begin
     if v_changed then
       if old.status = 'closed' then
         raise exception 'a closed requirement cannot be changed' using errcode = '55000';
+      end if;
+      -- The client a professional reads on a published requirement is the one who receives the data: it changes
+      -- only while the requirement is a draft (security review LOW-2; T-132).
+      if old.status <> 'draft' then
+        raise exception 'the client of a published requirement cannot change' using errcode = '55000';
       end if;
       -- The row is locked by this UPDATE, so apply (which locks it too) cannot slip in between.
       if exists (select 1 from public.applications a where a.requirement_id = old.id) then
@@ -147,12 +160,56 @@ begin
   where wr.id = new.requirement_id
   for share of rc;
   if found and v_status <> 'active' then
+    -- A new application: the professional learns only that the requirement takes none (CFA01, as a paused one;
+    -- security review LOW-3). A forward step: the agency is told why (CFR02).
+    if tg_op = 'INSERT' then
+      raise exception using errcode = 'CFA01', message = 'the requirement is not open';
+    end if;
     raise exception using errcode = 'CFR02', message = 'the representation of this client is not active';
   end if;
   return new;
 end;
 $$;
 revoke execute on function public.guard_application_client() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------------------------
+-- The organization type is not a way around the rules (security review MEDIUM-1): admins hold UPDATE on `type`
+-- (foundation). An organization becomes a staffing agency only while it has no published requirement without a
+-- client (otherwise an MRO could publish and then turn into an agency — or an agency flip out, publish, flip back),
+-- and stops being one only once it has no live (pending/active) client and no published requirement for a client.
+-- Drafts, paused and closed requirements do not block (resuming re-applies CFR01/CFR02). 55000, every write path.
+-- ---------------------------------------------------------------------------------------------
+create function public.guard_organization_type_clients()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.type = 'staffing_agency' and exists (
+    select 1 from public.work_requirements wr
+    where wr.organization_id = new.id and wr.status in ('open', 'covered') and wr.on_behalf_of_client_id is null
+  ) then
+    raise exception 'close or pause the published requirements without a client first' using errcode = '55000';
+  end if;
+  if old.type = 'staffing_agency' and (
+    exists (select 1 from public.represented_clients rc where rc.agency_id = new.id and rc.status <> 'revoked')
+    or exists (select 1 from public.work_requirements wr
+               where wr.organization_id = new.id and wr.status in ('open', 'covered')
+                 and wr.on_behalf_of_client_id is not null)
+  ) then
+    raise exception 'revoke the clients and close their published requirements first' using errcode = '55000';
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.guard_organization_type_clients() from public, anon, authenticated;
+
+create trigger organizations_type_clients
+  before update of type on public.organizations
+  for each row when (old.type is distinct from new.type
+                     and (old.type = 'staffing_agency' or new.type = 'staffing_agency'))
+  execute function public.guard_organization_type_clients();
 
 create trigger applications_client_active
   before insert or update of status on public.applications
@@ -417,7 +474,7 @@ begin
     and c.ends_at > now()
     and (p_id is null or c.id = p_id)
     and (p_urgency is null or c.urgency = p_urgency)
-    -- recruiter (R4, T-134): only while the representation is active.
+    -- recruiter (R4, T-133): only while the representation is active.
     and (wr.on_behalf_of_client_id is null or rc.status = 'active')
     -- v2-27 (T-90): never a requirement of one of the caller's own organizations.
     and not exists (
