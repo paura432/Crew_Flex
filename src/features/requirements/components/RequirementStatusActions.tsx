@@ -91,14 +91,14 @@ export function RequirementStatusActions({
   const archive = () =>
     startTransition(async () => {
       setNotice(null);
+      // Success redirects to the archived page (this component unmounts there): only failures land here.
       const result = await callAction(() => archiveRequirementAction(id));
       setStep(null);
+      if (result.ok) return;
       setNotice(
-        result.ok
-          ? { tone: "ok", text: tArchive("done") }
-          : result.code === "CONFLICT"
-            ? { tone: "danger", text: tStatus("conflict"), requestId: result.requestId }
-            : actionErrorCopy(tRoot, result),
+        result.code === "CONFLICT"
+          ? { tone: "danger", text: tStatus("conflict"), requestId: result.requestId }
+          : actionErrorCopy(tRoot, result),
       );
     });
 
