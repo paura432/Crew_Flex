@@ -4064,6 +4064,8 @@ describe("U. opportunities for every professional (M07, D-12, migration 20261022
           "description",
           "shifts",
           "time_zone",
+          // the represented client's name, null here (20261024500100; tests/db/recruiter.test.ts)
+          "client_name",
         ].sort(),
       );
       expect(rows[0]!.organization_name).toBe("Demo MRO Madrid");

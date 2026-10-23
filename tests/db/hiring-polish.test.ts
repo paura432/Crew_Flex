@@ -186,6 +186,7 @@ describe("list_opportunities: own organizations hidden, organization members lis
       );
       expect(Object.keys(rows[0]!).sort()).toEqual(
         [
+          "client_name", // the represented client's name, null here (20261024500100)
           "conditions",
           "country",
           "created_at",

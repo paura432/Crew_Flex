@@ -3,7 +3,7 @@
 # LOCAL Docker stack only: talks to the container `supabase_db_crew-flex` with `docker exec psql`
 # (never a URL), after the same local-target check as scripts/local/sb-local.sh. Every scenario
 # restores the rows it changed, so the deterministic seed stays as it was.
-# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|all]   (default: all)
+# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|recruiter|all]   (default: all)
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
 CONTAINER=supabase_db_crew-flex
@@ -443,6 +443,58 @@ SQL
   done
 }
 
+# Recruiter (20261024500100, BR-27.5): a revocation and an action for the same client at the same time. The action
+# share-locks the representation, so whichever commits first decides: a confirmation that holds it wins and the
+# revocation waits; a revocation that holds it makes the confirmation wait and then refuse (CFR02).
+recruiter_ready() {
+  [ "$(echo "select to_regclass('public.represented_clients') is not null;" | psql_owner)" = t ] && return 0
+  fail "migration 20261024500000 is not applied to the local stack (recruiter scenario not run)"
+  return 1
+}
+recruiter_round() { # $1 = confirm|revoke (the one that commits first)
+  : >"$OUT_A"; : >"$OUT_B"
+  local client req a status confirmed
+  client="$(psql_owner <<SQL | tail -1
+insert into public.represented_clients (agency_id, name, status, activated_at)
+select id, 'Race client ' || gen_random_uuid(), 'active', now() from public.organizations
+where name = 'Demo Aero Services Lisbon' returning id;
+SQL
+)"
+  req="$(race_need 'Demo Aero Services Lisbon' 1)"
+  echo "update public.work_requirements set on_behalf_of_client_id = '$client' where id = '$req';" | psql_owner >/dev/null
+  a="$(race_accepted "$req" "$DELTA" "$(new_uuid)")"
+  local revoke="select status from public.revoke_represented_client('$client');"
+  if [ "$1" = confirm ]; then
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$(confirm_sql "$a")" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+  else
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$revoke" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+  fi
+  local pa=$!
+  sleep 0.4
+  if [ "$1" = confirm ]; then printf '%s\n' "$revoke" | psql_as "$ADMIN_OTHER" >"$OUT_B" || true
+  else printf '%s\n' "$(confirm_sql "$a")" | psql_as "$ADMIN_OTHER" >"$OUT_B" || true; fi
+  wait "$pa" || true
+  status="$(echo "select status from public.represented_clients where id = '$client';" | psql_owner)"
+  confirmed="$(echo "select count(*) from public.applications where requirement_id = '$req' and status = 'confirmed';" | psql_owner)"
+  if [ "$1" = confirm ] && [ "$confirmed" = 1 ] && [ "$status" = revoked ]; then
+    pass "confirm first: the confirmation committed, the revocation waited and then ended the representation"
+  elif [ "$1" = revoke ] && [ "$confirmed" = 0 ] && [ "$status" = revoked ] && grep -q 'not active' "$OUT_B"; then
+    pass "revoke first: the confirmation waited and was refused (CFR02)"
+  else fail "$1 first: confirmed=$confirmed client=$status"; cat "$OUT_A" "$OUT_B"; fi
+  race_cleanup "$req"
+  echo "delete from public.represented_clients where id = '$client';" | psql_owner >/dev/null
+}
+recruiter() {
+  echo "== BR-27.5: revoke a client and confirm an application for it at the same time (both orders)"
+  applications_ready || return 0
+  recruiter_ready || return 0
+  # Owner fixtures: the representation rows do not depend on the organization type (only the RPCs check it).
+  race_available "$DELTA"
+  recruiter_round confirm
+  race_available "$DELTA"
+  recruiter_round revoke
+}
+
 case "${1:-all}" in
   e3) e3; e3_simultaneous ;;
   idempotency) idempotency ;;
@@ -451,8 +503,9 @@ case "${1:-all}" in
   applications) applications; pause_vs_confirm; double_booking; apply_vs_edit ;;
   notices) notices_role_loss ;;
   wallet-trash) wallet_trash ;;
+  recruiter) recruiter ;;
   all) e3; e3_simultaneous; idempotency; review; availability
-       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash ;;
+       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash; recruiter ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"
