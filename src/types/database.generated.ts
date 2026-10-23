@@ -794,6 +794,101 @@ export type Database = {
         };
         Relationships: [];
       };
+      represented_client_reviews: {
+        Row: {
+          client_id: string;
+          created_at: string;
+          id: string;
+          note: string;
+          reviewed_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          client_id: string;
+          created_at?: string;
+          id?: string;
+          note: string;
+          reviewed_by?: string | null;
+        };
+        Update: {
+          client_id?: string;
+          created_at?: string;
+          id?: string;
+          note?: string;
+          reviewed_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "represented_client_reviews_client_id_fkey";
+            columns: ["client_id"];
+            isOneToOne: false;
+            referencedRelation: "represented_clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "represented_client_reviews_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      represented_clients: {
+        Row: {
+          activated_at: string | null;
+          agency_id: string;
+          contact_email: string | null;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          name: string;
+          revoked_at: string | null;
+          status: Database["public"]["Enums"]["representation_status"];
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          activated_at?: string | null;
+          agency_id: string;
+          contact_email?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name: string;
+          revoked_at?: string | null;
+          status?: Database["public"]["Enums"]["representation_status"];
+          updated_at?: string;
+        };
+        Update: {
+          activated_at?: string | null;
+          agency_id?: string;
+          contact_email?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          name?: string;
+          revoked_at?: string | null;
+          status?: Database["public"]["Enums"]["representation_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "represented_clients_agency_id_fkey";
+            columns: ["agency_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "represented_clients_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       technician_notice_preferences: {
         Row: {
           aog_opt_in: boolean;
@@ -1154,6 +1249,7 @@ export type Database = {
           id: string;
           location: string;
           min_years: number | null;
+          on_behalf_of_client_id: string | null;
           organization_id: string;
           required_skills: string[];
           requires_type_rating: boolean;
@@ -1182,6 +1278,7 @@ export type Database = {
           id?: string;
           location: string;
           min_years?: number | null;
+          on_behalf_of_client_id?: string | null;
           organization_id: string;
           required_skills?: string[];
           requires_type_rating?: boolean;
@@ -1209,6 +1306,7 @@ export type Database = {
           id?: string;
           location?: string;
           min_years?: number | null;
+          on_behalf_of_client_id?: string | null;
           organization_id?: string;
           required_skills?: string[];
           requires_type_rating?: boolean;
@@ -1230,6 +1328,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "work_requirements_on_behalf_of_client_id_fkey";
+            columns: ["on_behalf_of_client_id"];
+            isOneToOne: false;
+            referencedRelation: "represented_clients";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "work_requirements_organization_id_fkey";
             columns: ["organization_id"];
             isOneToOne: false;
@@ -1243,6 +1348,27 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      activate_represented_client: {
+        Args: { p_client_id: string; p_note: string; p_request_id?: string };
+        Returns: {
+          activated_at: string;
+          id: string;
+          status: Database["public"]["Enums"]["representation_status"];
+        }[];
+      };
+      add_represented_client: {
+        Args: {
+          p_contact_email?: string;
+          p_name: string;
+          p_organization_id: string;
+          p_request_id?: string;
+        };
+        Returns: {
+          created_at: string;
+          id: string;
+          status: Database["public"]["Enums"]["representation_status"];
+        }[];
+      };
       apply_to_requirement: {
         Args: {
           p_idempotency_key: string;
@@ -1376,6 +1502,27 @@ export type Database = {
               p_urgency: Database["public"]["Enums"]["requirement_urgency"];
             };
             Returns: string;
+          }
+        | {
+            Args: {
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_headcount: number;
+              p_location: string;
+              p_on_behalf_of_client_id: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: string;
           };
       create_work_requirement_idempotent:
         | {
@@ -1405,6 +1552,31 @@ export type Database = {
               p_headcount: number;
               p_idempotency_key: string;
               p_location: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              id: string;
+              replayed: boolean;
+            }[];
+          }
+        | {
+            Args: {
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_headcount: number;
+              p_idempotency_key: string;
+              p_location: string;
+              p_on_behalf_of_client_id: string;
               p_organization_id: string;
               p_qualifications: Json;
               p_shift: Database["public"]["Enums"]["shift_type"];
@@ -1725,6 +1897,7 @@ export type Database = {
           p_urgency?: Database["public"]["Enums"]["requirement_urgency"];
         };
         Returns: {
+          client_name: string;
           conditions: Json;
           country: string;
           created_at: string;
@@ -1742,6 +1915,33 @@ export type Database = {
           title: string;
           total: number;
           urgency: Database["public"]["Enums"]["requirement_urgency"];
+        }[];
+      };
+      list_representation_reviews: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          activated_at: string;
+          agency_id: string;
+          agency_name: string;
+          contact_email: string;
+          created_at: string;
+          id: string;
+          name: string;
+          revoked_at: string;
+          status: Database["public"]["Enums"]["representation_status"];
+        }[];
+      };
+      list_represented_clients: {
+        Args: { p_organization_id: string };
+        Returns: {
+          activated_at: string;
+          agency_id: string;
+          contact_email: string;
+          created_at: string;
+          id: string;
+          name: string;
+          revoked_at: string;
+          status: Database["public"]["Enums"]["representation_status"];
         }[];
       };
       mark_notifications_read: { Args: { p_id?: string }; Returns: number };
@@ -1812,6 +2012,14 @@ export type Database = {
           id: string;
           reviewed_at: string;
           verification_status: Database["public"]["Enums"]["verification_status"];
+        }[];
+      };
+      revoke_represented_client: {
+        Args: { p_client_id: string; p_request_id?: string };
+        Returns: {
+          id: string;
+          revoked_at: string;
+          status: Database["public"]["Enums"]["representation_status"];
         }[];
       };
       save_notice_preferences: {
@@ -1932,6 +2140,32 @@ export type Database = {
               id: string;
               updated_at: string;
             }[];
+          }
+        | {
+            Args: {
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_expected_updated_at: string;
+              p_headcount: number;
+              p_id: string;
+              p_location: string;
+              p_on_behalf_of_client_id: string;
+              p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              changed: string[];
+              id: string;
+              updated_at: string;
+            }[];
           };
     };
     Enums: {
@@ -1971,6 +2205,7 @@ export type Database = {
       profile_visibility: "private" | "anonymous" | "verified_orgs" | "open";
       qualification_category: "LICENSE" | "TYPE_RATING" | "TRAINING" | "APPROVAL" | "SKILL";
       qualification_status: "active" | "withdrawn";
+      representation_status: "pending" | "active" | "revoked";
       requirement_level: "hard" | "soft";
       requirement_status: "draft" | "open" | "paused" | "covered" | "cancelled" | "closed";
       requirement_urgency: "planned" | "urgent" | "aog";
@@ -2127,6 +2362,7 @@ export const Constants = {
       profile_visibility: ["private", "anonymous", "verified_orgs", "open"],
       qualification_category: ["LICENSE", "TYPE_RATING", "TRAINING", "APPROVAL", "SKILL"],
       qualification_status: ["active", "withdrawn"],
+      representation_status: ["pending", "active", "revoked"],
       requirement_level: ["hard", "soft"],
       requirement_status: ["draft", "open", "paused", "covered", "cancelled", "closed"],
       requirement_urgency: ["planned", "urgent", "aog"],

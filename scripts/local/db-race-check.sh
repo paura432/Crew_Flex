@@ -194,13 +194,13 @@ applications_ready() {
   return 1
 }
 # Owner fixture: an open requirement of organization "$1" with hard B1.1 and headcount $2; prints its id.
-race_need() {
+race_need() { # $1 organization name, $2 headcount, [$3 represented client id — set at creation: BR-27 freezes it once published]
   psql_owner <<SQL | tail -1
 with wr as (
   insert into public.work_requirements
-    (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
+    (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by, on_behalf_of_client_id)
   select o.id, 'Race applications', 'LIS', date_trunc('day', now()) + interval '30 days',
-         date_trunc('day', now()) + interval '32 days', 'day', $2, 'planned', 'open', m.profile_id
+         date_trunc('day', now()) + interval '32 days', 'day', $2, 'planned', 'open', m.profile_id, nullif('${3:-}', '')::uuid
   from public.organizations o
   join public.organization_members m on m.organization_id = o.id and m.role = 'admin'
   where o.name = '$1' limit 1
@@ -460,8 +460,7 @@ select id, 'Race client ' || gen_random_uuid(), 'active', now() from public.orga
 where name = 'Demo Aero Services Lisbon' returning id;
 SQL
 )"
-  req="$(race_need 'Demo Aero Services Lisbon' 1)"
-  echo "update public.work_requirements set on_behalf_of_client_id = '$client' where id = '$req';" | psql_owner >/dev/null
+  req="$(race_need 'Demo Aero Services Lisbon' 1 "$client")"
   a="$(race_accepted "$req" "$DELTA" "$(new_uuid)")"
   local revoke="select status from public.revoke_represented_client('$client');"
   if [ "$1" = confirm ]; then
@@ -493,6 +492,8 @@ recruiter() {
   recruiter_round confirm
   race_available "$DELTA"
   recruiter_round revoke
+}
+
 # --- PKG outreach: «Distribuir aviso Urgente / AOG» (migrations 20261024400000…400200) -----------------
 # Delta's notice preferences are saved for the scenario and put back as they were at the end.
 ADMIN_MRO=00000000-0000-4000-8000-000000000001
