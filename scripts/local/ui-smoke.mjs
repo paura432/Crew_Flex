@@ -2623,7 +2623,7 @@ await logout();
   const hpDash = await page.locator("main").innerText();
   ok(
     "PKG hiring-polish 9 dashboard: «Shifts covered», «How to staff a requirement» (4 steps), quick links, note",
-    /Shifts covered/.test(hpDash) &&
+    /Shifts covered/i.test(hpDash) && // Metric labels are CSS-uppercased
       /How to staff a requirement/.test(hpDash) &&
       (await page.locator("main ol li").count()) >= 4 &&
       (await page.getByRole("link", { name: /Builder/ }).count()) === 1 &&
@@ -2853,9 +2853,10 @@ const wxWindowId = wxFuture.data?.window?.id;
 const wxMoved = await asSeedUser("delta@crewflex.test", "professional-availability", {
   method: "PATCH",
   query: { id: wxWindowId },
+  // Short window: a span to 2032 would fail «maxDays» first, hiding the floor.
   body: {
     startsAt: `${wxDay(-2)}T00:00:00.000Z`,
-    endsAt: "2032-03-02T00:00:00.000Z",
+    endsAt: `${wxDay(-1)}T00:00:00.000Z`,
     status: "available",
   },
 });
@@ -3041,14 +3042,15 @@ const v18Href = await page
   .locator("a:has-text('A320 / B737 NG line check')")
   .first()
   .getAttribute("href");
-await page.goto(`${BASE}${v18Href}/matches`);
+await page.goto(`${BASE}${v18Href}/matches?eligible=0`); // v2-25: «Solo elegibles» is on by default
 await page.waitForLoadState("networkidle");
 await page.locator("main article").first().waitFor({ timeout: 15000 });
 const v18Eligible = page.locator("main article").filter({ hasNotText: "Not eligible" });
 const v18EligibleText = (await v18Eligible.count()) === 1 ? await v18Eligible.innerText() : "";
 ok(
   "PKG matching-v18 1 one eligible candidate (Delta), every v1.8 profile requirement listed and met",
-  /Profile requirements/.test(v18EligibleText) &&
+  // Section titles are CSS-uppercased: innerText reflects it.
+  /Profile requirements/i.test(v18EligibleText) &&
     /Work permit: Spain/.test(v18EligibleText) &&
     /Category B1\.1/.test(v18EligibleText) &&
     /Aircraft: A320 Family \/ B737 NG/.test(v18EligibleText) &&
@@ -3057,7 +3059,7 @@ ok(
     ) &&
     /Minimum experience: 5 years/.test(v18EligibleText) &&
     /Capability: Line Maintenance/.test(v18EligibleText) &&
-    /Affinity \(soft score\)/.test(v18EligibleText),
+    /Affinity \(soft score\)/i.test(v18EligibleText),
   v18EligibleText.replace(/\s+/g, " ").slice(0, 240),
 );
 const v18Echo = await page
