@@ -2439,7 +2439,8 @@ await logout();
     await page.fill("#email", email);
     await page.fill("#password", `${PW}-close`);
     await page.click("button[type=submit]");
-    await page.waitForSelector("[role=alert]", { timeout: 15000 });
+    // Not a bare [role=alert]: the route announcer is one too and resolves first («Sign in»).
+    await page.waitForSelector("[role=alert]:has-text('incorrect')", { timeout: 15000 });
     ok(
       "PKG account e: «Type CLOSE» refuses another word; closed → «Account closed.»; sign-in refused",
       closedNotice && /Email or password is incorrect/.test(await mainText()),
@@ -2600,8 +2601,10 @@ await logout();
   );
   // v2-26: the cancel step explains what it does (opened, then backed out: nothing is sent).
   await hpAppCard.getByRole("button", { name: "Cancel assignment" }).click();
-  const hpHint = await hpAppCard.getByRole("group").innerText();
-  await hpAppCard.getByRole("group").getByRole("button", { name: "Back" }).click();
+  // `<details>` (History) is a group too: name the confirmation step.
+  const hpCancelStep = hpAppCard.getByRole("group", { name: "Cancel assignment" });
+  const hpHint = await hpCancelStep.innerText();
+  await hpCancelStep.getByRole("button", { name: "Back" }).click();
   ok(
     "PKG hiring-polish 7 cancel assignment hint «Seats will be released…» (backed out)",
     /Seats will be released and the technician's previous availability restored/.test(hpHint),
