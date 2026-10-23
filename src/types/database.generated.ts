@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261024300000. Do not edit by hand.
+// migrations up to 20261024400200. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -461,34 +461,37 @@ export type Database = {
       };
       notifications: {
         Row: {
-          application_id: string;
+          application_id: string | null;
           application_status: Database["public"]["Enums"]["application_status"] | null;
           created_at: string;
           id: string;
           kind: Database["public"]["Enums"]["notification_kind"];
           read_at: string | null;
           recipient_id: string;
+          requirement_id: string | null;
           requirement_status: Database["public"]["Enums"]["requirement_status"] | null;
         };
         ComputedFields: never;
         Insert: {
-          application_id: string;
+          application_id?: string | null;
           application_status?: Database["public"]["Enums"]["application_status"] | null;
           created_at?: string;
           id?: string;
           kind: Database["public"]["Enums"]["notification_kind"];
           read_at?: string | null;
           recipient_id: string;
+          requirement_id?: string | null;
           requirement_status?: Database["public"]["Enums"]["requirement_status"] | null;
         };
         Update: {
-          application_id?: string;
+          application_id?: string | null;
           application_status?: Database["public"]["Enums"]["application_status"] | null;
           created_at?: string;
           id?: string;
           kind?: Database["public"]["Enums"]["notification_kind"];
           read_at?: string | null;
           recipient_id?: string;
+          requirement_id?: string | null;
           requirement_status?: Database["public"]["Enums"]["requirement_status"] | null;
         };
         Relationships: [
@@ -504,6 +507,13 @@ export type Database = {
             columns: ["recipient_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_requirement_id_fkey";
+            columns: ["requirement_id"];
+            isOneToOne: false;
+            referencedRelation: "work_requirements";
             referencedColumns: ["id"];
           },
         ];
@@ -627,6 +637,36 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      outreach_distributions: {
+        Row: {
+          created_at: string;
+          notified_count: number | null;
+          requirement_id: string;
+          urgency: Database["public"]["Enums"]["requirement_urgency"];
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          notified_count?: number | null;
+          requirement_id: string;
+          urgency: Database["public"]["Enums"]["requirement_urgency"];
+        };
+        Update: {
+          created_at?: string;
+          notified_count?: number | null;
+          requirement_id?: string;
+          urgency?: Database["public"]["Enums"]["requirement_urgency"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "outreach_distributions_requirement_id_fkey";
+            columns: ["requirement_id"];
+            isOneToOne: true;
+            referencedRelation: "work_requirements";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       professional_documents: {
         Row: {
@@ -753,6 +793,51 @@ export type Database = {
           requires_expiry?: boolean;
         };
         Relationships: [];
+      };
+      technician_notice_preferences: {
+        Row: {
+          aog_opt_in: boolean;
+          created_at: string;
+          mobilization_hours: number | null;
+          profile_id: string;
+          quiet_end: string | null;
+          quiet_start: string | null;
+          time_zone: string;
+          updated_at: string;
+          urgent_opt_in: boolean;
+        };
+        ComputedFields: never;
+        Insert: {
+          aog_opt_in?: boolean;
+          created_at?: string;
+          mobilization_hours?: number | null;
+          profile_id: string;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
+          time_zone?: string;
+          updated_at?: string;
+          urgent_opt_in?: boolean;
+        };
+        Update: {
+          aog_opt_in?: boolean;
+          created_at?: string;
+          mobilization_hours?: number | null;
+          profile_id?: string;
+          quiet_end?: string | null;
+          quiet_start?: string | null;
+          time_zone?: string;
+          updated_at?: string;
+          urgent_opt_in?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "technician_notice_preferences_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
+          },
+        ];
       };
       technician_organization_blocks: {
         Row: {
@@ -1055,17 +1140,23 @@ export type Database = {
       };
       work_requirements: {
         Row: {
+          aircraft: string[];
           archived_at: string | null;
+          category: string | null;
           conditions: Json | null;
           country: string | null;
           created_at: string;
           created_by: string | null;
           description: string | null;
           ends_at: string;
+          engines: string[];
           headcount: number;
           id: string;
           location: string;
+          min_years: number | null;
           organization_id: string;
+          required_skills: string[];
+          requires_type_rating: boolean;
           shift: Database["public"]["Enums"]["shift_type"];
           shifts: Json | null;
           starts_at: string;
@@ -1077,17 +1168,23 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          aircraft?: string[];
           archived_at?: string | null;
+          category?: string | null;
           conditions?: Json | null;
           country?: string | null;
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
           ends_at: string;
+          engines?: string[];
           headcount: number;
           id?: string;
           location: string;
+          min_years?: number | null;
           organization_id: string;
+          required_skills?: string[];
+          requires_type_rating?: boolean;
           shift?: Database["public"]["Enums"]["shift_type"];
           shifts?: Json | null;
           starts_at: string;
@@ -1098,17 +1195,23 @@ export type Database = {
           urgency?: Database["public"]["Enums"]["requirement_urgency"];
         };
         Update: {
+          aircraft?: string[];
           archived_at?: string | null;
+          category?: string | null;
           conditions?: Json | null;
           country?: string | null;
           created_at?: string;
           created_by?: string | null;
           description?: string | null;
           ends_at?: string;
+          engines?: string[];
           headcount?: number;
           id?: string;
           location?: string;
+          min_years?: number | null;
           organization_id?: string;
+          required_skills?: string[];
+          requires_type_rating?: boolean;
           shift?: Database["public"]["Enums"]["shift_type"];
           shifts?: Json | null;
           starts_at?: string;
@@ -1171,6 +1274,7 @@ export type Database = {
       count_my_unread_notifications: { Args: Record<PropertyKey, never>; Returns: number };
       count_viable_candidates: {
         Args: {
+          p_country?: string;
           p_ends_at: string;
           p_hard_type_ids: string[];
           p_organization_id: string;
@@ -1455,6 +1559,7 @@ export type Database = {
           id: string;
           kind: Database["public"]["Enums"]["notification_kind"];
           organization_name: string;
+          outreach_urgency: Database["public"]["Enums"]["requirement_urgency"];
           read_at: string;
           requirement_id: string;
           requirement_status: Database["public"]["Enums"]["requirement_status"];
@@ -1472,20 +1577,27 @@ export type Database = {
         };
         Returns: {
           accepted_proposal_id: string;
+          aircraft: string[];
           application_id: string;
           candidate_availability: Json;
           candidate_base_location: string;
+          candidate_declarations: Json;
           candidate_display_name: string;
           candidate_pool: string;
           candidate_qualifications: Json;
           candidate_ref: string;
           candidate_years_experience: number;
+          category: string;
           created_at: string;
           current_proposal: Json;
+          engines: string[];
           history: Json;
+          min_years: number;
           reason: string;
+          required_skills: string[];
           requirement: Json;
           requirement_id: string;
+          requires_type_rating: boolean;
           status: Database["public"]["Enums"]["application_status"];
           total: number;
           updated_at: string;
@@ -1520,6 +1632,7 @@ export type Database = {
           application_id: string;
           candidate_availability: Json;
           candidate_base_location: string;
+          candidate_declarations: Json;
           candidate_display_name: string;
           candidate_pool: string;
           candidate_qualifications: Json;
@@ -1550,6 +1663,7 @@ export type Database = {
         Returns: {
           candidate_availability: Json;
           candidate_base_location: string;
+          candidate_declarations: Json;
           candidate_display_name: string;
           candidate_pool: string;
           candidate_qualifications: Json;
@@ -1563,6 +1677,18 @@ export type Database = {
           cap: number;
           hard_eligible: number;
           prefiltered: number;
+        }[];
+      };
+      get_requirement_profile_rules: {
+        Args: { p_requirement_ids: string[] };
+        Returns: {
+          aircraft: string[];
+          category: string;
+          engines: string[];
+          min_years: number;
+          required_skills: string[];
+          requirement_id: string;
+          requires_type_rating: boolean;
         }[];
       };
       has_org_role: {
@@ -1623,6 +1749,7 @@ export type Database = {
         Returns: {
           candidate_availability: Json;
           candidate_base_location: string;
+          candidate_declarations: Json;
           candidate_display_name: string;
           candidate_pool: string;
           candidate_qualifications: Json;
@@ -1651,6 +1778,14 @@ export type Database = {
           windows_created: number;
         }[];
       };
+      requirement_outreach: {
+        Args: { p_request_id?: string; p_requirement_id: string };
+        Returns: {
+          distributed_at: string;
+          notified: number;
+          urgency: Database["public"]["Enums"]["requirement_urgency"];
+        }[];
+      };
       review_organization: {
         Args: {
           p_expected_updated_at: string;
@@ -1677,6 +1812,33 @@ export type Database = {
           reviewed_at: string;
           verification_status: Database["public"]["Enums"]["verification_status"];
         }[];
+      };
+      save_notice_preferences: {
+        Args: {
+          p_aog_opt_in: boolean;
+          p_mobilization_hours: number;
+          p_quiet_end: string;
+          p_quiet_start: string;
+          p_time_zone: string;
+          p_urgent_opt_in: boolean;
+        };
+        Returns: {
+          aog_opt_in: boolean;
+          created_at: string;
+          mobilization_hours: number | null;
+          profile_id: string;
+          quiet_end: string | null;
+          quiet_start: string | null;
+          time_zone: string;
+          updated_at: string;
+          urgent_opt_in: boolean;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "technician_notice_preferences";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
       };
       save_professional_passport: {
         Args: { p_expected_updated_at?: string; p_passport: Json };
@@ -1800,7 +1962,7 @@ export type Database = {
         | "aog_intervention"
         | "workshop";
       mobility: "local" | "national" | "international";
-      notification_kind: "application" | "requirement";
+      notification_kind: "application" | "requirement" | "outreach";
       organization_review_status: "pending" | "reviewed";
       organization_role: "member" | "manager" | "admin";
       organization_type: "mro" | "airline" | "operator" | "staffing_agency" | "other";
@@ -1956,7 +2118,7 @@ export const Constants = {
         "workshop",
       ],
       mobility: ["local", "national", "international"],
-      notification_kind: ["application", "requirement"],
+      notification_kind: ["application", "requirement", "outreach"],
       organization_review_status: ["pending", "reviewed"],
       organization_role: ["member", "manager", "admin"],
       organization_type: ["mro", "airline", "operator", "staffing_agency", "other"],
