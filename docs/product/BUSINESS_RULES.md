@@ -562,8 +562,9 @@ functions only let the screens say it first (`clientRequired`, `canActForClient`
   `DIRECTORY_RATE_LIMITED`, SQLSTATE CFD01; the page shows the generic 409 state).
 - **Read-only; organization-side block NOT ported (T-158).** The directory writes nothing and no RPC takes a
   pseudonym. v1.8 has no employer block of a professional (its `blockEmployer` is the professional's own block,
-  BR-18 / N-08, `technician_organization_blocks`); the v2 backlog's v2-16 is that professional's block, a separate
-  package already implemented. The organization-side variant this package first carried
+  BR-18 / N-08, `technician_organization_blocks`); the v2 backlog's v2-16 is that professional's block, only partly
+  implemented (pool, counts, directory — T-35); hiding blocked organizations' needs from «Oportunidades» and
+  refusing the application are a separate package (migration `20261024800000`, in progress). The organization-side variant this package first carried
   (`organization_candidate_blocks`, `set_directory_block`, «Bloquear» / «Ver perfiles bloqueados») was blocked by
   the independent security review (2026-10-23: a linkage and watch-list primitive) and is parked under tag
   `parked/directory-employer-block` pending the owner.
