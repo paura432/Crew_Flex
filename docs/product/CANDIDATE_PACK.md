@@ -4,8 +4,8 @@
 > copy** of the professional's technical profile (v2-15 + v2-04, BUSINESS_RULES BR-25, defaults T-110…T-116):
 > frozen in `application_packs` by a trigger when they apply (migration `20261024300000`), previewed in the apply
 > panel («Qué compartes con {organización}», «Experiencia que compartes») before the consent, read through
-> `get_application_pack` by the applicant and the requirement organization's admins/managers («Ver expediente» on both
-> application pages), deleted when the application is withdrawn, rejected or cancelled and when the account closes,
+> `get_application_pack` by the applicant and the requirement organization's admins/managers («Ver expediente» on the
+> requirement's applications, the organization's «Candidaturas» and «Mis candidaturas»), deleted when the application is withdrawn, rejected or cancelled and when the account closes,
 > listed in the professional's own export. It carries
 > categories, years, English, base, aircraft, engines, declared type ratings, active qualifications and courses,
 > capabilities, work permits, restrictions, the declared minimum rate and the logbook entries marked «Seleccionable

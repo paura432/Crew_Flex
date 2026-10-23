@@ -418,4 +418,5 @@ v1.8 «Candidate Pack» (`Workflow.jsx:17-33`, connected `server/app.mjs:110`) w
    copies are part of «Exportar mis datos» (BR-19).
 
 IMPLEMENTED (local, migration `20261024300000`, `applications` GET `view=pack` / `view=pack-preview`, «Ver
-expediente» on both application pages).
+expediente» on the requirement's applications, the organization's «Candidaturas» — the same card,
+`OrgApplicationCard` — and «Mis candidaturas»).
