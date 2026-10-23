@@ -701,7 +701,7 @@ ok(
 const cards = () => page.locator("main article");
 // The list streams in after `load` (Suspense, loading.tsx): wait for the first card.
 const listed = () => page.locator("main article").first().waitFor({ timeout: 15_000 });
-await page.locator('input[name="eligible"]').check();
+await page.getByRole("checkbox", { name: "Eligible only" }).check();
 await Promise.all([
   page.waitForURL(/eligible=1/),
   page.getByRole("button", { name: "Apply" }).click(),
@@ -758,7 +758,7 @@ await Promise.all([
   page.getByRole("button", { name: /Compare selected/ }).click(),
 ]);
 await listed();
-await page.locator('input[name="eligible"]').check();
+await page.getByRole("checkbox", { name: "Eligible only" }).check();
 await Promise.all([
   page.waitForURL(/eligible=1/),
   page.getByRole("button", { name: "Apply" }).click(),
