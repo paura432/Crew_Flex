@@ -41,6 +41,7 @@
     "newRequirement": "Nueva necesidad",
     "requirement": "Necesidad",
     "matches": "Profesionales elegibles",
+    "candidates": "Buscar candidatos",
     "workforce": "Plantilla",
     "organizationProfile": "Organización",
     "settings": "Configuración",
@@ -69,6 +70,7 @@
     "account": "Cuenta",
     "dashboard": "Resumen",
     "requirements": "Necesidades",
+    "candidates": "Buscar candidatos",
     "workforce": "Plantilla",
     "organizationProfile": "Organización",
     "overview": "Mi espacio",
@@ -521,6 +523,10 @@
       "clientEmail": "Introduce un correo válido para el cliente.",
       "noteRequired": "Indica la evidencia de la representación",
       "noteMax": "Usa como máximo 2000 caracteres"
+    },
+    "directory": {
+      "window": "Completa ambas fechas con un intervalo válido de hasta un año.",
+      "minYears": "Introduce un mínimo de años válido (0 a 60)."
     }
   },
   "domain": {
@@ -565,15 +571,15 @@
       },
       "anonymous": {
         "label": "Anónimo",
-        "detail": "Tus cualificaciones relevantes pueden emparejarse; tu identidad queda oculta."
+        "detail": "Tus cualificaciones relevantes pueden emparejarse y las organizaciones te encuentran en su directorio con un seudónimo; tu identidad queda oculta."
       },
       "verified_orgs": {
         "label": "Empresas verificadas",
-        "detail": "Perfil anónimo, solo para organizaciones con la revisión registrada por la plataforma."
+        "detail": "Perfil anónimo, en el matching y en el directorio solo de las organizaciones con la revisión registrada por la plataforma."
       },
       "open": {
         "label": "Abierto",
-        "detail": "Tu nombre se muestra en los resultados. El contacto sigue requiriendo tu consentimiento."
+        "detail": "Tu nombre se muestra en los resultados y en el directorio de las organizaciones. El contacto sigue requiriendo tu consentimiento."
       }
     },
     "mobility": {
@@ -2432,6 +2438,7 @@
       "label": "Accesos rápidos",
       "home": "Inicio",
       "offers": "Ofertas",
+      "candidates": "Candidatos",
       "calendar": "Calendario",
       "applications": "Candidaturas",
       "tools": "Herramientas",
@@ -2495,6 +2502,101 @@
   },
   "orgHome": {
     "visibleNetwork": "Red visible",
-    "visibleNetworkDetail": "Según permisos y privacidad"
+    "visibleNetworkDetail": "Según permisos y privacidad",
+    "network": "Red profesional"
+  },
+  "directory": {
+    "eyebrow": "Red profesional",
+    "title": "Encuentra a tu próximo técnico.",
+    "description": "Compara cualificaciones, experiencia y disponibilidad. La identidad respeta las preferencias de cada profesional.",
+    "visibleNote": "Solo perfiles visibles para tu organización. Los descansos y el calendario privado no se muestran.",
+    "blockedTitle": "Perfiles bloqueados por tu organización",
+    "blockedDescription": "Estos profesionales no aparecen en tu directorio ni entre los candidatos de tus necesidades. No se les avisa.",
+    "viewBlocked": "Ver perfiles bloqueados",
+    "backToDirectory": "Volver al directorio",
+    "evaluate": {
+      "label": "Evaluar para la oferta",
+      "placeholder": "Sin oferta seleccionada",
+      "submit": "Evaluar",
+      "hint": "La elegibilidad se evalúa en «Profesionales elegibles» de la necesidad elegida."
+    },
+    "filters": {
+      "legend": "Filtros del directorio",
+      "base": "Base habitual",
+      "basePlaceholder": "Madrid (MAD), Lisboa…",
+      "more": "Más filtros",
+      "category": "Categoría",
+      "aircraft": "Aeronave",
+      "english": "Inglés mínimo",
+      "minYears": "Experiencia mínima (años)",
+      "country": "Permiso de trabajo",
+      "from": "Disponibilidad desde",
+      "to": "Disponibilidad hasta",
+      "all": "Todas",
+      "any": "Cualquiera",
+      "anyCountry": "Cualquier país",
+      "help": "El filtro de fechas requiere publicar todos los días del intervalo; no muestra el calendario privado.",
+      "apply": "Aplicar filtros",
+      "clear": "Limpiar filtros"
+    },
+    "summary": "{total, plural, one {<b>#</b> perfil} other {<b>#</b> perfiles}} · página {page} de {pages}",
+    "view": {
+      "label": "Vista del directorio",
+      "compact": "Compacta",
+      "expanded": "Ampliada"
+    },
+    "card": {
+      "anonymous": "Profesional anónimo {ref}",
+      "protectedIdentity": "Identidad protegida",
+      "avatarOf": "Avatar de {name}",
+      "baseNotShared": "Base no compartida",
+      "experience": "Experiencia: {count, plural, one {# año} other {# años}}",
+      "experienceUnknown": "Experiencia no declarada",
+      "english": "Inglés {level}",
+      "englishNone": "Inglés no declarado",
+      "aircraft": "Aeronaves: {list}",
+      "aircraftNone": "Aeronaves: sin declarar",
+      "categories": "Categorías: {list}",
+      "countries": "Países de trabajo: {list}",
+      "countriesNone": "Países de trabajo: sin declarar",
+      "restrictions": "Restricciones declaradas",
+      "openProfile": "Abrir perfil",
+      "block": "Bloquear",
+      "unblock": "Desbloquear",
+      "blocked": "Perfil bloqueado: ya no aparece en tu directorio ni en tus necesidades.",
+      "unblocked": "Perfil desbloqueado: vuelve a aparecer en tu directorio y en tus necesidades."
+    },
+    "medals": {
+      "label": "Insignias del perfil",
+      "yearsUnit": "años",
+      "experience": "{count, plural, one {# año de experiencia declarada} other {# años de experiencia declarada}}",
+      "category": "Categoría {category}",
+      "aircraft": "Aeronave {aircraft}",
+      "more": "Ver {count, plural, one {# insignia adicional} other {# insignias adicionales}}",
+      "note": "Resumen del perfil; no concede autorización de firma ni acredita formación por participar en retos."
+    },
+    "profile": {
+      "title": "Perfil profesional",
+      "close": "Cerrar",
+      "identity": "{base} · {count, plural, one {# año de experiencia declarada} other {# años de experiencia declarada}}",
+      "basePending": "Base por completar",
+      "sectionExperience": "Experiencia y condiciones",
+      "privacy": "Identidad según visibilidad. Contacto y archivos se comparten desde la candidatura con los consentimientos correspondientes.",
+      "learningNote": "Las medallas de aprendizaje son privadas del profesional y no se muestran."
+    },
+    "emptyTitle": "No hay perfiles para estos filtros",
+    "emptyDescription": "Amplía la búsqueda o revisa las fechas y los requisitos.",
+    "emptyBlockedTitle": "No has bloqueado ningún perfil",
+    "emptyBlockedDescription": "Desde cada tarjeta del directorio puedes bloquear a un profesional para que no aparezca en tus resultados.",
+    "pager": {
+      "label": "Páginas del directorio",
+      "info": "{page} / {pages} · {size} perfiles por página",
+      "previous": "Anterior",
+      "next": "Siguiente"
+    },
+    "conflict": {
+      "DIRECTORY_RATE_LIMITED": "Tu organización ha hecho demasiadas búsquedas en el último minuto. Espera un momento e inténtalo de nuevo.",
+      "DIRECTORY_CANDIDATE_NOT_FOUND": "Este perfil ya no está disponible para tu organización."
+    }
   }
 }

@@ -13,6 +13,7 @@ const TITLE_FOR_NAV: Record<keyof typeof es.nav, keyof typeof es.meta | null> = 
   views: null, // switcher labels: checked per view below
   dashboard: "organization",
   requirements: "requirements",
+  candidates: "candidates",
   workforce: "workforce",
   overview: "professional",
   profile: "passport",

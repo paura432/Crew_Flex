@@ -41,6 +41,7 @@
     "newRequirement": "New requirement",
     "requirement": "Requirement",
     "matches": "Eligible professionals",
+    "candidates": "Find candidates",
     "workforce": "Workforce",
     "organizationProfile": "Organization",
     "settings": "Settings",
@@ -69,6 +70,7 @@
     "account": "Account",
     "dashboard": "Dashboard",
     "requirements": "Requirements",
+    "candidates": "Find candidates",
     "workforce": "Workforce",
     "organizationProfile": "Organization",
     "overview": "Overview",
@@ -521,6 +523,10 @@
       "clientEmail": "Enter a valid e-mail for the client.",
       "noteRequired": "Enter the evidence of the representation",
       "noteMax": "Use at most 2000 characters"
+    },
+    "directory": {
+      "window": "Fill in both dates with a valid range of up to one year.",
+      "minYears": "Enter a valid minimum of years (0 to 60)."
     }
   },
   "domain": {
@@ -565,15 +571,15 @@
       },
       "anonymous": {
         "label": "Anonymous",
-        "detail": "Your relevant qualifications can be matched; your identity stays hidden."
+        "detail": "Your relevant qualifications can be matched and organizations find you in their directory under a pseudonym; your identity stays hidden."
       },
       "verified_orgs": {
         "label": "Verified organizations",
-        "detail": "Anonymous profile, only for organizations whose review the platform has registered."
+        "detail": "Anonymous profile, in matching and in the directory only of organizations whose review the platform has registered."
       },
       "open": {
         "label": "Open",
-        "detail": "Your name is shown in matching results. Contact still requires your consent."
+        "detail": "Your name is shown in matching results and in the organizations' directory. Contact still requires your consent."
       }
     },
     "mobility": {
@@ -2432,6 +2438,7 @@
       "label": "Quick access",
       "home": "Home",
       "offers": "Offers",
+      "candidates": "Candidates",
       "calendar": "Calendar",
       "applications": "Applications",
       "tools": "Tools",
@@ -2495,6 +2502,101 @@
   },
   "orgHome": {
     "visibleNetwork": "Visible network",
-    "visibleNetworkDetail": "Subject to permissions and privacy"
+    "visibleNetworkDetail": "Subject to permissions and privacy",
+    "network": "Professional network"
+  },
+  "directory": {
+    "eyebrow": "Professional network",
+    "title": "Find your next technician.",
+    "description": "Compare qualifications, experience and availability. Identity follows each professional's preferences.",
+    "visibleNote": "Only profiles visible to your organization. Rest days and the private calendar are not shown.",
+    "blockedTitle": "Profiles blocked by your organization",
+    "blockedDescription": "These professionals do not appear in your directory or among the candidates of your requirements. They are not told.",
+    "viewBlocked": "View blocked profiles",
+    "backToDirectory": "Back to the directory",
+    "evaluate": {
+      "label": "Evaluate for the offer",
+      "placeholder": "No offer selected",
+      "submit": "Evaluate",
+      "hint": "Eligibility is evaluated in the chosen requirement's «Eligible professionals»."
+    },
+    "filters": {
+      "legend": "Directory filters",
+      "base": "Usual base",
+      "basePlaceholder": "Madrid (MAD), Lisbon…",
+      "more": "More filters",
+      "category": "Category",
+      "aircraft": "Aircraft",
+      "english": "Minimum English",
+      "minYears": "Minimum experience (years)",
+      "country": "Work permit",
+      "from": "Available from",
+      "to": "Available until",
+      "all": "All",
+      "any": "Any",
+      "anyCountry": "Any country",
+      "help": "The date filter requires every day of the range to be published as available; it does not show the private calendar.",
+      "apply": "Apply filters",
+      "clear": "Clear filters"
+    },
+    "summary": "{total, plural, one {<b>#</b> profile} other {<b>#</b> profiles}} · page {page} of {pages}",
+    "view": {
+      "label": "Directory view",
+      "compact": "Compact",
+      "expanded": "Expanded"
+    },
+    "card": {
+      "anonymous": "Anonymous professional {ref}",
+      "protectedIdentity": "Protected identity",
+      "avatarOf": "Avatar of {name}",
+      "baseNotShared": "Base not shared",
+      "experience": "Experience: {count, plural, one {# year} other {# years}}",
+      "experienceUnknown": "Experience not declared",
+      "english": "English {level}",
+      "englishNone": "English not declared",
+      "aircraft": "Aircraft: {list}",
+      "aircraftNone": "Aircraft: not declared",
+      "categories": "Categories: {list}",
+      "countries": "Work countries: {list}",
+      "countriesNone": "Work countries: not declared",
+      "restrictions": "Restrictions declared",
+      "openProfile": "Open profile",
+      "block": "Block",
+      "unblock": "Unblock",
+      "blocked": "Profile blocked: it no longer appears in your directory or your requirements.",
+      "unblocked": "Profile unblocked: it appears again in your directory and your requirements."
+    },
+    "medals": {
+      "label": "Profile badges",
+      "yearsUnit": "years",
+      "experience": "{count, plural, one {# year of declared experience} other {# years of declared experience}}",
+      "category": "Category {category}",
+      "aircraft": "Aircraft {aircraft}",
+      "more": "Show {count, plural, one {# more badge} other {# more badges}}",
+      "note": "Profile summary; it grants no sign-off authorisation and certifies no training for taking part in challenges."
+    },
+    "profile": {
+      "title": "Professional profile",
+      "close": "Close",
+      "identity": "{base} · {count, plural, one {# year of declared experience} other {# years of declared experience}}",
+      "basePending": "Base to be completed",
+      "sectionExperience": "Experience and conditions",
+      "privacy": "Identity follows visibility. Contact details and files are shared from the application with the corresponding consents.",
+      "learningNote": "Learning medals are private to the professional and are not shown."
+    },
+    "emptyTitle": "No profiles for these filters",
+    "emptyDescription": "Widen the search or review the dates and requirements.",
+    "emptyBlockedTitle": "You have not blocked any profile",
+    "emptyBlockedDescription": "From any directory card you can block a professional so they no longer appear in your results.",
+    "pager": {
+      "label": "Directory pages",
+      "info": "{page} / {pages} · {size} profiles per page",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "conflict": {
+      "DIRECTORY_RATE_LIMITED": "Your organization has run too many searches in the last minute. Wait a moment and try again.",
+      "DIRECTORY_CANDIDATE_NOT_FOUND": "This profile is no longer available to your organization."
+    }
   }
 }

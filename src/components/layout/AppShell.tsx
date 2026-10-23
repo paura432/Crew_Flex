@@ -40,7 +40,8 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: agency ? "/app/recruiter" : "/app/organization", label: tNav("dashboard") },
     { href: "/app/organization/requirements", label: tNav("requirements") },
     // v1.8 company order: Resumen, Nueva necesidad, Ofertas y cobertura, Buscar candidatos,
-    // Candidaturas, Ofertas en la red, Organización (v2-05, v2-20); Plantilla is Next's own.
+    // Candidaturas, Ofertas en la red, Organización (v2-05, v2-20, v2-22); Plantilla is Next's own.
+    { href: "/app/organization/candidates", label: tNav("candidates") },
     { href: "/app/organization/applications", label: tNav("organizationApplications") },
     { href: "/app/organization/network", label: tNav("network") },
     { href: "/app/organization/workforce", label: tNav("workforce") },
@@ -105,7 +106,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
   ];
   const views = switcherViews(actor);
   // v1.8 dock (T-141): technician «Inicio · Ofertas · Calendario · Candidaturas · Herramientas»;
-  // company with the entries that exist here («Candidatos» waits for the directory); admin two.
+  // company «Inicio · Ofertas · Candidatos · Candidaturas · Herramientas» (SH-05 #2, directory package); admin two.
   const tools = { href: "/app/tools", label: tShell("dock.tools") };
   const docks: Partial<Record<WorkspaceView, NavItem[]>> = {
     ...(isProfessional
@@ -125,6 +126,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
           [agency ? "recruiter" : "organization"]: [
             { href: agency ? "/app/recruiter" : "/app/organization", label: tShell("dock.home") },
             { href: "/app/organization/requirements", label: tShell("dock.offers") },
+            { href: "/app/organization/candidates", label: tShell("dock.candidates") },
             { href: "/app/organization/applications", label: tShell("dock.applications") },
             tools,
           ],

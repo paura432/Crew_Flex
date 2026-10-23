@@ -34,6 +34,8 @@ const ICON_PATHS: Record<string, string> = {
   "/app/organization/applications":
     "M9 2h6v4H9zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 14l2 2 4-4",
   "/app/organization/network": BRIEFCASE,
+  // directory package: v1.8 `candidates: Search`
+  "/app/organization/candidates": "M21 21l-4.3-4.3M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16",
   "/app/professional/documents":
     "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8",
   // v1.8 `logbook: BookOpen`

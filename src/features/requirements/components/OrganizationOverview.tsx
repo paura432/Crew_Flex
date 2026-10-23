@@ -97,10 +97,24 @@ export async function OrganizationOverview({
       {t("newRequirement")}
     </ButtonLink>
   );
+  // v1.8 quick link «Red profesional» (ORG-01 #26) → the candidate directory (BR-28), admin/manager like it.
+  const headerActions = canManage && (
+    <>
+      <ButtonLink href="/app/organization/candidates" variant="ghost">
+        {tHome("network")}
+      </ButtonLink>
+      {newButton}
+    </>
+  );
 
   return (
     <>
-      <PageHeader eyebrow={eyebrow} title={title} description={description} actions={newButton} />
+      <PageHeader
+        eyebrow={eyebrow}
+        title={title}
+        description={description}
+        actions={headerActions}
+      />
       {!result.ok ? (
         <ApiErrorState error={result.error} requestId={result.requestId} />
       ) : result.data.requirements.length === 0 ? (
