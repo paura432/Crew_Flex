@@ -1,6 +1,6 @@
 # Candidate Pack and contact consent (D-07) · DESIGN — rules PREPARED, NOT ACTIVATED
 
-> **2026-10-24 (pack-view, local, PARTIAL):** the part of the Pack D-07 does not lock is IMPLEMENTED — the **dated
+> **2026-10-23 (pack-view, local, PARTIAL):** the part of the Pack D-07 does not lock is IMPLEMENTED — the **dated
 > copy** of the professional's technical profile (v2-15 + v2-04, BUSINESS_RULES BR-25, defaults T-110…T-116):
 > frozen in `application_packs` by a trigger when they apply (migration `20261024300000`), previewed in the apply
 > panel («Qué compartes con {organización}», «Experiencia que compartes») before the consent, read through
@@ -87,4 +87,4 @@ the approved scanner (D-10) and their controls exist. Earlier options and recomm
 - The D-06 states the conditions refer to (`APPLICATIONS_STATE_MACHINE.md` §4.1).
 
 Nothing in §1–§2 is implemented; no table, function, policy or UI for sharing identity, contact or documents exists
-(the dated technical copy of the 2026-10-24 note above is the only shared part).
+(the dated technical copy of the 2026-10-23 note above is the only shared part).

@@ -91,7 +91,7 @@ explainable (blockers + reasons). See `BUSINESS_RULES.md`.
 ## Candidate Pack
 
 Structured dossier generated from the profile and shared **with consent** for a specific
-requirement. **PARTIAL** (local only, 2026-10-24): the dated technical copy frozen when the professional applies
+requirement. **PARTIAL** (local only, 2026-10-23): the dated technical copy frozen when the professional applies
 («Ver expediente», BR-25); identity, contact and documents wait for D-07 P3 and the scanner (`CANDIDATE_PACK.md`).
 
 ## Planned / Urgent / AOG

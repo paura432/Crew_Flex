@@ -62,7 +62,7 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 > **Owner, 2026-10-22 (SCOPE-2):** every LATER item below is now implementable **locally** («copiarlo todo»), with
 > v1.8's behaviour as the documented default where a decision is open (`08-product-decisions.md` §SCOPE-2). OUT stays out.
 
-- Candidate Pack (consent-based, per requirement): PARTIAL (local only, 2026-10-24; migration `20261024300000`, not
+- Candidate Pack (consent-based, per requirement): PARTIAL (local only, 2026-10-23; migration `20261024300000`, not
   deployed) — the dated copy of the technical profile and the selected logbook entries, frozen when applying and
   shown as «Ver expediente» (BR-25, T-110…T-116); identity, contact and documents stay locked (D-07 P3 + D-10).
 - Partial coverage (several technicians covering one requirement period by day blocks).

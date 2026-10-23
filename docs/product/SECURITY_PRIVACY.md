@@ -92,7 +92,7 @@ candidate's declarations).
   documents. Readable only by the applicant and the organization's admins/managers of the moment
   (`get_application_pack`); deleted when the application is withdrawn, rejected or cancelled and when the account
   closes; a `finished` one keeps its copy (no retention period yet: owner decision, with D-07 P3). **Residual risks
-  (security review 2026-10-24, M-2/M-3/L-3):** (1) free text is copied as written — a registration, operator or
+  (security review 2026-10-23, M-2/M-3/L-3):** (1) free text is copied as written — a registration, operator or
   colleague's name in a logbook entry, or health data in a restriction, would reach the organization and can identify
   the person or their employer; the logbook, the restrictions field and the preview warn against it, but the database
   cannot filter it; (2) the copy's exact values (rate, restriction texts, entries) are a stable fingerprint that lets

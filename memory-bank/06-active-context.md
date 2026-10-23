@@ -17,7 +17,7 @@ owner's pause with 4 commits in worktree `.claude/worktrees/agent-a233810a77af48
 Last full gate (HEAD `c093523`, db reset in file order): `pnpm check` 0 (1123 Vitest, 188 Deno), E2E 48/48,
 `db-race-check.sh all` 19/19, ui-smoke **259/259** on `next build && next start`.
 Real defects found by the smoke this loop and fixed: sign-up enumeration (`4ff9852`), archive notice lost on
-re-render (`51d1292`). Local DB: all 57 migrations applied (reset in file order after every package whose files sort
+re-render (`51d1292`). Local DB: all 56 migrations applied (reset in file order after every package whose files sort
 before an applied one); after ANY reset: pipe the flag inserts to `db-owner-sql.sh` (STDIN!) and restart
 `functions serve` (wait for the NEW edge_runtime container). Local Auth now has e-mail confirmations ON + 12 h timebox
 (account package): an auth config change needs `sb-local.sh stop` + `start`.
@@ -28,7 +28,7 @@ before an applied one); after ANY reset: pipe the flag inserts to `db-owner-sql.
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Production   | frontend `origin/main` `51c835a` on the release-1 backend; landing «Iniciar sesión» invisible (X-01); **Next 16.4.0 with 2 published advisories** |
 | Local `main` | = `origin/main` `51c835a`                                                                                                                         |
-| Branch       | `feat/v18-html-parity` ≈ 160 commits over `main`: 53 migrations, 23 functions, T-01…T-129, BR-1…BR-26; deployed nowhere but the local Docker DB   |
+| Branch       | `feat/v18-html-parity` ≈ 160 commits over `main`: 56 migrations, 22 functions, T-01…T-129, BR-1…BR-26; deployed nowhere but the local Docker DB   |
 | Hotfix       | `hotfix/x01-landing-signin` = `15eb913` on `51c835a` (3 files, verified), waits for the owner                                                     |
 
 ## Risks
