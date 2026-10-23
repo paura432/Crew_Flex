@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps } from "react";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "inverse";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "inverse" | "inverseLink";
 type Size = "md" | "sm";
 
 // Colour and size come only from `variant` and `size`: two utilities for the same property in one
@@ -21,6 +21,8 @@ const variants: Record<Variant, string> = {
   danger: "border border-danger/40 bg-white text-danger hover:bg-danger-bg",
   // Secondary action on the navy landing.
   inverse: "border border-white/40 text-white hover:bg-white/10",
+  // v1.8 `.action.link` on the «Mi espacio» hero («Estado de mi perfil ↗»): text only, no border.
+  inverseLink: "text-hero-text hover:bg-white/10",
 };
 
 export function buttonClass(variant: Variant = "secondary", extra = "", size: Size = "md") {

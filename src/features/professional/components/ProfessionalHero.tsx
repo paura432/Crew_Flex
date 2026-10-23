@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { NavIcon } from "@/components/layout/NavLinks";
 import { ButtonLink } from "@/components/ui/Button";
 import type { BadgeInput } from "@/domain/badges";
 import type { Completeness } from "@/domain/professional";
@@ -53,7 +54,8 @@ export async function ProfessionalHero({
       aria-label={tIdentity("label")}
       className="rounded-2xl bg-hero p-5 text-white shadow-sm sm:p-6"
     >
-      <div className="flex items-start gap-4 sm:gap-5">
+      {/* v1.8 ≤ 390 px: the avatar above the name; a row from `sm`. */}
+      <div className="flex items-start gap-4 max-sm:flex-col sm:gap-5">
         <ProfileAvatar userId={userId} initials={initials(name)} />
         <div className="min-w-0 flex-1">
           <p className="text-2xl font-bold tracking-tight break-words sm:text-[28px]">{name}</p>
@@ -67,7 +69,10 @@ export async function ProfessionalHero({
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2.5">
-        <ButtonLink href="/app/professional/profile">{tIdentity("edit")}</ButtonLink>
+        <ButtonLink href="/app/professional/profile">
+          <NavIcon href="/app/professional/profile" className="size-4" />
+          {tIdentity("edit")}
+        </ButtonLink>
         <ProfileStatusDialog
           trigger={t("status")}
           title={t("statusTitle", { percent })}
