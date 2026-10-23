@@ -147,7 +147,9 @@ candidate's declarations).
   DEFINER passport save, and returned by no function to anyone else (D-07 P1: contact is shared only with its
   consent, and that sharing path does not exist yet) — **except the minimum rate**, which the professional's own
   application copies into that organization's Candidate Pack copy after previewing it (T-111, above). A blocked organization is not told; it simply no longer
-  finds the professional in its external pool (T-35). **Residual risk (T9, security review LOW-1):** it can still
+  finds the professional in its external pool (T-35), and the professional no longer sees or applies to its needs
+  (v2-16, T-160, `20261024800000` — the professional's own act, refused on their side only; the organization
+  learns nothing new). **Residual risk (T9, security review LOW-1):** it can still
   infer a block — the external pool summary drops by one when the block is saved, and a second organization
   account posting the same need would see an `open` (or recognisable: base, years, expiry dates, declarations)
   professional that the first no longer sees. The declarations also add quasi-identifiers to pseudonymous rows,

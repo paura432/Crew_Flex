@@ -32,6 +32,15 @@ employer, rate and blocks are owner-only; a professional who blocked an organiza
 `get_requirement_candidate_passports`, which calls the pool function (same rows, pseudonyms, cap and role check).
 Proof: `tests/db/passport.test.ts`.
 
+**Package professional-block (LOCAL `20261024800000`, v2-16, T-160), extends S-7/S-10:** the passport's blocks also
+bind the professional's own side — `list_opportunities` (and so the detail by id and a member's network view) and
+`get_requirement_profile_rules` never return a blocked organization's requirement, `apply_to_requirement` refuses it
+(`CFA16` after the state, before the history and eligibility) — through one private predicate
+`app_private.technician_blocks_organization(profile, organization)` (INVOKER, `search_path = ''`, no execute for
+`public`/`anon`/`authenticated`), always evaluated for `auth.uid()` only. Existing applications, pools, counts,
+directory and outreach are unchanged; the pool bodies keep their inline copy (the directory package re-creates them).
+Proof: `tests/db/professional-block.test.ts`.
+
 **Package wallet-extras (LOCAL `20261024200000`), S-10 and the maintenance gate:** `document_maintenance_batch`
 checks `auth.uid()` and the platform role in its body (S-10 holds), but since N-19 its apply mode also **deletes
 document rows** of any owner — only archived ones past `archive_retention`, each audited `document.trash_expired` —

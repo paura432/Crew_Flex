@@ -22,52 +22,55 @@
 
 Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M08/M09 (`15-autonomous-migration-backlog.md`
 §6.3 has each package's commits, gates and technical defaults T-01…T-148; `08-product-decisions.md` the defaults;
-`BUSINESS_RULES.md` BR-1…BR-29). **36 migrations** not applied anywhere but the local Docker DB, in file order:
+`BUSINESS_RULES.md` BR-1…BR-29). **37 migrations** not applied anywhere but the local Docker DB, in file order:
 
-| #   | File (apply in this order — `db push` applies pending files in file order) | Package                                      |
-| --- | -------------------------------------------------------------------------- | -------------------------------------------- |
-| 1   | `20261021120000_availability_version`                                      | W5 availability version                      |
-| 2   | `20261022130000_requirement_paused_status`                                 | M05 paused                                   |
-| 3   | `20261022130100_requirement_lifecycle`                                     | M05 lifecycle                                |
-| 4   | `20261022130200_opportunities`                                             | M07 opportunities                            |
-| 5   | `20261022130300_applications`                                              | M08 applications                             |
-| 6   | `20261023100000_passport_catalog`                                          | passport                                     |
-| 7   | `20261023100100_passport_declarations`                                     | ?                                            |
-| 8   | `20261023100200_passport_save`                                             | ?                                            |
-| 9   | `20261023100300_passport_pool_visibility`                                  | ?                                            |
-| 10  | `20261023200000_logbook_entries`                                           | logbook                                      |
-| 11  | `20261023300000_assignment_protection`                                     | calendar                                     |
-| 12  | `20261023400000_account_invitations`                                       | account                                      |
-| 13  | `20261023400100_account_closure`                                           | ?                                            |
-| 14  | `20261023500000_verified_orgs_visibility`                                  | admin-org                                    |
-| 15  | `20261023500100_organization_review`                                       | ?                                            |
-| 16  | `20261023500200_verified_orgs_pool`                                        | ?                                            |
-| 17  | `20261023500300_platform_summary`                                          | ?                                            |
-| 18  | `20261023500400_organization_review_former_members`                        | ?                                            |
-| 19  | `20261023600000_requirement_terms`                                         | requirement-builder                          |
-| 20  | `20261023600100_requirement_builder_rpcs`                                  | ?                                            |
-| 21  | `20261023800000_notifications`                                             | notices                                      |
-| 22  | `20261023900000_requirement_profile_rules`                                 | matching-v18                                 |
-| 23  | `20261023900100_profile_rules_matching`                                    | ?                                            |
-| 24  | `20261023900200_application_profile_guard`                                 | ?                                            |
-| 25  | `20261024100000_hiring_polish_opportunities`                               | hiring-polish                                |
-| 26  | `20261024100100_organization_applications`                                 | ?                                            |
-| 27  | `20261024100900_matching_v18_organization_applications`                    | matching-v18 (re-create after hiring-polish) |
-| 28  | `20261024200000_wallet_trash`                                              | wallet-extras                                |
-| 29  | `20261024200100_availability_past_start`                                   | ?                                            |
-| 30  | `20261024300000_application_packs`                                         | pack-view                                    |
-| 31  | `20261024400000_notification_kind_outreach`                                | outreach                                     |
-| 32  | `20261024400100_notice_preferences`                                        | ?                                            |
-| 33  | `20261024400200_requirement_outreach`                                      | ?                                            |
-| 34  | `20261024500000_represented_clients`                                       | recruiter                                    |
-| 35  | `20261024500100_requirement_client`                                        | ?                                            |
-| 36  | `20261024600000_visible_network_count`                                     | shell-visual                                 |
+| #   | File (apply in this order — `db push` applies pending files in file order) | Package                                                                             |
+| --- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 1   | `20261021120000_availability_version`                                      | W5 availability version                                                             |
+| 2   | `20261022130000_requirement_paused_status`                                 | M05 paused                                                                          |
+| 3   | `20261022130100_requirement_lifecycle`                                     | M05 lifecycle                                                                       |
+| 4   | `20261022130200_opportunities`                                             | M07 opportunities                                                                   |
+| 5   | `20261022130300_applications`                                              | M08 applications                                                                    |
+| 6   | `20261023100000_passport_catalog`                                          | passport                                                                            |
+| 7   | `20261023100100_passport_declarations`                                     | ?                                                                                   |
+| 8   | `20261023100200_passport_save`                                             | ?                                                                                   |
+| 9   | `20261023100300_passport_pool_visibility`                                  | ?                                                                                   |
+| 10  | `20261023200000_logbook_entries`                                           | logbook                                                                             |
+| 11  | `20261023300000_assignment_protection`                                     | calendar                                                                            |
+| 12  | `20261023400000_account_invitations`                                       | account                                                                             |
+| 13  | `20261023400100_account_closure`                                           | ?                                                                                   |
+| 14  | `20261023500000_verified_orgs_visibility`                                  | admin-org                                                                           |
+| 15  | `20261023500100_organization_review`                                       | ?                                                                                   |
+| 16  | `20261023500200_verified_orgs_pool`                                        | ?                                                                                   |
+| 17  | `20261023500300_platform_summary`                                          | ?                                                                                   |
+| 18  | `20261023500400_organization_review_former_members`                        | ?                                                                                   |
+| 19  | `20261023600000_requirement_terms`                                         | requirement-builder                                                                 |
+| 20  | `20261023600100_requirement_builder_rpcs`                                  | ?                                                                                   |
+| 21  | `20261023800000_notifications`                                             | notices                                                                             |
+| 22  | `20261023900000_requirement_profile_rules`                                 | matching-v18                                                                        |
+| 23  | `20261023900100_profile_rules_matching`                                    | ?                                                                                   |
+| 24  | `20261023900200_application_profile_guard`                                 | ?                                                                                   |
+| 25  | `20261024100000_hiring_polish_opportunities`                               | hiring-polish                                                                       |
+| 26  | `20261024100100_organization_applications`                                 | ?                                                                                   |
+| 27  | `20261024100900_matching_v18_organization_applications`                    | matching-v18 (re-create after hiring-polish)                                        |
+| 28  | `20261024200000_wallet_trash`                                              | wallet-extras                                                                       |
+| 29  | `20261024200100_availability_past_start`                                   | ?                                                                                   |
+| 30  | `20261024300000_application_packs`                                         | pack-view                                                                           |
+| 31  | `20261024400000_notification_kind_outreach`                                | outreach                                                                            |
+| 32  | `20261024400100_notice_preferences`                                        | ?                                                                                   |
+| 33  | `20261024400200_requirement_outreach`                                      | ?                                                                                   |
+| 34  | `20261024500000_represented_clients`                                       | recruiter                                                                           |
+| 35  | `20261024500100_requirement_client`                                        | ?                                                                                   |
+| 36  | `20261024600000_visible_network_count`                                     | shell-visual                                                                        |
+| 37  | `20261024800000_professional_block_opportunities`                          | professional-block (v2-16; after `20261024700000` once the directory is integrated) |
 
 **Edge Functions** (22 directories): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
 **changed since release 1** — `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-profile`, `professional-qualifications`, `professional-availability`, `user-preferences` (every one of them parses the new schema/statuses and
 accepts new parameters; the deployed versions answer 500/400 on them); **release-2 functions still undeployed** —
 `professional-documents`, `documents-maintenance`, `qualification-reviews` (wallet + OD-3 review, both behind flags). The directory package (pending integration) will add
-`20261024700000` and `candidate-directory`.
+`20261024700000` and `candidate-directory`. The professional-block package (v2-16, `20261024800000`) changes no
+function code but the shared `APPLICATION_CONFLICTS` (CFA16): `applications` and `opportunities` are deployed
+**after** that migration (an older `applications` would answer 500 instead of 409 `ORGANIZATION_BLOCKED`).
 
 ## 2. Preconditions (owner decisions, before any step)
 
