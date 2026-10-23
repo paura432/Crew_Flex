@@ -8,18 +8,24 @@ import {
   AVAILABILITY_CONFLICTS,
   type AvailabilityConflict,
 } from "../../../src/domain/availability.ts";
+import { DIRECTORY_CONFLICTS, type DirectoryConflict } from "../../../src/domain/directory.ts";
 import { OUTREACH_CONFLICTS, type OutreachConflict } from "../../../src/domain/outreach.ts";
 import { RECRUITER_CONFLICTS, type RecruiterConflict } from "../../../src/domain/recruiter.ts";
 
 /** Every `reason` a 409 can carry (one family per SQLSTATE prefix). */
 export type ConflictReason =
-  ApplicationConflict | AvailabilityConflict | OutreachConflict | RecruiterConflict;
+  | ApplicationConflict
+  | AvailabilityConflict
+  | OutreachConflict
+  | RecruiterConflict
+  | DirectoryConflict;
 
 const CONFLICT_FAMILIES: Record<string, readonly ConflictReason[]> = {
   A: APPLICATION_CONFLICTS,
   V: AVAILABILITY_CONFLICTS,
   O: OUTREACH_CONFLICTS,
   R: RECRUITER_CONFLICTS,
+  D: DIRECTORY_CONFLICTS,
 };
 
 export const ERROR_STATUS = {
@@ -61,7 +67,8 @@ export class ApiError extends Error {
     /**
      * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`),
      * availability (`AVAILABILITY_CONFLICTS`, BR-4.9), the Urgent/AOG outreach (`OUTREACH_CONFLICTS`,
-     * BR-26) or a represented client (`RECRUITER_CONFLICTS`, BR-27).
+     * BR-26), a represented client (`RECRUITER_CONFLICTS`, BR-27) or the candidate directory
+     * (`DIRECTORY_CONFLICTS`, BR-28).
      */
     readonly reason?: ConflictReason,
   ) {
@@ -85,10 +92,11 @@ interface PostgrestLikeError {
  * Our business conflicts: SQLSTATE `CFA01`…`CFA15` are the entries of `APPLICATION_CONFLICTS` in order
  * (20261022130300, 20261024100000; CFA14/CFA15 from the applications trigger of 20261023900200), `CFV01`… those of
  * `AVAILABILITY_CONFLICTS` (20261023300000), `CFO01`… those of `OUTREACH_CONFLICTS` (20261024400200), `CFR01`…
- * those of `RECRUITER_CONFLICTS` (20261024500100). Custom codes, never `40001` (PostgREST retries that one forever).
+ * those of `RECRUITER_CONFLICTS` (20261024500100), `CFD01`… those of `DIRECTORY_CONFLICTS` (20261024700000).
+ * Custom codes, never `40001` (PostgREST retries that one forever).
  */
 export function conflictReason(sqlstate: string | undefined): ConflictReason | undefined {
-  const match = /^CF([AVOR])(\d{2})$/.exec(sqlstate ?? "");
+  const match = /^CF([AVORD])(\d{2})$/.exec(sqlstate ?? "");
   if (!match) return undefined;
   return CONFLICT_FAMILIES[match[1]!]?.[Number(match[2]) - 1];
 }

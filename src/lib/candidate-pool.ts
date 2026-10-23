@@ -1,5 +1,6 @@
 // Row → domain mapping of the matching inputs: candidate rows (get_requirement_candidate_pool,
-// own_candidate_profile, get_requirement_applications — same columns), their companion
+// own_candidate_profile, get_requirement_applications — same columns; the directory rows of
+// search_candidate_directory reuse `toDeclarations`), their companion
 // get_requirement_candidate_passports() (package passport) and a requirement's v1.8 profile rules
 // (work_requirements columns / get_requirement_profile_rules, package matching-v18). One implementation
 // shared by the Edge Functions (Deno) and the database tests (Node). Rows are parsed, not cast, so schema
@@ -37,6 +38,27 @@ export function availabilityStatus(value: string): AvailabilityStatus {
     : "unavailable";
 }
 
+/** app_private.candidate_declarations (20261023900100): camelCase, catalog values as stored. */
+export const candidateDeclarationsRow = z.object({
+  primaryCategory: z.string().nullable(),
+  categories: z.array(z.string()),
+  aircraft: z.array(z.string()),
+  engines: z.array(z.string()),
+  skills: z.array(z.string()),
+  englishLevel: z.string().nullable(),
+  mobility: z.string(),
+  workPermits: z.array(z.string()),
+  typeRatings: z.array(
+    z.object({
+      aircraft: z.string(),
+      category: z.string(),
+      expiresAt: z.string().nullable(),
+      restricted: z.boolean(),
+    }),
+  ),
+  hasRestrictions: z.boolean(),
+});
+
 const poolRow = z.object({
   candidate_ref: z.string(),
   candidate_pool: z.enum(["internal", "external"]),
@@ -59,26 +81,7 @@ const poolRow = z.object({
       status: z.string().transform(availabilityStatus),
     }),
   ),
-  // app_private.candidate_declarations (20261023900100): camelCase, catalog values as stored.
-  candidate_declarations: z.object({
-    primaryCategory: z.string().nullable(),
-    categories: z.array(z.string()),
-    aircraft: z.array(z.string()),
-    engines: z.array(z.string()),
-    skills: z.array(z.string()),
-    englishLevel: z.string().nullable(),
-    mobility: z.string(),
-    workPermits: z.array(z.string()),
-    typeRatings: z.array(
-      z.object({
-        aircraft: z.string(),
-        category: z.string(),
-        expiresAt: z.string().nullable(),
-        restricted: z.boolean(),
-      }),
-    ),
-    hasRestrictions: z.boolean(),
-  }),
+  candidate_declarations: candidateDeclarationsRow,
 });
 
 const passportRow = z.object({
@@ -125,8 +128,8 @@ export function toCandidatePassport(raw: unknown): [string, CandidatePassport] {
  * a stated rule, never satisfy one) and an unknown mobility reads as `local` (no affinity). Requirement rules
  * are parsed strictly (`profileRulesColumns`): dropping one of those would make people eligible.
  */
-function toDeclarations(
-  raw: z.infer<typeof poolRow>["candidate_declarations"],
+export function toDeclarations(
+  raw: z.infer<typeof candidateDeclarationsRow>,
 ): CandidateDeclarations {
   const typeRatings: DeclaredTypeRating[] = [];
   for (const r of raw.typeRatings) {

@@ -15,7 +15,6 @@ import type {
 import type { CapacityResult } from "../domain/capacity.ts";
 import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/documents.ts";
 import type { LogbookCategory, LogbookEnvironment } from "../domain/logbook.ts";
-import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { OrganizationReviewStatus, OrganizationType } from "../domain/organization.ts";
 import type { PackExperience, PackQualification } from "../domain/candidate-pack.ts";
 import type {
@@ -31,6 +30,8 @@ import type {
   TypeRating,
 } from "../domain/passport.ts";
 import type { NoticeAudience, NoticeKind, NoticeRequirementStatus } from "../domain/notices.ts";
+import type { DirectoryConflict } from "../domain/directory.ts";
+import type { CandidateDeclarations, CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { NoticePreferences, OutreachConflict, OutreachUrgency } from "../domain/outreach.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { RecruiterConflict, RepresentationStatus } from "../domain/recruiter.ts";
@@ -73,10 +74,15 @@ export interface ApiErrorBody {
   /**
    * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`), an
    * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`), a refused
-   * «Distribuir aviso Urgente / AOG» (BR-26; `OUTREACH_CONFLICTS`) or an action for a represented client (BR-27;
-   * `RECRUITER_CONFLICTS`).
+   * «Distribuir aviso Urgente / AOG» (BR-26; `OUTREACH_CONFLICTS`), an action for a represented client (BR-27;
+   * `RECRUITER_CONFLICTS`) or a refused directory search or block (BR-28; `DIRECTORY_CONFLICTS`).
    */
-  reason?: ApplicationConflict | AvailabilityConflict | OutreachConflict | RecruiterConflict;
+  reason?:
+    | ApplicationConflict
+    | AvailabilityConflict
+    | OutreachConflict
+    | RecruiterConflict
+    | DirectoryConflict;
 }
 
 export type ApiResponse<T> =
@@ -849,4 +855,34 @@ export interface OutreachStatusResponse {
 /** POST `requirement-outreach` (201). */
 export interface OutreachDistributeResponse {
   distribution: OutreachDistribution;
+}
+
+/**
+ * One row of «Buscar candidatos» (package directory, BR-28): the per-organization pseudonym (T-151), the name
+ * only when the professional is `open`, base, declared years and the passport card as declarations
+ * (engines, capabilities and type ratings always empty — T-85/T-153). Never contact, employer, rate, blocks,
+ * documents, qualifications or restriction text.
+ */
+export interface DirectoryCandidate {
+  ref: string;
+  displayName: string | null;
+  baseLocation: string | null;
+  yearsExperience: number | null;
+  declarations: CandidateDeclarations;
+}
+
+/** GET `candidate-directory?organizationId=&…filters&page=` (admin/manager). `total` counts visible rows only. */
+export interface DirectorySearchResponse {
+  candidates: DirectoryCandidate[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** True when listing the professionals the organization blocked (v2-16). */
+  blocked: boolean;
+}
+
+/** PUT `candidate-directory` `{ organizationId, candidateRef, blocked }` → the resulting state. */
+export interface DirectoryBlockResponse {
+  candidateRef: string;
+  blocked: boolean;
 }
