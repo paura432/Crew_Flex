@@ -159,7 +159,7 @@ expected the old 7-item count: smoke fixed). After requirement-builder + account
 diagnostic added). After wallet-extras + hiring-polish (db reset, `7395305`): `pnpm check` 0 (918, Deno 157), E2E 48/48,
 race 15/15; smoke locators fixed for the new hidden inputs / `<details>` / announcer (`c89ab5e`, `af81bef`). After
 pack-view + matching-v18 + outreach (db reset in file order): `pnpm check` 0 (1050, Deno 181), E2E 48/48, race 17/17.
-Real defect found by smoke 16/17 and fixed: the archive success notice was lost on re-render (`51d1292`). ui-smoke **233/233** on `next start` at `15f68ef` (every merged PKG block included). After shell-visual (`79520c5`): E2E 48/48, race 17/17, ui-smoke **246/246**.
+Real defect found by smoke 16/17 and fixed: the archive success notice was lost on re-render (`51d1292`). ui-smoke **233/233** on `next start` at `15f68ef` (every merged PKG block included). After shell-visual (`79520c5`): E2E 48/48, race 17/17, ui-smoke **246/246**. After recruiter (`2a0ebae`): `pnpm check` 0 (1123, Deno 188), E2E 48/48, race 19/19, ui-smoke **259/259**.
 
 | Package                             | Content (diff task ids)                                  | State                                                                                                                                                                                                   |
 | ----------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
