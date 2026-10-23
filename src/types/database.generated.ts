@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261024200100. Do not edit by hand.
+// migrations up to 20261024300000. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -107,6 +107,78 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "application_proposals";
             referencedColumns: ["application_id", "id"];
+          },
+        ];
+      };
+      application_packs: {
+        Row: {
+          aircraft: string[];
+          application_id: string;
+          base_country: string | null;
+          base_location: string | null;
+          categories: string[];
+          created_at: string;
+          engines: string[];
+          english_level: string | null;
+          experience: NonNullable<Json>;
+          general_restrictions: string | null;
+          min_rate: number | null;
+          primary_category: string | null;
+          qualifications: NonNullable<Json>;
+          rate_unit: string | null;
+          skills: string[];
+          type_ratings: NonNullable<Json>;
+          work_permits: string[];
+          years_experience: number | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          aircraft?: string[];
+          application_id: string;
+          base_country?: string | null;
+          base_location?: string | null;
+          categories?: string[];
+          created_at?: string;
+          engines?: string[];
+          english_level?: string | null;
+          experience?: NonNullable<Json>;
+          general_restrictions?: string | null;
+          min_rate?: number | null;
+          primary_category?: string | null;
+          qualifications?: NonNullable<Json>;
+          rate_unit?: string | null;
+          skills?: string[];
+          type_ratings?: NonNullable<Json>;
+          work_permits?: string[];
+          years_experience?: number | null;
+        };
+        Update: {
+          aircraft?: string[];
+          application_id?: string;
+          base_country?: string | null;
+          base_location?: string | null;
+          categories?: string[];
+          created_at?: string;
+          engines?: string[];
+          english_level?: string | null;
+          experience?: NonNullable<Json>;
+          general_restrictions?: string | null;
+          min_rate?: number | null;
+          primary_category?: string | null;
+          qualifications?: NonNullable<Json>;
+          rate_unit?: string | null;
+          skills?: string[];
+          type_ratings?: NonNullable<Json>;
+          work_permits?: string[];
+          years_experience?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "application_packs_application_id_fkey";
+            columns: ["application_id"];
+            isOneToOne: true;
+            referencedRelation: "applications";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -1288,6 +1360,52 @@ export type Database = {
           total: number;
         }[];
       };
+      get_application_pack: {
+        Args: { p_application_id: string };
+        Returns: {
+          aircraft: string[];
+          application_id: string;
+          base_country: string;
+          base_location: string;
+          categories: string[];
+          copied_at: string;
+          engines: string[];
+          english_level: string;
+          experience: Json;
+          general_restrictions: string;
+          min_rate: number;
+          primary_category: string;
+          qualifications: Json;
+          rate_unit: string;
+          skills: string[];
+          type_ratings: Json;
+          work_permits: string[];
+          years_experience: number;
+        }[];
+      };
+      get_my_application_packs: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          aircraft: string[];
+          application_id: string;
+          base_country: string;
+          base_location: string;
+          categories: string[];
+          copied_at: string;
+          engines: string[];
+          english_level: string;
+          experience: Json;
+          general_restrictions: string;
+          min_rate: number;
+          primary_category: string;
+          qualifications: Json;
+          rate_unit: string;
+          skills: string[];
+          type_ratings: Json;
+          work_permits: string[];
+          years_experience: number;
+        }[];
+      };
       get_my_applications: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1301,6 +1419,28 @@ export type Database = {
           requirement_id: string;
           status: Database["public"]["Enums"]["application_status"];
           updated_at: string;
+        }[];
+      };
+      get_my_candidate_pack_preview: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          aircraft: string[];
+          base_country: string;
+          base_location: string;
+          categories: string[];
+          copied_at: string;
+          engines: string[];
+          english_level: string;
+          experience: Json;
+          general_restrictions: string;
+          min_rate: number;
+          primary_category: string;
+          qualifications: Json;
+          rate_unit: string;
+          skills: string[];
+          type_ratings: Json;
+          work_permits: string[];
+          years_experience: number;
         }[];
       };
       get_my_notifications: {
