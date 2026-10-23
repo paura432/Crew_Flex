@@ -14,6 +14,17 @@ export const APPLICATION_TONE: Record<ApplicationStatus, Tone> = {
   cancelled: "danger",
 };
 
+/**
+ * v2-15 «Ver expediente» / «Cerrar expediente»: the page URL with `?pack=<application id>` set (open) or removed
+ * (close); every other search param (filters, page) is kept.
+ */
+export function withPackParam(href: string, applicationId: string | null): string {
+  const url = new URL(href, "http://local");
+  if (applicationId) url.searchParams.set("pack", applicationId);
+  else url.searchParams.delete("pack");
+  return `${url.pathname}${url.search}`;
+}
+
 export type TransitionLabel =
   | "propose"
   | "repropose"

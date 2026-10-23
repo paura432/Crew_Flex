@@ -20,6 +20,7 @@ import {
   type WorkRequirement,
 } from "@/domain/work-requirement";
 import { listRequirementApplications } from "@/features/applications/api";
+import { OutreachPanel } from "@/features/outreach/components/OutreachPanel";
 import { CoverageMeter } from "@/features/requirements/components/CoverageMeter";
 import { canActForClient } from "@/domain/recruiter";
 import { requireOrganizationContext } from "@/server/session";
@@ -31,19 +32,29 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Request time (dynamic page), as RequirementBadges: render must stay pure for React's lint. */
 const expiredNow = (r: Pick<WorkRequirement, "status" | "endsAt">) => isExpired(r, Date.now());
+const requestTime = () => Date.now();
 
 export default async function RequirementDetailPage({
   params,
+  searchParams,
 }: PageProps<"/app/organization/requirements/[id]">) {
-  const [{ id }, { organization, canManage }, t, tDashboard, tApplications, tRecruiter] =
-    await Promise.all([
-      params,
-      requireOrganizationContext(),
-      getTranslations("organization.detail"),
-      getTranslations("organization.dashboard"),
-      getTranslations("applications"),
-      getTranslations("recruiter.requirement"),
-    ]);
+  const [
+    { id },
+    { archived },
+    { organization, canManage },
+    t,
+    tDashboard,
+    tApplications,
+    tRecruiter,
+  ] = await Promise.all([
+    params,
+    searchParams,
+    requireOrganizationContext(),
+    getTranslations("organization.detail"),
+    getTranslations("organization.dashboard"),
+    getTranslations("applications"),
+    getTranslations("recruiter.requirement"),
+  ]);
   const result = await getRequirement(id);
   if (!result.ok) {
     if (result.error.code === "NOT_FOUND" || result.error.code === "VALIDATION_ERROR") notFound();
@@ -93,6 +104,12 @@ export default async function RequirementDetailPage({
           )}
           {closed ? (
             <div className="mt-4 space-y-3 border-t border-line pt-4">
+              {/* «Archivar» redirects here with ?archived=1: the one-way step confirms itself (T-64). */}
+              {archived === "1" && requirement.archivedAt && (
+                <p role="status" className="text-sm font-medium">
+                  {t("archive.done")}
+                </p>
+              )}
               <p className="text-sm text-muted">
                 {requirement.archivedAt ? t("archive.note") : t("close.closedNote")}
               </p>
@@ -152,6 +169,8 @@ export default async function RequirementDetailPage({
             </div>
           )}
         </Panel>
+        {/* PKG outreach (v2-17): «Distribución Urgente/AOG», admin/manager, never on planned needs. */}
+        <OutreachPanel requirement={requirement} canManage={canManage} now={requestTime()} />
         {!evaluable ? null : !capacity ? (
           <StateMessage
             title={tDashboard("managersOnlyTitle")}

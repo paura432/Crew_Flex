@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { detailRouteOf } from "@/lib/detail-routes";
 import { publicEnv } from "@/lib/env";
+import { detailVisible } from "@/lib/supabase/detail-gate";
 import { updateSession } from "@/lib/supabase/proxy";
 import { isStaffingAgency } from "@/domain/recruiter";
 import { isQualificationReviewEnabled } from "@/server/feature-flags";
-import { actingMembership } from "@/server/membership";
+import { compareActing } from "@/lib/acting-organization";
 import type { OrganizationRole, OrganizationType } from "@/types/database";
 
 /**
@@ -57,6 +59,16 @@ export async function proxy(request: NextRequest) {
     url.search = `?next=${encodeURIComponent(pathname + search)}`;
     return redirectKeepingCookies(url, response);
   }
+  // A path no route matches renders the root not-found page with a 404 status (R-X L1: not
+  // Next's internal `/_not-found` name).
+  const rewriteNotFound = () => {
+    const notFound = NextResponse.rewrite(new URL("/__denied", request.url), {
+      request: { headers: requestHeaders },
+    });
+    for (const cookie of response.cookies.getAll()) notFound.cookies.set(cookie);
+    notFound.headers.set(CSP_HEADER, csp);
+    return notFound;
+  };
   // X-11: platform-only pages answer a real 404. Their own notFound() runs after the /app loading
   // boundary has streamed a 200, with the requested page's title; this decides before the stream.
   // «Espacio recruiter» (BR-27) also opens for a member whose acting organization is a staffing agency.
@@ -81,22 +93,27 @@ export async function proxy(request: NextRequest) {
       recruiter &&
       !memberships?.error &&
       isStaffingAgency(
-        actingMembership({ memberships: memberships?.data ?? [] })?.organization.type,
+        [...(memberships?.data ?? [])].sort((a, b) =>
+          compareActing(
+            { role: a.role, organizationId: a.organization.id },
+            { role: b.role, organizationId: b.organization.id },
+          ),
+        )[0]?.organization.type,
       );
     const allowed =
       agencyMember ||
       (data?.platform_role === "platform_admin" &&
         (!pathname.startsWith("/app/admin/verifications") || isQualificationReviewEnabled()));
-    if (!allowed) {
-      // A path no route matches renders the root not-found page with a 404 status (R-X L1: not
-      // Next's internal `/_not-found` name).
-      const notFound = NextResponse.rewrite(new URL("/__denied", request.url), {
-        request: { headers: requestHeaders },
-      });
-      for (const cookie of response.cookies.getAll()) notFound.cookies.set(cookie);
-      notFound.headers.set(CSP_HEADER, csp);
-      return notFound;
-    }
+    if (!allowed) return rewriteNotFound();
+  }
+  // Area 50 #15 / SH-07 #14: a missing or someone else's requirement, opportunity or network offer
+  // answered 200 «No encontrado» for the same reason; the same reads as the page, before the stream.
+  // Document requests only: a client navigation or prefetch (`rsc` header) has no status to fix and
+  // still gets the page's own notFound(), so lists full of links cost no extra reads.
+  const isDocument = request.headers.get("rsc") === null;
+  const detail = userId && isDocument ? detailRouteOf(pathname) : null;
+  if (userId && detail && (await detailVisible(detail, supabase, userId)) === false) {
+    return rewriteNotFound();
   }
   if ((pathname === "/login" || pathname === "/register") && userId) {
     const url = request.nextUrl.clone();

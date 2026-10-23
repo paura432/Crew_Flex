@@ -5,12 +5,16 @@ import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/i18n/format";
 import type { MatchResult } from "@/domain/matching";
 import { categoryKey, type CandidatePassport } from "@/domain/passport";
+import { countryName } from "@/features/organizations/countries";
 import type { EvaluatedCandidate } from "@/types/api";
 import {
+  explainAffinity,
   explainAvailability,
   explainBlocker,
   explainCheck,
+  explainProfileCheck,
   type CheckTone,
+  type ExplainedRule,
   type ExplainedText,
 } from "../explain";
 
@@ -21,23 +25,51 @@ const markTone: Record<CheckTone, string> = {
 };
 
 type Translate = Awaited<ReturnType<typeof getTranslations<"matching">>>;
-type TranslateDomain = Awaited<ReturnType<typeof getTranslations<"domain">>>;
 
-/** Resolves a structured explanation in the active locale (dates formatted, statuses labelled). */
-function render(t: Translate, tDomain: TranslateDomain, locale: Locale, text: ExplainedText) {
+export interface Resolvers {
+  t: Translate;
+  tDomain: Awaited<ReturnType<typeof getTranslations<"domain">>>;
+  tCategory: Awaited<ReturnType<typeof getTranslations<"passport.categories">>>;
+  tSkill: Awaited<ReturnType<typeof getTranslations<"passport.skills">>>;
+  locale: Locale;
+}
+
+export async function resolvers(): Promise<Resolvers> {
+  const [t, tDomain, tCategory, tSkill, locale] = await Promise.all([
+    getTranslations("matching"),
+    getTranslations("domain"),
+    getTranslations("passport.categories"),
+    getTranslations("passport.skills"),
+    getLocale() as Promise<Locale>,
+  ]);
+  return { t, tDomain, tCategory, tSkill, locale };
+}
+
+/**
+ * Resolves a structured explanation in the active locale: dates formatted, statuses, categories and
+ * capabilities labelled, countries named; aircraft and engine designations as they are.
+ */
+export function render(r: Resolvers, text: ExplainedText) {
   const p = text.params ?? {};
-  return t(text.key as Parameters<Translate>[0], {
+  return r.t(text.key as Parameters<Translate>[0], {
     code: p.code ?? "",
     percent: p.percent ?? 0,
-    date: p.date ? formatDate(locale, p.date) : "",
-    status: p.status ? tDomain(`verification.${p.status}`).toLowerCase() : "",
+    date: p.date ? formatDate(r.locale, p.date) : "",
+    status: p.status ? r.tDomain(`verification.${p.status}`).toLowerCase() : "",
+    country: p.country ? countryName(r.locale, p.country) : "",
+    category: p.category ? r.tCategory(categoryKey(p.category)) : "",
+    skill: p.skill ? r.tSkill(p.skill) : "",
+    list: p.list ?? "",
+    count: p.count ?? 0,
+    level: p.level ?? "",
   });
 }
 
 /**
  * v1.8 card declarations (category, aircraft, English, work permits, «Restricciones declaradas») under
- * the base line. Declarations, not evidence: matching does not use them yet (package passport, T-30…T-35).
- * Never contact, employer, rate or the restriction text — the function does not return them.
+ * the base line. Declarations, not evidence (package passport, T-30…T-35); a requirement's v1.8 profile
+ * requirements are checked against them (BR-3.7–3.13) and listed in the explanation below.
+ * Never contact, employer, rate or the restriction text — the functions do not return them.
  */
 async function PassportFacts({ passport }: { passport: CandidatePassport }) {
   const [t, tCategory] = await Promise.all([
@@ -115,18 +147,48 @@ export async function MatchCard({
   );
 }
 
+/** v1.8 «Requisitos comprobados» / affinity rows: mark, label (a message too) and the own declaration. */
+function RuleRows({ title, rows, r }: { title: string; rows: ExplainedRule[]; r: Resolvers }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-semibold tracking-wide text-muted uppercase">{title}</p>
+      <ul className="mt-1 divide-y divide-line text-sm">
+        {rows.map((row, i) => (
+          <li
+            key={`${row.rule}-${i}`}
+            className="grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3 py-1.5"
+          >
+            <span aria-hidden className={`font-bold ${markTone[row.tone]}`}>
+              {row.met ? "✓" : "✗"}
+            </span>
+            <span className="min-w-0 break-words">
+              <span className="font-semibold">{render(r, row.label)}</span>
+              <span className="block text-muted">
+                <span className="sr-only">{row.met ? r.t("met") : r.t("notMet")}</span>
+                {render(r, row.detail)}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /**
- * Blockers + per-qualification checklist with availability as its last row. Shared by the
- * organization's candidate cards and the professional's own eligibility (D-12: failed rules explained).
+ * Blockers + per-qualification checklist with availability as its last row, then the v1.8 profile
+ * requirements the need states (BR-3.7–3.13) and the soft affinity (BR-5.6). Shared by the organization's
+ * candidate and application cards and the professional's own eligibility (D-12: failed rules explained).
  */
 export async function MatchExplanation({ match }: { match: MatchResult }) {
-  const [t, tDomain, locale] = await Promise.all([
-    getTranslations("matching"),
-    getTranslations("domain"),
-    getLocale(),
-  ]);
+  const r = await resolvers();
+  const { t } = r;
   const checks = match.qualificationChecks.map(explainCheck);
   const availability = explainAvailability(match.availability.coveredPercent);
+  // Older functions do not send the v1.8 rows (optional chaining keeps their cards rendering).
+  const profile = (match.profileChecks ?? []).map(explainProfileCheck);
+  const affinity = (match.affinityChecks ?? []).map(explainAffinity);
   return (
     <>
       {match.blockers.length > 0 && (
@@ -136,7 +198,7 @@ export async function MatchExplanation({ match }: { match: MatchResult }) {
           </p>
           <ul className="mt-1 list-disc pl-5 text-sm text-danger">
             {match.blockers.map((blocker, i) => (
-              <li key={i}>{render(t, tDomain, locale, explainBlocker(blocker))}</li>
+              <li key={i}>{render(r, explainBlocker(blocker))}</li>
             ))}
           </ul>
         </div>
@@ -155,11 +217,13 @@ export async function MatchExplanation({ match }: { match: MatchResult }) {
             </span>
             <span className="min-w-0 text-muted">
               <span className="sr-only">{check.met ? t("met") : t("notMet")}</span>
-              {render(t, tDomain, locale, check.detail)}
+              {render(r, check.detail)}
             </span>
           </li>
         ))}
       </ul>
+      <RuleRows title={t("profileTitle")} rows={profile} r={r} />
+      <RuleRows title={t("affinityTitle")} rows={affinity} r={r} />
     </>
   );
 }

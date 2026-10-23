@@ -23,6 +23,8 @@ const item = (
     softScore: eligible ? 50 : 0,
     reasons: [],
     qualificationChecks: [],
+    profileChecks: [],
+    affinityChecks: [],
     availability: { coveredPercent: 100 },
   },
 });

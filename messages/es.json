@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Crew Flex",
+    "appName": "CrewFlex",
     "brandTag": "AVIATION",
     "skipToContent": "Saltar al contenido",
     "signOut": "Cerrar sesión",
@@ -22,7 +22,7 @@
     "utcNote": "Horas en UTC.",
     "notFoundTitle": "No encontrado",
     "notFoundDescription": "Esta página no existe o no tienes acceso a ella.",
-    "backToApp": "Volver a Crew Flex",
+    "backToApp": "Volver a CrewFlex",
     "errorTitle": "No se ha podido mostrar esta página",
     "errorHint": "Inténtalo de nuevo en un momento.",
     "signOutHint": "Si el problema continúa, cierra sesión y vuelve a entrar.",
@@ -121,7 +121,7 @@
   "auth": {
     "signIn": {
       "title": "Iniciar sesión",
-      "lead": "Accede a tu espacio de Crew Flex.",
+      "lead": "Accede a tu espacio de CrewFlex.",
       "noAccount": "¿Sin cuenta?",
       "createOne": "Crea una",
       "submit": "Iniciar sesión",
@@ -162,7 +162,7 @@
       "invitationCode": "Código de invitación",
       "invitationCodeHint": "Viene en el enlace de tu invitación.",
       "invitationCodeAsk": "Abre el enlace de tu correo de invitación o pega aquí su código.",
-      "invitationOnly": "El alta en Crew Flex es solo por invitación.",
+      "invitationOnly": "El alta en CrewFlex es solo por invitación.",
       "invitationInvalid": "Enlace caducado, utilizado o no válido.",
       "invitationContinue": "Continuar"
     },
@@ -240,7 +240,7 @@
     },
     "NETWORK_ERROR": {
       "title": "Servicio no disponible",
-      "description": "Crew Flex no ha podido contactar con el backend. Comprueba tu conexión y reintenta."
+      "description": "CrewFlex no ha podido contactar con el backend. Comprueba tu conexión y reintenta."
     },
     "INTERNAL_ERROR": {
       "title": "Error del servidor",
@@ -511,6 +511,11 @@
         "max": "Como máximo 200 organizaciones bloqueadas."
       }
     },
+    "outreach": {
+      "mobilization": "Indica entre 0 y 720 horas, sin decimales.",
+      "timeZone": "Zona horaria no válida.",
+      "quietHours": "Horas de silencio no válidas."
+    },
     "recruiter": {
       "clientName": "Indica un cliente válido en el espacio recruiter.",
       "clientEmail": "Introduce un correo válido para el cliente.",
@@ -644,12 +649,10 @@
       "awaitingNext": "{count, plural, one {# cualificación espera a un revisor. Hasta que se verifique no cuenta para los requisitos obligatorios.} other {# cualificaciones esperan a un revisor. Hasta que se verifiquen no cuentan para los requisitos obligatorios.}}",
       "openQualifications": "Abrir cualificaciones",
       "doIt": "Completar",
-      "checklistTitle": "Perfil completado · {percent, number}%",
       "itemDone": "hecho",
       "itemPending": "pendiente",
       "calendarTitle": "Tu disponibilidad",
       "openAvailability": "Editar disponibilidad",
-      "showChecklist": "Los {count} apartados del perfil",
       "reviewTitle": "Documentos y cursos próximos a revisar",
       "reviewNone": "Nada de lo declarado caduca en los próximos {days} días.",
       "reviewExpired": "Fecha superada",
@@ -711,7 +714,7 @@
       "categoriesHint": "Tu categoría principal siempre está marcada.",
       "aircraft": "Aeronaves con experiencia",
       "ratingsTitle": "Habilitaciones de tipo",
-      "ratingsIntro": "Aeronave × categoría de licencia. La fecha es opcional cuando no aplique; no se inventa una vigencia. Las organizaciones solo ven que declaras restricciones, no el texto.",
+      "ratingsIntro": "Aeronave × categoría de licencia. La fecha es opcional cuando no aplique; no se inventa una vigencia. Las tarjetas de candidato solo muestran que declaras restricciones; el texto va en la copia del expediente de las candidaturas que presentes.",
       "ratingsNone": "Sin habilitaciones declaradas.",
       "ratingsNeedDeclared": "Marca antes una aeronave y una categoría de licencia (B1, B2, B3, Cat A o Cat C).",
       "ratingAircraft": "Aeronave de habilitación {n}",
@@ -723,7 +726,7 @@
       "removeRating": "Quitar habilitación {n}",
       "ratingsHint": "Lo declarado no concede autorización de firma. Las licencias y type ratings que cuentan en el matching se declaran y verifican en Cualificaciones.",
       "generalRestrictions": "Restricciones generales de habilitación o alcance",
-      "generalRestrictionsHint": "Déjalo vacío si no tienes ninguna.",
+      "generalRestrictionsHint": "Déjalo vacío si no tienes ninguna. El texto va en la copia del expediente de las candidaturas que presentes: no incluyas datos de salud ni otros datos personales.",
       "english": "Inglés técnico",
       "engines": "Motores",
       "skills": "Capacidades",
@@ -732,7 +735,7 @@
       "openQualifications": "Abrir cualificaciones",
       "rateTitle": "04 · Tarifa y permisos de trabajo",
       "minRate": "Tarifa mínima",
-      "minRateHint": "Privada: ninguna organización la ve. Crew Flex no cobra ni paga nada.",
+      "minRateHint": "Solo tú la ves, salvo en la copia del expediente que recibe la organización a la que te presentas. Crew Flex no cobra ni paga nada.",
       "rateUnit": "Unidad de tarifa",
       "permits": "Permisos de trabajo declarados",
       "permitsHint": "Países de la Unión Europea en los que puedes trabajar.",
@@ -1071,7 +1074,7 @@
         "coverageTitle": "Cobertura por jornada",
         "shiftLine": "{span} · {hours} h",
         "shiftCoverage": "{date} · {filled}/{total} plazas confirmadas",
-        "notice": "Valores informativos de la organización: Crew Flex no gestiona cobros, comisiones ni pagos."
+        "notice": "Valores informativos de la organización: CrewFlex no gestiona cobros, comisiones ni pagos."
       },
       "archive": {
         "action": "Archivar",
@@ -1097,7 +1100,7 @@
     },
     "new": {
       "title": "Nueva necesidad de personal",
-      "description": "Describe la necesidad operativa real. Crew Flex evalúa primero tu capacidad interna.",
+      "description": "Describe la necesidad operativa real. CrewFlex evalúa primero tu capacidad interna.",
       "noPermissionTitle": "No tienes permiso",
       "noPermissionDescription": "Solo los managers y administradores de la organización pueden crear necesidades.",
       "catalogErrorTitle": "No se ha podido cargar el catálogo de cualificaciones",
@@ -1288,7 +1291,8 @@
           "application_rejected": "Candidatura rechazada",
           "application_confirmed": "Asignación confirmada",
           "application_cancelled": "Candidatura cancelada",
-          "application_finished": "Asignación finalizada"
+          "application_finished": "Asignación finalizada",
+          "requirement_outreach_distributed": "Aviso Urgente/AOG distribuido"
         }
       }
     }
@@ -1335,12 +1339,48 @@
       "expired": "{code} caducó el {date}",
       "expiresDuring": "{code} caduca durante la necesidad ({date})",
       "notAvailable": "No disponible en las fechas de la necesidad",
-      "partial": "Disponible solo el {percent, number}% del periodo de la necesidad"
+      "partial": "Disponible solo el {percent, number}% del periodo de la necesidad",
+      "workPermit": "Falta declarar permiso de trabajo para {country}",
+      "category": "La categoría no coincide: se pide {category}",
+      "aircraft": "La aeronave no está declarada en el perfil ({list})",
+      "typeRatingMissing": "Falta habilitación de tipo {category} · {list} declarada y vigente, sin restricciones",
+      "typeRatingNotValid": "La habilitación de tipo {category} · {list} solo está vigente hasta el {date}",
+      "typeRatingRestricted": "La habilitación de tipo {category} · {list} tiene restricciones declaradas",
+      "engine": "No declara ninguno de los motores pedidos ({list})",
+      "experience": "No alcanza la experiencia mínima ({count, plural, one {# año} other {# años}})",
+      "skill": "Capacidad requerida: {skill}"
+    },
+    "profileTitle": "Requisitos del perfil",
+    "affinityTitle": "Afinidad (puntuación deseable)",
+    "profile": {
+      "workPermit": "Permiso de trabajo: {country}",
+      "category": "Categoría {category}",
+      "aircraft": "Aeronave: {list}",
+      "typeRating": "Habilitación de tipo {category} · {list}",
+      "engine": "Motor: {list}",
+      "minYears": "Experiencia mínima: {count, plural, one {# año} other {# años}}",
+      "skill": "Capacidad: {skill}",
+      "declared": "Declarado en el perfil",
+      "notDeclared": "No declarado en el perfil",
+      "typeRatingMet": "Declarada, vigente y sin restricciones",
+      "typeRatingMissing": "No declarada",
+      "typeRatingNotValid": "Vigente solo hasta el {date}",
+      "typeRatingRestricted": "Con restricciones declaradas",
+      "yearsDeclared": "{count, plural, one {# año declarado} other {# años declarados}}",
+      "yearsUndeclared": "Experiencia no declarada"
+    },
+    "affinity": {
+      "english": "Inglés técnico",
+      "englishLevel": "Nivel {level}",
+      "englishNone": "Nivel no declarado",
+      "base": "Base habitual o movilidad aceptada",
+      "baseMet": "Misma base o acepta desplazamientos",
+      "baseNotMet": "Otra base y sin desplazamientos"
     }
   },
   "settings": {
     "title": "Configuración",
-    "description": "Tu cuenta y cómo ves Crew Flex. Los datos de negocio están en tu pasaporte o en las páginas de la organización.",
+    "description": "Tu cuenta y cómo ves CrewFlex. Los datos de negocio están en tu pasaporte o en las páginas de la organización.",
     "language": "Idioma / Language",
     "languageDescription": "La interfaz, las fechas y los mensajes siguen esta elección en todos los dispositivos donde inicies sesión. Los códigos de licencia, los tipos de aeronave y tus propios datos nunca se traducen.",
     "saved": "Idioma actualizado.",
@@ -2017,7 +2057,7 @@
       "accepted": "Condiciones aceptadas · versión {version}",
       "pending": "Pendiente de aceptación",
       "sent": "Enviada el {date}",
-      "notice": "Crew Flex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
+      "notice": "CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
       "newVersion": "Una propuesta nueva necesita otra aceptación; la aceptada se conserva en el historial."
     },
     "action": {
@@ -2036,7 +2076,7 @@
       "reasonLabel": "Motivo (obligatorio)",
       "reasonHint": "Lo verá la otra parte. Máximo 1000 caracteres.",
       "acceptTerms": "Acepto exactamente estas condiciones (versión {version}).",
-      "confirmHint": "El servidor vuelve a comprobar cualificaciones, disponibilidad, plazas y solapes antes de confirmar.",
+      "confirmHint": "El servidor vuelve a comprobar cualificaciones, requisitos del perfil, restricciones, disponibilidad, plazas y solapes antes de confirmar.",
       "finishHint": "Disponible después de la última jornada.",
       "withdrawHint": "Se retirará tu candidatura. Podrás volver a presentarte mientras la necesidad siga abierta.",
       "proposeHint": "Se enviará una copia fija de las condiciones publicadas; el profesional tendrá que aceptarla.",
@@ -2057,6 +2097,8 @@
       "ACTIVE_COMMITMENTS": "Resuelve antes las asignaciones activas (aceptadas o confirmadas).",
       "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar.",
       "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización.",
+      "PROFILE_REQUIREMENTS_UNMET": "El perfil no cumple los requisitos de la necesidad (permiso de trabajo, categoría, aeronave, habilitación de tipo, motores, experiencia o capacidades).",
+      "RESTRICTIONS_DECLARED": "El profesional declara restricciones generales: no se puede confirmar (perfil o restricciones pendientes de revisión).",
       "CLIENT_REQUIRED": "Una agencia de personal publica solo para un cliente representado: indica el cliente.",
       "CLIENT_NOT_ACTIVE": "La agencia ya no representa a este cliente: esta necesidad no puede avanzar."
     },
@@ -2067,12 +2109,70 @@
     "managersOnlyTitle": "Las candidaturas las gestionan administradores y managers",
     "managersOnlyDescription": "Tu rol en la organización no permite ver ni mover candidaturas."
   },
+  "candidatePack": {
+    "brand": "CREWFLEX",
+    "badge": "Expediente compartido",
+    "previewBadge": "Vista previa",
+    "heading": "Expediente",
+    "previewTitle": "Qué compartes con {organization}",
+    "previewIntro": "Además, al presentarte {organization} recibirá esta copia fechada de tu pasaporte y de tu logbook, tal como están ahora. Revísala: las restricciones y las entradas del logbook se copian tal cual las escribiste, y la copia se queda mientras la candidatura siga en curso o termine en una asignación (se borra si la retiras, la rechazan o se cancela).",
+    "sharedCopy": "La copia fechada de tu expediente que ves debajo: todas tus cualificaciones activas, tus restricciones y tu tarifa mínima declaradas y las entradas del logbook que marcaste.",
+    "orgIntro": "Copia del expediente técnico que el profesional compartió al presentarse.",
+    "ownIntro": "Esta es la copia que recibió {organization} al presentar tu candidatura.",
+    "view": "Ver expediente",
+    "hide": "Cerrar expediente",
+    "years": "{count, plural, one {# año} other {# años}}",
+    "english": "Inglés {level}",
+    "primary": "{category} (principal)",
+    "minRate": "Mínimo declarado: {amount} / {unit}",
+    "rateUnit": {
+      "hour": "hora",
+      "day": "día"
+    },
+    "noBase": "Base no declarada",
+    "qualificationsTitle": "Cualificaciones",
+    "aircraft": "Aeronaves: {list}",
+    "engines": "Motores: {list}",
+    "noneDeclared": "No declarados",
+    "rating": "{aircraft} · {category} · {expiry} · {restrictions}",
+    "noExpiryApplicable": "Sin fecha aplicable",
+    "noRestrictions": "Sin restricciones declaradas",
+    "catalogItem": "{code} · {name} · {verification} · {expiry}",
+    "noExpiry": "Sin caducidad",
+    "expires": "Caduca {date}",
+    "noQualifications": "Sin cualificaciones declaradas.",
+    "coursesTitle": "Cursos",
+    "course": "{name} · {expiry} · {state}",
+    "courseState": {
+      "none": "Sin caducidad",
+      "valid": "Vigente",
+      "soon": "Caduca pronto",
+      "expired": "Caducado"
+    },
+    "noCourses": "Sin cursos declarados.",
+    "skillsTitle": "Capacidades",
+    "permitsTitle": "Permisos de trabajo",
+    "restrictionsTitle": "Restricciones generales",
+    "experienceTitle": "Experiencia compartida",
+    "previewExperienceTitle": "Experiencia que compartes",
+    "previewExperienceHint": "Las entradas de tu logbook marcadas «Seleccionable para expediente», como máximo las {max} más recientes. Para cambiarlas, cambia esa marca en tu logbook antes de presentarte. No dejes matrículas, operadores ni nombres de personas o clientes en las que compartes.",
+    "noExperience": "Ninguna entrada del logbook marcada «Seleccionable para expediente».",
+    "experienceMeta": "{date} · {hours} · {environment}",
+    "experienceMetaAta": "{date} · ATA {ata} · {hours} · {environment}",
+    "protected": "Los originales, nombres de archivos y metadatos identificativos permanecen protegidos.",
+    "notIncluded": "El expediente no incluye nombre real, contacto, empresa actual, organizaciones bloqueadas ni documentos.",
+    "copyDate": "Copia del perfil: {date}. Los cambios del pasaporte y del logbook no alteran esta versión.",
+    "previewNote": "Se copiará al presentar la candidatura. Lo que cambies después en tu pasaporte o en tu logbook no alterará esa copia.",
+    "none": "Esta candidatura no tiene copia del expediente: se presentó antes de que existieran las copias o el profesional cerró su cuenta.",
+    "error": "No se ha podido cargar el expediente.",
+    "previewError": "No se ha podido preparar la vista previa de lo que compartes. Recarga la página para presentar la candidatura."
+  },
   "logbook": {
     "eyebrow": "MI EXPERIENCIA",
     "title": "Logbook personal",
     "description": "Registro auxiliar privado. No sustituye registros oficiales de la empresa.",
     "noProfileDescription": "El logbook pertenece a las cuentas profesionales.",
-    "disclaimer": "Registro autodeclarado; no constituye certificación de experiencia ni puesta en servicio. Solo tú puedes verlo: ninguna empresa tiene acceso.",
+    "disclaimer": "Registro autodeclarado; no constituye certificación de experiencia ni puesta en servicio. Solo tú puedes verlo; las entradas marcadas «Seleccionable para expediente» se copian en el expediente de las candidaturas que presentes.",
     "newTitle": "Nueva entrada",
     "date": "Fecha de la tarea",
     "aircraft": "Aeronave",
@@ -2097,9 +2197,9 @@
     "ata": "ATA (opcional)",
     "hours": "Horas",
     "hoursHint": "De 0 a 24, en pasos de 0,1.",
-    "descriptionLabel": "Descripción técnica privada",
+    "descriptionLabel": "Descripción técnica",
     "cvRelevant": "Disponible para seleccionar en Candidate Pack",
-    "cvRelevantHint": "El Candidate Pack aún no está activo: esta marca no comparte nada con nadie.",
+    "cvRelevantHint": "Las entradas marcadas se copian tal cual (aeronave, fecha, ATA, horas y descripción) en el expediente de cada candidatura que presentes: si la marcas, no incluyas matrículas, operadores ni nombres de personas o clientes. Los expedientes ya enviados conservan su copia.",
     "save": "Guardar entrada",
     "saved": "Entrada guardada",
     "updated": "Logbook actualizado",
@@ -2251,7 +2351,7 @@
       "builderText": "Necesidades estructuradas",
       "packsTitle": "Candidate Packs",
       "packsText": "Expedientes y seguimiento",
-      "note": "Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado. Crew Flex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma."
+      "note": "Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado. CrewFlex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma."
     },
     "applications": {
       "eyebrow": "Pipeline",
@@ -2281,5 +2381,120 @@
       "prepare": "Preparar candidatura",
       "applied": "Ya presentada"
     }
+  },
+  "outreach": {
+    "preferences": {
+      "title": "Avisos de oportunidades",
+      "description": "Decide qué avisos internos de necesidades urgentes o AOG quieres recibir. Una organización solo puede avisarte si eres visible para ella, cumples los requisitos y tu disponibilidad cubre las fechas; nunca sabe quién lo ha recibido.",
+      "consents": "Avisos que aceptas",
+      "urgent": "Quiero avisos internos de trabajos urgentes",
+      "aog": "Quiero avisos internos AOG",
+      "mobilization": "Horas mínimas que necesitas para movilizarte",
+      "mobilizationHint": "De 0 a 720 horas. Déjalo vacío si no quieres declararlo.",
+      "timeZone": "Zona horaria IANA para avisos",
+      "timeZoneHint": "Por ejemplo Europe/Madrid, Europe/Lisbon o UTC.",
+      "quietStart": "Silencio desde (opcional)",
+      "quietEnd": "Silencio hasta (opcional)",
+      "note": "Sin movilización declarada no se distribuyen avisos. El silencio también se respeta para AOG; no se envían correos o SMS.",
+      "save": "Guardar preferencias de avisos",
+      "saved": "Preferencias de avisos guardadas."
+    },
+    "distribution": {
+      "title": "Distribución {urgency}",
+      "explain": "Crea un aviso interno, una sola vez, para cada profesional que acepta avisos de esta urgencia, es visible para tu organización y no la ha bloqueado, no declara restricciones en la habilitación pedida, cumple los requisitos, está disponible todo el periodo, ha declarado una movilización que el inicio respeta y no está en sus horas de silencio. Nunca sabrás a quién llega; con menos de 5 candidatos posibles, tampoco cuántos.",
+      "button": "Distribuir aviso Urgente / AOG",
+      "result": "{count, plural, one {# aviso interno creado} other {# avisos internos creados}}. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.",
+      "resultWithheld": "Avisos internos creados. Con menos de {min} candidatos posibles no se muestra cuántos, para proteger sus preferencias. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.",
+      "done": "Distribuida el {date}: {count, plural, one {# aviso interno} other {# avisos internos}}.",
+      "doneWithheld": "Distribuida el {date}. Con menos de {min} candidatos posibles no se muestra cuántos avisos se crearon.",
+      "notOffered": "La distribución solo está disponible mientras la necesidad está publicada y no ha empezado.",
+      "conflict": {
+        "OUTREACH_NOT_OPEN": "Publica o reanuda la necesidad primero.",
+        "OUTREACH_PLANNED": "Las necesidades planificadas no se distribuyen.",
+        "OUTREACH_ALREADY_SENT": "Esta necesidad ya se distribuyó.",
+        "OUTREACH_STARTED": "La necesidad ya ha empezado: ya no se distribuye.",
+        "OUTREACH_DAILY_LIMIT": "Tu organización ya ha distribuido 10 necesidades en las últimas 24 horas. Inténtalo más tarde."
+      }
+    },
+    "notice": {
+      "outreachUrgent": "Urgente: {title}",
+      "outreachAog": "AOG: {title}",
+      "description": "Consulta las condiciones y decide si quieres presentar candidatura.",
+      "open": "Ver oportunidad"
+    },
+    "noticesHint": "Los avisos Urgente y AOG siguen tus preferencias de urgencia, movilización y silencio.",
+    "noticesHintLink": "Configurar avisos"
+  },
+  "shell": {
+    "breadcrumb": "Ruta de navegación",
+    "motto": "Cualificación · Disponibilidad · Confianza",
+    "dock": {
+      "label": "Accesos rápidos",
+      "home": "Inicio",
+      "offers": "Ofertas",
+      "calendar": "Calendario",
+      "applications": "Candidaturas",
+      "tools": "Herramientas",
+      "administration": "Administración"
+    }
+  },
+  "profileHero": {
+    "status": "Estado de mi perfil",
+    "statusTitle": "Estado del perfil · {percent, number}%",
+    "statusIntro": "Información cumplimentada; la revisión de documentos y cualificaciones es independiente.",
+    "allDone": "Los apartados de información están completados.",
+    "close": "Cerrar",
+    "photo": {
+      "add": "Añadir foto",
+      "change": "Cambiar foto",
+      "saving": "Guardando…",
+      "remove": "Quitar foto",
+      "note": "Foto guardada solo en este navegador · JPG, PNG o WebP · hasta 2 MB",
+      "invalid": "Elige una foto JPG, PNG o WebP de hasta 2 MB.",
+      "saveFailed": "No se ha podido guardar la foto. Comprueba el archivo y el espacio del navegador.",
+      "removeFailed": "No se ha podido quitar la foto."
+    }
+  },
+  "badges": {
+    "stripLabel": "Insignias del perfil",
+    "more": "Ver {count, plural, one {# insignia adicional} other {# insignias adicionales}}",
+    "less": "Ocultar las insignias adicionales",
+    "close": "Cerrar detalle de insignia",
+    "footnote": "Resumen del perfil; no concede autorización de firma ni acredita formación por participar en retos.",
+    "years": "{count, plural, one {# año} other {# años}}",
+    "yearsUnit": "AÑOS",
+    "status": {
+      "declared": "Declarado",
+      "verified": "Verificada",
+      "reviewValidity": "Revisar vigencia",
+      "restricted": "Con restricciones",
+      "typeDeclared": "Tipo declarado",
+      "experienceDeclared": "Experiencia declarada"
+    },
+    "detail": {
+      "category": "Categoría declarada en el perfil; pendiente de validación de su alcance.",
+      "specialty": "Especialidad declarada. No acredita métodos, niveles ni autorización.",
+      "verified": "Un revisor de la plataforma verificó la cualificación con este código; su vigencia está en Cualificaciones.",
+      "reviewValidity": "La fecha declarada requiere revisión.",
+      "typeDeclared": "Habilitación de tipo declarada. La autorización de firma corresponde a la organización; no se deduce de una medalla.",
+      "experience": "Experiencia indicada por el profesional; no es una certificación."
+    },
+    "passport": {
+      "label": "Insignias profesionales",
+      "kicker": "Pasaporte visual",
+      "empty": "Añade categorías, habilitaciones y experiencia para completar tu pasaporte visual.",
+      "footnote": "Las insignias resumen datos declarados. No conceden autorización de firma ni sustituyen la revisión de licencia, tipo o competencia."
+    },
+    "yearUnit": "AÑO"
+  },
+  "publicTools": {
+    "signIn": "Acceder a mi cuenta",
+    "note": "Sin cuenta: los cálculos se hacen en este navegador y no se guarda nada en el servidor. El reto diario necesita una cuenta.",
+    "loginNote": "Las herramientas se pueden utilizar sin abrir una cuenta.",
+    "open": "Abrir herramientas"
+  },
+  "orgHome": {
+    "visibleNetwork": "Red visible",
+    "visibleNetworkDetail": "Según permisos y privacidad"
   }
 }

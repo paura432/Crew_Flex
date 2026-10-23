@@ -56,6 +56,7 @@ const page = await ctx.newPage();
 const errors = [];
 const expectedErrorUrls = new Set(); // pages whose 404 is the behaviour under test (cross-org)
 let expectOffline = false; // 2h aborts a request on purpose: its console error is the test
+let expectBadLink = false; // wallet-extras 3 answers the signed URL with 400 on purpose (expired link)
 const isExpected404 = (text, url) =>
   /status of 404/.test(text) && [...expectedErrorUrls].some((u) => url.startsWith(u));
 page.on("pageerror", (e) => errors.push(`${String(e)} @ ${page.url()}`));
@@ -65,12 +66,17 @@ page.on("console", (m) => {
   if (
     m.type() === "error" &&
     !isExpected404(m.text(), page.url()) &&
-    !(expectOffline && /ERR_INTERNET_DISCONNECTED/.test(m.text()))
+    !(expectOffline && /ERR_INTERNET_DISCONNECTED/.test(m.text())) &&
+    !(expectBadLink && /status of 400/.test(m.text()))
   )
     errors.push(`${m.text()} @ ${page.url()}`);
 });
 const hosts = new Set();
-page.on("request", (r) => hosts.add(new URL(r.url()).host));
+page.on("request", (r) => {
+  // Chromium's built-in PDF viewer (chrome-extension://…, N-21 blob frame) is not a network host.
+  const u = new URL(r.url());
+  if (/^https?:$/.test(u.protocol)) hosts.add(u.host);
+});
 const shot = (name) =>
   page.screenshot({
     path: `${EVIDENCE}/local-${name}.jpg`,
@@ -249,10 +255,9 @@ ok(
   "",
 );
 await shot("01-technician-overview");
-// Batch 3 (M02, V1.8 TechnicianHome): full status checklist + read-only month calendar.
-const checklist = page
-  .locator("main section", { hasText: /Profile completeness · / })
-  .locator("li");
+// Batch 3 (M02, V1.8 TechnicianHome): full status checklist + read-only month calendar. Since PKG
+// shell-visual (N-18) the checklist is the «My profile status» dialog of the hero (closed: counted, not shown).
+const checklist = page.locator("dialog[aria-labelledby=profile-status-title] li");
 const today = new Date().toISOString().slice(0, 10);
 // N-03 (PKG calendar): the day is a toggle button whose label also counts its opportunities.
 const todayCell = page.locator(`main button[aria-current=date]`);
@@ -276,16 +281,16 @@ ok(
   nextMonthDay,
 );
 // 2e (batch 11, V1.8 hides the progress when complete): the seed completes every item of Delta but
-// the wallet document (package passport). Without the wallet: 100 % → list folded, one click away;
-// with it: 90 %, and «Document provided» is the only item with a «Complete» link.
+// the wallet document (package passport). Without the wallet: 100 % → no progress, the dialog says it is
+// complete; with it: 90 %, and «Document provided» is the only item with a «Complete» link.
 if (checklistItems === 9) {
   ok(
-    "2e complete profile: checklist folded behind «The 9 profile items»",
-    (await page.getByText("The 9 profile items").isVisible()) &&
-      !(await checklist.first().isVisible()),
+    "2e complete profile: no progress bar; the status dialog has no «Complete» link",
+    (await page.locator("main progress").count()) === 0 &&
+      (await checklist.filter({ has: page.locator("a") }).count()) === 0,
   );
 } else {
-  const pendingItems = checklist.filter({ has: page.getByRole("link", { name: "Complete" }) });
+  const pendingItems = checklist.filter({ has: page.locator("a", { hasText: "Complete" }) });
   ok(
     "2e Delta at 90 %: only «Document provided» is left (wallet on)",
     /Your passport is 90% complete/.test(await page.locator("main").innerText()) &&
@@ -704,7 +709,7 @@ ok(
 const cards = () => page.locator("main article");
 // The list streams in after `load` (Suspense, loading.tsx): wait for the first card.
 const listed = () => page.locator("main article").first().waitFor({ timeout: 15_000 });
-await page.locator('input[name="eligible"]').check();
+await page.getByRole("checkbox", { name: "Eligible only" }).check();
 await Promise.all([
   page.waitForURL(/eligible=1/),
   page.getByRole("button", { name: "Apply" }).click(),
@@ -761,7 +766,7 @@ await Promise.all([
   page.getByRole("button", { name: /Compare selected/ }).click(),
 ]);
 await listed();
-await page.locator('input[name="eligible"]').check();
+await page.getByRole("checkbox", { name: "Eligible only" }).check();
 await Promise.all([
   page.waitForURL(/eligible=1/),
   page.getByRole("button", { name: "Apply" }).click(),
@@ -969,7 +974,7 @@ for (const path of ["/app/admin", "/app/recruiter", "/app/admin/verifications"])
 }
 ok(
   "19b manager: no view switcher; admin, recruiter and verifications are HTTP 404, neutral title",
-  managerNoViews && denied.every((d) => d.status === 404 && d.notFound && d.title === "Crew Flex"),
+  managerNoViews && denied.every((d) => d.status === 404 && d.notFound && d.title === "CrewFlex"),
   JSON.stringify(denied),
 );
 await logout();
@@ -1036,12 +1041,15 @@ ok(
     (await page.locator("aside a[href='/app/professional/profile']").count()) === 0,
   "",
 );
-await page.goto(madUrl);
+// PKG shell-visual (T-147): a real HTTP 404 now (the proxy decides before the stream), as 13/13b.
+expectedErrorUrls.add(madUrl);
+const madAsAdmin = await page.goto(madUrl);
 ok(
   "20d Company view: another organization's requirement is a 404, even for a platform admin",
-  /not found/i.test(await page.locator("body").innerText()),
-  madUrl,
+  /not found/i.test(await page.locator("body").innerText()) && madAsAdmin?.status() === 404,
+  `${madUrl} ${madAsAdmin?.status()}`,
 );
+expectedErrorUrls.delete(madUrl);
 await page.goto(`${BASE}/app/admin/verifications`);
 await page.waitForLoadState("networkidle");
 const golfCard = page
@@ -1189,11 +1197,10 @@ await page.goto(`${BASE}/app/professional`);
 await page.waitForLoadState("networkidle");
 summaryNames.push(...(await disclosureNames()));
 await axSession.detach();
+// PKG shell-visual: «The N profile items» left Mi espacio for the «My profile status» dialog (N-18).
 ok(
-  "28f summaries named «Formula, sources and scope» / «The N profile items», without ▸ or ▾ (T-3)",
-  summaryNames.includes("Formula, sources and scope") &&
-    summaryNames.some((n) => /^The \d+ profile items$/.test(n)) &&
-    !summaryNames.some((n) => /[▸▾]/.test(n)),
+  "28f summaries named «Formula, sources and scope» (and any on Mi espacio), without ▸ or ▾ (T-3)",
+  summaryNames.includes("Formula, sources and scope") && !summaryNames.some((n) => /[▸▾]/.test(n)),
   summaryNames.join(" | "),
 );
 ok(
@@ -2019,13 +2026,23 @@ ok(
 );
 await page.goto(`${BASE}/app/professional`);
 await page.waitForLoadState("networkidle");
-const identityText = await page
+// PKG shell-visual (N-15): the identity card became the v1.8 hero; its medals summarise the
+// declarations (the saved A350 · B2 rating with its restriction sits behind «+N»).
+const heroMedals = page
   .getByRole("region", { name: "Your professional identity" })
+  .getByRole("group", { name: "Profile badges" });
+await heroMedals.getByRole("button", { name: /^Show \d+ more badges?$/ }).click();
+const restricted = heroMedals.getByRole("button", { name: "A350 · B2: With restrictions" });
+await restricted.click();
+const restrictedDetail = await page
+  .getByRole("status")
+  .filter({ hasText: "A350 · B2 · With restrictions" })
   .innerText();
 ok(
-  "PKG passport 4 identity card: main category and declared aircraft",
-  /B1\.1 · A320 Family · B737 NG · A350/.test(identityText),
-  identityText.replace(/\s+/g, " ").slice(0, 120),
+  "PKG passport 4 hero medals: main category, the declared rating with its restriction text",
+  (await heroMedals.getByRole("button", { name: /^B1\.1: / }).count()) === 1 &&
+    /Smoke restriction/.test(restrictedDetail),
+  restrictedDetail.replace(/\s+/g, " ").slice(0, 120),
 );
 await logout();
 const passportNow = (await asSeedUser("delta@crewflex.test", "professional-profile")).data.profile;
@@ -2442,7 +2459,8 @@ await logout();
     await page.fill("#email", email);
     await page.fill("#password", `${PW}-close`);
     await page.click("button[type=submit]");
-    await page.waitForSelector("[role=alert]", { timeout: 15000 });
+    // Not a bare [role=alert]: the route announcer is one too and resolves first («Sign in»).
+    await page.waitForSelector("[role=alert]:has-text('incorrect')", { timeout: 15000 });
     ok(
       "PKG account e: «Type CLOSE» refuses another word; closed → «Account closed.»; sign-in refused",
       closedNotice && /Email or password is incorrect/.test(await mainText()),
@@ -2603,8 +2621,10 @@ await logout();
   );
   // v2-26: the cancel step explains what it does (opened, then backed out: nothing is sent).
   await hpAppCard.getByRole("button", { name: "Cancel assignment" }).click();
-  const hpHint = await hpAppCard.getByRole("group").innerText();
-  await hpAppCard.getByRole("group").getByRole("button", { name: "Back" }).click();
+  // `<details>` (History) is a group too: name the confirmation step.
+  const hpCancelStep = hpAppCard.getByRole("group", { name: "Cancel assignment" });
+  const hpHint = await hpCancelStep.innerText();
+  await hpCancelStep.getByRole("button", { name: "Back" }).click();
   ok(
     "PKG hiring-polish 7 cancel assignment hint «Seats will be released…» (backed out)",
     /Seats will be released and the technician's previous availability restored/.test(hpHint),
@@ -2623,7 +2643,7 @@ await logout();
   const hpDash = await page.locator("main").innerText();
   ok(
     "PKG hiring-polish 9 dashboard: «Shifts covered», «How to staff a requirement» (4 steps), quick links, note",
-    /Shifts covered/.test(hpDash) &&
+    /Shifts covered/i.test(hpDash) && // Metric labels are CSS-uppercased
       /How to staff a requirement/.test(hpDash) &&
       (await page.locator("main ol li").count()) >= 4 &&
       (await page.getByRole("link", { name: /Builder/ }).count()) === 1 &&
@@ -2756,6 +2776,7 @@ const wxExpired = (route) =>
     headers: { "access-control-allow-origin": "*" },
     body: '{"statusCode":"400","error":"InvalidJWT","message":"jwt expired"}',
   });
+expectBadLink = true;
 await page.route("**/storage/v1/object/sign/**", wxExpired);
 const wxPdfRow = page.locator("main li", { hasText: "Smoke viewer pdf" });
 await wxPdfRow.getByRole("button", { name: "Open" }).click();
@@ -2765,6 +2786,7 @@ await wxAlert.waitFor({ timeout: 15_000 });
 const wxAlertText = await wxAlert.innerText();
 const wxNoFrame = (await wxPdfDialog.locator("iframe").count()) === 0;
 await page.unroute("**/storage/v1/object/sign/**", wxExpired);
+expectBadLink = false;
 await wxPdfDialog.getByRole("button", { name: "Try again" }).click();
 await wxPdfDialog.locator("iframe").waitFor({ timeout: 15_000 });
 const wxFrame = await wxPdfDialog.locator("iframe").getAttribute("src");
@@ -2853,9 +2875,10 @@ const wxWindowId = wxFuture.data?.window?.id;
 const wxMoved = await asSeedUser("delta@crewflex.test", "professional-availability", {
   method: "PATCH",
   query: { id: wxWindowId },
+  // Short window: a span to 2032 would fail «maxDays» first, hiding the floor.
   body: {
     startsAt: `${wxDay(-2)}T00:00:00.000Z`,
-    endsAt: "2032-03-02T00:00:00.000Z",
+    endsAt: `${wxDay(-1)}T00:00:00.000Z`,
     status: "available",
   },
 });
@@ -3090,6 +3113,678 @@ ok(
     rcResumed.every(Boolean),
   JSON.stringify(rcClosed.error ?? rcArchived.error ?? rcWindowRemoved.error ?? {}),
 );
+// PKG pack-view (v2-15 + v2-04, migration 20261024300000, BR-25): the apply panel previews the Candidate Pack
+// copy (with «Experience you share») before the consent; the organization opens «View dossier» and reads the copy
+// of the moment of applying, not the later edit; never the name. Setup through the local API (need, Delta's window
+// and logbook entry); restores: withdraw (the copy goes), window, entry, need closed, notices read.
+{
+  const packTitle = `Local UI check · pack ${Date.now()}`;
+  const PACK_AIRCRAFT = "A320 EC-PCK (smoke)";
+  const packNeed = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: {
+      organizationId: mroOrg.id,
+      title: packTitle,
+      location: "Madrid (MAD)",
+      startsAt: "2026-12-27T06:00:00.000Z",
+      endsAt: "2026-12-28T18:00:00.000Z",
+      shift: "day",
+      headcount: 1,
+      urgency: "planned",
+      qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+    },
+  });
+  const packNeedId = packNeed.data.requirement.id;
+  const packWindow = await asSeedUser("delta@crewflex.test", "professional-availability", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: {
+      startsAt: "2026-12-27T00:00:00.000Z",
+      endsAt: "2026-12-29T00:00:00.000Z",
+      status: "available",
+    },
+  });
+  const madridToday = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(
+    new Date(),
+  );
+  const packEntry = await asSeedUser("delta@crewflex.test", "professional-logbook", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: {
+      entryDate: madridToday,
+      aircraft: PACK_AIRCRAFT,
+      ata: "32",
+      hours: 2,
+      category: "inspection",
+      environment: "line_maintenance",
+      description: "Pack smoke · original description.",
+      cvRelevant: true,
+    },
+  });
+  const packEntryId = packEntry.data?.entry?.id;
+
+  await login("delta@crewflex.test");
+  await page.goto(`${BASE}/app/professional/opportunities/${packNeedId}`);
+  await page.waitForLoadState("networkidle");
+  const share = page.locator("section", { hasText: "What you share with Demo MRO Madrid" }).last();
+  const shareText = (await share.innerText().catch(() => "")).replace(/\s+/g, " ");
+  ok(
+    "PKG pack-view a: «What you share» lists the copy before the consent (experience, rate, protection; no name)",
+    /Experience you share/.test(shareText) &&
+      shareText.includes(PACK_AIRCRAFT) &&
+      /Declared minimum: €45\.00 \/ hour/.test(shareText) &&
+      /Originals, file names and identifying metadata stay protected\./.test(shareText) &&
+      !/Technician Delta/.test(shareText),
+    shareText.slice(0, 200),
+  );
+  await page.getByLabel(/I authorise sharing this data with Demo MRO Madrid/).check();
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await page.waitForSelector("[role=status]:has-text('Application sent')", { timeout: 20000 });
+  await logout();
+  // The professional edits the entry afterwards: the copy already sent must not follow.
+  if (packEntryId)
+    await asSeedUser("delta@crewflex.test", "professional-logbook", {
+      method: "PATCH",
+      query: { id: packEntryId },
+      body: { description: "Pack smoke · edited later." },
+    });
+
+  const packOrgView = await asSeedUser("admin.mro@crewflex.test", "applications", {
+    query: { requirementId: packNeedId },
+  });
+  const packApplicationId = packOrgView.data?.applications?.[0]?.id;
+  await login("admin.mro@crewflex.test");
+  await page.goto(`${BASE}/app/organization/requirements/${packNeedId}/applications`);
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("link", { name: "View dossier" }).first().click();
+  await page.waitForURL((u) => u.searchParams.get("pack") === packApplicationId, {
+    timeout: 20000,
+  });
+  await page.waitForLoadState("networkidle");
+  const dossier = page.locator(`#pack-${packApplicationId}`);
+  const dossierText = (await dossier.innerText().catch(() => "")).replace(/\s+/g, " ");
+  ok(
+    "PKG pack-view b: «View dossier» shows the dated copy of the moment of applying, protected, pseudonymous",
+    /Shared dossier/.test(dossierText) &&
+      /Profile copy: .*Changes to the passport and the logbook do not alter this version\./.test(
+        dossierText,
+      ) &&
+      dossierText.includes("Pack smoke · original description.") &&
+      !dossierText.includes("edited later") &&
+      /Originals, file names and identifying metadata stay protected\./.test(dossierText) &&
+      !/Technician Delta|delta@crewflex\.test/.test(dossierText),
+    dossierText.slice(0, 200),
+  );
+  await responsiveShots("pkg-pack-view");
+  await page.getByRole("link", { name: "Close dossier" }).click();
+  await page.waitForURL((u) => !u.searchParams.has("pack"), { timeout: 20000 });
+  ok(
+    "PKG pack-view c: «Close dossier» folds it back",
+    (await page.locator(`#pack-${packApplicationId}`).count()) === 0,
+    "",
+  );
+  await logout();
+  const strangerPack = await asSeedUser("admin.airline@crewflex.test", "applications", {
+    query: { view: "pack", applicationId: packApplicationId ?? crypto.randomUUID() },
+  });
+  ok(
+    "PKG pack-view d: another organization's admin gets 404 for the copy",
+    strangerPack.error?.code === "NOT_FOUND",
+    JSON.stringify(strangerPack).slice(0, 100),
+  );
+
+  // Restore: withdrawing deletes the copy; then the window, the entry, the need and the notices.
+  const packMine = await asSeedUser("delta@crewflex.test", "applications");
+  const packOwn = packMine.data?.applications?.find((a) => a.id === packApplicationId);
+  if (packOwn)
+    await asSeedUser("delta@crewflex.test", "applications", {
+      method: "PATCH",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: { applicationId: packOwn.id, to: "withdrawn", expectedUpdatedAt: packOwn.updatedAt },
+    });
+  const packAfter = await asSeedUser("admin.mro@crewflex.test", "applications", {
+    query: { view: "pack", applicationId: packApplicationId ?? crypto.randomUUID() },
+  });
+  ok(
+    "PKG pack-view e: after withdrawing, the copy is gone (pack: null)",
+    packAfter.data?.pack === null,
+    JSON.stringify(packAfter).slice(0, 100),
+  );
+  await asSeedUser("delta@crewflex.test", "professional-availability", {
+    method: "DELETE",
+    query: { id: packWindow.data.window.id },
+  });
+  if (packEntryId)
+    await asSeedUser("delta@crewflex.test", "professional-logbook", {
+      method: "DELETE",
+      query: { id: packEntryId },
+    });
+  await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+    method: "PATCH",
+    body: { id: packNeedId, status: "closed" },
+  });
+  for (const email of ["delta@crewflex.test", "manager.mro@crewflex.test"]) {
+    await asSeedUser(email, "notifications", { method: "PATCH", body: { all: true } });
+  }
+}
+// PKG matching-v18 (v2-11, BR-3.7–3.13, BR-5.6, T-80…T-87): the v1.8 profile requirements explained on both
+// sides. Organization: the seeded «B1.1 · A320 / B737 NG line check (v1.8 profile rules)» of Demo Airline Ops
+// Barcelona (read only). Professional: a need with country Spain created through the local API (the builder's
+// default country), seen by Delta (permit ES) and Kilo (no permit), then closed — nothing published is left.
+await login("admin.airline@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements`);
+await page.waitForLoadState("networkidle");
+const v18Href = await page
+  .locator("a:has-text('A320 / B737 NG line check')")
+  .first()
+  .getAttribute("href");
+await page.goto(`${BASE}${v18Href}/matches?eligible=0`); // v2-25: «Solo elegibles» is on by default
+await page.waitForLoadState("networkidle");
+await page.locator("main article").first().waitFor({ timeout: 15000 });
+const v18Eligible = page.locator("main article").filter({ hasNotText: "Not eligible" });
+const v18EligibleText = (await v18Eligible.count()) === 1 ? await v18Eligible.innerText() : "";
+ok(
+  "PKG matching-v18 1 one eligible candidate (Delta), every v1.8 profile requirement listed and met",
+  // Section titles are CSS-uppercased: innerText reflects it.
+  /Profile requirements/i.test(v18EligibleText) &&
+    /Work permit: Spain/.test(v18EligibleText) &&
+    /Category B1\.1/.test(v18EligibleText) &&
+    /Aircraft: A320 Family \/ B737 NG/.test(v18EligibleText) &&
+    /Type rating B1\.1 · A320 Family \/ B737 NG\s+Met:\s+Declared, valid and unrestricted/.test(
+      v18EligibleText,
+    ) &&
+    /Minimum experience: 5 years/.test(v18EligibleText) &&
+    /Capability: Line Maintenance/.test(v18EligibleText) &&
+    /Affinity \(soft score\)/i.test(v18EligibleText),
+  v18EligibleText.replace(/\s+/g, " ").slice(0, 240),
+);
+const v18Echo = await page
+  .locator("main article", { hasText: "Technician Echo" })
+  .first()
+  .innerText();
+ok(
+  "PKG matching-v18 2 Echo (open): the restricted rating and the missing capability are the blockers, never the restriction text",
+  /The B1\.1 · A320 Family \/ B737 NG type rating declares restrictions/.test(v18Echo) &&
+    /Required capability: Line Maintenance/.test(v18Echo) &&
+    !/No engine run-ups/.test(await page.locator("main").innerText()),
+  v18Echo.replace(/\s+/g, " ").slice(0, 240),
+);
+ok(
+  "PKG matching-v18 3 «Experiencia mínima 5» leaves out who declares 4 (Golf), explained",
+  /Below the minimum experience \(5 years\)/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+const v18Title = `Local UI check · v1.8 rules ${Date.now()}`;
+const [v18Org] = await seedRest(
+  "admin.mro@crewflex.test",
+  "organizations?select=id&name=eq.Demo%20MRO%20Madrid",
+);
+const v18Types = await seedRest(
+  "admin.mro@crewflex.test",
+  "qualification_types?select=id&code=in.(B1.1,TR-A320)",
+);
+const v18Created = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: v18Org.id,
+    title: v18Title,
+    location: "Madrid (MAD)",
+    startsAt: new Date(Date.now() + 60 * 86_400_000).toISOString(),
+    endsAt: new Date(Date.now() + 62 * 86_400_000).toISOString(),
+    shift: "day",
+    headcount: 1,
+    urgency: "planned",
+    country: "ES",
+    qualifications: v18Types.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const v18Id = v18Created.data?.requirement.id;
+const v18Opportunity = async (email) => {
+  await login(email);
+  await page.goto(`${BASE}/app/professional/opportunities/${v18Id}`);
+  await page.waitForLoadState("networkidle");
+  const text = await page.locator("main").innerText();
+  await logout();
+  return text;
+};
+const v18Delta = await v18Opportunity("delta@crewflex.test");
+const v18Kilo = await v18Opportunity("kilo@crewflex.test");
+ok(
+  "PKG matching-v18 4 own eligibility: the job's country is checked against the declared work permits (Delta yes, Kilo no)",
+  Boolean(v18Id) &&
+    /Work permit: Spain\s+Met:\s+Declared in the profile/.test(v18Delta) &&
+    /No work permit declared for Spain/.test(v18Kilo) &&
+    /Work permit: Spain\s+Not met:\s+Not declared in the profile/.test(v18Kilo),
+  JSON.stringify({ created: Boolean(v18Id), kilo: v18Kilo.replace(/\s+/g, " ").slice(0, 160) }),
+);
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: v18Id, status: "closed" },
+});
+
+// PKG outreach (N-10, v2-17; migrations 20261024400000…400200): Delta's «Opportunity notices» in Settings
+// (v1.8 errors, then a valid save), «Distribute Urgent / AOG notice» on an AOG need (ICU plural result, the
+// button gone, the count kept), and Delta's «AOG: {title}» notice leading to the opportunity. Setup and
+// restore through the local API: the need is closed, the window deleted and Delta's preferences put back
+// (never saved before = the defaults, which reach nobody).
+const outreachTitle = `Local UI check · outreach ${Date.now()}`;
+const outreachBefore = (await asSeedUser("delta@crewflex.test", "notice-preferences")).data
+  .preferences;
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/settings`);
+await page.waitForLoadState("networkidle");
+const prefsPanel = page.locator("#notice-preferences");
+const prefsSave = prefsPanel.getByRole("button", { name: "Save notice preferences" });
+await prefsPanel.getByLabel("IANA time zone for notices").fill("Mars/Olympus");
+await prefsPanel.getByLabel("Quiet from (optional)").fill("22:00");
+await prefsPanel.getByLabel("Quiet until (optional)").fill("");
+await prefsSave.click();
+const prefsErrors = await prefsPanel.innerText();
+ok(
+  "PKG outreach a: the v1.8 errors «Invalid time zone.» and «Invalid quiet hours.» show next to their fields",
+  /Invalid time zone\./.test(prefsErrors) && /Invalid quiet hours\./.test(prefsErrors),
+  "",
+);
+await prefsPanel.getByLabel("I want in-app AOG notices").check();
+await prefsPanel.getByLabel("Minimum hours you need to mobilise").fill("12");
+await prefsPanel.getByLabel("IANA time zone for notices").fill("Europe/Madrid");
+await prefsPanel.getByLabel("Quiet from (optional)").fill("");
+await prefsSave.click();
+ok(
+  "PKG outreach b: a valid form saves («Notice preferences saved.»), with v1.8's note on mobilisation and quiet hours",
+  await prefsPanel
+    .getByRole("status")
+    .filter({ hasText: "Notice preferences saved." })
+    .waitFor({ timeout: 15000 })
+    .then(() => true)
+    .catch(() => false),
+  "",
+);
+await logout();
+const outreachNeed = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: mroOrg.id,
+    title: outreachTitle,
+    location: "Madrid (MAD)",
+    startsAt: "2027-01-11T06:00:00.000Z",
+    endsAt: "2027-01-12T18:00:00.000Z",
+    shift: "day",
+    headcount: 1,
+    urgency: "aog",
+    qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const outreachNeedId = outreachNeed.data.requirement.id;
+const outreachWindow = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    startsAt: "2027-01-11T00:00:00.000Z",
+    endsAt: "2027-01-13T00:00:00.000Z",
+    status: "available",
+  },
+});
+await login("admin.mro@crewflex.test");
+await page.goto(`${BASE}/app/organization/requirements/${outreachNeedId}`);
+await page.waitForLoadState("networkidle");
+const distribution = page
+  .locator("section")
+  .filter({ has: page.getByRole("heading", { name: "AOG distribution" }) })
+  .last();
+await distribution.getByRole("button", { name: "Distribute Urgent / AOG notice" }).click();
+const distributed = await distribution
+  .getByRole("status")
+  .filter({
+    hasText:
+      // Below 5 eligible professionals (here: Delta alone) the number is withheld (T-128).
+      /^(?:[1-9]\d* in-app notices? created|In-app notices created\. With fewer than 5 possible candidates the number is not shown, to protect their preferences)\. Consent, availability and quiet hours are respected\. No e-mails were sent\./,
+  })
+  .waitFor({ timeout: 20000 })
+  .then(() => true)
+  .catch(() => false);
+await page.reload();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG outreach c: «Distribute Urgent / AOG notice» reports the count (ICU plural; withheld below 5 eligible), then the button is gone and the outcome stays",
+  distributed &&
+    (await distribution.getByRole("button", { name: "Distribute Urgent / AOG notice" }).count()) ===
+      0 &&
+    /Distributed on .*(?:: [1-9]\d* in-app notices?\.|\. With fewer than 5 possible candidates the number of notices is not shown\.)/.test(
+      await distribution.innerText(),
+    ),
+  "",
+);
+await logout();
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/notices`);
+await page.waitForLoadState("networkidle");
+const outreachCard = page.locator("main article", { hasText: `AOG: ${outreachTitle}` });
+const outreachCardText = (await outreachCard.count()) ? await outreachCard.innerText() : "";
+await outreachCard.getByRole("button", { name: "View opportunity" }).click();
+ok(
+  "PKG outreach d: Delta reads «AOG: {title} · Demo MRO Madrid · Check the conditions…» and opens the opportunity",
+  /Demo MRO Madrid · Check the conditions and decide whether you want to apply\./.test(
+    outreachCardText,
+  ) &&
+    (await page
+      .waitForURL((u) => u.pathname === `/app/professional/opportunities/${outreachNeedId}`, {
+        timeout: 20000,
+      })
+      .then(() => true)
+      .catch(() => false)),
+  "",
+);
+await logout();
+// Restore: Delta's preferences as they were, the window, the need (closed) and the notices read.
+await asSeedUser("delta@crewflex.test", "notice-preferences", {
+  method: "PUT",
+  body: {
+    urgentOptIn: outreachBefore.urgentOptIn,
+    aogOptIn: outreachBefore.aogOptIn,
+    mobilizationHours: outreachBefore.mobilizationHours,
+    timeZone: outreachBefore.timeZone,
+    quietStart: outreachBefore.quietStart,
+    quietEnd: outreachBefore.quietEnd,
+  },
+});
+await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "DELETE",
+  query: { id: outreachWindow.data.window.id },
+});
+await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "PATCH",
+  body: { id: outreachNeedId, status: "closed" },
+});
+await asSeedUser("delta@crewflex.test", "notifications", { method: "PATCH", body: { all: true } });
+// PKG shell-visual (v2 diff 10 #8/#10/#16/#18, 50 #1/#2/#3/#5/#12/#13/#14/#15, 20 N-15/N-18/N-23;
+// migration 20261024600000, T-140…T-148): brand, desktop header, mobile dock, footer, the «Mi espacio»
+// hero with medals and the «My profile status» dialog, the browser-only avatar photo, the public tools,
+// «Visible network» and real 404s on missing or foreign detail pages. No data is written (the photo
+// lives in this browser and is removed at the end).
+{
+  const SV_MISSING = "6f1c2c1e-2b0a-4a51-9a8e-0d3c5b7e9f10";
+  await login("delta@crewflex.test");
+  await page.goto(`${BASE}/app/professional`);
+  await page.waitForLoadState("networkidle");
+  const svShell = await page.evaluate(() => {
+    const visible = (el) => !!el && el.getClientRects().length > 0;
+    const bells = [...document.querySelectorAll("a[href='/app/notices'][aria-label]")];
+    const footer = document.querySelector("footer");
+    return {
+      crumbs: [...document.querySelectorAll("header nav ol")]
+        .filter(visible)
+        .map((o) => o.innerText.replace(/\s+/g, " ")),
+      headerBell: bells.filter(visible).map((b) => !!b.closest("header")),
+      footer: footer
+        ? [...footer.querySelectorAll("span")].filter(visible).map((s) => s.innerText)
+        : [],
+      brandPlane: !!document.querySelector("aside a[href='/app'] svg path"),
+      brandName: document.querySelector("aside a[href='/app']")?.textContent ?? "",
+      favicon: document.querySelector("link[rel=icon]")?.getAttribute("href") ?? "",
+    };
+  });
+  ok(
+    "PKG shell-visual 1 desktop: «CrewFlex / Overview» header with the bell (one visible), v1.8 footer without a version, plane brand",
+    svShell.crumbs.join() === "CrewFlex / Overview" &&
+      svShell.headerBell.join() === "true" &&
+      svShell.footer.join(" · ") === "CREWFLEX AVIATION · Qualification · Availability · Trust" &&
+      svShell.brandPlane &&
+      /^CrewFlexAVIATION$/.test(svShell.brandName) &&
+      /^\/icon\.svg/.test(svShell.favicon) &&
+      (await page.title()) === "Overview · CrewFlex",
+    JSON.stringify(svShell),
+  );
+  // Hero (N-15): experience first, then the main category; a medal opens its detail with the v1.8 footnote.
+  const svHero = page.getByRole("region", { name: "Your professional identity" });
+  const svMedals = await svHero
+    .getByRole("group", { name: "Profile badges" })
+    .getByRole("button")
+    .evaluateAll((bs) => bs.map((b) => b.getAttribute("aria-label")));
+  await svHero.getByRole("button", { name: svMedals[0] }).click();
+  const svDetail = await page
+    .getByRole("status")
+    .filter({ hasText: "grants no signing authority" })
+    .innerText();
+  ok(
+    "PKG shell-visual 2 hero medals: «12 years», «B1.1: Verified», a rating, «+N»; the detail has the footnote",
+    svMedals[0] === "12 years: Declared experience" &&
+      svMedals[1] === "B1.1: Verified" &&
+      /^A320 Family · B1\.1: /.test(svMedals[2] ?? "") &&
+      /^Show \d+ more badges?$/.test(svMedals.at(-1) ?? "") &&
+      /Experience stated by the professional/.test(svDetail),
+    svMedals.join(" | "),
+  );
+  // N-18: «My profile status ↗» opens the dialog; Escape closes it and focus returns to the trigger.
+  const svTrigger = svHero.getByRole("button", { name: /My profile status/ });
+  await svTrigger.click();
+  const svDialog = page.getByRole("dialog", { name: /^Profile status · \d+%$/ });
+  const svItems = await svDialog.locator("li").count();
+  await page.keyboard.press("Escape");
+  ok(
+    "PKG shell-visual 3 «My profile status» dialog: the 10 items (9 without the wallet); Escape closes, focus back",
+    [9, 10].includes(svItems) &&
+      !(await svDialog.isVisible()) &&
+      (await svTrigger.evaluate((el) => document.activeElement === el)),
+    `${svItems} items`,
+  );
+  // N-23: a photo kept only in this browser, under the user's id; invalid files are refused.
+  await page.goto(`${BASE}/app/professional/profile`);
+  await page.waitForLoadState("networkidle");
+  const svVisual = page.getByRole("region", { name: "Professional badges" });
+  const svFile = svVisual.locator("input[type=file]");
+  await svFile.setInputFiles({
+    name: "note.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("x"),
+  });
+  const svInvalid = await svVisual.getByRole("alert").innerText();
+  const svPng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  await svFile.setInputFiles({ name: "me.png", mimeType: "image/png", buffer: svPng });
+  await svVisual.getByRole("button", { name: "Change photo" }).waitFor({ timeout: 10000 });
+  const svKeys = await page.evaluate(() =>
+    Object.keys(localStorage).filter((k) => k.startsWith("crewflex-avatar-v1-")),
+  );
+  await page.goto(`${BASE}/app/professional`);
+  await page.waitForLoadState("networkidle");
+  const svHeroPhoto = await svHero.locator("img").count();
+  await page.goto(`${BASE}/app/professional/profile`);
+  await page.waitForLoadState("networkidle");
+  await svVisual.getByRole("button", { name: "Remove photo" }).click();
+  ok(
+    "PKG shell-visual 4 avatar photo: invalid file refused; PNG stored in this browser only (one per-user key), shown in the hero, removed",
+    /JPG, PNG or WebP photo of up to 2 MB/.test(svInvalid) &&
+      svKeys.length === 1 &&
+      /^crewflex-avatar-v1-[0-9a-f-]{36}$/.test(svKeys[0]) &&
+      svHeroPhoto === 1 &&
+      (await svVisual.getByRole("button", { name: "Add photo" }).isVisible()) &&
+      (await page.evaluate(() =>
+        Object.keys(localStorage).some((k) => k.startsWith("crewflex-avatar-v1-")),
+      )) === false,
+    `${svInvalid} · ${svKeys.join(",")} · hero img ${svHeroPhoto}`,
+  );
+  // Area 50 #14: on a filtered page the filter is aria-current="true"; only the menu entry is "page".
+  await page.goto(`${BASE}/app/professional/applications`);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG shell-visual 5 filters use aria-current=true; aria-current=page only in the menu",
+    (await page.locator("main [aria-current=page]").count()) === 0 &&
+      (await page.locator("main nav [aria-current=true]").count()) <= 1 &&
+      (await page.locator("aside [aria-current=page]").count()) === 1,
+    "",
+  );
+  // T-147: a missing opportunity is a real 404 with the neutral title.
+  const svOpp = `${BASE}/app/professional/opportunities/${SV_MISSING}`;
+  expectedErrorUrls.add(svOpp);
+  const svOppResponse = await page.goto(svOpp);
+  ok(
+    "PKG shell-visual 6 missing opportunity: HTTP 404, «Not found» with its h1, title «CrewFlex»",
+    svOppResponse?.status() === 404 &&
+      (await page.getByRole("heading", { level: 1, name: "Not found" }).isVisible()) &&
+      (await page.title()) === "CrewFlex",
+    String(svOppResponse?.status()),
+  );
+  expectedErrorUrls.delete(svOpp);
+  await logout();
+
+  // Mobile dock (T-141) on a touch screen: 5 shortcuts, 44 px, current marked, no overflow at 390/360.
+  const svTouch = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  const svTp = await svTouch.newPage();
+  await svTp.goto(`${BASE}/login`);
+  await svTp.fill("#email", "delta@crewflex.test");
+  await svTp.fill("#password", PW);
+  await Promise.all([svTp.waitForURL(/\/app/), svTp.click("form button[type=submit]")]);
+  for (const width of [390, 360]) {
+    await svTp.setViewportSize({ width, height: 800 });
+    await svTp.goto(`${BASE}/app/professional/availability`);
+    await svTp.waitForLoadState("networkidle");
+    const dock = await svTp.evaluate(() => {
+      const nav = document.querySelector("nav[aria-label='Quick access']");
+      const links = [...(nav?.querySelectorAll("a") ?? [])].map((a) => {
+        const r = a.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(a.querySelector("span"));
+        const t = range.getBoundingClientRect();
+        return {
+          text: a.textContent,
+          h: r.height,
+          w: r.width,
+          fits: t.left >= r.left - 0.5 && t.right <= r.right + 0.5,
+          current: a.getAttribute("aria-current"),
+        };
+      });
+      window.scrollTo(0, document.body.scrollHeight);
+      const footer = document.querySelector("footer").getBoundingClientRect();
+      return {
+        links,
+        footerClear: footer.bottom <= nav.getBoundingClientRect().top + 0.5,
+        motto: [...document.querySelectorAll("footer span")].filter(
+          (s) => s.getClientRects().length,
+        ).length,
+        scroll: document.documentElement.scrollWidth,
+      };
+    });
+    ok(
+      `PKG shell-visual 7 dock @${width}: Home · Offers · Calendar · Applications · Tools, ≥ 44 px, current marked, labels fit, footer clear, no overflow`,
+      dock.links.map((l) => l.text).join() === "Home,Offers,Calendar,Applications,Tools" &&
+        dock.links.every((l) => l.h >= 44 && l.w >= 44 && l.fits) &&
+        dock.links.find((l) => l.current === "page")?.text === "Calendar" &&
+        dock.footerClear &&
+        dock.motto === 1 &&
+        dock.scroll === width,
+      JSON.stringify(dock).slice(0, 300),
+    );
+  }
+  await svTp.setViewportSize({ width: 1024, height: 768 });
+  await svTp.goto(`${BASE}/app/professional`);
+  await svTp.waitForLoadState("networkidle");
+  ok(
+    "PKG shell-visual 8 dock hidden from lg (1024): the sidebar and the header take over",
+    !(await svTp.getByRole("navigation", { name: "Quick access" }).isVisible()) &&
+      (await svTp.getByRole("navigation", { name: "Breadcrumb" }).isVisible()),
+  );
+  await svTouch.close();
+
+  // Organization side: «Visible network» (T-146, admin/manager) and real 404s (T-147).
+  await login("admin.mro@crewflex.test");
+  await page.goto(`${BASE}/app/organization`);
+  await page.waitForLoadState("networkidle");
+  const svNetwork = await page
+    .locator("main dl > div", { hasText: "Visible network" })
+    .innerText()
+    .catch(() => "");
+  ok(
+    "PKG shell-visual 9 «Visible network» counts the professionals the organization can find",
+    /Visible network\s*\d+\s*Subject to permissions and privacy/i.test(svNetwork),
+    svNetwork.replace(/\s+/g, " "),
+  );
+  const svStatus = async (path) => {
+    expectedErrorUrls.add(`${BASE}${path}`);
+    const response = await page.goto(`${BASE}${path}`);
+    const result = `${response?.status()} ${await page.title()}`;
+    expectedErrorUrls.delete(`${BASE}${path}`);
+    return result;
+  };
+  const svOrg = {
+    own: await svStatus(new URL(madUrl).pathname),
+    ownMatches: await svStatus(`${new URL(madUrl).pathname}/matches`),
+    missing: await svStatus(`/app/organization/requirements/${SV_MISSING}`),
+    missingEdit: await svStatus(`/app/organization/requirements/${SV_MISSING}/edit`),
+    malformed: await svStatus("/app/organization/requirements/not-an-id"),
+    builder: await svStatus("/app/organization/requirements/new"),
+    networkMissing: await svStatus(`/app/organization/network/${SV_MISSING}`),
+    ownAsNetwork: await svStatus(new URL(madUrl).pathname.replace("/requirements/", "/network/")),
+  };
+  ok(
+    "PKG shell-visual 10 detail pages: own 200; missing, malformed, own-as-network 404 with «CrewFlex»",
+    /^200 /.test(svOrg.own) &&
+      /^200 /.test(svOrg.ownMatches) &&
+      /^200 /.test(svOrg.builder) &&
+      [
+        svOrg.missing,
+        svOrg.missingEdit,
+        svOrg.malformed,
+        svOrg.networkMissing,
+        svOrg.ownAsNetwork,
+      ].every((s) => s === "404 CrewFlex"),
+    JSON.stringify(svOrg),
+  );
+  await logout();
+  await login("charlie@crewflex.test");
+  await page.goto(`${BASE}/app/organization`);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG shell-visual 11 a plain member sees no «Visible network»",
+    (await page.locator("main dl > div", { hasText: "Visible network" }).count()) === 0,
+  );
+  await logout();
+
+  // Tools without an account (T-145): public, browser-only, same CSP, nothing asked of Supabase.
+  const svAnon = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const svAp = await svAnon.newPage();
+  const svHosts = new Set();
+  const svCsp = [];
+  svAp.on("request", (r) => svHosts.add(new URL(r.url()).host));
+  svAp.on("console", (m) => /Content Security Policy/.test(m.text()) && svCsp.push(m.text()));
+  const svTools = await svAp.goto(`${BASE}/tools`);
+  await svAp.waitForLoadState("networkidle");
+  const svTiles = await svAp
+    .locator("main a[href^='/tools/']")
+    .evaluateAll((as) => [...new Set(as.map((a) => a.getAttribute("href")))]);
+  await svAp.goto(`${BASE}/tools/torque`);
+  await svAp.waitForLoadState("networkidle");
+  await svAp.fill("#tool-value", "100");
+  const svTorque = await svAp.locator("main [aria-live=polite]").allInnerTexts();
+  const svAppTools = await svAp.request.get(`${BASE}/app/tools`, { maxRedirects: 0 });
+  await svAp.goto(`${BASE}/login`);
+  ok(
+    "PKG shell-visual 12 public /tools: 5 browser-only tools (no daily), torque works, CSP header and no violation, no Supabase request; /app/tools still needs a session; the login says so",
+    svTools?.status() === 200 &&
+      !!svTools.headers()["content-security-policy-report-only"] &&
+      svTiles.join() ===
+        "/tools/torque,/tools/translator,/tools/convert,/tools/knowledge,/tools/duration" &&
+      svTorque.some((t) => /73[.,]75/.test(t)) &&
+      svCsp.length === 0 &&
+      ![...svHosts].some((h) => /:5432\d|:5632\d/.test(h)) &&
+      svAppTools.status() === 307 &&
+      /The tools can be used without opening an account/.test(
+        await svAp.locator("main").innerText(),
+      ),
+    `${svTiles.join()} · ${[...svHosts].join(",")} · ${svTorque.join(" / ").slice(0, 80)}`,
+  );
+  await svAnon.close();
+}
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).

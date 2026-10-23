@@ -10,8 +10,9 @@
 // a membership) and carries no eligibility at all. The list comes from `list_opportunities` (DEFINER,
 // fixed projection: organization name, no ids of people or organizations, no counts; never the caller's
 // own organizations' requirements, T-90); eligibility is the shared engine on the caller's OWN data
-// (`own_candidate_profile`), every failed rule explained in `match.blockers` — publication never makes
-// anyone eligible. LLM ≠ eligibility engine.
+// (`own_candidate_profile`) against the requirement and its v1.8 profile requirements
+// (`get_requirement_profile_rules`, matching-v18), every failed rule explained in `match.blockers` —
+// publication never makes anyone eligible. LLM ≠ eligibility engine.
 import { z } from "zod";
 import { type Actor, requireActor, requireTechnician } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
@@ -19,9 +20,11 @@ import { createHandler } from "../_shared/http.ts";
 import {
   loadOwnApplications,
   loadOwnCandidate,
+  loadProfileRules,
   periodOf,
   toOpportunity,
   toOpportunityRequirement,
+  withProfileRules,
 } from "../_shared/applications.ts";
 import { parseQuery } from "../_shared/validation.ts";
 import {
@@ -106,15 +109,22 @@ export const handler = createHandler("opportunities", {
     }
 
     await requireTechnician(actor);
-    const requirements = await listPublished(actor, query);
+    const listed = await listPublished(actor, query);
 
-    const [own, mine] =
-      requirements.length === 0
-        ? [null, []]
+    const [own, mine, rules] =
+      listed.length === 0
+        ? [null, [], new Map()]
         : await Promise.all([
-            loadOwnCandidate(actor, periodOf(requirements)),
+            loadOwnCandidate(actor, periodOf(listed)),
             loadOwnApplications(actor),
+            loadProfileRules(
+              actor,
+              listed.map((r) => r.id),
+            ),
           ]);
+    // Each one with its v1.8 profile requirements (matching-v18); unpublished in between → left out.
+    const requirements = withProfileRules(listed, rules);
+    if (query.id && requirements.length === 0) throw new ApiError("NOT_FOUND");
     const now = Date.now();
     const all = own ? requirements.map((r) => toOpportunity(r, own, mine, now)) : [];
 

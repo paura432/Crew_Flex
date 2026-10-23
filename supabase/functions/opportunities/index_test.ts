@@ -1,5 +1,10 @@
 import { assert, assertEquals, assertThrows } from "@std/assert";
-import { periodOf, toOpportunity, toOpportunityRequirement } from "../_shared/applications.ts";
+import {
+  periodOf,
+  toOpportunity,
+  toOpportunityRequirement,
+  withProfileRules,
+} from "../_shared/applications.ts";
 import { ApiError } from "../_shared/errors.ts";
 import { toCandidate } from "../_shared/requirements.ts";
 import { parseValue } from "../_shared/validation.ts";
@@ -78,7 +83,66 @@ const me = (
       endsAt: "2031-02-01T00:00:00+00:00",
       status: w.status,
     })),
+    candidate_declarations: {
+      primaryCategory: "B1.1",
+      categories: ["B1.1", "B2"],
+      aircraft: ["A320 Family", "B737 NG"],
+      engines: ["CFM56-5B/7B"],
+      skills: ["line_maintenance", "aog_support"],
+      englishLevel: "C1",
+      mobility: "international",
+      workPermits: ["PT", "ES", "FR"],
+      typeRatings: [
+        { aircraft: "A320 Family", category: "B1.1", expiresAt: null, restricted: false },
+      ],
+      hasRestrictions: false,
+    },
   });
+
+const NO_RULES = {
+  category: null,
+  aircraft: [],
+  requiresTypeRating: false,
+  engines: [],
+  minYears: null,
+  requiredSkills: [],
+};
+
+Deno.test(
+  "each opportunity gets its v1.8 profile rules; one unpublished in between is left out",
+  () => {
+    const listed = [toOpportunityRequirement(row), toOpportunityRequirement({ ...row, id: "r2" })];
+    const strict = { ...NO_RULES, aircraft: ["B737 MAX" as const], minYears: 15 };
+    const merged = withProfileRules(listed, new Map([["r1", strict]]));
+    assertEquals(
+      merged.map((r) => r.id),
+      ["r1"],
+    );
+    const opportunity = toOpportunity(
+      merged[0]!,
+      me("verified"),
+      [],
+      Date.parse("2030-12-15T00:00:00Z"),
+    );
+    assertEquals(opportunity.applyBlocker, "NOT_ELIGIBLE");
+    assertEquals(
+      opportunity.match.blockers.map((b) => b.code),
+      ["AIRCRAFT_NOT_DECLARED", "INSUFFICIENT_EXPERIENCE"],
+    );
+    // Only availability may make it «possible on a rest day» (BR-14.1): a profile blocker never does.
+    assertEquals(opportunity.possibleOnRest, false);
+    assertEquals(
+      withProfileRules(
+        listed,
+        new Map([
+          ["r1", NO_RULES],
+          ["r2", NO_RULES],
+        ]),
+      ).length,
+      2,
+    );
+  },
+);
 
 Deno.test("rows map to the fixed projection: organization name only, ISO UTC, hard first", () => {
   const requirement = toOpportunityRequirement(row);

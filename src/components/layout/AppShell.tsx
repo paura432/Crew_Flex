@@ -9,17 +9,21 @@ import { isStaffingAgency } from "@/domain/recruiter";
 import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/feature-flags";
 import { primaryMembership, type SessionActor } from "@/server/session";
 import { accountSummaryKeys } from "./account-summary";
+import { Brand } from "./Brand";
+import { MobileDock } from "./MobileDock";
 import { NavDrawer } from "./NavDrawer";
 import type { NavItem } from "./NavLinks";
-import { switcherViews } from "./views";
+import { TopBar } from "./TopBar";
+import { switcherViews, type WorkspaceView } from "./views";
 import { ViewSections, ViewSwitcher, type NavSection } from "./ViewSwitcher";
 
 export async function AppShell({ actor, children }: { actor: SessionActor; children: ReactNode }) {
-  const [t, tNav, tDomain, tNotices, walletEnabled, unreadResult] = await Promise.all([
+  const [t, tNav, tDomain, tNotices, tShell, walletEnabled, unreadResult] = await Promise.all([
     getTranslations("common"),
     getTranslations("nav"),
     getTranslations("domain"),
     getTranslations("notices"),
+    getTranslations("shell"),
     actor.profile.account_type === "professional" ? isDocumentWalletEnabled() : false,
     getUnreadNoticeCount(),
   ]);
@@ -30,12 +34,10 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
   const organization = primaryMembership(actor)?.organization;
   const isProfessional = actor.profile.account_type === "professional";
 
+  const agency = isStaffingAgency(organization?.type);
   const organizationNav: NavItem[] = [
     // A staffing agency's «Resumen» is its «Espacio recruiter» (v1.8 «ESPACIO RECRUITER», BR-27).
-    {
-      href: isStaffingAgency(organization?.type) ? "/app/recruiter" : "/app/organization",
-      label: tNav("dashboard"),
-    },
+    { href: agency ? "/app/recruiter" : "/app/organization", label: tNav("dashboard") },
     { href: "/app/organization/requirements", label: tNav("requirements") },
     // v1.8 company order: Resumen, Nueva necesidad, Ofertas y cobertura, Buscar candidatos,
     // Candidaturas, Ofertas en la red, Organización (v2-05, v2-20); Plantilla is Next's own.
@@ -87,7 +89,8 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
       ? [
           {
             label: organization?.name ?? tNav("organization"),
-            view: "organization" as const,
+            // An agency's workspace is «Espacio recruiter» (BR-27): its section follows that view.
+            view: agency ? ("recruiter" as const) : ("organization" as const),
             items: organizationNav,
           },
         ]
@@ -101,9 +104,54 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { label: tNav("account"), items: accountNav },
   ];
   const views = switcherViews(actor);
+  // v1.8 dock (T-141): technician «Inicio · Ofertas · Calendario · Candidaturas · Herramientas»;
+  // company with the entries that exist here («Candidatos» waits for the directory); admin two.
+  const tools = { href: "/app/tools", label: tShell("dock.tools") };
+  const docks: Partial<Record<WorkspaceView, NavItem[]>> = {
+    ...(isProfessional
+      ? {
+          professional: [
+            { href: "/app/professional", label: tShell("dock.home") },
+            { href: "/app/professional/opportunities", label: tShell("dock.offers") },
+            { href: "/app/professional/availability", label: tShell("dock.calendar") },
+            { href: "/app/professional/applications", label: tShell("dock.applications") },
+            tools,
+          ],
+        }
+      : {}),
+    ...(actor.memberships.length > 0
+      ? {
+          // The same dock under both views: an agency's home is /app/recruiter (BR-27).
+          [agency ? "recruiter" : "organization"]: [
+            { href: agency ? "/app/recruiter" : "/app/organization", label: tShell("dock.home") },
+            { href: "/app/organization/requirements", label: tShell("dock.offers") },
+            { href: "/app/organization/applications", label: tShell("dock.applications") },
+            tools,
+          ],
+        }
+      : {}),
+    ...(isPlatformAdmin
+      ? { admin: [{ href: "/app/admin", label: tShell("dock.administration") }, tools] }
+      : {}),
+  };
+  // Where /app lands (src/app/app/page.tsx): the dock's view before a workspace page is opened.
+  const homeView: WorkspaceView = isPlatformAdmin
+    ? "admin"
+    : actor.memberships.length > 0
+      ? agency
+        ? "recruiter"
+        : "organization"
+      : "professional";
+  const bell = (onLight: boolean) => (
+    <NoticeBell
+      count={unread}
+      label={badge ? tNotices("bell", { count: unread ?? 0 }) : tNotices("nav")}
+      onLight={onLight}
+    />
+  );
 
   return (
-    <div className="min-h-screen lg:flex">
+    <div className="flex min-h-screen flex-col lg:flex-row">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2"
@@ -114,31 +162,13 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
         <NavDrawer
           label={t("menu")}
           brand={
-            <Link
-              href="/app"
-              className="flex items-center gap-2.5 text-white pointer-coarse:min-h-11"
-            >
-              <span
-                aria-hidden
-                className="grid size-9 place-items-center rounded-lg bg-accent font-black text-navy"
-              >
-                CF
-              </span>
+            <Link href="/app" className="flex items-center pointer-coarse:min-h-11">
               {/* Below 420 px the mark alone (the name stays for assistive tech) leaves room for the bell. */}
-              <span className="sr-only leading-tight min-[420px]:not-sr-only">
-                <span className="block text-lg font-bold tracking-tight">{t("appName")}</span>
-                <span className="block text-[11px] tracking-[0.28em] text-[#91aac1]">
-                  {t("brandTag")}
-                </span>
-              </span>
+              <Brand onDark compact />
             </Link>
           }
-          bell={
-            <NoticeBell
-              count={unread}
-              label={badge ? tNotices("bell", { count: unread ?? 0 }) : tNotices("nav")}
-            />
-          }
+          // From `lg` the bell moves to the white header (TopBar); one count, read once above.
+          bell={<span className="contents lg:hidden">{bell(false)}</span>}
           toolbar={
             <form action={signOutAction}>
               <button
@@ -175,9 +205,24 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
           </form>
         </div>
       </aside>
-      <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
-        <div className="mx-auto max-w-6xl">{children}</div>
-      </main>
+      {/* Below `lg` the column reserves the dock's height (and the home indicator's) at its end. */}
+      <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <TopBar
+          items={sections.flatMap((section) => section.items)}
+          home={t("appName")}
+          label={tShell("breadcrumb")}
+          bell={bell(true)}
+        />
+        <main id="main" className="flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+          <div className="mx-auto max-w-6xl">{children}</div>
+        </main>
+        {/* v1.8 `.app-footer` without its version label (area 10 #16): the motto from `md`. */}
+        <footer className="mx-4 flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-line py-5 text-xs tracking-[0.1em] text-muted sm:mx-6 lg:mx-10">
+          <span className="uppercase">{`${t("appName")} ${t("brandTag")}`}</span>
+          <span className="hidden md:inline">{tShell("motto")}</span>
+        </footer>
+      </div>
+      <MobileDock label={tShell("dock.label")} docks={docks} initial={homeView} />
     </div>
   );
 }

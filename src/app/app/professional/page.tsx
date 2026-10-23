@@ -9,11 +9,16 @@ import { EXPIRY_TONE, StatusChip } from "@/components/ui/StatusChip";
 import { documentExpiryState, isDueForReview, REVIEW_WINDOW_DAYS } from "@/domain/documents";
 import { parseMonth } from "@/features/availability/calendar";
 import { countOwnDocuments, listOwnDocumentExpiries } from "@/features/documents/api";
-import { IdentityCard } from "@/features/professional/components/IdentityCard";
+import { medalInputOf } from "@/features/professional/medals";
+import { ProfessionalHero } from "@/features/professional/components/ProfessionalHero";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
-import { ProfessionalActivity } from "@/features/applications/components/ProfessionalActivity";
+import {
+  activityCounts,
+  loadActivity,
+  ProfessionalActivity,
+} from "@/features/applications/components/ProfessionalActivity";
 import { LearningAchievements } from "@/features/tools/components/LearningAchievements";
-import { COMPLETENESS_HREF, completenessOf } from "@/features/professional/completeness";
+import { completenessOf } from "@/features/professional/completeness";
 import { loadProfessionalContext } from "@/features/professional/load";
 import { formatDate, formatPercent } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
@@ -42,10 +47,14 @@ export default async function ProfessionalOverviewPage({
   }
   const today = new Date().toISOString().slice(0, 10);
   // V1.8 Badges «Documentos y cursos próximos a revisar» (TD-44): declared expiries within 60 days,
-  // expired included, over active qualifications and (when the wallet is on) own documents.
-  const [documents, documentCount] = walletEnabled
-    ? await Promise.all([listOwnDocumentExpiries(), countOwnDocuments()])
-    : [[], null];
+  // expired included, over active qualifications and (when the wallet is on) own documents. The
+  // activity reads feed both the hero's counters and the section below (read once).
+  const [[documents, documentCount], activity] = await Promise.all([
+    walletEnabled
+      ? Promise.all([listOwnDocumentExpiries(), countOwnDocuments()])
+      : Promise.resolve([[], null] as const),
+    loadActivity(),
+  ]);
   const documentsFailed = documents === null;
   const toReview = [
     ...overview.qualifications
@@ -87,19 +96,22 @@ export default async function ProfessionalOverviewPage({
 
   return (
     <>
-      {/* V1.8 home: the promise as the heading, the person in the identity card below. */}
+      {/* V1.8 home: the promise as the heading, the person in the hero below. */}
       <PageHeader
         eyebrow={t("overview.eyebrow")}
         title={t.rich("overview.headline", { br: () => <br /> })}
         actions={<ButtonLink href="/app/tools">{tNav("tools")}</ButtonLink>}
       />
       <div className="space-y-6">
-        <IdentityCard
+        <ProfessionalHero
+          userId={actor.id}
           name={actor.profile.display_name}
           baseLocation={overview.profile.base_location}
           yearsExperience={overview.profile.years_experience}
-          primaryCategory={overview.profile.primary_category}
-          aircraft={overview.profile.aircraft}
+          medals={medalInputOf(overview, today)}
+          today={today}
+          completeness={completeness}
+          {...activityCounts(activity)}
         />
         <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {/* Completeness of the profile items (BR-11) is not a verification status (8.2). */}
@@ -132,7 +144,7 @@ export default async function ProfessionalOverviewPage({
           />
         </dl>
         {/* v1.8: counters, the month (a day filters the feed) next to «Oportunidades para ti». */}
-        <ProfessionalActivity windows={windows} month={month} today={today} />
+        <ProfessionalActivity reads={activity} windows={windows} month={month} today={today} />
         {(awaiting > 0 || rejected > 0) && (
           <Panel title={t("overview.nextTitle")}>
             <ul className="space-y-3 text-sm">
@@ -197,66 +209,15 @@ export default async function ProfessionalOverviewPage({
         </Panel>
         {/* V1.8 Badges «Logros de aprendizaje» (L-3): read from this browser, after hydration. */}
         <LearningAchievements userId={actor.id} />
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* V1.8 «Estado de mi perfil»: every BR-11 item with a direct link to complete it. */}
-          <Panel title={t("overview.checklistTitle", { percent: completeness.percent })}>
-            {/* V1.8 hides the progress from 95 %; with 7 items that is 100 %. The list stays one click away. */}
-            {completeness.percent < 100 && (
-              <div className="mb-3">
-                <p className="text-sm font-semibold">
-                  {t("overview.progressLead", { percent: completeness.percent })}
-                </p>
-                <progress
-                  max={100}
-                  value={completeness.percent}
-                  aria-label={t("overview.progressLabel", { percent: completeness.percent })}
-                  className="mt-2 h-2 w-full accent-accent"
-                />
-                <p className="mt-1 text-sm text-muted">
-                  {t("overview.toComplete", { count: completeness.missing.length })}
-                </p>
-              </div>
-            )}
-            <p className="mb-3 text-xs text-muted">{t("overview.progressNote")}</p>
-            <details open={completeness.percent < 100} className="group">
-              <summary className="flex cursor-pointer items-center text-sm font-semibold text-blue pointer-coarse:min-h-11">
-                {t("overview.showChecklist", { count: completeness.items.length })}
-              </summary>
-              <ul className="divide-y divide-line text-sm">
-                {completeness.items.map((item) => {
-                  const done = !completeness.missing.includes(item);
-                  return (
-                    <li
-                      key={item}
-                      className="flex flex-wrap items-center justify-between gap-3 py-2"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span aria-hidden className={done ? "font-bold text-ok" : "text-muted"}>
-                          {done ? "✓" : "○"}
-                        </span>
-                        <span className={done ? "text-muted" : undefined}>{t(`item.${item}`)}</span>
-                        <span className="sr-only">
-                          {done ? t("overview.itemDone") : t("overview.itemPending")}
-                        </span>
-                      </span>
-                      {!done && (
-                        <ButtonLink href={COMPLETENESS_HREF[item]}>{t("overview.doIt")}</ButtonLink>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </details>
-          </Panel>
-          <Panel
-            title={t("overview.profile")}
-            actions={
-              <ButtonLink href="/app/professional/profile">{t("overview.editPassport")}</ButtonLink>
-            }
-          >
-            <ProfileFacts profile={overview.profile} />
-          </Panel>
-        </div>
+        {/* «Estado de mi perfil» is the hero's dialog (N-18); the facts stay below. */}
+        <Panel
+          title={t("overview.profile")}
+          actions={
+            <ButtonLink href="/app/professional/profile">{t("overview.editPassport")}</ButtonLink>
+          }
+        >
+          <ProfileFacts profile={overview.profile} />
+        </Panel>
       </div>
     </>
   );

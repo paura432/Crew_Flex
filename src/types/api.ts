@@ -17,12 +17,21 @@ import type { DocumentKind, DocumentMime, DocumentScanStatus } from "../domain/d
 import type { LogbookCategory, LogbookEnvironment } from "../domain/logbook.ts";
 import type { CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { OrganizationReviewStatus, OrganizationType } from "../domain/organization.ts";
+import type { PackExperience, PackQualification } from "../domain/candidate-pack.ts";
 import type {
+  Aircraft,
   CandidatePassport,
+  Engine,
+  EnglishLevel,
   PassportDeclarations,
   PassportPrivate,
+  ProfessionalCategory,
+  RateUnit,
+  Skill,
+  TypeRating,
 } from "../domain/passport.ts";
 import type { NoticeAudience, NoticeKind, NoticeRequirementStatus } from "../domain/notices.ts";
+import type { NoticePreferences, OutreachConflict, OutreachUrgency } from "../domain/outreach.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { RecruiterConflict, RepresentationStatus } from "../domain/recruiter.ts";
 import type { Locale } from "../i18n/config.ts";
@@ -36,6 +45,7 @@ import type {
   EuCountry,
   RequiredQualification,
   RequirementConditions,
+  RequirementProfileRules,
   RequirementShift,
   RequirementStatus,
   RequirementTimeZone,
@@ -62,10 +72,11 @@ export interface ApiErrorBody {
   issues?: { path: string; message: string }[];
   /**
    * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`), an
-   * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`) or an action
-   * for a represented client (BR-27; `RECRUITER_CONFLICTS`).
+   * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`), a refused
+   * «Distribuir aviso Urgente / AOG» (BR-26; `OUTREACH_CONFLICTS`) or an action for a represented client (BR-27;
+   * `RECRUITER_CONFLICTS`).
    */
-  reason?: ApplicationConflict | AvailabilityConflict | RecruiterConflict;
+  reason?: ApplicationConflict | AvailabilityConflict | OutreachConflict | RecruiterConflict;
 }
 
 export type ApiResponse<T> =
@@ -244,7 +255,10 @@ export interface LogbookEntry {
   category: LogbookCategory;
   environment: LogbookEnvironment;
   description: string;
-  /** «Seleccionable para expediente»: stored only, nothing reads it until D-07. */
+  /**
+   * «Seleccionable para expediente»: when the professional applies, the selected, active entries are copied
+   * into that application's Candidate Pack copy (v2-04, T-112; BR-25). Nothing else reads it.
+   */
   cvRelevant: boolean;
   archived: boolean;
   createdAt: string;
@@ -439,9 +453,11 @@ export interface DocumentsMaintenanceResponse {
 
 /**
  * What a professional may see of a published requirement (D-12): the fixed projection of
- * `list_opportunities` — organization NAME only, no ids of people, no counts of other applicants.
+ * `list_opportunities` — organization NAME only, no ids of people, no counts of other applicants — plus
+ * its v1.8 profile requirements (`get_requirement_profile_rules`, package matching-v18). The rules are
+ * optional: a frozen proposal copy and older functions do not carry them.
  */
-export interface OpportunityRequirement {
+export interface OpportunityRequirement extends RequirementProfileRules {
   id: string;
   organizationName: string;
   title: string;
@@ -611,6 +627,45 @@ export interface ApplicationTransitionResponse {
   replayed: boolean;
 }
 
+/**
+ * The Candidate Pack copy (v2-15 + v2-04, BR-25): the professional's technical profile frozen when they
+ * applied (`get_application_pack`), or what it would be now (`get_my_candidate_pack_preview`). Never
+ * identity, contact, employer, blocked organizations or documents (D-07, `PACK_ACTIVATION` off).
+ */
+export interface CandidatePackCopy {
+  /** The application this copy belongs to; null for the preview. */
+  applicationId: string | null;
+  /** When the copy was frozen (the preview: the moment it was read). */
+  copiedAt: string;
+  primaryCategory: ProfessionalCategory | null;
+  categories: ProfessionalCategory[];
+  yearsExperience: number | null;
+  englishLevel: EnglishLevel | null;
+  baseLocation: string | null;
+  baseCountry: EuCountry | null;
+  aircraft: Aircraft[];
+  engines: Engine[];
+  skills: Skill[];
+  workPermits: EuCountry[];
+  generalRestrictions: string | null;
+  /** v1.8 «Mínimo declarado» (T-111: shown to this organization only, previewed before the consent). */
+  minRate: { amount: number; unit: RateUnit } | null;
+  typeRatings: TypeRating[];
+  qualifications: PackQualification[];
+  /** Logbook entries marked «Seleccionable para expediente» (≤ 20, newest first, T-112). */
+  experience: PackExperience[];
+}
+
+/** `GET /applications?view=pack&applicationId=`: null = this application has no copy (withdrawn, or older). */
+export interface ApplicationPackResponse {
+  pack: CandidatePackCopy | null;
+}
+
+/** `GET /applications?view=pack-preview`: the caller's copy as it would be frozen now. */
+export interface CandidatePackPreviewResponse {
+  pack: CandidatePackCopy;
+}
+
 // --- In-app notices («Avisos internos», v2-18; SCOPE-2 LATER, migration 20261023800000) -------------
 
 /**
@@ -625,7 +680,8 @@ export interface Notice {
   audience: NoticeAudience;
   createdAt: string;
   readAt: string | null;
-  applicationId: string;
+  /** Null only for an `outreach` notice, which is about a requirement (v2-17). */
+  applicationId: string | null;
   requirementId: string;
   requirementTitle: string;
   /** Technician side only. */
@@ -636,6 +692,8 @@ export interface Notice {
   requirementStatus: NoticeRequirementStatus | null;
   /** Organization side only. */
   candidate: { name: string | null; ref: string | null } | null;
+  /** `outreach`: the urgency it was distributed for («Urgente» / «AOG»); null otherwise. */
+  outreachUrgency: OutreachUrgency | null;
 }
 
 export interface NoticeListResponse {
@@ -697,6 +755,10 @@ export interface AccountExport {
     privateDetails: ExportRecord | null;
     organizationBlocks: ExportRecord[];
     logbook: ExportRecord[];
+    /** The Candidate Pack copies frozen with own applications (`get_my_application_packs`, v2-15). */
+    candidatePacks: ExportRecord[];
+    /** «Avisos de oportunidades» (PKG outreach, N-10); null while never saved. */
+    noticePreferences: ExportRecord | null;
   } | null;
   requirementsCreated: ExportRecord[];
   documents: ExportedDocument[];
@@ -758,4 +820,33 @@ export interface RepresentationReviewItem extends RepresentedClient {
 
 export interface RepresentationReviewListResponse {
   clients: RepresentationReviewItem[];
+}
+
+// --- Urgent/AOG outreach and notice preferences (package outreach, v2-17 / N-10; BR-26) -----------------
+
+/** The caller's own notice preferences (`notice-preferences`); `updatedAt` null = never saved. */
+export interface NoticePreferencesResponse {
+  preferences: NoticePreferences & { updatedAt: string | null };
+}
+
+/**
+ * The one distribution of a requirement, as its admins/managers see it: the urgency it was sent for,
+ * when and HOW MANY in-app notices it created — never who received them.
+ */
+export interface OutreachDistribution {
+  requirementId: string;
+  urgency: OutreachUrgency;
+  /** Null = not reported: fewer than `OUTREACH_REPORT_MIN` eligible professionals (T-128). */
+  notified: number | null;
+  distributedAt: string;
+}
+
+/** GET `requirement-outreach?requirementId=`; null = not distributed yet. */
+export interface OutreachStatusResponse {
+  distribution: OutreachDistribution | null;
+}
+
+/** POST `requirement-outreach` (201). */
+export interface OutreachDistributeResponse {
+  distribution: OutreachDistribution;
 }

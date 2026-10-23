@@ -38,7 +38,7 @@ const fields = {
     .trim()
     .min(1, "v.logbook.description.required")
     .max(LOGBOOK_LIMITS.description, "v.logbook.description.max"),
-  /** «Seleccionable para expediente» (v1.8 `cvRelevant`): stored only; nothing reads it yet (D-07). */
+  /** «Seleccionable para expediente» (v1.8 `cvRelevant`): copied into the Candidate Pack copy when applying (BR-25). */
   cvRelevant: z.boolean("v.invalid"),
 };
 

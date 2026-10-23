@@ -76,7 +76,8 @@ export const availableTransitions = (from: ApplicationStatus, actor: Application
 
 /**
  * Stable reasons the API returns with a 409 (`reason` in the error body), one per server check.
- * The SQL functions raise them as SQLSTATE `CFA01`…`CFA13` (`_shared/errors.ts` maps them).
+ * The SQL functions raise them as SQLSTATE `CFA01`…`CFA15` (`_shared/errors.ts` maps them). Append only:
+ * the position is the code.
  */
 export const APPLICATION_CONFLICTS = [
   "REQUIREMENT_NOT_OPEN", // CFA01: paused, closed, covered or not published
@@ -92,6 +93,10 @@ export const APPLICATION_CONFLICTS = [
   "ACTIVE_COMMITMENTS", // CFA11: closing with accepted/confirmed applications (T-12)
   "HAS_APPLICATIONS", // CFA12: editing a requirement that received applications (M05)
   "OWN_ORGANIZATION", // CFA13: applying to a requirement of an own organization (v2-27, T-90)
+  // CFA14: apply or confirm while a v1.8 profile requirement fails (work permit, category, aircraft, type
+  // rating, engines, years, capabilities; BR-3.7–3.13, trigger applications_profile_rules)
+  "PROFILE_REQUIREMENTS_UNMET",
+  "RESTRICTIONS_DECLARED", // CFA15: confirm while the professional declares general restrictions (T-87)
 ] as const;
 export type ApplicationConflict = (typeof APPLICATION_CONFLICTS)[number];
 
@@ -106,7 +111,7 @@ export type ApplyBlocker =
 /**
  * Apply rules (D-06 Q5/Q6, T-08, T-09): the requirement is open and has not started; the technician
  * has no application that is not withdrawn (one that ended rejected, cancelled or finished closes the
- * door); and is eligible now (hard qualifications + availability).
+ * door); and is eligible now (hard qualifications, the v1.8 profile requirements and availability).
  */
 export function applyBlocker(
   requirement: Pick<WorkRequirement, "startsAt"> & { status: RequirementStatus },

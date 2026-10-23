@@ -20,6 +20,7 @@ import { DEFAULT_LIST_LIMIT } from "@/lib/validation/work-requirement";
 import { TERMINAL_APPLICATION_STATUSES, type ApplicationStatus } from "@/domain/applications";
 import { coveredShifts, seatsByRequirement, sumCounts } from "@/domain/coverage";
 import { getRequirementApplicationCounts } from "@/features/applications/api";
+import { getVisibleNetworkCount } from "@/features/organizations/api";
 import { CoverageGuide } from "@/features/requirements/components/CoverageGuide";
 
 import type { OrganizationRow } from "@/types/database";
@@ -71,16 +72,19 @@ export async function OrganizationOverview({
   description: string;
   children?: ReactNode;
 }) {
-  const [t, tHiring] = await Promise.all([
+  const [t, tHiring, tHome] = await Promise.all([
     getTranslations("organization.dashboard"),
     getTranslations("hiring.dashboard"),
+    getTranslations("orgHome"),
   ]);
-  const [result, open, counts] = await Promise.all([
+  const [result, open, counts, network] = await Promise.all([
     // Archived needs (v1.8 «Archivada», T-64) leave the working lists.
     listRequirements(organization.id, { archived: "exclude" }),
     listFocusCandidates(organization.id),
     // Per requirement (v2-08): the organization's counters are their sums (admin/manager, T-93).
     canManage ? getRequirementApplicationCounts(organization.id) : null,
+    // v1.8 «Red visible» (area 50 #13, T-146): admin/manager, like the other hiring counters.
+    canManage ? getVisibleNetworkCount(organization.id) : null,
   ]);
   // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and «Jornadas cubiertas» (D-06).
   const perRequirement = counts?.ok ? counts.data.requirements : null;
@@ -133,6 +137,13 @@ export async function OrganizationOverview({
                     detail={t("confirmedOnly")}
                   />
                 </>
+              )}
+              {canManage && (
+                <Metric
+                  label={tHome("visibleNetwork")}
+                  value={network ?? "—"}
+                  detail={tHome("visibleNetworkDetail")}
+                />
               )}
             </dl>
           ) : (

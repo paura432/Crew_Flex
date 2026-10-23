@@ -283,6 +283,9 @@ describe("requirement builder terms (v2-09/10/12/14)", () => {
     );
     expect(viableCandidatesInput.safeParse({ ...ok, endsAt: ok.startsAt }).success).toBe(false);
     expect(viableCandidatesInput.safeParse({ ...ok, profileId: B11 }).success).toBe(false);
+    // matching-v18: the job's country (an EU member) joins the count's work-permit rule.
+    expect(viableCandidatesInput.safeParse({ ...ok, country: "ES" }).success).toBe(true);
+    expect(viableCandidatesInput.safeParse({ ...ok, country: "GB" }).success).toBe(false);
   });
 
   it("PATCH takes a status change or the archive, nothing else; the list filters archived ones", () => {

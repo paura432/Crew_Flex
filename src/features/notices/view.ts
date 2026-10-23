@@ -5,8 +5,15 @@ import type { Notice } from "@/types/api";
 
 /** v1.8 «Actualización de candidatura»; the organization also learns of a NEW application (HIRE-07 #7). */
 export function noticeTitleKey(
-  notice: Pick<Notice, "kind" | "audience" | "applicationStatus" | "requirementStatus">,
+  notice: Pick<
+    Notice,
+    "kind" | "audience" | "applicationStatus" | "requirementStatus" | "outreachUrgency"
+  >,
 ) {
+  // v1.8 `app.mjs:104` «{modo}: {título}» (v2-17): the mode it was distributed for.
+  if (notice.kind === "outreach") {
+    return notice.outreachUrgency === "aog" ? "outreachAog" : "outreachUrgent";
+  }
   if (notice.kind === "requirement") {
     return notice.requirementStatus === "paused"
       ? "requirementPaused"
@@ -21,9 +28,13 @@ export function noticeTitleKey(
 
 /**
  * Technician side: the card in «Mis candidaturas» (v1.8 went to `applications`); organization side:
- * the applications of that requirement, at the applicant's card.
+ * the applications of that requirement, at the applicant's card; an outreach notice: the opportunity
+ * itself (v1.8 «Ver oportunidades»: decide whether to apply).
  */
-export function noticeHref(notice: Pick<Notice, "audience" | "applicationId" | "requirementId">) {
+export function noticeHref(
+  notice: Pick<Notice, "kind" | "audience" | "applicationId" | "requirementId">,
+) {
+  if (notice.kind === "outreach") return `/app/professional/opportunities/${notice.requirementId}`;
   return notice.audience === "technician"
     ? `/app/professional/applications#a-${notice.applicationId}`
     : `/app/organization/requirements/${notice.requirementId}/applications#a-${notice.applicationId}`;

@@ -91,12 +91,16 @@ explainable (blockers + reasons). See `BUSINESS_RULES.md`.
 ## Candidate Pack
 
 Structured dossier generated from the profile and shared **with consent** for a specific
-requirement. **PLANNED** — not in V0.
+requirement. **PARTIAL** (local only, 2026-10-24): the dated technical copy frozen when the professional applies
+(«Ver expediente», BR-25); identity, contact and documents wait for D-07 P3 and the scanner (`CANDIDATE_PACK.md`).
 
 ## Planned / Urgent / AOG
 
 Urgency is stored on every requirement (`planned`, `urgent`, `aog`). In V0 it is displayed and
-filterable; differentiated outreach intensity and commercial logic are **PLANNED**.
+filterable. «Distribuir aviso Urgente / AOG» — one in-app notice per professional who opted in for that urgency,
+respecting visibility, blocks, restrictions, eligibility, availability, mobilization and quiet hours, the organization
+told only how many — is **IMPLEMENTED (local only)**, package outreach, BUSINESS_RULES BR-26. Differentiated outreach
+intensity, priority contact and commercial logic are **PLANNED**; e-mail, SMS and push stay OUT.
 
 ## Non-goals (now)
 

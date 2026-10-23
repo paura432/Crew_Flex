@@ -24,7 +24,7 @@ same change.
 | BR-1.9  | Requirements are never hard-deleted. An admin/manager **closes** one (V1.8 `job.status`, `server/app.mjs:88`): `closed` is terminal — the database refuses any later status change (`guard_requirement_status`, `20261020120000`) — and every status change is audited `requirement.status_changed {from,to}`. A closed requirement is **frozen** (no field or qualification change, `20261020120100`) and is no longer evaluated: capacity and matching answer 409, as V1.8 only evaluates published jobs. Closing is refused while any application is `accepted` or `confirmed` (T-12, V1.8 «Resuelve antes las asignaciones activas», 409 `ACTIVE_COMMITMENTS`; LOCAL `20261022130300`); other open applications are not moved. **Lifecycle (M05, owner 2026-10-22, LOCAL `20261022130000/130100`):** open ↔ paused (V1.8 «Pausar» / «Reanudar»), a draft is opened, anything not closed may be closed, nothing else — one table, `canChangeRequirementStatus` (`src/domain/work-requirement.ts`), mirrored by `guard_requirement_status` (rls suite S compares every pair). A paused requirement is not published and not evaluated (capacity/matching 409, `isEvaluable`); «Pausar» is hidden on an expired need. **Edit (M05, LOCAL `20261022130300`):** only while the requirement never received an application (withdrawn included; 409 `HAS_APPLICATIONS` otherwise, direct writes too), with the creation validations, an optimistic version (409 when stale) and audit `requirement.updated` (field names). `covered` comes and goes with the confirmed seats only (BR-13). | IMPLEMENTED (close, local) |
 | BR-1.10 | **Shifts** (v2-09, v1.8 connected ShiftEditor; T-60): optional, 1–366 shifts `{startsAt, endsAt, baseHours}`; each lasts more than 0 and at most 24 h («Divide los trabajos de varios días en jornadas de hasta 24 horas.») and pays 0.25–24 base hours, never more than it lasts («Las horas base superan la duración del intervalo.»); sorted by start they do not overlap («Las jornadas no pueden solaparse.», touching is fine) and start on different local dates of the requirement's zone («Solo se admite una jornada por fecha local de inicio.», UTC without a zone). The requirement's `startsAt`/`endsAt` is exactly their envelope. `shiftIssues`/`shiftEnvelope` (`src/domain/work-requirement.ts`) = trigger `work_requirements_shifts_valid` (PGlite parity suite `requirement-builder`). Without shifts the requirement is one continuous period, as before. **D-06 Q6 holds**: an application covers every shift, and eligibility, availability coverage, apply and the confirm re-check use the envelope (availability is also needed in the gaps between shifts until per-shift coverage, matching-v18 / v2-30). Shown as «{Σ} horas base en {n} jornadas» and, for the organization, «Cobertura por jornada · {fecha} · x/n plazas confirmadas» (seats = confirmed + finished).                                                                                                                                                                                                                                                                                   | IMPLEMENTED (local)        |
 | BR-1.11 | **Country and zone** (v2-10, OD-6/D-04 default; T-61): `country` is one of the 27 EU members (v1.8 `server/rules.mjs:1`, «Selecciona un país de la Unión Europea.»); `timeZone` one of the EU IANA zones or UTC («Zona horaria no válida.»), used only to tell local dates apart — every instant is still entered and shown in UTC (BR-10). Both optional in the API (null = not stated: every requirement created before them); the form proposes ES and Europe/Madrid. Shown as «{base} · {país}». The base stays free text and is not cross-checked with the country.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | IMPLEMENTED (local)        |
-| BR-1.12 | **Terms without money** (v2-12, OD-7; T-62): EUR per hour (0–2000, not 0), per overtime hour and per diem per day (0–2000), hours per shift (0.25–24), contract (Contractor · Temporal · Permanente · Por proyecto), «Tratar presupuesto como requisito obligatorio» (declared, **not evaluated** by the engine until C-10/v2-11), maximum mobilisation (1–168 h; the form proposes 48 h, 12 h for AOG), incorporation (≤ 160) and logistics (flights, accommodation, local transport, meals, own tools), plus a description ≤ 4000. Two decimals at most; unknown keys (commissions included) are refused by the schema and the CHECK. Informative only: no fee, commission, invoice or payment exists (SCOPE OUT). Frozen like the other business fields once closed or after the first application (CFA12), and copied into every proposal version (T-11 widened, R-08). Day rate = €/h × hours per shift; a proposal with shifts shows «{h} h × {tarifa}/h = {importe} para el técnico» (no commission).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | IMPLEMENTED (local)        |
+| BR-1.12 | **Terms without money** (v2-12, OD-7; T-62): EUR per hour (0–2000, not 0), per overtime hour and per diem per day (0–2000), hours per shift (0.25–24), contract (Contractor · Temporal · Permanente · Por proyecto), «Tratar presupuesto como requisito obligatorio» (declared, **not evaluated**: the professional's minimum rate is owner-only, T-33, T-86), maximum mobilisation (1–168 h; the form proposes 48 h, 12 h for AOG), incorporation (≤ 160) and logistics (flights, accommodation, local transport, meals, own tools), plus a description ≤ 4000. Two decimals at most; unknown keys (commissions included) are refused by the schema and the CHECK. Informative only: no fee, commission, invoice or payment exists (SCOPE OUT). Frozen like the other business fields once closed or after the first application (CFA12), and copied into every proposal version (T-11 widened, R-08). Day rate = €/h × hours per shift; a proposal with shifts shows «{h} h × {tarifa}/h = {importe} para el técnico» (no commission).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | IMPLEMENTED (local)        |
 | BR-1.13 | **Drafts** (v2-14, R-D4 default; T-63): «Guardar borrador» creates or saves a `draft`: title, base and period are required (every row has them), qualifications (0–20, no hard one needed), shifts and terms may be incomplete. A draft is never published nor evaluated (`isEvaluable` false: no opportunity, capacity or matching). Publishing — «Publicar necesidad», «Guardar y publicar» or «Publicar» (draft → open) — applies every creation rule (BR-1.1…1.4, start in the future, shifts, terms) in the schema and again at commit (BR-1.4). The form autosaves in the browser every 350 ms per organization and requirement (v1.8 `useDraft`) and offers «Recuperar» / «Descartar» on return.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | IMPLEMENTED (local)        |
 | BR-1.14 | **Archive and duplicate** (v2-14; T-64, T-65): «Archivar» is one way and only for a closed requirement — archiving a draft closes it in the same step; an open, paused or covered one is closed first (T-12 applies) — then it leaves the list and appears under «Ver archivadas» (`archived_at`, audited `requirement.archived`; never `cancelled`, T-14). «Duplicar» opens the builder prefilled with «Copia · {título}», the start moved to the same UTC time 45 days from today, the same duration and shift pattern and every term; nothing frozen comes with it and nothing is saved until the organization saves it.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | IMPLEMENTED (local)        |
 | BR-1.15 | **Live count** (v2-13; T-66): «{n} candidatos con requisitos y bloques viables» counts the internal members and the external pool's candidates (`anonymous`/`open`, `verified_orgs` once the organization is reviewed; never `private` nor one who blocked it — the same predicate as `ranked_external_pool`) who pass the hard filters (BR-2/BR-3/BR-4.8, the same SQL as apply and confirm, `app_private.hard_eligibility_for`) for the form's period (not started), urgency and hard qualifications, saved or not; admin/manager only, a number only. No urgency bands by date (C-8).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | IMPLEMENTED (local)        |
@@ -55,11 +55,42 @@ No score can compensate a blocker.
 | Held but not `verified`       | `HARD_QUALIFICATION_NOT_VERIFIED` (pending/rejected/expired status) |
 | Expired before start          | `HARD_QUALIFICATION_EXPIRED`                                        |
 | Expires inside the period     | `HARD_QUALIFICATION_EXPIRES_DURING_REQUIREMENT`                     |
+| Profile requirement not met   | one per rule, BR-3.7–3.13 below                                     |
 | No availability at all        | `NOT_AVAILABLE`                                                     |
 | Availability covers only part | `PARTIAL_AVAILABILITY` (with `coveredPercent`)                      |
 
 **Hard requirements require `verified` status.** Self-declaration alone is not eligibility
 (see `OPEN_DECISIONS.md` OD-3).
+
+**v1.8 profile requirements (package matching-v18, owner rule DEFAULTS of 2026-10-22: C-10/D-02/D-03/OD-6 as
+documented technical defaults T-80…T-86).** A requirement may state the v1.8 rules below (`work_requirements`
+columns, `country` from the builder; `RequirementProfileRules`). Each one is **checked only when stated** — null or an
+empty list means «not required» — so a requirement that states none keeps exactly its qualification + availability
+verdict. They are checked against the professional's **own passport declarations** (BR-18), as v1.8 does
+(`server/rules.mjs:27` `eligible`, `src/business.js:140-150` `matching`); the verified catalog qualifications above
+stay a separate, additional rule. Blockers come in this order: qualifications, profile rules (in the order of the
+table), availability. One SQL expression mirrors them (`app_private.profile_rules_ok`, `20261023900100`) inside
+`hard_eligibility_for` / `hard_eligibility` (apply, confirm, live count) and `ranked_external_pool` (the pool's
+eligible-first order and counts); `tests/db/matching-v18.test.ts` proves SQL = `evaluateMatch` on randomized profiles
+for six rule sets (own data and the organization's pool rows) and the 50/100/101/500 cap sizes.
+
+| Rule    | Requirement states                                                    | The professional must declare                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Blocker                                                                                |
+| ------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| BR-3.7  | `country` (one of the 27 EU members, the builder's field, default ES) | a work permit for that country (v1.8 «Falta declarar permiso de trabajo para el país.»)                                                                                                                                                                                                                                                                                                                                                                                               | `MISSING_WORK_PERMIT` {country}                                                        |
+| BR-3.8  | `category` (one of the 12 v1.8 categories)                            | that category among the declared ones, not only the main one (v1.8 «La categoría no coincide.»)                                                                                                                                                                                                                                                                                                                                                                                       | `CATEGORY_MISMATCH` {category}                                                         |
+| BR-3.9  | `aircraft` («Aeronaves aceptadas», ≤ 12)                              | **at least one** of them (v1.8 demo `aircraft.some`; «La aeronave no está declarada en el perfil.»)                                                                                                                                                                                                                                                                                                                                                                                   | `AIRCRAFT_NOT_DECLARED` {aircraft}                                                     |
+| BR-3.10 | `requires_type_rating` («Exigir habilitación de tipo»)                | a type rating of the required category on **one** of the accepted aircraft, valid for the whole period (BR-2: through `date(endsAt − 1 ms)`, no validity = valid) and **without restrictions** (v1.8 «Falta habilitación de tipo declarada y vigente, sin restricciones.»). The closest miss is reported: a valid one that declares restrictions, else one not valid for the period (latest expiry), else none. Only a licence category and ≥ 1 aircraft can ask for it (CHECK, T-83) | `TYPE_RATING_RESTRICTED` · `TYPE_RATING_NOT_VALID` {expiresAt} · `TYPE_RATING_MISSING` |
+| BR-3.11 | `engines` («Motores», ≤ 7)                                            | at least one of them (v1.8 demo `engines.some`)                                                                                                                                                                                                                                                                                                                                                                                                                                       | `ENGINE_NOT_DECLARED` {engines}                                                        |
+| BR-3.12 | `min_years` (0–60)                                                    | at least that many years of experience; none declared counts as 0 (v1.8 `profile.years \|\| 0`, «No alcanza la experiencia mínima.»)                                                                                                                                                                                                                                                                                                                                                  | `INSUFFICIENT_EXPERIENCE` {minYears, years}                                            |
+| BR-3.13 | `required_skills` («Capacidades obligatorias», of the 9 v1.8)         | **every** one (v1.8 «Capacidad requerida: {s}.»)                                                                                                                                                                                                                                                                                                                                                                                                                                      | `MISSING_SKILL` {skill}, one per missing capability                                    |
+
+Not ported (documented, T-86): «Completa tu perfil.» (a display name is mandatory at sign-up), «Curso pendiente o
+caducado» (courses are verified TRAINING qualifications, BR-2/BR-3), «Movilización máxima», «Herramientas propias» and
+«Tarifa mínima dentro del presupuesto» (the professional's mobilisation hours are not modelled; own tools and budget are
+builder terms not evaluated yet; the minimum rate is owner-only, T-33). Every requirement's rules are frozen with the
+rest of it once closed or after the first application (CFA12). Writing them through the builder form and its RPCs is a
+follow-up: today only the seed and the owner set them (no grant), and the builder sends only the country. IMPLEMENTED
+(local).
 
 ## BR-4 Availability
 
@@ -105,13 +136,14 @@ direct API clients that created past windows get 400 (v1.8 connected accepts the
 
 ## BR-5 Soft score
 
-| Rule   | Statement                                                                                                                                                                    |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BR-5.1 | Score is computed **only for eligible candidates**; ineligible → `softScore = 0`.                                                                                            |
-| BR-5.2 | A soft qualification is _met_ when held, not withdrawn, not rejected, and valid for the full period (BR-2). Pending verification counts as met but is flagged in the reason. |
-| BR-5.3 | `softScore = round(100 × met / totalSoft)`; with no soft requirements `softScore = 100`.                                                                                     |
-| BR-5.4 | Location, shift and experience are **informational** in V0 (displayed, not scored).                                                                                          |
-| BR-5.5 | Results are ordered: eligible first, then `softScore` desc, then candidate id (stable).                                                                                      |
+| Rule   | Statement                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-5.1 | Score is computed **only for eligible candidates**; ineligible → `softScore = 0`.                                                                                                                                                                                                                                                                                                                                          |
+| BR-5.2 | A soft qualification is _met_ when held, not withdrawn, not rejected, and valid for the full period (BR-2). Pending verification counts as met but is flagged in the reason.                                                                                                                                                                                                                                               |
+| BR-5.3 | `softScore = round(100 × met / total)` over the soft qualifications **plus the two affinity items of BR-5.6** (so `total ≥ 2`). Changed 2026-10-22 (matching-v18, T-84): it was the soft qualifications only, 100 without any.                                                                                                                                                                                             |
+| BR-5.4 | The shift is **informational** (displayed, not scored). Experience is a hard rule only when the requirement states a minimum (BR-3.12); base and English count as affinity (BR-5.6).                                                                                                                                                                                                                                       |
+| BR-5.5 | Results are ordered: eligible first, then `softScore` desc, then candidate id (stable).                                                                                                                                                                                                                                                                                                                                    |
+| BR-5.6 | v1.8 affinity (`src/business.js:155-160`, T-84), always evaluated, **never a blocker**: «Inglés técnico» is met with a declared English level B2, C1 or C2; «Base habitual o movilidad aceptada» with the same base as the requirement (compared without case or extra spaces) or a mobility other than `local`. v1.8's third item, «Tarifa dentro del presupuesto», is not ported: the minimum rate is owner-only (T-33). |
 
 ## BR-6 Capacity — `evaluateCapacity()`
 
@@ -132,6 +164,12 @@ coveragePercent     = min(100, internallyEligible / required × 100), rounded to
 | Internal | Technicians who are members (any role) of the requirement's organization.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | External | Technicians with `visibility ∈ {anonymous, open}`, not members of the organization, holding at least one of the requirement's qualification types. Max 100 evaluated per call. Selection order before the cap (`20261015130300`): **candidates who pass every hard filter of BR-3 first** (same date and availability rules as `evaluateMatch`, asserted by a parity test), then most hard types active + verified, then active, then id. So when ≤ 100 candidates are eligible, all of them are evaluated. `get_requirement_external_pool_summary` returns counts (prefiltered, hard-eligible, cap) and the UI says whether the result is complete, trimmed near misses only, or **partial** (more eligible candidates than the cap). |
 
+The «pass every hard filter of BR-3 first» order includes the profile requirements (BR-3.7–3.13, `20261023900100`),
+so an eligible candidate is never cut by the cap for them either. For an organization, each candidate row carries
+only the declarations its requirement's verdict can use beyond the passport card (BR-18): the engines and capabilities
+the requirement asks for, the type ratings of its category on its aircraft (validity and whether restricted, never the
+text) and the mobility (BR-5.6).
+
 Internal candidates are named. External candidates are shown with a per-requirement pseudonymous
 reference unless the professional chose `open` visibility. A professional who **blocked** the requirement's
 organization is not one of its external candidates (`20261023100300`, T-35, BR-18); the internal pool is
@@ -151,6 +189,13 @@ summary) and in `src/domain/organization.ts` `isExternallyMatchable(visibility, 
 parity for every visibility × review state is asserted in `tests/db/admin-org.test.ts`. Members of the
 requirement's organization are in the internal pool whatever their visibility. Applying is the professional's own
 act (S-7 exception): an applicant is visible to that organization whatever their visibility. IMPLEMENTED (local).
+
+**«Red visible» (v1.8 `Dashboard.jsx:24`, T-146; LOCAL `20261024600000`).** The organization home counts the
+professionals this organization can find in the network: `count_visible_network(org)` = the same candidate filter
+(this visibility table, a registered review for `verified_orgs`, not a member of the organization, not blocked by the
+professional — BR-18/T-35) without the requirement's qualification filter. A number only, for admin/manager of that
+organization (42501 otherwise); `tests/db/shell-visual.test.ts` proves it against `isExternallyMatchable`.
+IMPLEMENTED (local).
 
 ## BR-9 Roles
 
@@ -208,6 +253,13 @@ it back to `open`); finish only once the period ended (Q4, `PERIOD_NOT_ENDED`); 
 possible from their rows, also on paused or closed requirements. Every success writes one event and one audit row
 `application.<to>` in the same transaction. IMPLEMENTED (local).
 
+**v1.8 profile requirements and restrictions (matching-v18, `20261023900200`, trigger `applications_profile_rules`).**
+Applying and confirming also re-check the requirement's profile rules (BR-3.7–3.13, `PROFILE_REQUIREMENTS_UNMET`,
+CFA14), after the RPC's own checks. **Confirming** is refused while the professional declares **general restrictions**
+(BR-18; `RESTRICTIONS_DECLARED`, CFA15; T-87 = v1.8 connected «Perfil o restricciones pendientes de revisión.»,
+`server/app.mjs:122`); applying is not. Other transitions are not re-checked. v1.8's «La organización requiere revisión
+administrativa.» at confirmation is still not ported (T-52). IMPLEMENTED (local).
+
 ## BR-14 Opportunities (D-12, owner 2026-10-22) — `list_opportunities`
 
 Every professional account — whatever its visibility, `private` included — lists the **published, current**
@@ -238,7 +290,8 @@ filter `rest=1` (with `eligible=1` too: either). A hint for the professional onl
 A professional may apply when the requirement is `open` and has not started, they have no application to it that is
 not `withdrawn` (an active one → `ALREADY_APPLIED`; one that ended `rejected`, `cancelled` or `finished` →
 `REAPPLY_NOT_ALLOWED`: re-applying is allowed only after `withdrawn`), and they are eligible **now** (hard
-qualifications and availability, T-08). One application covers the requirement's single period (Q6). Applying needs
+qualifications, the requirement's v1.8 profile requirements — BR-3.7–3.13, `PROFILE_REQUIREMENTS_UNMET` — and
+availability, T-08). One application covers the requirement's single period (Q6). Applying needs
 the explicit share consent of the form (required by the database too and recorded as a flag in the audit row); it reserves nothing in the calendar, and nothing is shared beyond the
 candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Once **confirmed**, the
 assignment's days are protected in the calendar and on the server (BR-4.9, T-15; T-13 superseded). A member (any role)
@@ -277,8 +330,11 @@ official record, a certification of experience or a release to service, and nobo
    shows the active or the archived entries, newest first (date, then creation), at most 500 per view with the total.
    An archived entry can be deleted permanently by its owner (T-22; v1.8 had no delete).
 4. **Privacy:** owner only — no organization (not even the technician's own), manager or platform admin reads an
-   entry; the audit trail keeps ids and changed field names only, never a value. The selection flag is stored and
-   read by nothing until the Candidate Pack exists (D-07, T-21); it never reaches the audit trail.
+   entry; the audit trail keeps ids and changed field names only, never a value. **The one exception is the
+   professional's own act:** when they apply, the entries marked «Seleccionable para expediente» and not archived
+   (the newest 20) are copied into that application's Candidate Pack copy, listed under «Experiencia que compartes»
+   before the consent (BR-25, T-112; it supersedes T-21). Later edits do not change a copy already sent. The flag
+   never reaches the audit trail.
 
 IMPLEMENTED (local, 2026-10-22; migration `20261023200000`, `professional-logbook`, `/app/professional/logbook`).
 candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Availability edits after
@@ -310,18 +366,20 @@ transaction (`save_professional_passport`, version check I-3) and CHECK-constrai
 | General restrictions                  | Free text ≤ 2000; blank = none (T-31)                                                                                                                                                                |
 | English, engines, capabilities, tools | A1–C2; the 7 v1.8 engines; the 9 v1.8 capabilities; «own tools» yes/no (T-32)                                                                                                                        |
 | Base country, work permits            | The 27 EU member states; the base itself stays free text (T-34)                                                                                                                                      |
-| Minimum rate                          | ≥ 0.01, ≤ 100 000, EUR per hour or per day; **owner-only**, no money moves (T-33)                                                                                                                    |
+| Minimum rate                          | ≥ 0.01, ≤ 100 000, EUR per hour or per day; **owner-only**, no money moves (T-33) — except in the Candidate Pack copy of an application, previewed before the consent (BR-25, T-111)                 |
 | Phone, current employer               | **Owner-only**; never shared (D-07; no sharing path exists) (T-35)                                                                                                                                   |
 | Blocked organizations                 | **Owner-only**, ≤ 200. A blocked organization does not get the professional in its **external** pool or counts (BR-7); membership, the opportunities list and own applications are unaffected (T-35) |
 
-**Not eligibility (yet).** No declaration changes `evaluateMatch`, the candidate-pool hard filters or
-`app_private.hard_eligibility`: the verified catalog qualifications (BR-2/BR-3) still decide. The C-10 defaults that
-use these fields (restriction ⇒ not eligible for a licence need, category/aircraft match, English, years, country)
-are a separate package after the company-side diff; `src/domain/passport.ts` already exposes the pieces it needs
-(`CandidatePassport`, `hasRestrictions`, `meetsEnglishLevel`). Organizations see — in the candidate card, with the
+**Used by matching since package matching-v18 (2026-10-22).** The declarations decide the v1.8 profile requirements
+a requirement states (BR-3.7–3.13: work permits, categories, aircraft, type ratings with validity and restrictions,
+engines, years, capabilities) and the affinity of the soft score (BR-5.6: English, mobility); declared general
+restrictions block the **confirmation** (BR-13, T-87). The verified catalog qualifications (BR-2/BR-3) still decide on
+their own as well. Organizations see — in the candidate card, with the
 pool's pseudonym and visibility rules — the main category, categories, aircraft, English, work permits and whether
 restrictions are declared (`get_requirement_candidate_passports`), never the restriction text, contact, employer,
-rate or blocks. IMPLEMENTED (local).
+rate or blocks. The professional's own act of applying is the one exception for the restriction texts and the
+minimum rate: the dated copy that organization receives carries them, shown to the professional before the consent
+(BR-25, T-111); contact, employer and blocks never. IMPLEMENTED (local).
 
 ## BR-22 In-app notices (v2-18, T-70…T-73) — `notifications` / `src/features/notices/view.ts`
 
@@ -336,7 +394,7 @@ receive notices. «Nuevo» until the notice is opened or «Marcar todas como le�
 notice takes the next event about the same technician and requirement (a new status, pause/resume/close, or
 applying again after withdrawing) instead of a new one. Kept 180 days
 and the newest 200 per reader (T-73). In-app
-only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) is not part of this rule yet. IMPLEMENTED (local).
+only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) writes a third kind of notice: BR-26. IMPLEMENTED (local).
 
 ## BR-19 Account data rights and sign-up by invitation (PKG account; T-40, T-42, T-43) — `close_my_account` / `handle_new_user`
 
@@ -346,9 +404,10 @@ only (e-mail, SMS, push: OUT). «Distribución Urgente/AOG» (v2-17) is not part
   `shortlisted` or `proposed` are withdrawn explicitly (an event and an audit row each), never silently; the others
   keep their status. An organization whose last admin closes the account closes its draft, open and paused
   requirements (T-12 still holds: their other applications do not move). Applications, requirements and audit rows
-  stay without the profile. The same rules apply whoever deletes the account. IMPLEMENTED (local).
-- **Export** (v1.8 «Exportar mis datos y archivos»): only the person's own records, never another person's data nor
-  the audit trail; wallet files embedded (base64) while their total is ≤ 3 MiB (`filesToEmbed`, oldest first, each
+  stay without the profile; the Candidate Pack copies of the person's applications do not (BR-25, T-113). The same
+  rules apply whoever deletes the account. IMPLEMENTED (local).
+- **Export** (v1.8 «Exportar mis datos y archivos»): only the person's own records (the Candidate Pack copies of
+  their applications included, BR-25), never another person's data nor the audit trail; wallet files embedded (base64) while their total is ≤ 3 MiB (`filesToEmbed`, oldest first, each
   file that still fits), the others listed. IMPLEMENTED (local).
 - **Sign-up by invitation** (owner flag `invitation_signup`, off by default): a code is valid 7 days, for one sign-up,
   by the invited address only; the invitation decides the account type (professional or organization, never platform
@@ -382,6 +441,72 @@ v1.8 demo «Archivar» / «Papelera» / «Restaurar» (`Professional2.jsx:210-21
 Display and storage only: no rule here changes eligibility (qualifications decide, BR-2/BR-3), and nothing is shared
 (D-07/D-10). IMPLEMENTED (local, `20261024200000`).
 
+## BR-25 Candidate Pack copy (v2-15 + v2-04; T-110…T-116) — `application_packs` / `src/domain/candidate-pack.ts`
+
+v1.8 «Candidate Pack» (`Workflow.jsx:17-33`, connected `server/app.mjs:110`) without what D-07 keeps locked.
+
+1. **Frozen when applying.** Every new application gets a copy of the professional's technical profile, in the
+   same transaction (a database trigger, so every path that creates an application — applying again after
+   `withdrawn` included — freezes its own). Later changes to the passport, the qualifications or the logbook never
+   alter it: «Copia del perfil: {fecha}. Los cambios del pasaporte y del logbook no alteran esta versión.» (T-115).
+2. **Content (T-110…T-112):** main category and categories, years, English, base and its country, aircraft,
+   engines, declared type ratings (validity, restrictions), active catalog qualifications with verification and
+   expiry («Cursos» = TRAINING, with the v1.8 state — Sin caducidad / Vigente / Caduca pronto / Caducado — read
+   when the copy is viewed), capabilities, work permits, general restrictions, the declared minimum rate and the
+   logbook entries marked «Seleccionable para expediente» and not archived (newest 20).
+3. **Never in it:** real name (the card keeps the pool's naming rule, T-04), e-mail, phone, current employer,
+   blocked organizations, documents, file names or their metadata. While `PACK_ACTIVATION` is off the copy says
+   «Los originales, nombres de archivos y metadatos identificativos permanecen protegidos.» and nothing unlocks
+   (D-07 P3 open).
+4. **Consent sees the content (T-111):** the apply panel shows «Qué compartes con {organización}» — the copy as it
+   would be frozen now, from the same builder, with «Experiencia que compartes» — above the consent; while that
+   preview cannot be loaded nothing can be sent. Free text (restrictions, logbook aircraft and description) is copied
+   as written: the restrictions field, the logbook flag and the preview warn against health data, registrations,
+   operators and names (residual risks in `SECURITY_PRIVACY.md`).
+5. **Who reads it (T-113):** the applicant and the admins/managers of the requirement's organization at reading
+   time; nobody else (the same answer as a missing id). An application that ends without an engagement —
+   withdrawn, rejected or cancelled — loses its copy; a finished one keeps it; closing the account deletes every copy
+   of the person (BR-19). Only the professional's own application writes a copy.
+   Applications sent before the copies existed have none. Reads are not audited (T-114). The professional's own
+   copies are part of «Exportar mis datos» (BR-19).
+
+IMPLEMENTED (local, migration `20261024300000`, `applications` GET `view=pack` / `view=pack-preview`, «Ver
+expediente» on the requirement's applications, the organization's «Candidaturas» — the same card,
+`OrgApplicationCard` — and «Mis candidaturas»).
+
+## BR-26 Urgent/AOG outreach and notice preferences (PKG outreach, v2-17 / N-10; T-120…T-129) — `requirement_outreach` / `src/domain/outreach.ts`
+
+- **Preferences (N-10, v1.8 connected «Avisos de oportunidades»):** «Quiero avisos internos de trabajos urgentes»,
+  «Quiero avisos internos AOG» (separate consents, both off until saved), «Horas mínimas que necesitas para
+  movilizarte» (whole hours 0–720, optional), «Zona horaria IANA para avisos» (default Europe/Madrid; «Zona horaria no
+  válida.»), «Silencio desde/hasta (opcional)» (both or neither, different times, overnight when the start is later;
+  «Horas de silencio no válidas.»). Owner-only: no organization, colleague or platform admin reads them. «Sin
+  movilización declarada no se distribuyen avisos. El silencio también se respeta para AOG; no se envían correos o
+  SMS.» `isIanaTimeZone`, `isValidQuietHours`, the schema `noticePreferencesInput`; the database re-checks every rule
+  (zone against its own list). IMPLEMENTED (local).
+- **Who may distribute:** an admin or manager of the requirement's organization (role from the database), on an
+  `open` need (not draft, paused, covered, closed or archived) whose declared urgency is `urgent` or `aog` (C-8:
+  never deduced from the date) and that has not started — **once** per requirement (two clicks at once: one wins, the
+  other «Esta necesidad ya se distribuyó.») and at most 10 needs per organization in 24 h. `canDistributeOutreach` decides whether «Distribuir aviso Urgente / AOG»
+  shows; the database refuses everything else (`OUTREACH_CONFLICTS`, SQLSTATE CFO01…CFO05).
+- **Audience** (all in one database function, v1.8 `server/app.mjs:89-105`): professionals the organization may reach
+  outside itself — its external candidate pool: not `private`, `verified_orgs` only for a reviewed organization (BR-8),
+  not a member of the organization, not blocking it (N-08) — who have no general restriction and no restricted type
+  rating the need asks for (T-124), opted in for **that** urgency, declared a mobilization the start respects (and
+  within the need's `maxMobilizationHours` when stated), are outside their quiet hours in their own time zone now,
+  have no application to that need other than a withdrawn one, are eligible
+  (`app_private.hard_eligibility`: hard qualifications valid for the period, availability covering it) and were not
+  notified for it before. Of those, whoever already got 3 outreach notices from that organization in the last
+  24 h is not sent another one (delivery bound, T-126); the count still includes them.
+- **What each recipient gets:** one in-app notice «{Urgente|AOG}: {título}» · «{organización} · Consulta las
+  condiciones y decide si quieres presentar candidatura.», «Nuevo» until opened, «Ver oportunidad» → the opportunity;
+  listed only while the need is published and current. E-mail, SMS and push: OUT.
+- **What the organization learns:** the count only — «{count, plural, one {# aviso interno creado} other {# avisos
+  internos creados}}. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.», then
+  «Distribuida el {fecha}: {n} avisos internos.» on the need — and **no number** when fewer than 5 professionals of
+  its external pool are eligible for the need and not already its applicants (the organization sees those). Never
+  who received it nor why someone did not (ORG-06 #4, #5); the audit row `requirement.outreach_distributed` carries the count and the urgency. IMPLEMENTED (local).
+
 ## BR-27 Recruiter: represented clients (D-12 provisional model; T-130…T-135) — `src/domain/recruiter.ts` / `represented_clients`
 
 A recruiter is an ordinary organization of type `staffing_agency` that represents clients (`docs/product/RECRUITER_MODEL.md`;
@@ -399,3 +524,19 @@ v1.8 `Company2.jsx:103,211`, `Marketplace.jsx:36-44`). No platform or cross-orga
 
 Every rule is enforced in the database for every path (RPCs and BEFORE triggers, `20261024500000/500100`); the domain
 functions only let the screens say it first (`clientRequired`, `canActForClient`, `activationBlocker`). IMPLEMENTED (local).
+
+## BR-29 Profile medals (N-15, T-143) — `badges()` (`src/domain/badges.ts`)
+
+v1.8 `badges()` (`src/features/progress.js:3-11`) over the professional's **own declarations** (BR-18), shown only
+to them («Mi espacio» hero and «Pasaporte visual» of the passport):
+
+| Rule    | Statement                                                                                                                                                                                                |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-29.1 | One medal per declared category (the main one first); NDT and Sheet Metal are specialties (wrench), the rest licence shields. A declared NDT / sheet-metal skill without that category adds a specialty. |
+| BR-29.2 | One medal per declared type rating («{aircraft} · {category}»): «Revisar vigencia» when its declared validity ended before today (UTC), else «Con restricciones» with its text, else «Tipo declarado».   |
+| BR-29.3 | One experience medal when the declared years are > 0 («Experiencia declarada»).                                                                                                                          |
+| BR-29.4 | Next's «Verificada» replaces «Declarado» on a category whose code matches an active qualification a platform reviewer verified and whose expiry is not before today.                                     |
+| BR-29.5 | The main strip shows experience, the first category, the first aircraft and the first specialty; the rest behind «+N». Declared aircraft without a type rating make no medal (v1.8).                     |
+
+Display only: a medal makes nobody eligible (BR-2/BR-3) and grants no signing authority (v1.8 footnote, shown with
+every detail); organizations never see medals. IMPLEMENTED (local, no migration).

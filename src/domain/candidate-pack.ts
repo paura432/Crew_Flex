@@ -1,14 +1,21 @@
 // Candidate Pack access rules (D-07; CANDIDATE_PACK.md §1). Owner, 2026-10-22: P1 (contact from
 // `accepted`, with its own consent), P2 (only authorised, scanned, `clean` documents, audited) and P4
 // (real identity together with contact) are the ratified DIRECTION; P3 (access-log retention) is OPEN.
-// PREPARED, NOT ACTIVATED: nothing calls these yet, no table, RPC or UI shares contact or documents,
-// and `PACK_ACTIVATION` stays false until P3, the approved scanner (D-10) and their controls exist.
+// PREPARED, NOT ACTIVATED: no table, RPC or UI shares contact or documents, and `PACK_ACTIVATION` stays
+// false until P3, the approved scanner (D-10) and their controls exist.
+//
+// What IS shared (v2-15 + v2-04, LOCAL, BR-25, T-110…T-116): the dated copy of the professional's technical
+// profile frozen when they apply (`application_packs`, migration 20261024300000) — never identity, contact,
+// employer, blocks or documents. The view consults `packWithheld()` below, i.e. `PACK_ACTIVATION`.
 import type { ApplicationStatus } from "./applications.ts";
 import {
   canShareWithThirdParties,
   documentExpiryState,
   type DocumentScanStatus,
+  type ExpiryState,
 } from "./documents.ts";
+import type { LogbookCategory, LogbookEnvironment } from "./logbook.ts";
+import type { QualificationCategory, VerificationStatus } from "./qualification.ts";
 
 /** Kill switch: flipping a value is an owner decision (P3 + D-10), never a code default. */
 export const PACK_ACTIVATION = { contact: false, documents: false } as const;
@@ -58,3 +65,73 @@ export function documentAccessible(
     documentExpiryState(document.expiresAt, today) !== "expired"
   );
 }
+
+// --- The dated copy (v2-15 + v2-04) --------------------------------------------------------------------
+
+/**
+ * v2-04 (T-112): the logbook entries marked «Seleccionable para expediente» and not archived when the
+ * professional applies, newest first, at most this many (the database builder and its CHECK repeat it).
+ */
+export const PACK_EXPERIENCE_MAX = 20;
+
+/** A catalog qualification as it stood when the copy was made (active ones only). */
+export interface PackQualification {
+  code: string;
+  name: string;
+  category: QualificationCategory;
+  verificationStatus: VerificationStatus;
+  /** `YYYY-MM-DD` or null. */
+  expiresAt: string | null;
+}
+
+/** A selected logbook entry as it stood when the copy was made (no id: the copy is not a link). */
+export interface PackExperience {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  aircraft: string;
+  ata: string | null;
+  hours: number;
+  category: LogbookCategory;
+  environment: LogbookEnvironment;
+  description: string;
+}
+
+/**
+ * T-113: an application that ends without an engagement loses its copy — withdrawn (v1.8 kept it, ✗ MKT-05
+ * #14), rejected or cancelled (security review M-3) —, so both parties may open it only in the other statuses.
+ * (An application sent before the copies existed, or whose technician closed the account, has none: the read
+ * says so.) The database trigger `applications_drop_pack` repeats this list.
+ */
+export const PACK_DROPPED_STATUSES: readonly ApplicationStatus[] = [
+  "withdrawn",
+  "rejected",
+  "cancelled",
+];
+export const hasPackCopy = (status: ApplicationStatus): boolean =>
+  !PACK_DROPPED_STATUSES.includes(status);
+
+/**
+ * What the copy must declare as withheld while D-07 is not activated: identity and contact (P1/P4) and
+ * documents (P2). The database never returns them; the view says so whenever this is true.
+ */
+export function packWithheld(activation: PackActivation = PACK_ACTIVATION): boolean {
+  return !activation.contact || !activation.documents;
+}
+
+/** v1.8 «Cursos» are the TRAINING qualifications; «Cualificaciones», every other category. */
+export function splitPackQualifications(qualifications: readonly PackQualification[]): {
+  courses: PackQualification[];
+  others: PackQualification[];
+} {
+  return {
+    courses: qualifications.filter((q) => q.category === "TRAINING"),
+    others: qualifications.filter((q) => q.category !== "TRAINING"),
+  };
+}
+
+/**
+ * v1.8 course state («Sin caducidad / Caducado / Caduca pronto / Vigente», `documentStatus`), computed when
+ * the copy is read from the expiry the copy froze (`today` = YYYY-MM-DD, UTC).
+ */
+export const packCourseState = (course: PackQualification, today: string): ExpiryState =>
+  documentExpiryState(course.expiresAt, today);

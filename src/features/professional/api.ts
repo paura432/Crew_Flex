@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { ProfessionalCategory, Skill, TypeRating } from "@/domain/passport";
 import type { UpdateProfessionalProfileInput } from "@/lib/validation/professional";
 import { invokeEdgeFunction } from "@/server/edge-functions";
 import type { ProfessionalProfileResponse } from "@/types/api";
@@ -11,6 +12,12 @@ import type {
 
 export interface ProfessionalOverview {
   profile: TechnicianProfileRow;
+  /** The declarations the v1.8 medals summarise (N-15): own row, read under RLS. */
+  medalSource: {
+    categories: ProfessionalCategory[];
+    skills: Skill[];
+    typeRatings: TypeRating[];
+  };
   qualifications: TechnicianQualificationRow[];
   availability: AvailabilityWindowRow[];
   /** Owner-only declared minimum rate (T-33); `null` until declared. */
@@ -26,15 +33,18 @@ export async function getOwnProfessionalOverview(
   profileId: string,
 ): Promise<ProfessionalOverview | null> {
   const supabase = await createServerSupabase();
-  const [profile, qualifications, availability, privateDetails] = await Promise.all([
+  const [profile, qualifications, availability, privateDetails, ratings] = await Promise.all([
     supabase
       .from("technician_profiles")
       .select(
-        "profile_id, base_location, mobility, years_experience, current_status, visibility, primary_category, aircraft, work_permits",
+        "profile_id, base_location, mobility, years_experience, current_status, visibility, primary_category, aircraft, work_permits, categories, skills",
       )
       .eq("profile_id", profileId)
       .maybeSingle()
-      .overrideTypes<TechnicianProfileRow, { merge: false }>(),
+      .overrideTypes<
+        TechnicianProfileRow & { categories: ProfessionalCategory[]; skills: Skill[] },
+        { merge: false }
+      >(),
     supabase
       .from("technician_qualifications")
       .select(
@@ -55,16 +65,52 @@ export async function getOwnProfessionalOverview(
       .eq("profile_id", profileId)
       .maybeSingle()
       .overrideTypes<{ min_rate: number | string | null }, { merge: false }>(),
+    supabase
+      .from("technician_type_ratings")
+      .select("aircraft, category, expires_at, restrictions")
+      .eq("technician_profile_id", profileId)
+      .order("created_at")
+      .overrideTypes<
+        {
+          aircraft: TypeRating["aircraft"];
+          category: TypeRating["category"];
+          expires_at: string | null;
+          restrictions: string | null;
+        }[],
+        { merge: false }
+      >(),
   ]);
-  if (profile.error || qualifications.error || availability.error || privateDetails.error) {
+  if (
+    profile.error ||
+    qualifications.error ||
+    availability.error ||
+    privateDetails.error ||
+    ratings.error
+  ) {
     throw new Error("professional overview unavailable", {
-      cause: profile.error ?? qualifications.error ?? availability.error ?? privateDetails.error,
+      cause:
+        profile.error ??
+        qualifications.error ??
+        availability.error ??
+        privateDetails.error ??
+        ratings.error,
     });
   }
   if (!profile.data) return null;
   const minRate = privateDetails.data?.min_rate;
+  const { categories, skills, ...row } = profile.data;
   return {
-    profile: profile.data,
+    profile: row,
+    medalSource: {
+      categories: categories ?? [],
+      skills: skills ?? [],
+      typeRatings: ratings.data.map((r) => ({
+        aircraft: r.aircraft,
+        category: r.category,
+        expiresAt: r.expires_at,
+        restrictions: r.restrictions,
+      })),
+    },
     qualifications: [...qualifications.data].sort((a, b) =>
       a.qualification_types.code.localeCompare(b.qualification_types.code),
     ),

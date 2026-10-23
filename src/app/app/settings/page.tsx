@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { CloseAccountForm } from "@/features/account/components/CloseAccountForm";
 import { ExportLink } from "@/features/account/components/ExportLink";
+import { NoticePreferencesSection } from "@/features/outreach/components/NoticePreferencesSection";
 import { LocaleSwitcher } from "@/features/preferences/components/LocaleSwitcher";
 import { primaryMembership, requireSessionActor } from "@/server/session";
 
@@ -48,6 +49,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           <p className="mb-4 max-w-prose text-sm text-muted">{t("languageDescription")}</p>
           <LocaleSwitcher />
         </Panel>
+        {/* PKG outreach (N-10): professional accounts only. */}
+        {actor.profile.account_type === "professional" && <NoticePreferencesSection />}
         <Panel title={t("account")}>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
             {facts.map(([label, value]) => (

@@ -37,20 +37,22 @@ app_private.idempotency_keys · app_private.feature_flags   (not exposed by Post
 
 ## Deterministic engines — ONE implementation each
 
-| Engine                                                     | Function (file)                                         | Used by                                                                            | Rules      |
-| ---------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------- |
-| Qualification validity                                     | `validityForPeriod` (`src/domain/qualification.ts`)     | matching                                                                           | BR-2       |
-| Availability coverage                                      | `availabilityCoverage` (`src/domain/availability.ts`)   | matching                                                                           | BR-4       |
-| Eligibility + soft score                                   | `evaluateMatch` (`src/domain/matching.ts`)              | `matching-evaluate`, `capacity-evaluate`                                           | BR-3, BR-5 |
-| Capacity                                                   | `evaluateCapacity` (`src/domain/capacity.ts`)           | `capacity-evaluate`, org dashboard                                                 | BR-6       |
-| Evaluability guard                                         | `assertEvaluableRequirement` (`src/domain/capacity.ts`) | `evaluateCapacity` + `matching-evaluate` (refuse a requirement without hard quals) | BR-1.4     |
-| Passport completeness                                      | `profileCompleteness` (`src/domain/professional.ts`)    | professional overview                                                              | BR-11      |
-| External pool selection (SQL **prefilter**, not an engine) | `app_private.ranked_external_pool` (`20261015130300`)   | `get_requirement_candidate_pool`                                                   | BR-7       |
+| Engine                                                     | Function (file)                                         | Used by                                                                            | Rules       |
+| ---------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------- |
+| Qualification validity                                     | `validityForPeriod` (`src/domain/qualification.ts`)     | matching                                                                           | BR-2        |
+| Availability coverage                                      | `availabilityCoverage` (`src/domain/availability.ts`)   | matching                                                                           | BR-4        |
+| Eligibility + soft score                                   | `evaluateMatch` (`src/domain/matching.ts`)              | `matching-evaluate`, `capacity-evaluate`                                           | BR-3, BR-5  |
+| Capacity                                                   | `evaluateCapacity` (`src/domain/capacity.ts`)           | `capacity-evaluate`, org dashboard                                                 | BR-6        |
+| Evaluability guard                                         | `assertEvaluableRequirement` (`src/domain/capacity.ts`) | `evaluateCapacity` + `matching-evaluate` (refuse a requirement without hard quals) | BR-1.4      |
+| Passport completeness                                      | `profileCompleteness` (`src/domain/professional.ts`)    | professional overview                                                              | BR-11       |
+| External pool selection (SQL **prefilter**, not an engine) | `app_private.ranked_external_pool` (`20261015130300`)   | `get_requirement_candidate_pool`                                                   | BR-7        |
+| Profile requirements (SQL **mirror**, not an engine)       | `app_private.profile_rules_ok` (`20261023900100`)       | `hard_eligibility_for` / `hard_eligibility`, `ranked_external_pool`, live count    | BR-3.7–3.13 |
 
 **Parity rule.** The SQL prefilter only _orders and caps_ candidates (eligible-first) — the verdict is
 always `evaluateMatch`. Its "hard-eligible" predicate must agree with `evaluateMatch`; proven by
-`tests/db/rls.test.ts` section M (300 random profiles + 50/100/101/500 sizes). Any change to BR-2/3/4
-must update both and keep section M green.
+`tests/db/rls.test.ts` section M (300 random profiles + 50/100/101/500 sizes); the v1.8 profile requirements by
+`tests/db/matching-v18.test.ts` (randomized near misses × 6 rule sets, the same sizes). Any change to BR-2/3/4
+must update both and keep sections M, P, W and matching-v18 green.
 
 ## Pools and privacy (BR-7, BR-8)
 
@@ -63,8 +65,10 @@ must update both and keep section M green.
 
 Documents/Storage, consents, Candidate Pack, applications (D-06), proposals, confirmations,
 assignments/day coverage (D-08), organization verification/KYB (C-14, OD-5), recruiter clients (D-12),
-rating restrictions (D-02), min experience as hard rule (D-03), work-permit countries (D-04), AOG-only
-availability (C-8, D-05), requirement terms/rates (C-9), tools beyond D-11, notifications, billing (OD-7). (The logbook exists locally since
+AOG-only availability (C-8, D-05), requirement terms/rates (C-9), tools beyond D-11, notifications, billing (OD-7).
+(Since package matching-v18, LOCAL `20261023900*`: rating restrictions (D-02), minimum experience (D-03), the work
+permit for the job's country (D-04) and the other v1.8 profile requirements are modelled as technical defaults
+T-80…T-87 — BR-3.7–3.13, BR-5.6.) (The logbook exists locally since
 `20261023200000`, BR-16.)
 
 ## Pending functional decisions that change rules

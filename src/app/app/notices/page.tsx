@@ -36,12 +36,13 @@ const href = (page: number) => `/app/notices${page > 1 ? `?page=${page}` : ""}`;
  * «Nuevo» until opened; each notice leads to the application. In-app only: no e-mail or push.
  */
 export default async function NoticesPage({ searchParams }: PageProps<"/app/notices">) {
-  const [{ page: pageParam }, actor, t, tDomain, tMatching, locale] = await Promise.all([
+  const [{ page: pageParam }, actor, t, tDomain, tMatching, tOutreach, locale] = await Promise.all([
     searchParams,
     requireSessionActor(),
     getTranslations("notices"),
     getTranslations("domain"),
     getTranslations("matching"),
+    getTranslations("outreach"),
     getLocale() as Promise<Locale>,
   ]);
   const page = parseRequirementsPage(pageParam);
@@ -50,13 +51,28 @@ export default async function NoticesPage({ searchParams }: PageProps<"/app/noti
     professional: actor.profile.account_type === "professional",
     manages: actor.memberships.some((m) => m.role === "admin" || m.role === "manager"),
   });
+  const professional = actor.profile.account_type === "professional";
   const header = (actions?: ReactNode) => (
-    <PageHeader
-      eyebrow={t("eyebrow")}
-      title={t("title")}
-      description={t(`intro.${intro}`)}
-      actions={actions}
-    />
+    <>
+      <PageHeader
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        description={t(`intro.${intro}`)}
+        actions={actions}
+      />
+      {/* PKG outreach (v1.8 «Configura Urgente/AOG, movilización y silencio desde tu perfil.») */}
+      {professional && (
+        <p className="-mt-2 mb-6 max-w-prose text-sm text-muted">
+          {tOutreach("noticesHint")}{" "}
+          <Link
+            href="/app/settings#notice-preferences"
+            className="font-semibold text-blue underline"
+          >
+            {tOutreach("noticesHintLink")}
+          </Link>
+        </p>
+      )}
+    </>
   );
   if (!result.ok) {
     return (
@@ -70,17 +86,30 @@ export default async function NoticesPage({ searchParams }: PageProps<"/app/noti
   const pages = pageCount(total);
   if (total > 0 && page > pages) redirect(href(pages));
 
+  // v1.8 `app.mjs:104` «{modo}: {título}» for an Urgent/AOG distribution (PKG outreach).
+  const title = (n: Notice) => {
+    const key = noticeTitleKey(n);
+    return key === "outreachUrgent" || key === "outreachAog"
+      ? tOutreach(`notice.${key}`, { title: n.requirementTitle })
+      : t(`kind.${key}`);
+  };
   const description = (n: Notice) =>
-    [
-      n.requirementTitle,
-      n.audience === "technician"
-        ? n.organizationName
-        : (n.candidate?.name ?? tMatching("anonymous", { ref: n.candidate?.ref ?? "" })),
-      // The title already names a new application and every requirement change.
-      n.kind === "application" && noticeTitleKey(n) === "applicationUpdate" && n.applicationStatus
-        ? tDomain(`applicationStatus.${n.applicationStatus}`)
-        : null,
-    ]
+    (n.kind === "outreach"
+      ? // The title names the need; the organization and v1.8's invitation to decide follow.
+        [n.organizationName, tOutreach("notice.description")]
+      : [
+          n.requirementTitle,
+          n.audience === "technician"
+            ? n.organizationName
+            : (n.candidate?.name ?? tMatching("anonymous", { ref: n.candidate?.ref ?? "" })),
+          // The title already names a new application and every requirement change.
+          n.kind === "application" &&
+          noticeTitleKey(n) === "applicationUpdate" &&
+          n.applicationStatus
+            ? tDomain(`applicationStatus.${n.applicationStatus}`)
+            : null,
+        ]
+    )
       .filter(Boolean)
       .join(" · ");
 
@@ -102,8 +131,8 @@ export default async function NoticesPage({ searchParams }: PageProps<"/app/noti
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 id={`n-${n.id}`} className="font-semibold">
-                        {t(`kind.${noticeTitleKey(n)}`)}
+                      <h2 id={`n-${n.id}`} className="font-semibold break-words">
+                        {title(n)}
                       </h2>
                       {!n.readAt && <StatusChip tone="info">{t("new")}</StatusChip>}
                     </div>
@@ -112,7 +141,12 @@ export default async function NoticesPage({ searchParams }: PageProps<"/app/noti
                       <time dateTime={n.createdAt}>{formatDateTime(locale, n.createdAt)}</time>
                     </p>
                   </div>
-                  <OpenNoticeButton id={n.id} label={t(`open.${n.audience}`)} />
+                  <OpenNoticeButton
+                    id={n.id}
+                    label={
+                      n.kind === "outreach" ? tOutreach("notice.open") : t(`open.${n.audience}`)
+                    }
+                  />
                 </article>
               </li>
             ))}

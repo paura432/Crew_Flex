@@ -31,7 +31,14 @@ requirement** (type, status, verification, expiry) and availability windows **ov
 requirement**. Display name only if visibility = `open`. No email, phone, documents, employer, rates.
 Its companion `get_requirement_candidate_passports()` (LOCAL, package passport) adds, for the same rows and
 references, the declared main category, categories, aircraft, English, work permits and a `has_restrictions`
-flag — still no contact, employer, rate, blocks or restriction text.
+flag — still no contact, employer, rate, blocks or restriction text. Since package matching-v18 (LOCAL
+`20261023900100`) the candidate row itself carries `candidate_declarations` — the same card fields plus, minimised to
+the requirement (T-85), the engines and capabilities it asks for, the type ratings of its category on its aircraft
+(validity and a `restricted` flag) and the mobility — because the engine now checks the requirement's v1.8 profile
+rules (BR-3.7–3.13). Applicants (`get_requirement_applications`, `get_organization_applications`) carry the same
+projection, `private` applicants included (their own act, S-7). The builder's live count takes the job's country and no
+other rule (security review MEDIUM-1: free rule parameters plus a count would let one organization reconstruct one
+candidate's declarations).
 
 ## Threat model
 
@@ -62,6 +69,7 @@ flag — still no contact, employer, rate, blocks or restriction text.
 | T40 | **Sign-up without invitation / pre-registration of an invited address** | Accounts, account type     | Unvetted accounts; an attacker's password on the invitee's account | LOCAL, owner flag `invitation_signup` (T-40): the sign-up trigger refuses any Auth user without the code of an open, unexpired invitation for that same address (`CFI01`, every path incl. direct `/auth/v1/signup`); the account type comes from the invitation; 244-bit code, only its SHA-256 stored, single use, 7 days, removed from the user's metadata; the admin UI never shows it; anon RPCs answer only a status. The `invitation_delivery` marker is refused outside a genuine delivery (flag off included). Residuals (security review 2026-10-23): a platform admin calling `create_invitation` directly gets the code it creates (as v1.8's API) and `invitation.sent` is recorded on the function's word; the code is consumed when the Auth user is created, before the address is confirmed, so **production must keep e-mail confirmation on** (whoever holds the code could otherwise register the address with their own password); with the flag on, a direct `/auth/v1/signup` of an unknown address fails (500) while an existing one gets Auth's obfuscated 200 — an existence check (GoTrue's `/otp` already allows one); the delivery account exists for one request | IMPLEMENTED (tested; LOCAL, flag off by default)         |
 | T41 | **Login CSRF / account enumeration through e-mail links and sign-up**   | Session, address book      | Victim signed into an attacker account; who has an account         | Sign-up confirmation links never open a session (`/auth/confirm` → login notice); recovery keeps its own flow; with confirmations on, an existing address gets the same «check your inbox» as a new one (smoke PKG d)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | IMPLEMENTED (LOCAL Auth config; production Auth = owner) |
 | T42 | **Account deletion that voids a commitment or leaks the person**        | Applications, audit, files | Silent loss of an assignment; personal data kept                   | `close_my_account()` (caller only, one transaction) and a trigger on `profiles` for every path: refused with accepted/confirmed applications (CFA11); in-progress ones withdrawn with event + audit; commitments, requirements and audit kept without the profile (§Account closure); files deleted at once (tombstones `owner_delete`, objects removed with the caller's token, leftovers purged by `documents-maintenance`); every invitation of the address deleted. Residual: any valid session may close its account (the typed word is a UI guard; no recent sign-in is required — an owner decision, like T22)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | IMPLEMENTED (tested; LOCAL)                              |
+| T43 | **Urgent/AOG outreach as an oracle on professionals**                   | Notice preferences         | An organization learns who opted in, mobilization, sleep hours     | PKG outreach (BR-26, T-128): one DEFINER function computes the audience; the organization gets a count only — never recipients or per-person reasons — and **no number** when fewer than 5 professionals of its external pool are eligible (the base it can already count); no filter on bookings with other organizations; one distribution per need, at most 10 per organization per 24 h and 3 notices per organization and professional per 24 h, serialised per organization (an advisory lock); preferences owner-only. Applicants to the need are not counted towards the 5 (the organization sees them) and the per-person delivery bound never changes the count (saturating known people cannot isolate the one left). Residual: with 5 or more eligible non-applicants, comparing two crafted needs whose pools differ by one known candidate still reveals that candidate's filters, at most a few bits a day and each probe notifies real people (pausing the need hides the notice at once) — an owner decision whether to coarsen counts further                                                                                                                                | IMPLEMENTED (tested; LOCAL)                              |
 
 ## Privacy by design
 
@@ -75,6 +83,25 @@ flag — still no contact, employer, rate, blocks or restriction text.
   visible to **that** organization for **that** requirement only, under the candidate-pool rules (per-requirement
   pseudonym unless internal, name only for internal or `open`, relevant qualifications and overlapping windows; no
   contact data, no documents — D-07 not activated). `private` professionals are still never in the external pool.
+- **Candidate Pack copy (LOCAL `20261024300000`, BR-25, T-110…T-116).** Applying also hands **that** organization a
+  dated copy of the professional's technical profile — wider than the live card: every active qualification with its
+  verification state (pending and rejected included), the declared type ratings with their restriction texts, the
+  general restrictions, the declared minimum rate, and the logbook entries marked «Seleccionable para expediente»
+  (newest 20). The apply panel shows the exact copy (same builder) before the consent and nothing is sent while that
+  preview fails; the form hints say where each field goes. Never the name, e-mail, phone, employer, blocks or
+  documents. Readable only by the applicant and the organization's admins/managers of the moment
+  (`get_application_pack`); deleted when the application is withdrawn, rejected or cancelled and when the account
+  closes; a `finished` one keeps its copy (no retention period yet: owner decision, with D-07 P3). **Residual risks
+  (security review 2026-10-24, M-2/M-3/L-3):** (1) free text is copied as written — a registration, operator or
+  colleague's name in a logbook entry, or health data in a restriction, would reach the organization and can identify
+  the person or their employer; the logbook, the restrictions field and the preview warn against it, but the database
+  cannot filter it; (2) the copy's exact values (rate, restriction texts, entries) are a stable fingerprint that lets
+  one organization link the per-requirement pseudonyms of the same person across its requirements, weakening T-04
+  (base, years and expiry dates already allowed it in part, T9); (3) access follows the organization's admins/managers
+  at reading time, so a manager who joins later reads the copies of applications still in progress or finished; (4) the
+  copy is taken when the application is inserted: an edit made in another tab after the preview loaded is what is
+  copied (the professional reads their own copy afterwards). Including the rate and restriction texts reverses T-33 /
+  BR-18 for this one path and touches OD-7: it needs the owner's (and ideally legal) sign-off before any remote use.
 - Professionals read published requirements only through a fixed projection (`list_opportunities`: organization
   name, no ids of people or organizations, no counts of other applicants). **Accepted (T-95, LOCAL
   `20261024100000`):** members of any organization — plain `member`s included — read the same projection as
@@ -101,11 +128,25 @@ flag — still no contact, employer, rate, blocks or restriction text.
   account; an organization recipient's notices are deleted when they lose admin/manager (the event trigger locks
   the memberships, so a concurrent demotion cannot leave one behind). Marking read is the only write a user makes.
 - Internal workforce data visible to own organization admins/managers only (OD-4).
+- Shell-visual (LOCAL, T-143…T-146): the profile medals are rendered for the professional only, from their own
+  rows; a restricted rating's medal shows their own restriction text, which organizations never receive. The avatar
+  photo (N-23) is a 320×320 JPEG data URL in **this browser's** `localStorage` under `crewflex-avatar-v1-<user id>`:
+  never uploaded, never shown to anyone else, readable by whoever uses the same browser profile (as the learning
+  progress, BR-16); only `data:image/(jpeg|png|webp)` values are ever rendered. «Red visible» is one number per
+  organization for its admins/managers (`count_visible_network`), no identity. The public `/tools` reads no session
+  and no data and keeps the same CSP. **Accepted after the independent review (2026-10-23, 4 LOW):** (a) the count is a
+  coarse oracle — an admin polling it sees it drop by one when someone blocks the organization, goes `private` or
+  closes the account, which the per-requirement pool summary already reveals (T9 residual risk); (b) the
+  visibility/block filter now lives in three SQL functions (`ranked_external_pool`, `count_viable_candidates`,
+  `count_visible_network`) — a future exclusion must land in all three, and `tests/db/shell-visual.test.ts` pins the
+  count to `isExternallyMatchable`; (c) the browser avatar and the learning progress are not cleared at sign-out
+  or account closure (the server holds neither; the person clears the browser).
 - Contact and economic data of the passport (LOCAL, package passport `20261023100100`): phone, current employer,
   minimum rate and blocked organizations live in owner-only tables (`technician_private_details`,
   `technician_organization_blocks`): not readable by the own organization or platform admins, written only by the
   DEFINER passport save, and returned by no function to anyone else (D-07 P1: contact is shared only with its
-  consent, and that sharing path does not exist yet). A blocked organization is not told; it simply no longer
+  consent, and that sharing path does not exist yet) — **except the minimum rate**, which the professional's own
+  application copies into that organization's Candidate Pack copy after previewing it (T-111, above). A blocked organization is not told; it simply no longer
   finds the professional in its external pool (T-35). **Residual risk (T9, security review LOW-1):** it can still
   infer a block — the external pool summary drops by one when the block is saved, and a second organization
   account posting the same need would see an `open` (or recognisable: base, years, expiry dates, declarations)
@@ -120,7 +161,8 @@ flag — still no contact, employer, rate, blocks or restriction text.
 **Deleted at once**, whatever deletes the account (the «Cerrar cuenta» button, the Auth Admin API, the dashboard):
 credentials (Auth user, sessions, identities, one-time tokens), the profile, the technician profile with its
 qualifications (and the reviewer's note on them), passport declarations, type ratings, owner-only details
-and organization blocks, the logbook, availability windows and saved rotation, notices addressed to them, memberships,
+and organization blocks, the logbook, the Candidate Pack copies of their applications (BR-25), availability windows
+and saved rotation, notices addressed to them, memberships,
 idempotency keys, every invitation of the address (they hold it) and the document rows. The documents' bytes:
 removed right after the closure with the person's own token; anything Storage leaves is a due `owner_delete`
 tombstone purged by `documents-maintenance` (`DOCUMENT_WALLET.md` §6). An operator deletion without the button

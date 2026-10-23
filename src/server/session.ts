@@ -1,8 +1,8 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { compareActing } from "@/lib/acting-organization";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { actingMembership } from "./membership";
 import type {
   MembershipRow,
   OrganizationRole,
@@ -88,11 +88,17 @@ export async function requireSessionActor(): Promise<SessionActor> {
 }
 
 /**
- * The membership the organization pages act on: the highest role (V0, one active organization), ties broken by
- * organization id — `actingMembership` in `./membership`, shared with the proxy.
+ * The membership the organization pages act on: the highest role (V0, one active organization);
+ * ties broken by organization id so the acting organization never flips between requests
+ * (`compareActing`, shared with the proxy). Multi-organization switching is NEXT.
  */
 export const primaryMembership = (actor: Pick<SessionActor, "memberships">) =>
-  actingMembership(actor);
+  [...actor.memberships].sort((a, b) =>
+    compareActing(
+      { role: a.role, organizationId: a.organization.id },
+      { role: b.role, organizationId: b.organization.id },
+    ),
+  )[0];
 
 export async function requireOrganizationContext() {
   const actor = await requireSessionActor();

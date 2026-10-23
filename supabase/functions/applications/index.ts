@@ -10,6 +10,9 @@
 // GET   /applications?organizationId=<uuid>&view=byRequirement → { requirements: [{ requirementId,
 //                                                        headcount, startsAt, endsAt, shiftCount, counts }] }
 //                                                        (admin/manager; v2-05 tabs, v2-08 coverage)
+// GET   /applications?view=pack&applicationId=<uuid>     → { pack | null } (the applicant or the requirement
+//                                                        organization's admin/manager; 404 otherwise)
+// GET   /applications?view=pack-preview                  → { pack } (the caller's copy if they applied now)
 // POST  /applications { requirementId, shareConsent: true }        → 201 { application } · 200 replay
 // PATCH /applications { applicationId, to, expectedUpdatedAt, reason?, proposalId?, acceptTerms? }
 //                                                      → { transition, replayed }
@@ -21,6 +24,8 @@ import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import {
   loadOwnCandidate,
+  loadProfileRules,
+  myApplicationRequirementIds,
   periodOf,
   toMyApplication,
   toOrganizationApplication,
@@ -37,6 +42,12 @@ import {
   type TransitionInput,
   transitionInput,
 } from "../../../src/lib/validation/applications.ts";
+import {
+  applicationPackQuery,
+  isPackView,
+  packPreviewQuery,
+} from "../../../src/lib/validation/candidate-pack.ts";
+import { loadApplicationPack, loadPackPreview } from "./pack.ts";
 import type {
   ApplicationCountsResponse,
   ApplicationResponse,
@@ -159,13 +170,28 @@ async function loadMine(actor: Actor): Promise<MyApplication[]> {
     const { startsAt, endsAt } = req.parse(r).requirement;
     return { startsAt: toIso(startsAt), endsAt: toIso(endsAt) };
   });
-  const own = await loadOwnCandidate(actor, periodOf(requirements));
-  return rows.map((r) => toMyApplication(r, own));
+  // Own data and each requirement's v1.8 profile rules (matching-v18), one call each.
+  const [own, rules] = await Promise.all([
+    loadOwnCandidate(actor, periodOf(requirements)),
+    loadProfileRules(actor, myApplicationRequirementIds(rows)),
+  ]);
+  return rows.map((r) => toMyApplication(r, own, rules));
 }
 
 export const handler = createHandler("applications", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
+    // Candidate Pack copy (v2-15 + v2-04): two views of their own, parsed by their own strict schemas, so the
+    // existing routes and their query contract stay exactly as they were.
+    const view = ctx.url.searchParams.get("view");
+    if (isPackView(view)) {
+      if (view === "pack") {
+        const { applicationId } = parseQuery(ctx.url, applicationPackQuery);
+        return { data: await loadApplicationPack(actor, applicationId) };
+      }
+      parseQuery(ctx.url, packPreviewQuery);
+      return { data: await loadPackPreview(actor) };
+    }
     const query = parseQuery(ctx.url, listApplicationsQuery);
     assertListParams(query);
 
@@ -228,7 +254,7 @@ export const handler = createHandler("applications", {
       p_share_consent: input.shareConsent, // literal true (schema); the database requires it too
       p_request_id: ctx.requestId,
     });
-    // P0002 → 404 · CFA01…CFA10, CFA13 → 409 + reason · CF409 → 409 (key reused with another requirement)
+    // P0002 → 404 · CFA01…CFA10, CFA13, CFA14 → 409 + reason · CF409 → 409 (key reused with another requirement)
     if (error) throw fromDatabaseError(error);
     const { id, replayed } = createdRow(data);
     const application = (await loadMine(actor)).find((a) => a.id === id);

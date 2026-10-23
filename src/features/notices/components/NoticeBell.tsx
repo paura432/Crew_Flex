@@ -9,13 +9,22 @@ export const BELL_PATH = "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94
  * (the demo had only a dot). The accessible name carries the count; the badge is decoration.
  * `count` null = unknown (the service could not answer): no badge, the link still works.
  */
-export function NoticeBell({ count, label }: { count: number | null; label: string }) {
+export function NoticeBell({
+  count,
+  label,
+  onLight = false,
+}: {
+  count: number | null;
+  label: string;
+  /** The white desktop header (v1.8 `.workspace-header`); default: the navy bar. */
+  onLight?: boolean;
+}) {
   const badge = unreadBadge(count);
   return (
     <Link
       href="/app/notices"
       aria-label={label}
-      className="relative grid size-10 shrink-0 place-items-center rounded-lg text-[#c4d3e1] hover:bg-white/5 hover:text-white pointer-coarse:size-11"
+      className={`relative grid size-10 shrink-0 place-items-center rounded-lg pointer-coarse:size-11 ${onLight ? "text-muted hover:bg-canvas hover:text-ink" : "text-[#c4d3e1] hover:bg-white/5 hover:text-white"}`}
     >
       <svg
         aria-hidden

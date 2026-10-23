@@ -514,6 +514,13 @@ import_map = "./functions/deno.json"
 verify_jwt = false
 import_map = "./functions/deno.json"
 
+# Local only, not deployed: the professional's notice preferences (N-10) and «Distribuir aviso Urgente /
+# AOG» (v2-17), package outreach. Deploy only after migrations 20261024400000…20261024400200.
+[functions.notice-preferences]
+verify_jwt = false
+import_map = "./functions/deno.json"
+
+[functions.requirement-outreach]
 # Local only, not deployed (PKG recruiter, D-12 provisional): an agency's represented clients and their
 # activation by a platform admin. Deploy only after migrations 20261024500000/500100.
 [functions.represented-clients]

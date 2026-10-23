@@ -3,8 +3,14 @@ import { APPLICATION_STATUSES } from "./applications";
 import {
   contactVisible,
   documentAccessible,
+  hasPackCopy,
   PACK_ACTIVATION,
+  PACK_EXPERIENCE_MAX,
+  packCourseState,
+  packWithheld,
+  splitPackQualifications,
   type PackDocument,
+  type PackQualification,
 } from "./candidate-pack";
 
 const on = { contact: true, documents: true };
@@ -56,5 +62,41 @@ describe("Candidate Pack (D-07) — prepared, not activated", () => {
       expect(contactVisible(status, both, on)).toBe(false);
       expect(documentAccessible(status, both, clean, today, on)).toBe(false);
     }
+  });
+});
+
+describe("the dated copy (v2-15, BR-25)", () => {
+  const q = (code: string, category: PackQualification["category"], expiresAt: string | null) =>
+    ({ code, name: code, category, verificationStatus: "verified", expiresAt }) as const;
+
+  it("declares identity, contact and documents withheld while PACK_ACTIVATION is off", () => {
+    expect(packWithheld()).toBe(true);
+    expect(packWithheld({ contact: true, documents: false })).toBe(true);
+    expect(packWithheld({ contact: false, documents: true })).toBe(true);
+    expect(packWithheld(on)).toBe(false);
+  });
+
+  it("courses are the TRAINING qualifications, with the v1.8 state at reading time", () => {
+    const list = [q("B1.1", "LICENSE", "2030-01-01"), q("EWIS", "TRAINING", "2026-11-01")];
+    const { courses, others } = splitPackQualifications(list);
+    expect(courses.map((c) => c.code)).toEqual(["EWIS"]);
+    expect(others.map((c) => c.code)).toEqual(["B1.1"]);
+    expect(packCourseState(courses[0]!, today)).toBe("soon");
+    expect(packCourseState(courses[0]!, "2026-11-02")).toBe("expired");
+    expect(packCourseState(q("HF", "TRAINING", null), today)).toBe("none");
+    expect(packCourseState(q("HF", "TRAINING", "2030-01-01"), today)).toBe("valid");
+  });
+
+  it("copies at most 20 logbook entries", () => {
+    expect(PACK_EXPERIENCE_MAX).toBe(20);
+  });
+
+  it("ending without an engagement drops the copy; finished keeps it (T-113)", () => {
+    expect(APPLICATION_STATUSES.filter((s) => !hasPackCopy(s))).toEqual([
+      "rejected",
+      "withdrawn",
+      "cancelled",
+    ]);
+    expect(hasPackCopy("finished")).toBe(true);
   });
 });

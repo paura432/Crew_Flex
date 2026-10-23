@@ -1,20 +1,9 @@
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { ToolsHeader } from "@/features/tools/components/ToolsHeader";
-import { TranslatorTool } from "@/features/tools/components/TranslatorTool";
+import { TOOLS_BASE } from "@/features/tools/ids";
+import { ToolScreen, toolMetadata } from "@/features/tools/components/ToolScreen";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("tools");
-  return { title: t("tile.translator.title") };
-}
+export const generateMetadata = () => toolMetadata("translator");
 
-// One h1 (the workbench header); the translator's own title is an h2 (v1.8 had two h1, ✗ TOOL-06 #2).
-export default async function ToolsTranslatorPage() {
-  const t = await getTranslations("tools");
-  return (
-    <>
-      <ToolsHeader title={t("tile.translator.title")} back />
-      <TranslatorTool />
-    </>
-  );
+// Signed-in workbench; the same screen is public at /tools (T-145).
+export default function ToolsTranslatorPage() {
+  return <ToolScreen id="translator" base={TOOLS_BASE.app} />;
 }

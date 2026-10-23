@@ -307,3 +307,26 @@ insert into public.technician_type_ratings (technician_profile_id, aircraft, cat
   ('00000000-0000-4000-8000-000000000021', 'A320 Family', 'B1.1', null, null),
   ('00000000-0000-4000-8000-000000000022', 'A320 Family', 'B1.1', null, 'No engine run-ups (synthetic)'),
   ('00000000-0000-4000-8000-000000000023', 'ATR 72', 'CAT-A', '2028-12-31', null);
+
+-- PKG matching-v18 (migrations 20261023900*): one need of Demo Airline Ops Barcelona with the v1.8 profile
+-- requirements (BR-3.7–3.13), so the candidate cards explain them. Its period has already ended (12–16 Oct
+-- 2026): it is never in «Oportunidades», a dashboard focus or a calendar, and its matching page stays
+-- readable (open, «Vencida»). Expected: Delta eligible · Echo restricted rating + capability · Foxtrot no
+-- B1.1 rating on those aircraft + capability · Golf B1.1 pending, below 5 years and no declarations.
+-- One statement per requirement: BR-1.4 is checked when it commits (migration 20261015130000).
+with wr as (
+  insert into public.work_requirements
+  (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by,
+   country, category, aircraft, requires_type_rating, min_years, required_skills)
+  select id, 'B1.1 · A320 / B737 NG line check (v1.8 profile rules)', 'Barcelona (BCN)',
+    '2026-10-12 06:00Z', '2026-10-16 18:00Z', 'day', 1, 'planned', 'open',
+    '00000000-0000-4000-8000-000000000003',
+    'ES', 'B1.1', '{A320 Family,B737 NG}', true, 5, '{line_maintenance}'
+  from public.organizations where name = 'Demo Airline Ops Barcelona'
+  returning id
+)
+insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+select wr.id, qt.id, 'hard'
+from wr
+cross join public.qualification_types qt
+where qt.code in ('B1.1', 'EWIS', 'HF');

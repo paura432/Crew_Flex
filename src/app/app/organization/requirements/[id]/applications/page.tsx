@@ -20,13 +20,17 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * M08, organization side (v1.8 «Candidaturas» filtered by one job): applicants as the candidate pool
  * shows them (pseudonym rules, T-04), their live eligibility, proposal, history and the actions of
- * an admin/manager. Plain members see the managers-only state (the function refuses them anyway).
+ * an admin/manager, plus «Ver expediente» (`?pack=`): the Candidate Pack copy frozen when they applied
+ * (v2-15, BR-25; no identity, contact or documents). Plain members see the managers-only state (the
+ * functions refuse them anyway).
  */
 export default async function RequirementApplicationsPage({
   params,
+  searchParams,
 }: PageProps<"/app/organization/requirements/[id]/applications">) {
-  const [{ id }, { organization, canManage }, t, locale] = await Promise.all([
+  const [{ id }, { pack: packParam }, { organization, canManage }, t, locale] = await Promise.all([
     params,
+    searchParams,
     requireOrganizationContext(),
     getTranslations("applications"),
     getLocale(),
@@ -81,6 +85,11 @@ export default async function RequirementApplicationsPage({
               key={application.id}
               application={application}
               requirement={requirement}
+              pack={{
+                // Only an application of this list can be opened: `?pack=` is matched against it.
+                open: packParam === application.id,
+                baseHref: `/app/organization/requirements/${requirement.id}/applications`,
+              }}
             />
           ))}
         </div>

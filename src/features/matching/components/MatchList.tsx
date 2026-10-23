@@ -6,7 +6,8 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";
 import { formatPercent } from "@/i18n/format";
 import type { EvaluatedCandidate } from "@/types/api";
-import { explainAvailability, explainCheck } from "../explain";
+import { explainAvailability, explainCheck, explainProfileCheck } from "../explain";
+import { render, resolvers } from "./MatchCard";
 import { MAX_COMPARE, MATCH_SORTS, type MatchListQuery } from "../list";
 
 /** `?…` for the same page with some params replaced (plain links: works without JavaScript). */
@@ -165,6 +166,16 @@ export async function CompareTable({
     const check = item.match.qualificationChecks.map(explainCheck).find((c) => c.label === label);
     return check ? (check.met ? "✓" : "✗") : "—";
   };
+  // v1.8 profile requirements (BR-3.7–3.13): the same rules for every candidate of one requirement.
+  const r = await resolvers();
+  const ruleRows = (items[0]?.match.profileChecks ?? []).map((check, i) => ({
+    key: `${check.rule}-${i}`,
+    label: render(r, explainProfileCheck(check).label),
+    cells: items.map((item) => {
+      const own = item.match.profileChecks?.[i];
+      return own ? (own.met ? "✓" : "✗") : "—";
+    }),
+  }));
   return (
     <section
       aria-labelledby="compare-title"
@@ -243,6 +254,18 @@ export async function CompareTable({
                 {items.map((item) => (
                   <td key={item.candidate.id} className="py-2 pr-3">
                     {cell(item, label)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {ruleRows.map((row) => (
+              <tr key={row.key}>
+                <th scope="row" className="py-2 pr-3 font-semibold break-words">
+                  {row.label}
+                </th>
+                {row.cells.map((mark, i) => (
+                  <td key={items[i]!.candidate.id} className="py-2 pr-3">
+                    {mark}
                   </td>
                 ))}
               </tr>

@@ -156,7 +156,8 @@ export async function archiveRequirementAction(id: unknown): Promise<Requirement
     };
   }
   revalidatePath("/app/organization", "layout");
-  return { ok: true };
+  // The actions component unmounts once the need is archived: the success shows from the URL.
+  redirect(`/app/organization/requirements/${parsed.data}?archived=1`);
 }
 
 export type ViableCountResult = { ok: true; viable: number } | { ok: false; code: ApiErrorCode };

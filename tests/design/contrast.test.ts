@@ -95,7 +95,8 @@ describe("type scale", () => {
   it("11 px only in the V1.8 micro-labels DESIGN_SYSTEM lists (X-20)", () => {
     const allowed = [
       "src/app/app/admin/verifications/page.tsx", // table header
-      "src/components/layout/AppShell.tsx", // «AVIATION» brand tag
+      "src/components/layout/Brand.tsx", // «AVIATION» brand tag
+      "src/components/layout/MobileDock.tsx", // dock labels (v1.8 9 px, T-141)
       "src/components/layout/ViewSwitcher.tsx", // sidebar section titles, «Ver como»
       "src/features/availability/components/AvailabilityManager.tsx", // day-cell state label
       "src/features/availability/components/AvailabilityMonth.tsx", // mini calendar weekdays
@@ -111,5 +112,43 @@ describe("type scale", () => {
       .filter((name) => name.endsWith(".tsx"))
       .filter((name) => /text-\[(?:[0-9]|1[01])px\]/.test(read(`${dir}/${name}`)));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("shell-visual colours (T-141…T-143)", () => {
+  const white = "#ffffff";
+
+  it("the «Mi espacio» hero: white and hero-text on both gradient stops, white initials on the avatar", () => {
+    for (const stop of ["--color-hero-from", "--color-hero-to"]) {
+      expect(contrast(white, token(stop)), stop).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(token("--color-hero-text"), token(stop)), stop).toBeGreaterThanOrEqual(4.5);
+    }
+    for (const stop of ["--color-avatar-from", "--color-avatar-to"]) {
+      expect(contrast(white, token(stop)), stop).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("medal text on its own background (v1.8 `.tiny-medal`)", () => {
+    for (const [fg, bg] of [
+      ["--color-medal-gold", "--color-medal-gold-bg"],
+      ["--color-blue", "--color-info-bg"],
+      ["--color-ok", "--color-ok-bg"],
+      ["--color-medal-violet", "--color-medal-violet-bg"],
+    ] as const) {
+      expect(contrast(token(fg), token(bg)), fg).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("dock labels (muted on white, the current one ok on ok-bg) and the footer (muted on canvas)", () => {
+    expect(contrast(token("--color-muted"), white)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token("--color-ok"), token("--color-ok-bg"))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token("--color-muted"), token("--color-canvas"))).toBeGreaterThanOrEqual(4.5);
+    const dock = read("src/components/layout/MobileDock.tsx");
+    for (const utility of [
+      "text-muted",
+      "aria-[current=page]:bg-ok-bg",
+      "aria-[current=page]:text-ok",
+    ])
+      expect(dock).toContain(utility);
   });
 });

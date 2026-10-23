@@ -307,8 +307,8 @@ export const evaluateRequirementInput = z.strictObject({
 export type EvaluateRequirementInput = z.infer<typeof evaluateRequirementInput>;
 
 /**
- * v1.8 «{n} candidatos con requisitos y bloques viables» (v2-13, T-66): the builder's period, urgency and hard
- * qualifications, saved or not (`POST /matching-evaluate`). The answer is a count only.
+ * v1.8 «{n} candidatos con requisitos y bloques viables» (v2-13, T-66): the builder's period, urgency, hard
+ * qualifications and country, saved or not (`POST /matching-evaluate`). The answer is a count only.
  */
 export const viableCandidatesInput = z
   .strictObject({
@@ -320,6 +320,8 @@ export const viableCandidatesInput = z
       .array(z.uuid("v.qualification.select"))
       .min(1, "v.qualifications.hard")
       .max(20, "v.qualifications.max"),
+    // The job's country: the professional needs a work permit for it (matching-v18, BR-3.7). Absent = none.
+    country: z.enum(EU_COUNTRIES, "v.requirement.country").optional(),
   })
   .superRefine((value, ctx) => {
     const start = Date.parse(value.startsAt);

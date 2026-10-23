@@ -11,9 +11,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const [params, t, invitationOnly] = await Promise.all([
+  const [params, t, tTools, invitationOnly] = await Promise.all([
     searchParams,
     getTranslations("auth.signIn"),
+    getTranslations("publicTools"),
     isInvitationSignupRequired(),
   ]);
   const { next } = params;
@@ -48,6 +49,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         {invitationOnly ? null : `${t("noAccount")} `}
         <Link href="/register" className="font-semibold text-blue hover:underline">
           {invitationOnly ? t("haveInvitation") : t("createOne")}
+        </Link>
+      </p>
+      {/* v1.8 connected login (Account.jsx:36): the tools work without an account (T-145). */}
+      <p className="mt-3 text-sm text-muted">
+        {`${tTools("loginNote")} `}
+        <Link href="/tools" className="font-semibold text-blue hover:underline">
+          {tTools("open")}
         </Link>
       </p>
     </>

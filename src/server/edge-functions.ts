@@ -22,6 +22,8 @@ export type EdgeFunctionName =
   | "notifications"
   | "account"
   | "invitations"
+  | "notice-preferences"
+  | "requirement-outreach"
   | "represented-clients";
 
 interface InvokeOptions {

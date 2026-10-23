@@ -67,8 +67,38 @@ Deno.test("an organization row keeps the applicant label and drops technician-on
     applicationStatus: "received",
     requirementStatus: null,
     candidate: { name: null, ref: "CF-0123456789" },
+    outreachUrgency: null,
   });
 });
+
+Deno.test(
+  "an outreach row (v2-17) is the reader's own: urgency, no application, no candidate",
+  () => {
+    const outreach = row({
+      kind: "outreach",
+      audience: "technician",
+      application_id: null,
+      application_status: null,
+      organization_name: "Demo MRO Madrid",
+      candidate_ref: null,
+      outreach_urgency: "aog",
+    });
+    const notice = toNotice(outreach);
+    assertEquals(
+      [notice.kind, notice.applicationId, notice.outreachUrgency, notice.organizationName],
+      ["outreach", null, "aog", "Demo MRO Madrid"],
+    );
+    assertEquals(notice.candidate, null);
+    // An application kind keeps no urgency even if a row carried one.
+    assertEquals(toNotice(row({ outreach_urgency: "urgent" })).outreachUrgency, null);
+    // Inconsistent rows are refused, never shown half-rendered.
+    assertThrows(() => toNotice({ ...outreach, outreach_urgency: null }));
+    assertThrows(() => toNotice({ ...outreach, audience: "organization" }));
+    assertThrows(() => toNotice({ ...outreach, application_id: APP }));
+    assertThrows(() => toNotice({ ...outreach, outreach_urgency: "planned" }));
+    assertThrows(() => toNotice(row({ application_id: null })));
+  },
+);
 
 Deno.test("a technician row has the organization name and no candidate", () => {
   const notice = toNotice(
@@ -89,7 +119,7 @@ Deno.test("a technician row has the organization name and no candidate", () => {
 });
 
 Deno.test("unknown kinds, audiences or statuses are refused, never passed through raw", () => {
-  assertThrows(() => toNotice(row({ kind: "outreach" })));
+  assertThrows(() => toNotice(row({ kind: "broadcast" })));
   assertThrows(() => toNotice(row({ audience: "admin" })));
   assertThrows(() => toNotice(row({ requirement_status: "covered" })));
   // The redirect is built from these ids: anything but a UUID is refused.

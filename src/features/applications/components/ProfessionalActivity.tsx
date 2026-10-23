@@ -17,15 +17,41 @@ import { APPLICATION_TONE } from "../view";
 const DOTS = 50;
 
 /**
- * v1.8 technician home (`TechnicianHome.jsx:15`, `ConnectedHome.jsx:15`): counters, the month with
- * «Asignado» and the red dot next to «Oportunidades para ti» (a day filters it), and the latest own
- * applications. A failing feed says so in place; it never breaks «Mi espacio».
+ * The three reads of «Mi espacio»: compatible and possible-on-rest opportunities, own applications.
+ * Read once by the page; the hero's counters and this section share them.
+ */
+export const loadActivity = () =>
+  Promise.all([
+    listOpportunities({ eligible: "1", limit: DOTS }),
+    // BR-14.1 «Posible en descanso»; a failed read only leaves those rows out.
+    listOpportunities({ rest: "1", limit: DOTS }),
+    listMyApplications(),
+  ]);
+export type ActivityReads = Awaited<ReturnType<typeof loadActivity>>;
+
+/** The hero's v1.8 counters; null when the read failed (shown as «—»). */
+export function activityCounts([compatible, , applications]: ActivityReads) {
+  return {
+    compatible: compatible.ok ? compatible.data.total : null,
+    confirmed: applications.ok
+      ? applications.data.applications.filter((a) => a.status === "confirmed").length
+      : null,
+  };
+}
+
+/**
+ * v1.8 technician home (`TechnicianHome.jsx:15`, `ConnectedHome.jsx:15`): the application counters
+ * (the hero shows compatible and confirmed), the month with «Asignado» and the red dot next to
+ * «Oportunidades para ti» (a day filters it), and the latest own applications. A failing feed says so
+ * in place; it never breaks «Mi espacio».
  */
 export async function ProfessionalActivity({
+  reads: [compatible, possible, applications],
   windows,
   month,
   today,
 }: {
+  reads: ActivityReads;
   /** Own availability windows (the calendar's day states). */
   windows: CalendarWindow[];
   /** `YYYY-MM` shown by the calendar. */
@@ -33,14 +59,10 @@ export async function ProfessionalActivity({
   /** `YYYY-MM-DD` (UTC). */
   today: string;
 }) {
-  const [t, tDomain, locale, compatible, possible, applications] = await Promise.all([
+  const [t, tDomain, locale] = await Promise.all([
     getTranslations("professional.activity"),
     getTranslations("domain"),
     getLocale() as Promise<Locale>,
-    listOpportunities({ eligible: "1", limit: DOTS }),
-    // BR-14.1 «Posible en descanso»; a failed read only leaves those rows out.
-    listOpportunities({ rest: "1", limit: DOTS }),
-    listMyApplications(),
   ]);
   const mine = applications.ok ? applications.data.applications : [];
   const active = mine.filter((a) => !TERMINAL_APPLICATION_STATUSES.includes(a.status));
@@ -57,19 +79,13 @@ export async function ProfessionalActivity({
 
   return (
     <section aria-label={t("label")} className="space-y-4">
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Metric
-          label={t("compatible")}
-          value={compatible.ok ? compatible.data.total : "—"}
-          tone={compatible.ok && compatible.data.total > 0 ? "ok" : "neutral"}
-        />
+      <dl className="grid grid-cols-2 gap-3">
         <Metric label={t("active")} value={applications.ok ? active.length : "—"} />
         <Metric
           label={t("toAccept")}
           value={applications.ok ? toAccept : "—"}
           tone={toAccept > 0 ? "warn" : "neutral"}
         />
-        <Metric label={t("confirmed")} value={applications.ok ? confirmed.length : "—"} />
       </dl>
       <HomeOpportunities
         key={month}

@@ -26,6 +26,7 @@ describe("getOwnProfessionalOverview (X-16)", () => {
     results.technician_qualifications = { data: [], error: null };
     results.availability_windows = { data: [], error: null };
     results.technician_private_details = { data: null, error: null };
+    results.technician_type_ratings = { data: [], error: null };
   });
 
   it("no technician profile → null (an organization account)", async () => {
@@ -49,6 +50,26 @@ describe("getOwnProfessionalOverview (X-16)", () => {
     results.technician_private_details = { data: { min_rate: "45.50" }, error: null };
     expect((await getOwnProfessionalOverview("p"))?.minRate).toBe(45.5);
     results.technician_private_details = { data: null, error: { message: "boom" } };
+    await expect(getOwnProfessionalOverview("p")).rejects.toThrow("unavailable");
+  });
+
+  it("the medals read the own categories, skills and type ratings (N-15); a failed read throws", async () => {
+    results.technician_profiles = {
+      data: { profile_id: "p", categories: ["B1.1"], skills: ["ndt"] },
+      error: null,
+    };
+    results.technician_type_ratings = {
+      data: [{ aircraft: "A330", category: "B1.1", expires_at: null, restrictions: null }],
+      error: null,
+    };
+    const overview = await getOwnProfessionalOverview("p");
+    expect(overview?.medalSource).toEqual({
+      categories: ["B1.1"],
+      skills: ["ndt"],
+      typeRatings: [{ aircraft: "A330", category: "B1.1", expiresAt: null, restrictions: null }],
+    });
+    expect(overview?.profile).not.toHaveProperty("categories");
+    results.technician_type_ratings = { data: null, error: { message: "boom" } };
     await expect(getOwnProfessionalOverview("p")).rejects.toThrow("unavailable");
   });
 });

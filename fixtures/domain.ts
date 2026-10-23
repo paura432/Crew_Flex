@@ -1,6 +1,6 @@
 // Typed, synthetic fixtures for domain tests. Not real people, not real organizations.
 import type { HeldQualification } from "@/domain/qualification.ts";
-import type { Candidate, MatchableRequirement } from "@/domain/matching.ts";
+import type { Candidate, CandidateDeclarations, MatchableRequirement } from "@/domain/matching.ts";
 import type { RequiredQualification } from "@/domain/work-requirement.ts";
 
 export const QT = {
@@ -30,6 +30,7 @@ export function madRequirement(
   overrides: Partial<MatchableRequirement & { headcount: number }> = {},
 ) {
   return {
+    location: "Madrid (MAD)",
     startsAt: "2026-10-18T20:00:00Z",
     endsAt: "2026-10-22T06:00:00Z",
     urgency: "urgent" as const, // as in the seed requirement
@@ -67,6 +68,28 @@ export const OCTOBER = [
   },
 ];
 
+/**
+ * A typical B1.1 · A320 Family passport (BR-18): English B2 and national mobility, so both v1.8 affinity
+ * items are met (BR-5.6); one unrestricted A320 Family · B1.1 rating without expiry; permit for Spain.
+ */
+export function declared(overrides: Partial<CandidateDeclarations> = {}): CandidateDeclarations {
+  return {
+    primaryCategory: "B1.1",
+    categories: ["B1.1"],
+    aircraft: ["A320 Family"],
+    engines: [],
+    skills: [],
+    englishLevel: "B2",
+    mobility: "national",
+    workPermits: ["ES"],
+    typeRatings: [
+      { aircraft: "A320 Family", category: "B1.1", expiresAt: null, restricted: false },
+    ],
+    hasRestrictions: false,
+    ...overrides,
+  };
+}
+
 export function candidate(id: string, overrides: Partial<Candidate> = {}): Candidate {
   return {
     id,
@@ -76,6 +99,7 @@ export function candidate(id: string, overrides: Partial<Candidate> = {}): Candi
     yearsExperience: 8,
     qualifications: FULL_HARD_SET,
     availability: OCTOBER,
+    declarations: declared(),
     ...overrides,
   };
 }

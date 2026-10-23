@@ -17,6 +17,13 @@ const requirementRow = {
   status: "open",
   created_at: "2026-10-09T10:00:00+00:00",
   updated_at: "2026-10-09T10:30:00.123456+00:00",
+  // v1.8 profile rules (matching-v18, 20261023900000): none stated.
+  category: null,
+  aircraft: [],
+  requires_type_rating: false,
+  engines: [],
+  min_years: null,
+  required_skills: [],
   work_requirement_qualifications: [
     { requirement_level: "soft", qualification_types: { id: "q-sms", code: "SMS", name: "SMS" } },
     { requirement_level: "hard", qualification_types: { id: "q-b11", code: "B1.1", name: "B1.1" } },
@@ -45,7 +52,54 @@ const poolRow = (ref: string, pool: string, verificationStatus: string) => ({
       status: "available",
     },
   ],
+  candidate_declarations: {
+    primaryCategory: "B1.1",
+    categories: ["B1.1"],
+    aircraft: ["A320 Family"],
+    engines: [],
+    skills: ["line_maintenance"],
+    englishLevel: "B2",
+    mobility: "local",
+    workPermits: ["ES"],
+    typeRatings: [
+      { aircraft: "A320 Family", category: "B1.1", expiresAt: "2026-10-21", restricted: false },
+    ],
+    hasRestrictions: false,
+  },
 });
+
+Deno.test(
+  "the requirement's v1.8 profile rules are parsed strictly and applied by the engine",
+  () => {
+    const requirement = toWorkRequirement({
+      ...requirementRow,
+      country: "ES",
+      category: "B1.1",
+      aircraft: ["A320 Family", "B737 NG"],
+      requires_type_rating: true,
+      min_years: 5,
+      required_skills: ["line_maintenance"],
+    });
+    assertEquals(
+      [requirement.country, requirement.category, requirement.aircraft, requirement.minYears],
+      ["ES", "B1.1", ["A320 Family", "B737 NG"], 5],
+    );
+    // The rating expires on the 21st; the period's last UTC day is the 22nd (BR-2, BR-3.10).
+    const match = evaluateMatch(requirement, toCandidate(poolRow("a", "external", "verified")));
+    assertEquals(match.blockers, [
+      {
+        code: "TYPE_RATING_NOT_VALID",
+        category: "B1.1",
+        aircraft: ["A320 Family", "B737 NG"],
+        expiresAt: "2026-10-21",
+      },
+    ]);
+    // An unknown required value or a missing rule column fails instead of dropping the rule.
+    assertThrows(() => toWorkRequirement({ ...requirementRow, category: "B9" }));
+    const { min_years: _dropped, ...withoutYears } = requirementRow;
+    assertThrows(() => toWorkRequirement(withoutYears));
+  },
+);
 
 Deno.test("rows map to domain objects that the shared engine evaluates", () => {
   const requirement = toWorkRequirement(requirementRow);
