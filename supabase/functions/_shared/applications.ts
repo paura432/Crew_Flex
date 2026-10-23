@@ -258,6 +258,8 @@ export function toOrganizationApplication(raw: unknown): {
   return { application, total: row.total };
 }
 
+export const PROFILE_RULES_BATCH = 200;
+
 /**
  * The v1.8 profile rules of requirements the caller (a professional) may read: published and current, or
  * applied to (`get_requirement_profile_rules`, DEFINER; 42501 when not a professional). One call.
@@ -266,12 +268,17 @@ export async function loadProfileRules(
   actor: Actor,
   requirementIds: readonly string[],
 ): Promise<Map<string, RequirementRuleColumns>> {
-  if (requirementIds.length === 0) return new Map();
-  const { data, error } = await actor.client.rpc("get_requirement_profile_rules", {
-    p_requirement_ids: [...new Set(requirementIds)],
-  });
-  if (error) throw fromDatabaseError(error);
-  return toProfileRulesById(z.array(z.unknown()).parse(data));
+  const ids = [...new Set(requirementIds)];
+  const rules = new Map<string, RequirementRuleColumns>();
+  // The RPC takes at most 200 ids (the opportunities cap); own applications have no cap (review LOW-1).
+  for (let i = 0; i < ids.length; i += PROFILE_RULES_BATCH) {
+    const { data, error } = await actor.client.rpc("get_requirement_profile_rules", {
+      p_requirement_ids: ids.slice(i, i + PROFILE_RULES_BATCH),
+    });
+    if (error) throw fromDatabaseError(error);
+    for (const [id, r] of toProfileRulesById(z.array(z.unknown()).parse(data))) rules.set(id, r);
+  }
+  return rules;
 }
 
 /**

@@ -14,8 +14,8 @@
 --    NULL / empty = not required, so a requirement stating none is unaffected.
 -- 2. app_private.hard_eligibility_for (the builder's explicit-parameter rule, 20261023600100) takes the rules
 --    and returns `profile_ok` too; app_private.hard_eligibility stays its thin wrapper (the requirement's
---    columns, the builder's `country` included); count_viable_candidates (the builder's live count) passes the
---    rules it is given and counts only who passes all three. The applications trigger of the next migration
+--    columns, the builder's `country` included); count_viable_candidates (the builder's live count) takes the
+--    job's country only and counts who passes all three. The applications trigger of the next migration
 --    reads hard_eligibility().profile_ok at apply and confirm; the assignment protection keeps reading
 --    availability_ok.
 -- 3. app_private.ranked_external_pool: `hard_eligible` = qualifications ∧ availability ∧ profile rules, so the
@@ -208,8 +208,11 @@ as $$
   where wr.id = p_requirement_id;
 $$;
 
--- The builder's live count (body of 20261023600100) with the profile rules: the form sends the job's country;
--- the other rules default to «not required» until the form offers them. Same checks and errors as before.
+-- The builder's live count (body of 20261023600100) with the ONE profile rule the form offers, the job's
+-- country (BR-3.7). The other rules are deliberately NOT parameters (security review MEDIUM-1): a caller who
+-- can choose engines, capabilities, years or ratings freely and read a count could reconstruct one
+-- candidate's declarations by narrowing the count to one person — exactly what T-85 hides. When the builder
+-- adopts those rules, add them here together with a minimum-count floor and a negative test.
 drop function public.count_viable_candidates(uuid, timestamptz, timestamptz, public.requirement_urgency, uuid[]);
 create function public.count_viable_candidates(
   p_organization_id uuid,
@@ -217,13 +220,7 @@ create function public.count_viable_candidates(
   p_ends_at timestamptz,
   p_urgency public.requirement_urgency,
   p_hard_type_ids uuid[],
-  p_country text default null,
-  p_category text default null,
-  p_aircraft text[] default '{}',
-  p_requires_type_rating boolean default false,
-  p_engines text[] default '{}',
-  p_min_years integer default null,
-  p_required_skills text[] default '{}'
+  p_country text default null
 )
 returns integer
 language plpgsql
@@ -252,9 +249,7 @@ begin
   left join public.organization_members m
     on m.organization_id = p_organization_id and m.profile_id = tp.profile_id
   cross join lateral app_private.hard_eligibility_for(
-    p_starts_at, p_ends_at, p_urgency, p_hard_type_ids, tp.profile_id,
-    p_country, p_category, p_aircraft, p_requires_type_rating, p_engines, p_min_years,
-    p_required_skills) as e
+    p_starts_at, p_ends_at, p_urgency, p_hard_type_ids, tp.profile_id, p_country) as e
   where (m.profile_id is not null
          or ((tp.visibility in ('anonymous', 'open')
               or (tp.visibility = 'verified_orgs'
@@ -659,16 +654,14 @@ from public, anon, authenticated;
 revoke execute on function app_private.candidate_declarations(uuid, uuid) from public, anon;
 grant execute on function app_private.candidate_declarations(uuid, uuid) to authenticated;
 revoke execute on function
-  public.count_viable_candidates(uuid, timestamptz, timestamptz, public.requirement_urgency, uuid[], text, text,
-    text[], boolean, text[], integer, text[]),
+  public.count_viable_candidates(uuid, timestamptz, timestamptz, public.requirement_urgency, uuid[], text),
   public.get_requirement_candidate_pool(uuid),
   public.own_candidate_profile(timestamptz, timestamptz),
   public.get_requirement_applications(uuid),
   public.get_requirement_profile_rules(uuid[])
 from public, anon;
 grant execute on function
-  public.count_viable_candidates(uuid, timestamptz, timestamptz, public.requirement_urgency, uuid[], text, text,
-    text[], boolean, text[], integer, text[]),
+  public.count_viable_candidates(uuid, timestamptz, timestamptz, public.requirement_urgency, uuid[], text),
   public.get_requirement_candidate_pool(uuid),
   public.own_candidate_profile(timestamptz, timestamptz),
   public.get_requirement_applications(uuid),

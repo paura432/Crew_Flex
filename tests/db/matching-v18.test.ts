@@ -508,38 +508,27 @@ describe("SQL ↔ TypeScript parity on the v1.8 profile requirements (BR-3.7–3
           poolCompared++;
         }
 
-        // The builder's live count with the same rules = internal eligible + external hard-eligible.
+        // The builder's live count knows the job's country only (MEDIUM-1): it must equal the members and
+        // the pool's candidates passing the hard filters with that single rule.
         await tx.exec("reset role");
+        const r = { ...NO_RULES, ...variant };
         const truth = (
           await tx.query<{ n: number }>(
-            `select (select count(*)::int from app_private.ranked_external_pool($1) where hard_eligible)
-                  + (select count(*)::int from public.organization_members m
-                     cross join lateral app_private.hard_eligibility($1, m.profile_id) e
-                     where m.organization_id = $2 and e.qualifications_ok and e.availability_ok
-                       and e.profile_ok) as n`,
-            [need, mroId],
+            `with people as (
+               select m.profile_id from public.organization_members m where m.organization_id = $2
+               union
+               select r.profile_id from app_private.ranked_external_pool($1) r)
+             select count(*)::int as n from people p
+             cross join lateral app_private.hard_eligibility_for($3, $4, 'planned', $5::uuid[], p.profile_id, $6) e
+             where e.qualifications_ok and e.availability_ok and e.profile_ok`,
+            [need, mroId, requirement.startsAt, requirement.endsAt, [b11, a320], r.country],
           )
         ).rows[0]!.n;
-        const r = { ...NO_RULES, ...variant };
         await actAs(tx, SEED.managerMro);
         const counted = (
           await tx.query<{ n: number }>(
-            `select public.count_viable_candidates($1, $2, $3, 'planned', $4::uuid[],
-               p_country => $5, p_category => $6, p_aircraft => $7, p_requires_type_rating => $8,
-               p_engines => $9, p_min_years => $10, p_required_skills => $11) as n`,
-            [
-              mroId,
-              requirement.startsAt,
-              requirement.endsAt,
-              [b11, a320],
-              r.country,
-              r.category,
-              r.aircraft,
-              r.requires_type_rating,
-              r.engines,
-              r.min_years,
-              r.required_skills,
-            ],
+            `select public.count_viable_candidates($1, $2, $3, 'planned', $4::uuid[], p_country => $5) as n`,
+            [mroId, requirement.startsAt, requirement.endsAt, [b11, a320], r.country],
           )
         ).rows[0]!.n;
         expect([label, counted]).toEqual([label, truth]);
@@ -961,6 +950,113 @@ describe("candidate rows carry the declarations, minimised for organizations", (
           user,
         ).toBe("42501");
       }
+    });
+  });
+});
+
+describe("privileges and minimisation of the package's functions (S-10, T-85)", () => {
+  it("every function pins search_path; anon executes none; authenticated only the RPCs and the INVOKER declarations helper", async () => {
+    const { rows } = await db.query<{
+      name: string;
+      definer: boolean;
+      config: string[] | null;
+      anon: boolean;
+      authenticated: boolean;
+    }>(
+      `select p.oid::regprocedure::text as name, p.prosecdef as definer, p.proconfig as config,
+              has_function_privilege('anon', p.oid, 'execute') as anon,
+              has_function_privilege('authenticated', p.oid, 'execute') as authenticated
+       from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+       where (s.nspname = 'public' and p.proname in ('count_viable_candidates', 'get_requirement_candidate_pool',
+               'own_candidate_profile', 'get_requirement_applications', 'get_requirement_profile_rules',
+               'get_organization_applications', 'guard_application_profile_rules', 'guard_closed_requirement',
+               'guard_requirement_with_applications'))
+          or (s.nspname = 'app_private' and p.proname in ('profile_rules_ok', 'candidate_declarations',
+               'hard_eligibility', 'hard_eligibility_for'))`,
+    );
+    expect(rows).toHaveLength(13);
+    for (const row of rows) {
+      expect(row.config, row.name).toEqual(['search_path=""']);
+      expect(row.anon, row.name).toBe(false);
+    }
+    const name = (r: { name: string }) => r.name.split("(")[0]!;
+    expect(
+      rows
+        .filter((r) => r.authenticated)
+        .map(name)
+        .sort(),
+    ).toEqual([
+      "app_private.candidate_declarations",
+      "count_viable_candidates",
+      "get_organization_applications",
+      "get_requirement_applications",
+      "get_requirement_candidate_pool",
+      "get_requirement_profile_rules",
+      "own_candidate_profile",
+    ]);
+    expect(
+      rows
+        .filter((r) => !r.definer)
+        .map(name)
+        .sort(),
+    ).toEqual([
+      "app_private.candidate_declarations",
+      "app_private.hard_eligibility",
+      "app_private.hard_eligibility_for",
+      "app_private.profile_rules_ok",
+      "own_candidate_profile",
+    ]);
+    // MEDIUM-1: the live count takes the country and nothing else of the profile rules.
+    const count = rows.find((r) => name(r) === "count_viable_candidates")!;
+    expect(count.name).toBe(
+      "count_viable_candidates(uuid,timestamp with time zone,timestamp with time zone,requirement_urgency,uuid[],text)",
+    );
+  });
+
+  it("the live count refuses every other profile rule as a parameter (no reconstruction of one candidate's declarations)", async () => {
+    await asUser(db, SEED.managerMro, async (tx) => {
+      const base = `$1, now() + interval '10 days', now() + interval '12 days', 'planned', $2::uuid[]`;
+      for (const extra of [
+        "p_min_years => 9",
+        "p_engines => '{GE90}'::text[]",
+        "p_required_skills => '{aog_support}'::text[]",
+        "p_category => 'B1.1', p_aircraft => '{A320 Family}'::text[], p_requires_type_rating => true",
+      ]) {
+        expect(
+          await sqlError(tx, `select public.count_viable_candidates(${base}, ${extra})`, [
+            mroId,
+            [b11],
+          ]),
+          extra,
+        ).toBe("42883"); // undefined_function: no such signature
+      }
+      const { rows } = await tx.query<{ n: number }>(
+        `select public.count_viable_candidates(${base}, p_country => 'ES') as n`,
+        [mroId, [b11]],
+      );
+      expect(rows[0]!.n).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  it("app_private.candidate_declarations called directly reads under RLS: someone else's profile is null", async () => {
+    await asUser(db, SEED.managerMro, async (tx) => {
+      const own = await tx.query<{ d: unknown }>(
+        "select app_private.candidate_declarations($1, null) as d",
+        [SEED.managerMro],
+      );
+      expect(own.rows[0]!.d).not.toBeNull();
+      // Delta is not a member of Demo MRO: the manager has no row to read.
+      const other = await tx.query<{ d: unknown }>(
+        "select app_private.candidate_declarations($1, null) as d",
+        [SEED.delta],
+      );
+      expect(other.rows[0]!.d).toBeNull();
+      await actAs(tx, SEED.delta);
+      const peer = await tx.query<{ d: unknown }>(
+        "select app_private.candidate_declarations($1, null) as d",
+        [SEED.echo],
+      );
+      expect(peer.rows[0]!.d).toBeNull();
     });
   });
 });

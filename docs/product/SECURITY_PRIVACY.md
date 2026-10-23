@@ -31,7 +31,14 @@ requirement** (type, status, verification, expiry) and availability windows **ov
 requirement**. Display name only if visibility = `open`. No email, phone, documents, employer, rates.
 Its companion `get_requirement_candidate_passports()` (LOCAL, package passport) adds, for the same rows and
 references, the declared main category, categories, aircraft, English, work permits and a `has_restrictions`
-flag — still no contact, employer, rate, blocks or restriction text.
+flag — still no contact, employer, rate, blocks or restriction text. Since package matching-v18 (LOCAL
+`20261023900100`) the candidate row itself carries `candidate_declarations` — the same card fields plus, minimised to
+the requirement (T-85), the engines and capabilities it asks for, the type ratings of its category on its aircraft
+(validity and a `restricted` flag) and the mobility — because the engine now checks the requirement's v1.8 profile
+rules (BR-3.7–3.13). Applicants (`get_requirement_applications`, `get_organization_applications`) carry the same
+projection, `private` applicants included (their own act, S-7). The builder's live count takes the job's country and no
+other rule (security review MEDIUM-1: free rule parameters plus a count would let one organization reconstruct one
+candidate's declarations).
 
 ## Threat model
 
