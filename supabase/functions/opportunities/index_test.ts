@@ -5,7 +5,7 @@ import {
   toOpportunityRequirement,
   withProfileRules,
 } from "../_shared/applications.ts";
-import { ApiError } from "../_shared/errors.ts";
+import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { toCandidate } from "../_shared/requirements.ts";
 import { parseValue } from "../_shared/validation.ts";
 import { listOpportunitiesQuery } from "../../../src/lib/validation/applications.ts";
@@ -36,6 +36,23 @@ Deno.test("opportunities is read-only (405 for every write method)", async () =>
   }
   restore();
 });
+
+Deno.test(
+  "v2-16: a blocked organization's requirement is absent from the list (SQL), so applying to it is a 409 ORGANIZATION_BLOCKED, never a 500",
+  () => {
+    // list_opportunities (20261024800000) leaves the requirement out, so `?id=` answers 404 like an unpublished one;
+    // a direct apply reaches apply_to_requirement, whose CFA16 maps to the stable reason the professional's UI names.
+    const error = fromDatabaseError({
+      code: "CFA16",
+      message: "the organization is blocked by the applicant",
+    });
+    assertEquals(
+      [error.status, error.code, error.reason],
+      [409, "CONFLICT", "ORGANIZATION_BLOCKED"],
+    );
+    assert(!error.message.includes("applicant"));
+  },
+);
 
 Deno.test("the cap is the SQL cap of list_opportunities", () => {
   assertEquals(OPPORTUNITY_CAP, 200);

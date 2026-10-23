@@ -254,7 +254,8 @@ export const handler = createHandler("applications", {
       p_share_consent: input.shareConsent, // literal true (schema); the database requires it too
       p_request_id: ctx.requestId,
     });
-    // P0002 → 404 · CFA01…CFA10, CFA13, CFA14 → 409 + reason · CF409 → 409 (key reused with another requirement)
+    // P0002 → 404 · CFA01…CFA10, CFA13, CFA14, CFA16 (the applicant blocked the organization, v2-16) → 409 +
+    // reason · CF409 → 409 (key reused with another requirement)
     if (error) throw fromDatabaseError(error);
     const { id, replayed } = createdRow(data);
     const application = (await loadMine(actor)).find((a) => a.id === id);

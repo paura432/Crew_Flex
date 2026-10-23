@@ -130,7 +130,7 @@ Deno.test("transition arguments carry the request, never an identity or a side",
 });
 
 Deno.test(
-  "CFA01…CFA15 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
+  "CFA01…CFA16 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
   () => {
     APPLICATION_CONFLICTS.forEach((reason, i) => {
       const code = `CFA${String(i + 1).padStart(2, "0")}`;
@@ -149,6 +149,13 @@ Deno.test(
     assertEquals(fromDatabaseError({ code: "CFR99" }).reason, undefined);
     assertEquals(fromDatabaseError({ code: "CFA14" }).reason, "PROFILE_REQUIREMENTS_UNMET"); // matching-v18
     assertEquals(fromDatabaseError({ code: "CFA15" }).reason, "RESTRICTIONS_DECLARED"); // T-87
+    // v2-16 (20261024800000, T-160): the applicant blocked the organization in the passport.
+    const blocked = fromDatabaseError({ code: "CFA16", message: "the organization is blocked" });
+    assertEquals(
+      [blocked.status, blocked.code, blocked.reason],
+      [409, "CONFLICT", "ORGANIZATION_BLOCKED"],
+    );
+    assertEquals(APPLICATION_CONFLICTS.length, 16);
     const unknown = `CFA${String(APPLICATION_CONFLICTS.length + 1).padStart(2, "0")}`;
     assertEquals(fromDatabaseError({ code: unknown }).code, "INTERNAL_ERROR");
     assertEquals(fromDatabaseError({ code: "CF412" }).reason, undefined);

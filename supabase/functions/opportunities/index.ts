@@ -9,7 +9,9 @@
 // Professional accounts (403 otherwise); `view=network` is for organization members instead (403 without
 // a membership) and carries no eligibility at all. The list comes from `list_opportunities` (DEFINER,
 // fixed projection: organization name, no ids of people or organizations, no counts; never the caller's
-// own organizations' requirements, T-90); eligibility is the shared engine on the caller's OWN data
+// own organizations' requirements, T-90; never a requirement of an organization the caller blocked in the
+// passport, v2-16/T-160 — so `?id=` of one is a 404 like an unpublished one, and applying to it answers
+// 409 `ORGANIZATION_BLOCKED` in `applications`); eligibility is the shared engine on the caller's OWN data
 // (`own_candidate_profile`) against the requirement and its v1.8 profile requirements
 // (`get_requirement_profile_rules`, matching-v18), every failed rule explained in `match.blockers` —
 // publication never makes anyone eligible. LLM ≠ eligibility engine.
