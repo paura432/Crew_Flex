@@ -15,6 +15,10 @@ if [ "${1:-}" = "--dry-run" ]; then
 fi
 # work_requirement_qualifications cascade with the requirement; audit rows stay (append-only, synthetic).
 bash scripts/local/sb-local.sh db query "delete from public.work_requirements where $WHERE returning title"
+# ui-smoke step 5 declares a B2 for Delta and removes it at the end; an interrupted run leaves it (the seed has none).
+bash scripts/local/sb-local.sh db query "delete from public.technician_qualifications q using public.qualification_types qt
+  where qt.id = q.qualification_type_id and qt.code = 'B2'
+    and q.technician_profile_id = '00000000-0000-4000-8000-000000000021' returning qt.code"
 # PKG recruiter: the browser smoke's revoked «Smoke client …» rows once nothing references them, and Lisbon back to
 # an MRO if an interrupted run left it a staffing agency (no-ops before migration 20261024500000).
 bash scripts/local/sb-local.sh db query "do \$\$ begin
