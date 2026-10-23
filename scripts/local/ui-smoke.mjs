@@ -56,6 +56,7 @@ const page = await ctx.newPage();
 const errors = [];
 const expectedErrorUrls = new Set(); // pages whose 404 is the behaviour under test (cross-org)
 let expectOffline = false; // 2h aborts a request on purpose: its console error is the test
+let expectBadLink = false; // wallet-extras 3 answers the signed URL with 400 on purpose (expired link)
 const isExpected404 = (text, url) =>
   /status of 404/.test(text) && [...expectedErrorUrls].some((u) => url.startsWith(u));
 page.on("pageerror", (e) => errors.push(`${String(e)} @ ${page.url()}`));
@@ -65,12 +66,17 @@ page.on("console", (m) => {
   if (
     m.type() === "error" &&
     !isExpected404(m.text(), page.url()) &&
-    !(expectOffline && /ERR_INTERNET_DISCONNECTED/.test(m.text()))
+    !(expectOffline && /ERR_INTERNET_DISCONNECTED/.test(m.text())) &&
+    !(expectBadLink && /status of 400/.test(m.text()))
   )
     errors.push(`${m.text()} @ ${page.url()}`);
 });
 const hosts = new Set();
-page.on("request", (r) => hosts.add(new URL(r.url()).host));
+page.on("request", (r) => {
+  // Chromium's built-in PDF viewer (chrome-extension://…, N-21 blob frame) is not a network host.
+  const u = new URL(r.url());
+  if (/^https?:$/.test(u.protocol)) hosts.add(u.host);
+});
 const shot = (name) =>
   page.screenshot({
     path: `${EVIDENCE}/local-${name}.jpg`,
@@ -2756,6 +2762,7 @@ const wxExpired = (route) =>
     headers: { "access-control-allow-origin": "*" },
     body: '{"statusCode":"400","error":"InvalidJWT","message":"jwt expired"}',
   });
+expectBadLink = true;
 await page.route("**/storage/v1/object/sign/**", wxExpired);
 const wxPdfRow = page.locator("main li", { hasText: "Smoke viewer pdf" });
 await wxPdfRow.getByRole("button", { name: "Open" }).click();
@@ -2765,6 +2772,7 @@ await wxAlert.waitFor({ timeout: 15_000 });
 const wxAlertText = await wxAlert.innerText();
 const wxNoFrame = (await wxPdfDialog.locator("iframe").count()) === 0;
 await page.unroute("**/storage/v1/object/sign/**", wxExpired);
+expectBadLink = false;
 await wxPdfDialog.getByRole("button", { name: "Try again" }).click();
 await wxPdfDialog.locator("iframe").waitFor({ timeout: 15_000 });
 const wxFrame = await wxPdfDialog.locator("iframe").getAttribute("src");
@@ -3054,7 +3062,7 @@ ok(
     /Work permit: Spain/.test(v18EligibleText) &&
     /Category B1\.1/.test(v18EligibleText) &&
     /Aircraft: A320 Family \/ B737 NG/.test(v18EligibleText) &&
-    /Type rating B1\.1 · A320 Family \/ B737 NG\s+Met: Declared, valid and unrestricted/.test(
+    /Type rating B1\.1 · A320 Family \/ B737 NG\s+Met:\s+Declared, valid and unrestricted/.test(
       v18EligibleText,
     ) &&
     /Minimum experience: 5 years/.test(v18EligibleText) &&
@@ -3118,9 +3126,9 @@ const v18Kilo = await v18Opportunity("kilo@crewflex.test");
 ok(
   "PKG matching-v18 4 own eligibility: the job's country is checked against the declared work permits (Delta yes, Kilo no)",
   Boolean(v18Id) &&
-    /Work permit: Spain\s+Met: Declared in the profile/.test(v18Delta) &&
+    /Work permit: Spain\s+Met:\s+Declared in the profile/.test(v18Delta) &&
     /No work permit declared for Spain/.test(v18Kilo) &&
-    /Work permit: Spain\s+Not met: Not declared in the profile/.test(v18Kilo),
+    /Work permit: Spain\s+Not met:\s+Not declared in the profile/.test(v18Kilo),
   JSON.stringify({ created: Boolean(v18Id), kilo: v18Kilo.replace(/\s+/g, " ").slice(0, 160) }),
 );
 await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
