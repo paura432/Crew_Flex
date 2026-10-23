@@ -52,7 +52,6 @@ to their own workspaces: it grants nothing and opens no new read path; `/app/adm
 | `application_packs` (LOCAL, v2-15)                    | – (no grant). Applicant · requirement org's admin/manager now, via `get_application_pack`; own copies via `get_my_application_packs`                  | – (AFTER INSERT trigger on `applications`; the applicant's own act only)                      | – (refused by trigger, owner included)                                                                                                                                                                                                                                                                                                        | – (trigger: withdrawal, account closure; cascades)                                      |
 | `technician_notice_preferences` (LOCAL)               | **own only** (not the organization, not platform admins)                                                                                              | own (`save_notice_preferences` or direct; CHECKs + zone trigger)                              | own, the form's columns (not `profile_id`)                                                                                                                                                                                                                                                                                                    | – (cascade with the account)                                                            |
 | `outreach_distributions` (LOCAL)                      | admin/manager of the requirement's organization · platform admin (urgency, count, time; no recipient)                                                 | – (`requirement_outreach` only)                                                               | –                                                                                                                                                                                                                                                                                                                                             | – (cascade with the requirement)                                                        |
-| `organization_candidate_blocks` (LOCAL, v2-16)        | – (no grant, no policy). Admin/manager read their organization's blocked refs through `search_candidate_directory(…, blocked)`                        | – (`set_directory_block` only)                                                                | –                                                                                                                                                                                                                                                                                                                                             | – (`set_directory_block`; cascades with the professional and the organization)          |
 
 | `app_private.feature_flags` | – (no grant; owner only) | – | – | – |
 | `app_private.application_transitions`, `app_private.requirement_cards` | – (no grant; read by the DEFINER RPCs) | – | – | – |
@@ -217,25 +216,26 @@ assignments and `hard_eligibility` — and the organization receives **only the 
 external pool are eligible and not its applicants (T-128; the count is taken before the per-person delivery bound); distributions of one organization are serialised and limited to 10 per 24 h. No function returns who was notified or why someone was not.
 Each recipient reads their notice through `get_my_notifications` as their own, only while the need is published.
 
-**Candidate directory and employer block (PKG directory, LOCAL `20261024700000`, BR-28, T-150…T-159).** «Buscar
-candidatos» is ONE DEFINER function, `search_candidate_directory`: the caller must be admin/manager of the
+**Candidate directory (PKG directory, LOCAL `20261024700000`, BR-28, T-150…T-158).** «Buscar candidatos» is ONE
+DEFINER function, `search_candidate_directory`, and the package is read-only: no RPC takes a pseudonym or writes
+(the organization-side block was not ported — v1.8 has none — and is parked under tag
+`parked/directory-employer-block` after the security review of 2026-10-23). The caller must be admin/manager of the
 organization, read in the body (42501 for a plain member, another organization, a professional, a platform admin
 without membership and anon). Whom it may find is the external pool's visibility without a requirement —
 `anonymous`/`open`, `verified_orgs` only for a reviewed organization, never a member, never a professional who blocked
-it (`app_private.directory_visible`, proven equal to `ranked_external_pool` on randomized profiles) — minus the
-professionals the organization itself blocked; `private` profiles are never read, counted or resolvable. A row carries
-a per-**organization** pseudonym (`CF-` + 10 hex of a salted hash: stable for that organization, different for every
-other organization and from every per-requirement ref, not computable from a profile id — T-04 kept, T-151), the name
-only for `open`, base, declared years and the passport card minimised as for a requirement that asks for nothing
-(T-85: no engines, capabilities or type ratings; never restriction text, contact, employer, rate, blocks, documents or
-qualifications — T-153). The filters ask only about what the card shows (category, aircraft, English, years, permit,
-base) plus an availability window that starts today or later and spans at most 365 days (BR-4 as a planned need);
-`total` counts the visible rows of the search. At most 60 directory calls (searches and blocks) per organization per minute (CFD01, T-157); a page is at most 20 rows. The
-employer block (v2-16, `set_directory_block`): admin/manager, by the ref the organization sees, resolved only among
-the professionals it may currently find (CFD02 like an unknown ref — no existence oracle), idempotent, audited with
-the block row id only; applied to the directory, `ranked_external_pool` (hence the per-need pool, its summary and the outreach audience) and `count_viable_candidates`; the professional is never told —
-opportunities and applying are unaffected (symmetric with T-35). Known consequence (security review 2026-10-23, Medium-1, owner decision pending): the block removes exactly one chosen professional from the organization's own pools, so blocking and unblocking lets that organization link a directory ref to the same person's per-requirement refs (the pool row that disappears; the applicant row keeps listing them) — the refs themselves stay unlinkable and the linkage costs two audited acts per need; pinned in `tests/db/directory.test.ts`. `organization_candidate_blocks` has no grant and no
-policy. Proof: `tests/db/directory.test.ts`.
+it (`app_private.directory_visible`, proven equal to `ranked_external_pool` on randomized profiles; `count_visible_network`
+counts the same helper); `private` profiles are never read, counted or resolvable. A row carries a per-**organization**
+pseudonym (`CF-` + 10 hex of a salted hash: stable for that organization, different for every other organization and
+from every per-requirement ref, not computable from a profile id — T-04 kept, T-151), the name only for `open`, base,
+declared years and the passport card minimised as for a requirement that asks for nothing (T-85: no engines,
+capabilities or type ratings; never restriction text, contact, employer, rate, blocks, documents or qualifications —
+T-153). The filters ask only about what the card shows (category, aircraft, English, years, permit, base) plus an
+availability window that starts today or later and spans at most 365 days (BR-4 as a planned need). The database
+checks the bounds it can (22023: English level, years, base length, window, limit, offset) and matches category,
+aircraft and country as values — an unknown value matches nobody; the Edge Function's schema refuses it with 400
+before the call. `total` counts the visible rows of the search. At most 60 searches per organization per minute
+(CFD01, T-157); a page is at most 20 rows. The salt, the throttle table and the helpers (`directory_visible`,
+`directory_ref`, `directory_throttle`) have no grant for any API role. Proof: `tests/db/directory.test.ts`.
 
 ## Edge Function checklist
 

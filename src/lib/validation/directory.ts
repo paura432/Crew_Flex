@@ -1,14 +1,14 @@
-// Shared by the «Buscar candidatos» page, its block action and the `candidate-directory` Edge Function
-// (package directory, BUSINESS_RULES BR-28). Deno-compatible imports (relative, `.ts`). Messages are i18n
-// keys (`v.directory.*`, messages/*.json). Identity never travels in a payload: the organization role comes
-// from the database; every schema is strict, so `profileId`, `userId`, `role`… are rejected. The database
-// re-checks every bound (22023) and is the backstop for a direct PostgREST call.
+// Shared by the «Buscar candidatos» page and the `candidate-directory` Edge Function (package directory,
+// BUSINESS_RULES BR-28). Deno-compatible imports (relative, `.ts`). Messages are i18n keys (`v.directory.*`,
+// messages/*.json). Identity never travels in a payload: the organization role comes from the database; the
+// schema is strict, so `profileId`, `userId`, `role`… are rejected. The catalog values (category, aircraft,
+// country) are checked HERE (400); the database re-checks the other bounds (22023) and is the backstop for a
+// direct PostgREST call.
 import { z } from "./zod.ts";
 import {
   DIRECTORY_BASE_MAX,
   DIRECTORY_MIN_YEARS_MAX,
   DIRECTORY_PAGE_MAX,
-  DIRECTORY_REF_PATTERN,
   isValidDirectoryWindow,
   utcDay,
 } from "../../domain/directory.ts";
@@ -43,8 +43,6 @@ export const directorySearchQuery = z
     base: z.string("v.invalid").trim().max(DIRECTORY_BASE_MAX, "v.invalid").optional(),
     from: isoDate.optional(),
     to: isoDate.optional(),
-    /** `1` lists the professionals the organization blocked (v2-16) instead of the directory. */
-    blocked: z.enum(["0", "1"], "v.invalid").optional(),
     page: queryInt(DIRECTORY_PAGE_MAX, "v.invalid")
       .refine((n) => n >= 1, "v.invalid")
       .optional(),
@@ -54,11 +52,3 @@ export const directorySearchQuery = z
     message: "v.directory.window",
   });
 export type DirectorySearchQuery = z.infer<typeof directorySearchQuery>;
-
-/** PUT `candidate-directory` `{ organizationId, candidateRef, blocked }` (v2-16 employer block). */
-export const directoryBlockInput = z.strictObject({
-  organizationId: z.uuid("v.invalid"),
-  candidateRef: z.string("v.invalid").regex(DIRECTORY_REF_PATTERN, "v.invalid"),
-  blocked: z.boolean("v.invalid"),
-});
-export type DirectoryBlockInput = z.infer<typeof directoryBlockInput>;

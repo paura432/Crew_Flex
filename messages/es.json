@@ -2510,10 +2510,6 @@
     "title": "Encuentra a tu próximo técnico.",
     "description": "Compara cualificaciones, experiencia y disponibilidad. La identidad respeta las preferencias de cada profesional.",
     "visibleNote": "Solo perfiles visibles para tu organización. Los descansos y el calendario privado no se muestran.",
-    "blockedTitle": "Perfiles bloqueados por tu organización",
-    "blockedDescription": "Estos profesionales no aparecen en tu directorio ni entre los candidatos de tus necesidades. No se les avisa.",
-    "viewBlocked": "Ver perfiles bloqueados",
-    "backToDirectory": "Volver al directorio",
     "evaluate": {
       "label": "Evaluar para la oferta",
       "placeholder": "Sin oferta seleccionada",
@@ -2560,11 +2556,7 @@
       "countries": "Países de trabajo: {list}",
       "countriesNone": "Países de trabajo: sin declarar",
       "restrictions": "Restricciones declaradas",
-      "openProfile": "Abrir perfil",
-      "block": "Bloquear",
-      "unblock": "Desbloquear",
-      "blocked": "Perfil bloqueado: ya no aparece en tu directorio ni en tus necesidades.",
-      "unblocked": "Perfil desbloqueado: vuelve a aparecer en tu directorio y en tus necesidades."
+      "openProfile": "Abrir perfil"
     },
     "medals": {
       "label": "Insignias del perfil",
@@ -2586,17 +2578,11 @@
     },
     "emptyTitle": "No hay perfiles para estos filtros",
     "emptyDescription": "Amplía la búsqueda o revisa las fechas y los requisitos.",
-    "emptyBlockedTitle": "No has bloqueado ningún perfil",
-    "emptyBlockedDescription": "Desde cada tarjeta del directorio puedes bloquear a un profesional para que no aparezca en tus resultados.",
     "pager": {
       "label": "Páginas del directorio",
       "info": "{page} / {pages} · {size} perfiles por página",
       "previous": "Anterior",
       "next": "Siguiente"
-    },
-    "conflict": {
-      "DIRECTORY_RATE_LIMITED": "Tu organización ha hecho demasiadas búsquedas en el último minuto. Espera un momento e inténtalo de nuevo.",
-      "DIRECTORY_CANDIDATE_NOT_FOUND": "Este perfil ya no está disponible para tu organización."
     }
   }
 }

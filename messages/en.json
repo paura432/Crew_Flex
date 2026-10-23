@@ -2510,10 +2510,6 @@
     "title": "Find your next technician.",
     "description": "Compare qualifications, experience and availability. Identity follows each professional's preferences.",
     "visibleNote": "Only profiles visible to your organization. Rest days and the private calendar are not shown.",
-    "blockedTitle": "Profiles blocked by your organization",
-    "blockedDescription": "These professionals do not appear in your directory or among the candidates of your requirements. They are not told.",
-    "viewBlocked": "View blocked profiles",
-    "backToDirectory": "Back to the directory",
     "evaluate": {
       "label": "Evaluate for the offer",
       "placeholder": "No offer selected",
@@ -2560,11 +2556,7 @@
       "countries": "Work countries: {list}",
       "countriesNone": "Work countries: not declared",
       "restrictions": "Restrictions declared",
-      "openProfile": "Open profile",
-      "block": "Block",
-      "unblock": "Unblock",
-      "blocked": "Profile blocked: it no longer appears in your directory or your requirements.",
-      "unblocked": "Profile unblocked: it appears again in your directory and your requirements."
+      "openProfile": "Open profile"
     },
     "medals": {
       "label": "Profile badges",
@@ -2586,17 +2578,11 @@
     },
     "emptyTitle": "No profiles for these filters",
     "emptyDescription": "Widen the search or review the dates and requirements.",
-    "emptyBlockedTitle": "You have not blocked any profile",
-    "emptyBlockedDescription": "From any directory card you can block a professional so they no longer appear in your results.",
     "pager": {
       "label": "Directory pages",
       "info": "{page} / {pages} · {size} profiles per page",
       "previous": "Previous",
       "next": "Next"
-    },
-    "conflict": {
-      "DIRECTORY_RATE_LIMITED": "Your organization has run too many searches in the last minute. Wait a moment and try again.",
-      "DIRECTORY_CANDIDATE_NOT_FOUND": "This profile is no longer available to your organization."
     }
   }
 }

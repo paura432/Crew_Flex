@@ -45,7 +45,6 @@ export async function DirectoryFilters({
       aria-label={t("legend")}
       className="mb-4 rounded-xl border border-line bg-white p-4"
     >
-      {query.blocked && <input type="hidden" name="blocked" value="1" />}
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
         <label className={field}>
           {t("base")}
@@ -161,7 +160,7 @@ export async function DirectoryFilters({
   );
 }
 
-/** v1.8 «Limpiar filtros»: everything but the blocked mode (the list the user is looking at). */
+/** v1.8 «Limpiar filtros»: every filter and the page. */
 const CLEARED: Partial<DirectoryQuery> = {
   category: null,
   aircraft: null,

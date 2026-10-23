@@ -5,7 +5,6 @@ import { categoryKey } from "@/domain/passport";
 import { countryName } from "@/features/organizations/countries";
 import type { Locale } from "@/i18n/config";
 import type { DirectoryCandidate } from "@/types/api";
-import { BlockCandidateForm } from "./BlockCandidateForm";
 import { MedalStrip } from "./MedalStrip";
 import { ProfileDialog } from "./ProfileDialog";
 
@@ -30,13 +29,7 @@ function Avatar({ name, label, size }: { name: string | null; label: string; siz
  * the «Perfil profesional» dialog with the same passport-card data. Never contact, employer, rate, documents,
  * qualifications or restriction text — the function does not return them (T-153).
  */
-export async function DirectoryCard({
-  candidate,
-  blocked,
-}: {
-  candidate: DirectoryCandidate;
-  blocked: boolean;
-}) {
+export async function DirectoryCard({ candidate }: { candidate: DirectoryCandidate }) {
   const [t, tCategory, locale] = await Promise.all([
     getTranslations("directory"),
     getTranslations("passport.categories"),
@@ -117,7 +110,6 @@ export async function DirectoryCard({
           <p className="mt-5 text-xs text-muted">{t("profile.privacy")}</p>
           <p className="mt-1 text-xs text-muted">{t("profile.learningNote")}</p>
         </ProfileDialog>
-        <BlockCandidateForm candidateRef={candidate.ref} blocked={blocked} />
       </footer>
     </article>
   );

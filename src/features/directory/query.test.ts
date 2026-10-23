@@ -10,7 +10,7 @@ import {
 const TODAY = "2026-10-23";
 
 describe("parseDirectoryQuery", () => {
-  it("reads the seven filters, the blocked switch and the page; unknown catalog values fall back", () => {
+  it("reads the seven filters and the page; unknown catalog values fall back", () => {
     const { query, errors } = parseDirectoryQuery(
       {
         category: "B1.1",
@@ -21,7 +21,6 @@ describe("parseDirectoryQuery", () => {
         base: "  Madrid ",
         from: "2026-11-01",
         to: "2026-11-10",
-        blocked: "1",
         page: "3",
       },
       TODAY,
@@ -35,7 +34,6 @@ describe("parseDirectoryQuery", () => {
       base: "Madrid",
       from: "2026-11-01",
       to: "2026-11-10",
-      blocked: true,
       page: 3,
     });
     expect(errors).toEqual({ window: false, minYears: false });
@@ -81,9 +79,11 @@ describe("toDirectorySearchParams / directoryHref", () => {
       category: "B2",
     });
     expect(directoryHref(EMPTY_DIRECTORY_QUERY)).toBe("/app/organization/candidates");
-    expect(directoryHref(EMPTY_DIRECTORY_QUERY, { page: 2, blocked: true })).toBe(
-      "/app/organization/candidates?blocked=1&page=2",
+    expect(directoryHref(EMPTY_DIRECTORY_QUERY, { page: 2 })).toBe(
+      "/app/organization/candidates?page=2",
     );
+    // The parked employer block: `blocked` is not URL state any more.
+    expect(parseDirectoryQuery({ blocked: "1" }, TODAY).query).toEqual(EMPTY_DIRECTORY_QUERY);
     expect(directoryHref({ ...EMPTY_DIRECTORY_QUERY, minYears: 0, base: "Lisboa (LIS)" })).toBe(
       "/app/organization/candidates?minYears=0&base=Lisboa+%28LIS%29",
     );

@@ -1,8 +1,9 @@
-// Package directory (migration 20261024700000; v2-22 / v2-23 «Buscar candidatos», v2-16 employer block;
-// BUSINESS_RULES BR-28, T-150…T-159). Who may search, whom an organization may find (parity with
-// ranked_external_pool on randomized profiles), what a row carries, every filter with a negative case, the
-// employer block on the directory, the pool and the count, and the per-organization throttle. Every case runs
-// inside a rolled-back transaction (harness `asUser`).
+// Package directory (migration 20261024700000; v2-22 / v2-23 «Buscar candidatos»; BUSINESS_RULES BR-28,
+// T-150…T-158). Who may search, whom an organization may find (parity with ranked_external_pool on randomized
+// profiles; «Red visible» counts the same set), what a row carries, every filter with a negative case, the
+// no-grant surface and the per-organization throttle. The organization-side block is not ported (tag
+// `parked/directory-employer-block`): nothing here writes. Every case runs inside a rolled-back transaction
+// (harness `asUser`).
 import { createHash } from "node:crypto";
 import type { PGlite, Transaction } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -67,7 +68,6 @@ interface Filters {
   base?: string | null;
   from?: string | null;
   to?: string | null;
-  blocked?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -80,7 +80,7 @@ interface Row {
   total: number;
 }
 const SEARCH =
-  "select * from public.search_candidate_directory($1, $2, $3, $4, $5, $6, $7, $8::date, $9::date, $10, $11, $12)";
+  "select * from public.search_candidate_directory($1, $2, $3, $4, $5, $6, $7, $8::date, $9::date, $10, $11)";
 const searchParams = (org: string, f: Filters = {}) => [
   org,
   f.category ?? null,
@@ -91,7 +91,6 @@ const searchParams = (org: string, f: Filters = {}) => [
   f.base ?? null,
   f.from ?? null,
   f.to ?? null,
-  f.blocked ?? false,
   f.limit ?? 20,
   f.offset ?? 0,
 ];
@@ -124,21 +123,6 @@ async function refOf(tx: Transaction, org: string, profile: string) {
     [org, profile],
   );
   return rows[0]!.ref;
-}
-
-async function setBlock(
-  tx: Transaction,
-  userId: string,
-  org: string,
-  ref: string,
-  blocked: boolean,
-) {
-  await actAs(tx, userId);
-  const { rows } = await tx.query<{ b: boolean }>(
-    "select public.set_directory_block($1, $2, $3, $4) as b",
-    [org, ref, blocked, "00000000-0000-4000-8000-00000000d1d1"],
-  );
-  return rows[0]!.b;
 }
 
 const DAY = 86_400_000;
@@ -190,46 +174,29 @@ describe("search_candidate_directory — who may search (S-10)", () => {
     });
   });
 
-  it("the block table and the private helpers have no API path (no grant) — admin, platform admin and anon alike", async () => {
+  it("the salt, the throttle table and the private helpers (visible, ref, throttle) have no API path (no grant) — admin, platform admin, professional and anon alike", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
-      for (const user of [SEED.platformAdmin, SEED.delta, null]) {
+      const probes: [string, unknown[]][] = [
+        ["select * from app_private.directory_settings", []],
+        ["select * from app_private.directory_search_events", []],
+        ["insert into app_private.directory_search_events (organization_id) values ($1)", [mroId]],
+        ["select * from app_private.directory_visible($1)", [mroId]],
+        ["select app_private.directory_ref($1, $2)", [mroId, SEED.delta]],
+        ["select app_private.directory_throttle($1)", [mroId]],
+      ];
+      for (const user of [SEED.adminMro, SEED.platformAdmin, SEED.delta, null]) {
         await actAs(tx, user);
-        expect(
-          await sqlError(tx, "select * from public.organization_candidate_blocks"),
-          String(user),
-        ).toBe("42501");
-        expect(
-          await sqlError(
-            tx,
-            "insert into public.organization_candidate_blocks (organization_id, technician_profile_id) values ($1, $2)",
-            [mroId, SEED.delta],
-          ),
-          String(user),
-        ).toBe("42501");
-        expect(
-          await sqlError(tx, "select * from app_private.directory_search_events"),
-          String(user),
-        ).toBe("42501");
+        for (const [sql, params] of probes) {
+          expect(await sqlError(tx, sql, params), `${String(user)}: ${sql}`).toBe("42501");
+        }
       }
-      await actAs(tx, SEED.adminMro);
-      expect(await sqlError(tx, "select * from public.organization_candidate_blocks")).toBe(
-        "42501",
+      // The parked employer block left nothing behind: no table, no RPC.
+      await asOwner(tx);
+      const { rows: leftovers } = await tx.query<{ n: number }>(
+        `select (select count(*) from pg_tables where tablename = 'organization_candidate_blocks')::int
+              + (select count(*) from pg_proc where proname = 'set_directory_block')::int as n`,
       );
-      expect(
-        await sqlError(
-          tx,
-          "insert into public.organization_candidate_blocks (organization_id, technician_profile_id) values ($1, $2)",
-          [mroId, SEED.delta],
-        ),
-      ).toBe("42501");
-      expect(await sqlError(tx, "select * from app_private.directory_visible($1)", [mroId])).toBe(
-        "42501",
-      );
-      expect(
-        await sqlError(tx, "select app_private.directory_ref($1, $2)", [mroId, SEED.delta]),
-      ).toBe("42501");
-      expect(await sqlError(tx, "select * from app_private.directory_settings")).toBe("42501");
-      expect(await sqlError(tx, "select * from app_private.directory_search_events")).toBe("42501");
+      expect(leftovers[0]!.n).toBe(0);
     });
   });
 });
@@ -256,6 +223,13 @@ describe("whom the organization may find (S-7 without a requirement)", () => {
       );
       expect(rows.length).toBe(visible[0]!.n);
       expect(new Set(rows.map((r) => r.total))).toEqual(new Set([visible[0]!.n]));
+      // «Red visible» (shell-visual T-146) is the same definition: it counts exactly the rows the directory lists.
+      await actAs(tx, SEED.adminMro);
+      const { rows: network } = await tx.query<{ n: number }>(
+        "select public.count_visible_network($1) as n",
+        [mroId],
+      );
+      expect(network[0]!.n).toBe(rows.length);
     });
   });
 
@@ -315,7 +289,7 @@ describe("whom the organization may find (S-7 without a requirement)", () => {
           .slice(0, 10)
           .toUpperCase();
       expect(first).not.toBe(unsalted);
-      // Two searches agree on the ref (the UI pages, opens and blocks by it).
+      // Two searches agree on the ref (the UI pages and opens by it).
       const a = refs(await searchAll(tx, SEED.adminMro, mroId));
       const b = refs(await searchAll(tx, SEED.managerMro, mroId));
       expect(a).toEqual(b);
@@ -585,11 +559,6 @@ describe("parity with ranked_external_pool (S-7) on randomized profiles", () => 
             "insert into public.technician_organization_blocks (technician_profile_id, organization_id) values ($1, $2)",
             [id, mroId],
           );
-        if (rnd() < 0.15)
-          await tx.query(
-            "insert into public.organization_candidate_blocks (organization_id, technician_profile_id) values ($1, $2)",
-            [mroId, id],
-          );
         if (rnd() < 0.1)
           await tx.query(
             "insert into public.organization_members (organization_id, profile_id, role) values ($1, $2, 'member')",
@@ -657,9 +626,7 @@ describe("parity with ranked_external_pool (S-7) on randomized profiles", () => 
         await asOwner(tx);
         const { rows: unqualified } = await tx.query<{ profile_id: string }>(
           `select v.profile_id from app_private.directory_visible($1) v
-           where not exists (select 1 from public.organization_candidate_blocks cb
-                             where cb.organization_id = $1 and cb.technician_profile_id = v.profile_id)
-             and not exists (select 1 from public.technician_qualifications tq
+           where not exists (select 1 from public.technician_qualifications tq
                              where tq.technician_profile_id = v.profile_id and tq.status = 'active'
                                and tq.qualification_type_id = $2)`,
           [mroId, b11],
@@ -714,318 +681,8 @@ describe("parity with ranked_external_pool (S-7) on randomized profiles", () => 
   });
 });
 
-describe("employer block (v2-16, T-158)", () => {
-  it("blocking by ref removes the professional from the directory, the per-need pool, its summary and the live count; the blocked list and unblocking bring them back; audited without the profile id", async () => {
-    await asUser(db, SEED.adminMro, async (tx) => {
-      await addWindow(tx, SEED.delta, 10, 20);
-      const deltaRef = await refOf(tx, mroId, SEED.delta);
-      const deltaPoolRef =
-        "CF-" +
-        createHash("sha256")
-          .update(`${madRequirementId}:${SEED.delta}`)
-          .digest("hex")
-          .slice(0, 10)
-          .toUpperCase();
-      const period = [new Date(midnight(10)).toISOString(), new Date(midnight(14)).toISOString()];
-      const a320 = (
-        await tx.query<{ id: string }>(
-          "select id from public.qualification_types where code = 'TR-A320'",
-        )
-      ).rows[0]!.id;
-      const snapshot = async () => {
-        await actAs(tx, SEED.adminMro);
-        const pool = await tx.query<{ candidate_ref: string }>(
-          "select candidate_ref from public.get_requirement_candidate_pool($1) where candidate_pool = 'external'",
-          [madRequirementId],
-        );
-        const summary = await tx.query<{ prefiltered: number }>(
-          "select prefiltered from public.get_requirement_external_pool_summary($1)",
-          [madRequirementId],
-        );
-        const count = await tx.query<{ n: number }>(
-          "select public.count_viable_candidates($1, $2, $3, 'planned', array[$4, $5]::uuid[]) as n",
-          [mroId, period[0], period[1], b11, a320],
-        );
-        const network = await tx.query<{ n: number }>(
-          "select public.count_visible_network($1) as n",
-          [mroId],
-        );
-        return {
-          // «Red visible» (shell-visual T-146) = the rows the directory lists, the organization's blocks excluded.
-          visibleNetwork: network.rows[0]!.n,
-          directory: refs(await searchAll(tx, SEED.adminMro, mroId)),
-          blocked: refs(await searchAll(tx, SEED.adminMro, mroId, { blocked: true })),
-          deltaInPool: pool.rows.some((r) => r.candidate_ref === deltaPoolRef),
-          prefiltered: summary.rows[0]!.prefiltered,
-          viable: count.rows[0]!.n,
-        };
-      };
-      // Delta applied to the MAD need before the block (the organization already sees the applicant).
-      await asOwner(tx);
-      await tx.query(
-        "insert into public.applications (requirement_id, technician_profile_id) values ($1, $2)",
-        [madRequirementId, SEED.delta],
-      );
-      const applicantRefs = async () => {
-        await actAs(tx, SEED.adminMro);
-        return (
-          await tx.query<{ candidate_ref: string }>(
-            "select candidate_ref from public.get_requirement_applications($1)",
-            [madRequirementId],
-          )
-        ).rows.map((r) => r.candidate_ref);
-      };
-      const poolRefs = async () => {
-        await actAs(tx, SEED.adminMro);
-        return (
-          await tx.query<{ candidate_ref: string }>(
-            "select candidate_ref from public.get_requirement_candidate_pool($1) where candidate_pool = 'external'",
-            [madRequirementId],
-          )
-        ).rows.map((r) => r.candidate_ref);
-      };
-      const before = await snapshot();
-      const poolBefore = await poolRefs();
-      expect(before.directory).toContain(deltaRef);
-      expect(before.blocked).toEqual([]);
-      expect(before.deltaInPool).toBe(true);
-      expect(before.viable).toBeGreaterThan(0);
-      expect(before.visibleNetwork).toBe(before.directory.length);
-      expect(await applicantRefs()).toContain(deltaPoolRef);
-
-      expect(await setBlock(tx, SEED.adminMro, mroId, deltaRef, true)).toBe(true);
-      const blocked = await snapshot();
-      expect(blocked.directory).not.toContain(deltaRef);
-      expect(blocked.blocked).toEqual([deltaRef]);
-      expect(blocked.deltaInPool).toBe(false);
-      // Security review Medium-1 (pinned, owner decision pending): the pool loses EXACTLY the blocked
-      // professional's per-requirement ref, so the organization can link its directory ref to that ref by
-      // blocking and unblocking; the applicant row (the professional's own act) keeps listing them.
-      const poolAfter = await poolRefs();
-      expect(poolBefore.filter((r) => !poolAfter.includes(r))).toEqual([deltaPoolRef]);
-      expect(await applicantRefs()).toContain(deltaPoolRef);
-      expect(blocked.prefiltered).toBe(before.prefiltered - 1);
-      expect(blocked.viable).toBe(before.viable - 1);
-      expect(blocked.visibleNetwork).toBe(before.visibleNetwork - 1);
-      // Idempotent: a second block changes nothing and writes no second audit row.
-      expect(await setBlock(tx, SEED.adminMro, mroId, deltaRef, true)).toBe(true);
-
-      await asOwner(tx);
-      const { rows: audit } = await tx.query<{
-        action: string;
-        entity_type: string;
-        entity_id: string;
-        metadata: Record<string, unknown>;
-        organization_id: string;
-        actor_profile_id: string;
-      }>(
-        "select action, entity_type, entity_id, metadata, organization_id, actor_profile_id from public.audit_events where action like 'directory.%' order by created_at",
-      );
-      const { rows: row } = await tx.query<{ id: string }>(
-        "select id from public.organization_candidate_blocks where organization_id = $1 and technician_profile_id = $2",
-        [mroId, SEED.delta],
-      );
-      expect(audit).toHaveLength(1);
-      expect(audit[0]).toMatchObject({
-        action: "directory.candidate_blocked",
-        entity_type: "organization_candidate_block",
-        entity_id: row[0]!.id,
-        organization_id: mroId,
-        actor_profile_id: SEED.adminMro,
-        metadata: { request_id: "00000000-0000-4000-8000-00000000d1d1" },
-      });
-      expect(JSON.stringify(audit[0]!.metadata)).not.toContain(SEED.delta);
-      expect(Object.keys(audit[0]!.metadata)).toEqual(["request_id"]);
-
-      // Unblock (by the manager) restores everything.
-      expect(await setBlock(tx, SEED.managerMro, mroId, deltaRef, false)).toBe(false);
-      expect(await setBlock(tx, SEED.managerMro, mroId, deltaRef, false)).toBe(false);
-      expect(await snapshot()).toEqual(before);
-      await asOwner(tx);
-      const { rows: audit2 } = await tx.query<{ action: string }>(
-        "select action from public.audit_events where action like 'directory.%' order by created_at",
-      );
-      expect(audit2.map((a) => a.action)).toEqual([
-        "directory.candidate_blocked",
-        "directory.candidate_unblocked",
-      ]);
-    });
-  });
-
-  it("only an admin/manager of that organization; a private profile, a member, a blocker or an unknown ref is CFD02; a malformed ref 22023", async () => {
-    await asUser(db, SEED.adminMro, async (tx) => {
-      const deltaRef = await refOf(tx, mroId, SEED.delta);
-      const BLOCK = "select public.set_directory_block($1, $2, true)";
-      for (const user of [
-        SEED.charlieMember,
-        SEED.adminOther,
-        SEED.delta,
-        SEED.platformAdmin,
-        null,
-      ]) {
-        await actAs(tx, user);
-        expect(await sqlError(tx, BLOCK, [mroId, deltaRef]), String(user)).toBe("42501");
-      }
-      await asOwner(tx);
-      await tx.query(
-        "insert into public.technician_organization_blocks (technician_profile_id, organization_id) values ($1, $2)",
-        [FOXTROT, mroId],
-      );
-      const notFound = conflict("DIRECTORY_CANDIDATE_NOT_FOUND");
-      for (const [label, ref] of [
-        ["private", await refOf(tx, mroId, SEED.hotelPrivate)],
-        ["member", await refOf(tx, mroId, SEED.alpha)],
-        ["blocker", await refOf(tx, mroId, FOXTROT)],
-        ["another organization's ref", await refOf(tx, lisbonId, SEED.delta)],
-        ["unknown", "CF-0123456789"],
-      ] as const) {
-        await actAs(tx, SEED.adminMro);
-        expect(await sqlError(tx, BLOCK, [mroId, ref]), label).toBe(notFound);
-      }
-      await actAs(tx, SEED.adminMro);
-      for (const ref of ["cf-0123456789", "CF-012345678", SEED.delta, ""])
-        expect(await sqlError(tx, BLOCK, [mroId, ref]), ref).toBe("22023");
-      expect(
-        await sqlError(tx, "select public.set_directory_block($1, $2, null)", [mroId, deltaRef]),
-      ).toBe("22023");
-      // Nothing was written by the refused calls.
-      await asOwner(tx);
-      expect(
-        (await tx.query("select 1 from public.organization_candidate_blocks")).rows,
-      ).toHaveLength(0);
-      expect(
-        (await tx.query("select 1 from public.audit_events where action like 'directory.%'")).rows,
-      ).toHaveLength(0);
-    });
-  });
-
-  it("the professional is never told (symmetric with T-35): opportunities and their own data are unchanged", async () => {
-    await asUser(db, SEED.adminMro, async (tx) => {
-      await asOwner(tx);
-      const { rows: need } = await tx.query<{ id: string }>(
-        `insert into public.work_requirements
-           (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
-         values ($1, 'directory block · opportunity', 'Madrid (MAD)', $2, $3, 'day', 1, 'planned', 'open', $4)
-         returning id`,
-        [
-          mroId,
-          new Date(midnight(30)).toISOString(),
-          new Date(midnight(33)).toISOString(),
-          SEED.adminMro,
-        ],
-      );
-      await tx.query(
-        `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
-         values ($1, $2, 'hard')`,
-        [need[0]!.id, b11],
-      );
-      const opportunities = async () => {
-        await actAs(tx, SEED.delta);
-        return (
-          await tx.query<{ id: string }>("select id from public.list_opportunities()")
-        ).rows.map((r) => r.id);
-      };
-      const before = await opportunities();
-      expect(before).toContain(need[0]!.id);
-      await setBlock(tx, SEED.adminMro, mroId, await refOf(tx, mroId, SEED.delta), true);
-      expect(await opportunities()).toEqual(before);
-      await actAs(tx, SEED.delta);
-      expect(await sqlError(tx, "select * from public.organization_candidate_blocks")).toBe(
-        "42501",
-      );
-      // Their own blocks (N-08) are still only theirs.
-      expect(
-        (await tx.query("select 1 from public.technician_organization_blocks")).rows,
-      ).toHaveLength(0);
-    });
-  });
-
-  it("a blocked professional who then blocks the organization leaves the blocked list; unblocking is CFD02; the row waits for them to come back", async () => {
-    await asUser(db, SEED.adminMro, async (tx) => {
-      const deltaRef = await refOf(tx, mroId, SEED.delta);
-      await setBlock(tx, SEED.adminMro, mroId, deltaRef, true);
-      expect(refs(await searchAll(tx, SEED.adminMro, mroId, { blocked: true }))).toEqual([
-        deltaRef,
-      ]);
-      await asOwner(tx);
-      await tx.query(
-        "insert into public.technician_organization_blocks (technician_profile_id, organization_id) values ($1, $2)",
-        [SEED.delta, mroId],
-      );
-      expect(await searchAll(tx, SEED.adminMro, mroId, { blocked: true })).toEqual([]);
-      await actAs(tx, SEED.adminMro);
-      expect(
-        await sqlError(tx, "select public.set_directory_block($1, $2, false)", [mroId, deltaRef]),
-      ).toBe(conflict("DIRECTORY_CANDIDATE_NOT_FOUND"));
-      await asOwner(tx);
-      expect(
-        (await tx.query("select 1 from public.organization_candidate_blocks")).rows,
-      ).toHaveLength(1);
-      await tx.query(
-        "delete from public.technician_organization_blocks where technician_profile_id = $1 and organization_id = $2",
-        [SEED.delta, mroId],
-      );
-      expect(refs(await searchAll(tx, SEED.adminMro, mroId, { blocked: true }))).toEqual([
-        deltaRef,
-      ]);
-      expect(refs(await searchAll(tx, SEED.adminMro, mroId))).not.toContain(deltaRef);
-    });
-  });
-
-  it("the block and the throttle rows follow the organization (cascades)", async () => {
-    await asUser(db, SEED.adminMro, async (tx) => {
-      await asOwner(tx);
-      const { rows: org } = await tx.query<{ id: string }>(
-        "insert into public.organizations (name, type, country) values ('Directory cascade', 'other', 'ES') returning id",
-      );
-      await tx.query(
-        "insert into public.organization_candidate_blocks (organization_id, technician_profile_id) values ($1, $2)",
-        [org[0]!.id, SEED.delta],
-      );
-      await tx.query(
-        "insert into app_private.directory_search_events (organization_id) values ($1)",
-        [org[0]!.id],
-      );
-      await tx.query("delete from public.organizations where id = $1", [org[0]!.id]);
-      expect(
-        (
-          await tx.query(
-            "select 1 from public.organization_candidate_blocks where organization_id = $1",
-            [org[0]!.id],
-          )
-        ).rows,
-      ).toHaveLength(0);
-      expect(
-        (
-          await tx.query(
-            "select 1 from app_private.directory_search_events where organization_id = $1",
-            [org[0]!.id],
-          )
-        ).rows,
-      ).toHaveLength(0);
-    });
-  });
-
-  it("the block follows the professional and the organization (cascades)", async () => {
-    await asUser(db, SEED.adminMro, async (tx) => {
-      await setBlock(tx, SEED.adminMro, mroId, await refOf(tx, mroId, SEED.delta), true);
-      await setBlock(tx, SEED.adminMro, mroId, await refOf(tx, mroId, SEED.echo), true);
-      await asOwner(tx);
-      await tx.query("delete from public.technician_profiles where profile_id = $1", [SEED.delta]);
-      expect(
-        (
-          await tx.query<{ n: number }>(
-            "select count(*)::int as n from public.organization_candidate_blocks where organization_id = $1",
-            [mroId],
-          )
-        ).rows[0]!.n,
-      ).toBe(1);
-    });
-  });
-});
-
 describe("throttle (T-157): 60 searches per organization per minute", () => {
-  it("the 61st directory call of the organization (search or block) is CFD01 for any of its managers, another organization is unaffected, a minute later the slot is free, hour-old rows are pruned", async () => {
+  it("the 61st search of the organization is CFD01 for any of its managers, another organization is unaffected, a minute later the slot is free, hour-old rows are pruned", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       await asOwner(tx);
       await tx.query(
@@ -1036,14 +693,6 @@ describe("throttle (T-157): 60 searches per organization per minute", () => {
       const limited = conflict("DIRECTORY_RATE_LIMITED");
       expect(await searchError(tx, SEED.adminMro, mroId, { limit: 1 })).toBe(limited);
       expect(await searchError(tx, SEED.managerMro, mroId, { limit: 1 })).toBe(limited);
-      // Block and unblock share the brake (a no-op unblock would otherwise probe a ref's visibility freely).
-      await actAs(tx, SEED.adminMro);
-      expect(
-        await sqlError(tx, "select public.set_directory_block($1, $2, false)", [
-          mroId,
-          await refOf(tx, mroId, SEED.delta),
-        ]),
-      ).toBe(limited);
       expect((await search(tx, SEED.adminOther, lisbonId, { limit: 1 })).length).toBeGreaterThan(0);
       await asOwner(tx);
       const { rows: events } = await tx.query<{ n: number; old: number }>(
@@ -1057,6 +706,28 @@ describe("throttle (T-157): 60 searches per organization per minute", () => {
         [mroId],
       );
       expect((await search(tx, SEED.adminMro, mroId, { limit: 1 })).length).toBeGreaterThan(0);
+    });
+  });
+
+  it("the throttle rows follow the organization (cascade)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await asOwner(tx);
+      const { rows: org } = await tx.query<{ id: string }>(
+        "insert into public.organizations (name, type, country) values ('Directory cascade', 'other', 'ES') returning id",
+      );
+      await tx.query(
+        "insert into app_private.directory_search_events (organization_id) values ($1)",
+        [org[0]!.id],
+      );
+      await tx.query("delete from public.organizations where id = $1", [org[0]!.id]);
+      expect(
+        (
+          await tx.query(
+            "select 1 from app_private.directory_search_events where organization_id = $1",
+            [org[0]!.id],
+          )
+        ).rows,
+      ).toHaveLength(0);
     });
   });
 });

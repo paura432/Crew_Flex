@@ -1,5 +1,5 @@
 // «Buscar candidatos» — the organization's free candidate directory (package directory; v1.8
-// `CandidateDirectory.jsx`, `MedalStrip.jsx`; BUSINESS_RULES BR-28, T-150…T-159). Pure: no I/O, no
+// `CandidateDirectory.jsx`, `MedalStrip.jsx`; BUSINESS_RULES BR-28, T-150…T-158). Pure: no I/O, no
 // framework imports. Shared by Next.js, the `candidate-directory` Edge Function and the database tests.
 // The search itself runs in the database (search_candidate_directory): these are the bounds both sides agree
 // on and the display rules of the card.
@@ -15,15 +15,14 @@ export const DIRECTORY_WINDOW_MAX_DAYS = 365;
 export const DIRECTORY_BASE_MAX = 80;
 /** «Experiencia mínima» in declared years (`technician_profiles.years_experience` is 0–60). */
 export const DIRECTORY_MIN_YEARS_MAX = 60;
-/** T-157: directory calls (searches and block/unblock) per organization per minute before the database answers CFD01. */
+/** T-157: searches per organization per minute before the database answers CFD01. */
 export const DIRECTORY_SEARCHES_PER_MINUTE = 60;
-/** The pseudonym the organization sees: `CF-` + 10 upper-case hex (per organization, T-151). */
+/** The pseudonym the organization sees: `CF-` + 10 upper-case hex (per organization, T-151); display only. */
 export const DIRECTORY_REF_PATTERN = /^CF-[0-9A-F]{10}$/;
 
 /** SQLSTATE `CFD01`… in order (migration 20261024700000); the 409 `reason` of `candidate-directory`. */
 export const DIRECTORY_CONFLICTS = [
   "DIRECTORY_RATE_LIMITED", // CFD01: more than DIRECTORY_SEARCHES_PER_MINUTE searches by the organization
-  "DIRECTORY_CANDIDATE_NOT_FOUND", // CFD02: the ref names nobody the organization may find right now
 ] as const;
 export type DirectoryConflict = (typeof DIRECTORY_CONFLICTS)[number];
 

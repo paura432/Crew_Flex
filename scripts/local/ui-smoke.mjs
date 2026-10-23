@@ -3787,12 +3787,11 @@ await asSeedUser("delta@crewflex.test", "notifications", { method: "PATCH", body
   await svAnon.close();
 }
 
-// PKG directory (v2-22 / v2-23 «Buscar candidatos», v2-16 employer block; migration 20261024700000, BR-28,
-// T-150…T-159): the menu entry in the v1.8 order, the free directory and its count, a v1.8 filter error, a
-// narrowing filter, Compact/Expanded (aria-pressed, remembered across a reload), the «Professional profile»
-// dialog (Escape returns the focus), blocking Echo (gone from the directory, listed under blocked, back after
-// unblocking) and a plain member's managers-only notice. Setup/restore through the local API: Echo's ref is
-// read first and the block removed at the end whatever happened in between.
+// PKG directory (v2-22 / v2-23 «Buscar candidatos»; migration 20261024700000, BR-28, T-150…T-158): the menu
+// entry in the v1.8 order, the free directory and its count, a v1.8 filter error, a narrowing filter,
+// Compact/Expanded (aria-pressed, remembered across a reload), the «Professional profile» dialog (Escape returns
+// the focus) and a plain member's managers-only notice. Read-only: the page runs no mutation (the organization-side
+// block is not ported), so there is nothing to set up or restore.
 const dirPage = `${BASE}/app/organization/candidates`;
 const dirRows = await asSeedUser("admin.mro@crewflex.test", "candidate-directory", {
   query: { organizationId: mroOrg.id, base: "Madrid" },
@@ -3908,37 +3907,10 @@ ok(
     (await page.evaluate(() => document.activeElement?.textContent?.trim())) === "Open profile",
   "",
 );
-await dirEchoCard.getByRole("button", { name: "Block" }).click();
-await page.waitForLoadState("networkidle");
-await page.waitForTimeout(500);
 ok(
-  "PKG directory j: a blocked profile leaves the directory and the count drops by one",
-  (await page.locator("article", { hasText: "Technician Echo" }).count()) === 0 &&
-    Number(/^(\d+) profiles?/.exec(await dirSummaryText())?.[1]) === dirTotal - 1,
-  await dirSummaryText(),
-);
-await page.getByRole("link", { name: "View blocked profiles" }).click();
-await page.waitForLoadState("networkidle");
-ok(
-  "PKG directory k: «Profiles blocked by your organization» lists Echo with «Unblock»",
-  (await page.getByRole("heading", { name: "Profiles blocked by your organization" }).count()) ===
-    1 &&
-    (await page
-      .locator("article", { hasText: "Technician Echo" })
-      .getByRole("button", { name: "Unblock" })
-      .count()) === 1,
-  "",
-);
-await page
-  .locator("article", { hasText: "Technician Echo" })
-  .getByRole("button", { name: "Unblock" })
-  .click();
-await page.waitForLoadState("networkidle");
-await page.goto(dirPage);
-await page.waitForLoadState("networkidle");
-ok(
-  "PKG directory l: unblocking brings Echo back to the directory",
-  (await page.locator("article", { hasText: "Technician Echo" }).count()) === 1,
+  "PKG directory j: a card offers no mutation (no «Block» button: the organization-side block is not ported)",
+  (await page.getByRole("button", { name: /^(Block|Unblock)$/ }).count()) === 0 &&
+    (await page.getByRole("link", { name: "View blocked profiles" }).count()) === 0,
   "",
 );
 await responsiveShots("directory");
@@ -3947,18 +3919,12 @@ await login("charlie@crewflex.test");
 await page.goto(dirPage);
 await page.waitForLoadState("networkidle");
 ok(
-  "PKG directory m: a plain member sees the managers-only notice and no directory",
-  /available for managers and administrators/i.test(await page.locator("main").innerText()) &&
+  "PKG directory k: a plain member sees the managers-only notice and no directory",
+  /managers and admins/i.test(await page.locator("main").innerText()) &&
     (await page.locator("article").count()) === 0,
   "",
 );
 await logout();
-if (echoRef) {
-  await asSeedUser("admin.mro@crewflex.test", "candidate-directory", {
-    method: "PUT",
-    body: { organizationId: mroOrg.id, candidateRef: echoRef, blocked: false },
-  });
-}
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).

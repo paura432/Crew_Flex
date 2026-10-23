@@ -82,9 +82,6 @@ describe("avatar and refs", () => {
     expect("CF-0123ABCDEF").toMatch(DIRECTORY_REF_PATTERN);
     expect("cf-0123abcdef").not.toMatch(DIRECTORY_REF_PATTERN);
     expect("CF-0123ABCDE").not.toMatch(DIRECTORY_REF_PATTERN);
-    expect(DIRECTORY_CONFLICTS).toEqual([
-      "DIRECTORY_RATE_LIMITED",
-      "DIRECTORY_CANDIDATE_NOT_FOUND",
-    ]);
+    expect(DIRECTORY_CONFLICTS).toEqual(["DIRECTORY_RATE_LIMITED"]);
   });
 });

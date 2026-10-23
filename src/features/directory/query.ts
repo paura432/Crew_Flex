@@ -1,5 +1,5 @@
-// URL state of «Buscar candidatos» (package directory, BR-28): the seven v1.8 filters, the blocked switch and
-// the page, parsed leniently from `searchParams` (an unknown value falls back to its default; a malformed
+// URL state of «Buscar candidatos» (package directory, BR-28): the seven v1.8 filters and the page, parsed
+// leniently from `searchParams` (an unknown value falls back to its default; a malformed
 // window or years count is kept and flagged so the form shows v1.8's error) and written back as plain links.
 import {
   DIRECTORY_MIN_YEARS_MAX,
@@ -31,7 +31,6 @@ export interface DirectoryQuery {
   /** `YYYY-MM-DD` as typed (empty when absent), so the form keeps an invalid window for correction. */
   from: string;
   to: string;
-  blocked: boolean;
   page: number;
 }
 export interface DirectoryQueryErrors {
@@ -53,7 +52,6 @@ export const EMPTY_DIRECTORY_QUERY: DirectoryQuery = {
   base: "",
   from: "",
   to: "",
-  blocked: false,
   page: 1,
 };
 
@@ -78,7 +76,6 @@ export function parseDirectoryQuery(
       base: first(params.base).trim().slice(0, DIRECTORY_BASE_MAX),
       from,
       to,
-      blocked: first(params.blocked) === "1",
       page: Number.isFinite(page) && page >= 1 ? Math.min(page, DIRECTORY_PAGE_MAX) : 1,
     },
     errors: {
@@ -104,7 +101,6 @@ export function toDirectorySearchParams(
     params.from = query.from;
     params.to = query.to;
   }
-  if (query.blocked) params.blocked = "1";
   if (query.page > 1) params.page = String(query.page);
   return params;
 }
@@ -121,7 +117,6 @@ export function directoryHref(query: DirectoryQuery, over: Partial<DirectoryQuer
   if (next.base) params.set("base", next.base);
   if (next.from) params.set("from", next.from);
   if (next.to) params.set("to", next.to);
-  if (next.blocked) params.set("blocked", "1");
   if (next.page > 1) params.set("page", String(next.page));
   const qs = params.toString();
   return qs ? `${DIRECTORY_PATH}?${qs}` : DIRECTORY_PATH;

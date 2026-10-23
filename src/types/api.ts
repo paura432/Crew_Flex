@@ -75,7 +75,7 @@ export interface ApiErrorBody {
    * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`), an
    * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`), a refused
    * «Distribuir aviso Urgente / AOG» (BR-26; `OUTREACH_CONFLICTS`), an action for a represented client (BR-27;
-   * `RECRUITER_CONFLICTS`) or a refused directory search or block (BR-28; `DIRECTORY_CONFLICTS`).
+   * `RECRUITER_CONFLICTS`) or a refused directory search (BR-28; `DIRECTORY_CONFLICTS`).
    */
   reason?:
     | ApplicationConflict
@@ -877,12 +877,4 @@ export interface DirectorySearchResponse {
   total: number;
   page: number;
   pageSize: number;
-  /** True when listing the professionals the organization blocked (v2-16). */
-  blocked: boolean;
-}
-
-/** PUT `candidate-directory` `{ organizationId, candidateRef, blocked }` → the resulting state. */
-export interface DirectoryBlockResponse {
-  candidateRef: string;
-  blocked: boolean;
 }

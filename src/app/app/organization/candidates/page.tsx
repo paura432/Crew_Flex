@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
-import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { DIRECTORY_PAGE_SIZE, utcDay } from "@/domain/directory";
@@ -39,9 +38,9 @@ const evaluableAtRequestTime = (requirements: WorkRequirement[]) =>
 
 /**
  * v1.8 «Buscar candidatos» (v2-22 / v2-23; BR-28): the organization's free directory over its external
- * pool rules, 20 a page, the seven filters, «Compacta/Ampliada», the profile dialog and the employer block
- * (v2-16). Admins and managers only (a member sees the same notice as the matches page); the Edge Function
- * and the database re-check the role.
+ * pool rules, 20 a page, the seven filters, «Compacta/Ampliada» and the profile dialog. Read-only: the page
+ * runs no mutation (the organization-side block is not ported — v1.8 has none). Admins and managers only (a
+ * member sees the same notice as the matches page); the Edge Function and the database re-check the role.
  */
 export default async function CandidatesPage({
   searchParams,
@@ -80,24 +79,9 @@ export default async function CandidatesPage({
 
   return (
     <>
-      <PageHeader
-        eyebrow={t("eyebrow")}
-        title={query.blocked ? t("blockedTitle") : t("title")}
-        description={query.blocked ? t("blockedDescription") : t("description")}
-        actions={
-          query.blocked ? (
-            <ButtonLink href={directoryHref(query, { blocked: false, page: 1 })}>
-              {t("backToDirectory")}
-            </ButtonLink>
-          ) : (
-            <ButtonLink href={directoryHref(query, { blocked: true, page: 1 })} variant="ghost">
-              {t("viewBlocked")}
-            </ButtonLink>
-          )
-        }
-      />
-      {!query.blocked && <p className="mb-4 text-sm text-muted">{t("visibleNote")}</p>}
-      {!query.blocked && <EvaluateForm requirements={evaluable} />}
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+      <p className="mb-4 text-sm text-muted">{t("visibleNote")}</p>
+      <EvaluateForm requirements={evaluable} />
       <DirectoryFilters query={query} errors={errors} />
       {result === null ? null : !result.ok ? (
         <ApiErrorState error={result.error} requestId={result.requestId} />
@@ -120,19 +104,12 @@ export default async function CandidatesPage({
           }
         >
           {result.data.candidates.length === 0 ? (
-            <StateMessage
-              title={t(query.blocked ? "emptyBlockedTitle" : "emptyTitle")}
-              description={t(query.blocked ? "emptyBlockedDescription" : "emptyDescription")}
-            />
+            <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {/* Position in the key: two visible professionals may (rarely) share a 40-bit ref (T-151). */}
               {result.data.candidates.map((candidate, index) => (
-                <DirectoryCard
-                  key={`${index}:${candidate.ref}`}
-                  candidate={candidate}
-                  blocked={query.blocked}
-                />
+                <DirectoryCard key={`${index}:${candidate.ref}`} candidate={candidate} />
               ))}
             </div>
           )}

@@ -67,7 +67,7 @@ export class ApiError extends Error {
     /**
      * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`),
      * availability (`AVAILABILITY_CONFLICTS`, BR-4.9), the Urgent/AOG outreach (`OUTREACH_CONFLICTS`,
-     * BR-26), a represented client (`RECRUITER_CONFLICTS`, BR-27) or the candidate directory
+     * BR-26), a represented client (`RECRUITER_CONFLICTS`, BR-27) or a refused directory search
      * (`DIRECTORY_CONFLICTS`, BR-28).
      */
     readonly reason?: ConflictReason,

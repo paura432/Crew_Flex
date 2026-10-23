@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { directoryBlockInput, directorySearchQuery } from "./directory";
+import { directorySearchQuery } from "./directory";
 
 const ORG = "22222222-2222-4222-8222-000000000001";
 const today = new Date().toISOString().slice(0, 10);
@@ -17,10 +17,9 @@ describe("directorySearchQuery (shared with the candidate-directory function)", 
       base: " Madrid ",
       from: today,
       to: plusDays(10),
-      blocked: "1",
       page: "2",
     });
-    expect(full).toMatchObject({ minYears: 5, page: 2, base: "Madrid", blocked: "1" });
+    expect(full).toMatchObject({ minYears: 5, page: 2, base: "Madrid" });
     expect(directorySearchQuery.parse({ organizationId: ORG })).toEqual({ organizationId: ORG });
     for (const bad of [
       { userId: ORG },
@@ -36,7 +35,8 @@ describe("directorySearchQuery (shared with the candidate-directory function)", 
       { from: plusDays(3), to: today },
       { from: today, to: plusDays(366) },
       { from: plusDays(-1), to: plusDays(2) },
-      { blocked: "true" },
+      { blocked: "1" }, // the parked employer block: not a filter
+      { candidateRef: "CF-0123456789" },
       { page: "0" },
       { page: "501" },
     ]) {
@@ -50,25 +50,5 @@ describe("directorySearchQuery (shared with the candidate-directory function)", 
     if (!window.success) expect(window.error.issues[0]?.message).toBe("v.directory.window");
     const years = directorySearchQuery.safeParse({ organizationId: ORG, minYears: "99" });
     if (!years.success) expect(years.error.issues[0]?.message).toBe("v.directory.minYears");
-  });
-});
-
-describe("directoryBlockInput", () => {
-  it("is strict: the organization, the organization's ref and a boolean", () => {
-    expect(
-      directoryBlockInput.parse({
-        organizationId: ORG,
-        candidateRef: "CF-0123456789",
-        blocked: true,
-      }),
-    ).toEqual({ organizationId: ORG, candidateRef: "CF-0123456789", blocked: true });
-    for (const bad of [
-      { organizationId: ORG, candidateRef: ORG, blocked: true },
-      { organizationId: ORG, candidateRef: "cf-0123456789", blocked: true },
-      { organizationId: ORG, candidateRef: "CF-0123456789", blocked: "1" },
-      { organizationId: ORG, candidateRef: "CF-0123456789", blocked: true, userId: ORG },
-    ]) {
-      expect(directoryBlockInput.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
-    }
   });
 });

@@ -527,14 +527,14 @@ v1.8 `Company2.jsx:103,211`, `Marketplace.jsx:36-44`). No platform or cross-orga
 Every rule is enforced in the database for every path (RPCs and BEFORE triggers, `20261024500000/500100`); the domain
 functions only let the screens say it first (`clientRequired`, `canActForClient`, `activationBlocker`). IMPLEMENTED (local).
 
-## BR-28 Candidate directory «Buscar candidatos» and employer block (PKG directory, v2-22 / v2-23 / v2-16; T-150…T-159) — `search_candidate_directory` / `src/domain/directory.ts`
+## BR-28 Candidate directory «Buscar candidatos» (PKG directory, v2-22 / v2-23; T-150…T-158) — `search_candidate_directory` / `src/domain/directory.ts`
 
 - **Who searches:** an admin or manager of the organization (role from the database; a plain member sees the
   managers-only notice). The menu entry «Buscar candidatos» follows «Necesidades» (v1.8 company order, SH-03 #19); the mobile dock shows «Candidatos» (SH-05 #2) and the organization home offers «Red profesional» → the directory (ORG-01 #26).
   IMPLEMENTED (local).
 - **Whom it finds (S-7 without a requirement):** the organization's external pool rules — `anonymous`/`open`,
   `verified_orgs` only for a reviewed organization (BR-8), never a member, never a professional who blocked it (BR-18,
-  N-08) — minus the professionals the organization blocked (below). Never `private`. It is the per-need pool without
+  N-08). Never `private`. It is the per-need pool without
   the «≥ 1 required qualification» predicate (there is no requirement); `tests/db/directory.test.ts` proves the sets
   agree on randomized profiles, and that the directory with a need's rules and period equals the pool's hard-eligible set.
 - **What it shows (T-151, T-153):** a per-organization pseudonym «Profesional anónimo CF-…» (stable for the
@@ -558,14 +558,15 @@ functions only let the screens say it first (`clientRequired`, `canActForClient`
   con los consentimientos correspondientes.»
 - **«Evaluar para la oferta» (T-155):** a published, current need → its «Profesionales elegibles»; the directory itself
   evaluates nobody.
-- **Throttle (T-157):** at most 60 directory calls (searches and block/unblock) per organization per minute («Tu organización ha hecho demasiadas búsquedas
-  en el último minuto. Espera un momento e inténtalo de nuevo.», `DIRECTORY_CONFLICTS`, SQLSTATE CFD01).
-- **Employer block (v2-16, T-158):** «Bloquear» on a card (admin/manager) hides the professional from the
-  organization's directory, its per-need pools and counts and its outreach audience; «Ver perfiles
-  bloqueados» lists them with «Desbloquear». Resolved by the pseudonym — a private profile, a member or a blocker never
-  resolves («Este perfil ya no está disponible para tu organización.», CFD02) —, idempotent, audited without the
-  profile id. The professional is never told: their opportunities and applications are unchanged (symmetric with
-  T-35). IMPLEMENTED (local). Known consequence (security review 2026-10-23, Medium-1, owner decision pending): the block removes exactly one chosen professional from the organization's own pools, so blocking and unblocking lets that organization link a directory ref to the same person's per-requirement refs (the pool row that disappears; the applicant row keeps listing them) — the refs themselves stay unlinkable and the linkage costs two audited acts per need; pinned in `tests/db/directory.test.ts`.
+- **Throttle (T-157):** at most 60 searches per organization per minute (`DIRECTORY_CONFLICTS`
+  `DIRECTORY_RATE_LIMITED`, SQLSTATE CFD01; the page shows the generic 409 state).
+- **Read-only; organization-side block NOT ported (T-158).** The directory writes nothing and no RPC takes a
+  pseudonym. v1.8 has no employer block of a professional (its `blockEmployer` is the professional's own block,
+  BR-18 / N-08, `technician_organization_blocks`); the v2 backlog's v2-16 is that professional's block, a separate
+  package already implemented. The organization-side variant this package first carried
+  (`organization_candidate_blocks`, `set_directory_block`, «Bloquear» / «Ver perfiles bloqueados») was blocked by
+  the independent security review (2026-10-23: a linkage and watch-list primitive) and is parked under tag
+  `parked/directory-employer-block` pending the owner.
 
 ## BR-29 Profile medals (N-15, T-143) — `badges()` (`src/domain/badges.ts`)
 

@@ -518,53 +518,6 @@ export type Database = {
           },
         ];
       };
-      organization_candidate_blocks: {
-        Row: {
-          created_at: string;
-          created_by: string | null;
-          id: string;
-          organization_id: string;
-          technician_profile_id: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          created_at?: string;
-          created_by?: string | null;
-          id?: string;
-          organization_id: string;
-          technician_profile_id: string;
-        };
-        Update: {
-          created_at?: string;
-          created_by?: string | null;
-          id?: string;
-          organization_id?: string;
-          technician_profile_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "organization_candidate_blocks_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "organization_candidate_blocks_organization_id_fkey";
-            columns: ["organization_id"];
-            isOneToOne: false;
-            referencedRelation: "organizations";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "organization_candidate_blocks_technician_profile_id_fkey";
-            columns: ["technician_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "technician_profiles";
-            referencedColumns: ["profile_id"];
-          },
-        ];
-      };
       organization_members: {
         Row: {
           created_at: string;
@@ -2104,7 +2057,6 @@ export type Database = {
         Args: {
           p_aircraft?: string;
           p_base?: string;
-          p_blocked?: boolean;
           p_category?: string;
           p_country?: string;
           p_english_level?: string;
@@ -2123,15 +2075,6 @@ export type Database = {
           candidate_years_experience: number;
           total: number;
         }[];
-      };
-      set_directory_block: {
-        Args: {
-          p_blocked: boolean;
-          p_candidate_ref: string;
-          p_organization_id: string;
-          p_request_id?: string;
-        };
-        Returns: boolean;
       };
       transition_application: {
         Args: {

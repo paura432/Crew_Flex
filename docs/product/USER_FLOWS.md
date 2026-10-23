@@ -51,8 +51,8 @@ in. Platform admins also read «Rol de plataforma» in «Cuenta».
    availability coverage, location; not eligible with explicit blockers.
 6. **Find candidates without a need** → `/app/organization/candidates` (LOCAL, v1.8 «Buscar candidatos», BR-28;
    Edge Function `candidate-directory`): the organization's external pool rules without a requirement, 20 a page,
-   the seven v1.8 filters, «Compacta/Ampliada», the «Perfil profesional» dialog, «Evaluar para la oferta» → the
-   need's matches, and the employer block («Bloquear» / «Ver perfiles bloqueados»; the professional is never told).
+   the seven v1.8 filters, «Compacta/Ampliada», the «Perfil profesional» dialog and «Evaluar para la oferta» → the
+   need's matches. Read-only: no organization-side block (v1.8 has none; parked, tag `parked/directory-employer-block`).
 
 ## UF-4 Organization: workforce (IMPLEMENTED, read-only)
 
