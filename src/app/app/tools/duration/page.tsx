@@ -1,19 +1,9 @@
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { DurationTool } from "@/features/tools/components/DurationTool";
-import { ToolsHeader } from "@/features/tools/components/ToolsHeader";
+import { TOOLS_BASE } from "@/features/tools/ids";
+import { ToolScreen, toolMetadata } from "@/features/tools/components/ToolScreen";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("tools");
-  return { title: t("tile.duration.title") };
-}
+export const generateMetadata = () => toolMetadata("duration");
 
-export default async function ToolsDurationPage() {
-  const t = await getTranslations("tools");
-  return (
-    <>
-      <ToolsHeader title={t("tile.duration.title")} back />
-      <DurationTool />
-    </>
-  );
+// Signed-in workbench; the same screen is public at /tools (T-145).
+export default function ToolsDurationPage() {
+  return <ToolScreen id="duration" base={TOOLS_BASE.app} />;
 }

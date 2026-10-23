@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Crew Flex",
+    "appName": "CrewFlex",
     "brandTag": "AVIATION",
     "skipToContent": "Saltar al contenido",
     "signOut": "Cerrar sesión",
@@ -22,7 +22,7 @@
     "utcNote": "Horas en UTC.",
     "notFoundTitle": "No encontrado",
     "notFoundDescription": "Esta página no existe o no tienes acceso a ella.",
-    "backToApp": "Volver a Crew Flex",
+    "backToApp": "Volver a CrewFlex",
     "errorTitle": "No se ha podido mostrar esta página",
     "errorHint": "Inténtalo de nuevo en un momento.",
     "signOutHint": "Si el problema continúa, cierra sesión y vuelve a entrar.",
@@ -119,7 +119,7 @@
   "auth": {
     "signIn": {
       "title": "Iniciar sesión",
-      "lead": "Accede a tu espacio de Crew Flex.",
+      "lead": "Accede a tu espacio de CrewFlex.",
       "noAccount": "¿Sin cuenta?",
       "createOne": "Crea una",
       "submit": "Iniciar sesión",
@@ -160,7 +160,7 @@
       "invitationCode": "Código de invitación",
       "invitationCodeHint": "Viene en el enlace de tu invitación.",
       "invitationCodeAsk": "Abre el enlace de tu correo de invitación o pega aquí su código.",
-      "invitationOnly": "El alta en Crew Flex es solo por invitación.",
+      "invitationOnly": "El alta en CrewFlex es solo por invitación.",
       "invitationInvalid": "Enlace caducado, utilizado o no válido.",
       "invitationContinue": "Continuar"
     },
@@ -238,7 +238,7 @@
     },
     "NETWORK_ERROR": {
       "title": "Servicio no disponible",
-      "description": "Crew Flex no ha podido contactar con el backend. Comprueba tu conexión y reintenta."
+      "description": "CrewFlex no ha podido contactar con el backend. Comprueba tu conexión y reintenta."
     },
     "INTERNAL_ERROR": {
       "title": "Error del servidor",
@@ -636,12 +636,10 @@
       "awaitingNext": "{count, plural, one {# cualificación espera a un revisor. Hasta que se verifique no cuenta para los requisitos obligatorios.} other {# cualificaciones esperan a un revisor. Hasta que se verifiquen no cuentan para los requisitos obligatorios.}}",
       "openQualifications": "Abrir cualificaciones",
       "doIt": "Completar",
-      "checklistTitle": "Perfil completado · {percent, number}%",
       "itemDone": "hecho",
       "itemPending": "pendiente",
       "calendarTitle": "Tu disponibilidad",
       "openAvailability": "Editar disponibilidad",
-      "showChecklist": "Los {count} apartados del perfil",
       "reviewTitle": "Documentos y cursos próximos a revisar",
       "reviewNone": "Nada de lo declarado caduca en los próximos {days} días.",
       "reviewExpired": "Fecha superada",
@@ -1063,7 +1061,7 @@
         "coverageTitle": "Cobertura por jornada",
         "shiftLine": "{span} · {hours} h",
         "shiftCoverage": "{date} · {filled}/{total} plazas confirmadas",
-        "notice": "Valores informativos de la organización: Crew Flex no gestiona cobros, comisiones ni pagos."
+        "notice": "Valores informativos de la organización: CrewFlex no gestiona cobros, comisiones ni pagos."
       },
       "archive": {
         "action": "Archivar",
@@ -1089,7 +1087,7 @@
     },
     "new": {
       "title": "Nueva necesidad de personal",
-      "description": "Describe la necesidad operativa real. Crew Flex evalúa primero tu capacidad interna.",
+      "description": "Describe la necesidad operativa real. CrewFlex evalúa primero tu capacidad interna.",
       "noPermissionTitle": "No tienes permiso",
       "noPermissionDescription": "Solo los managers y administradores de la organización pueden crear necesidades.",
       "catalogErrorTitle": "No se ha podido cargar el catálogo de cualificaciones",
@@ -1369,7 +1367,7 @@
   },
   "settings": {
     "title": "Configuración",
-    "description": "Tu cuenta y cómo ves Crew Flex. Los datos de negocio están en tu pasaporte o en las páginas de la organización.",
+    "description": "Tu cuenta y cómo ves CrewFlex. Los datos de negocio están en tu pasaporte o en las páginas de la organización.",
     "language": "Idioma / Language",
     "languageDescription": "La interfaz, las fechas y los mensajes siguen esta elección en todos los dispositivos donde inicies sesión. Los códigos de licencia, los tipos de aeronave y tus propios datos nunca se traducen.",
     "saved": "Idioma actualizado.",
@@ -1974,7 +1972,7 @@
       "accepted": "Condiciones aceptadas · versión {version}",
       "pending": "Pendiente de aceptación",
       "sent": "Enviada el {date}",
-      "notice": "Crew Flex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
+      "notice": "CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
       "newVersion": "Una propuesta nueva necesita otra aceptación; la aceptada se conserva en el historial."
     },
     "action": {
@@ -2266,7 +2264,7 @@
       "builderText": "Necesidades estructuradas",
       "packsTitle": "Candidate Packs",
       "packsText": "Expedientes y seguimiento",
-      "note": "Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado. Crew Flex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma."
+      "note": "Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado. CrewFlex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma."
     },
     "applications": {
       "eyebrow": "Pipeline",
@@ -2339,5 +2337,77 @@
     },
     "noticesHint": "Los avisos Urgente y AOG siguen tus preferencias de urgencia, movilización y silencio.",
     "noticesHintLink": "Configurar avisos"
+  },
+  "shell": {
+    "breadcrumb": "Ruta de navegación",
+    "motto": "Cualificación · Disponibilidad · Confianza",
+    "dock": {
+      "label": "Accesos rápidos",
+      "home": "Inicio",
+      "offers": "Ofertas",
+      "calendar": "Calendario",
+      "applications": "Candidaturas",
+      "tools": "Herramientas",
+      "administration": "Administración"
+    }
+  },
+  "profileHero": {
+    "status": "Estado de mi perfil",
+    "statusTitle": "Estado del perfil · {percent, number}%",
+    "statusIntro": "Información cumplimentada; la revisión de documentos y cualificaciones es independiente.",
+    "allDone": "Los apartados de información están completados.",
+    "close": "Cerrar",
+    "photo": {
+      "add": "Añadir foto",
+      "change": "Cambiar foto",
+      "saving": "Guardando…",
+      "remove": "Quitar foto",
+      "note": "Foto guardada solo en este navegador · JPG, PNG o WebP · hasta 2 MB",
+      "invalid": "Elige una foto JPG, PNG o WebP de hasta 2 MB.",
+      "saveFailed": "No se ha podido guardar la foto. Comprueba el archivo y el espacio del navegador.",
+      "removeFailed": "No se ha podido quitar la foto."
+    }
+  },
+  "badges": {
+    "stripLabel": "Insignias del perfil",
+    "more": "Ver {count, plural, one {# insignia adicional} other {# insignias adicionales}}",
+    "less": "Ocultar las insignias adicionales",
+    "close": "Cerrar detalle de insignia",
+    "footnote": "Resumen del perfil; no concede autorización de firma ni acredita formación por participar en retos.",
+    "years": "{count, plural, one {# año} other {# años}}",
+    "yearsUnit": "AÑOS",
+    "status": {
+      "declared": "Declarado",
+      "verified": "Verificada",
+      "reviewValidity": "Revisar vigencia",
+      "restricted": "Con restricciones",
+      "typeDeclared": "Tipo declarado",
+      "experienceDeclared": "Experiencia declarada"
+    },
+    "detail": {
+      "category": "Categoría declarada en el perfil; pendiente de validación de su alcance.",
+      "specialty": "Especialidad declarada. No acredita métodos, niveles ni autorización.",
+      "verified": "Un revisor de la plataforma verificó la cualificación con este código; su vigencia está en Cualificaciones.",
+      "reviewValidity": "La fecha declarada requiere revisión.",
+      "typeDeclared": "Habilitación de tipo declarada. La autorización de firma corresponde a la organización; no se deduce de una medalla.",
+      "experience": "Experiencia indicada por el profesional; no es una certificación."
+    },
+    "passport": {
+      "label": "Insignias profesionales",
+      "kicker": "Pasaporte visual",
+      "empty": "Añade categorías, habilitaciones y experiencia para completar tu pasaporte visual.",
+      "footnote": "Las insignias resumen datos declarados. No conceden autorización de firma ni sustituyen la revisión de licencia, tipo o competencia."
+    },
+    "yearUnit": "AÑO"
+  },
+  "publicTools": {
+    "signIn": "Acceder a mi cuenta",
+    "note": "Sin cuenta: los cálculos se hacen en este navegador y no se guarda nada en el servidor. El reto diario necesita una cuenta.",
+    "loginNote": "Las herramientas se pueden utilizar sin abrir una cuenta.",
+    "open": "Abrir herramientas"
+  },
+  "orgHome": {
+    "visibleNetwork": "Red visible",
+    "visibleNetworkDetail": "Según permisos y privacidad"
   }
 }

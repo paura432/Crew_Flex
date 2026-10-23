@@ -119,6 +119,14 @@ only platform admins read). A professional with visibility `verified_orgs` enter
 reviewed organization, always pseudonymous; for any other organization it is as invisible as `private`. The
 S-7 exception (applying) is unchanged. `get_platform_summary` (DEFINER, platform admin, 42501 otherwise) returns
 counts only; the audit view reads `audit_events` under the existing policy.
+**Shell and «Red visible» (PKG shell-visual, LOCAL `20261024600000`).** `count_visible_network(org)` (DEFINER) answers
+admins/managers of that organization only (42501 for members, professionals, other organizations, platform admins
+and anon) with one number: the professionals the external pool would let that organization find (BR-8, blocks
+included), no identity and no row. The proxy's detail-page check (`src/lib/supabase/detail-gate.ts`, T-147) is UX
+only: it repeats, under the caller's JWT, the page's own read (the requirement's organization against the acting
+one; `list_opportunities` for an opportunity or a network offer) so a missing or someone else's resource answers a
+real 404 before the stream; it grants nothing — the Edge Functions and RLS still decide. The public `/tools`
+(T-145) reads no session and no data.
 **In-app notices (v2-18, LOCAL `20261023800000`).** Any signed-in account reads only the notices addressed to it.
 Who receives one is decided in the database, in the transaction of the event: the other party of each application
 event (the applicant when the organization acts; every admin/manager of the requirement's organization, except the

@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Crew Flex",
+    "appName": "CrewFlex",
     "brandTag": "AVIATION",
     "skipToContent": "Skip to content",
     "signOut": "Sign out",
@@ -22,7 +22,7 @@
     "utcNote": "Times are UTC.",
     "notFoundTitle": "Not found",
     "notFoundDescription": "This page does not exist or you do not have access to it.",
-    "backToApp": "Back to Crew Flex",
+    "backToApp": "Back to CrewFlex",
     "errorTitle": "This page could not be displayed",
     "errorHint": "Try again in a moment.",
     "signOutHint": "If the problem persists, sign out and sign in again.",
@@ -119,7 +119,7 @@
   "auth": {
     "signIn": {
       "title": "Sign in",
-      "lead": "Access your Crew Flex workspace.",
+      "lead": "Access your CrewFlex workspace.",
       "noAccount": "No account?",
       "createOne": "Create one",
       "submit": "Sign in",
@@ -160,7 +160,7 @@
       "invitationCode": "Invitation code",
       "invitationCodeHint": "It comes in your invitation link.",
       "invitationCodeAsk": "Open the link in your invitation e-mail or paste its code here.",
-      "invitationOnly": "Signing up to Crew Flex is by invitation only.",
+      "invitationOnly": "Signing up to CrewFlex is by invitation only.",
       "invitationInvalid": "This link has expired, was already used or is not valid.",
       "invitationContinue": "Continue"
     },
@@ -238,7 +238,7 @@
     },
     "NETWORK_ERROR": {
       "title": "Service unreachable",
-      "description": "Crew Flex could not reach the backend. Check your connection and retry."
+      "description": "CrewFlex could not reach the backend. Check your connection and retry."
     },
     "INTERNAL_ERROR": {
       "title": "Server error",
@@ -636,12 +636,10 @@
       "awaitingNext": "{count, plural, one {# qualification is waiting for a reviewer. Until it is verified it does not count for hard requirements.} other {# qualifications are waiting for a reviewer. Until they are verified they do not count for hard requirements.}}",
       "openQualifications": "Open qualifications",
       "doIt": "Complete",
-      "checklistTitle": "Profile completeness · {percent, number}%",
       "itemDone": "done",
       "itemPending": "pending",
       "calendarTitle": "Your availability",
       "openAvailability": "Edit availability",
-      "showChecklist": "The {count} profile items",
       "reviewTitle": "Documents and courses to review",
       "reviewNone": "Nothing declared expires within the next {days} days.",
       "reviewExpired": "Date passed",
@@ -1063,7 +1061,7 @@
         "coverageTitle": "Coverage per shift",
         "shiftLine": "{span} · {hours} h",
         "shiftCoverage": "{date} · {filled}/{total} seats confirmed",
-        "notice": "Informative values set by the organization: Crew Flex handles no charges, commissions or payments."
+        "notice": "Informative values set by the organization: CrewFlex handles no charges, commissions or payments."
       },
       "archive": {
         "action": "Archive",
@@ -1089,7 +1087,7 @@
     },
     "new": {
       "title": "New work requirement",
-      "description": "Describe the real operational need. Crew Flex evaluates your internal capacity first.",
+      "description": "Describe the real operational need. CrewFlex evaluates your internal capacity first.",
       "noPermissionTitle": "You don't have permission",
       "noPermissionDescription": "Only organization managers and admins can create requirements.",
       "catalogErrorTitle": "The qualification catalog could not be loaded",
@@ -1369,7 +1367,7 @@
   },
   "settings": {
     "title": "Settings",
-    "description": "Your account and how Crew Flex looks to you. Business data lives in your passport or organization pages.",
+    "description": "Your account and how CrewFlex looks to you. Business data lives in your passport or organization pages.",
     "language": "Language / Idioma",
     "languageDescription": "The interface, dates and messages follow this choice on every device where you sign in. Licence codes, aircraft types and your own data are never translated.",
     "saved": "Language updated.",
@@ -1974,7 +1972,7 @@
       "accepted": "Accepted terms · version {version}",
       "pending": "Awaiting acceptance",
       "sent": "Sent on {date}",
-      "notice": "Crew Flex intermediates; the employment or service contract is agreed directly between the parties.",
+      "notice": "CrewFlex intermediates; the employment or service contract is agreed directly between the parties.",
       "newVersion": "A new proposal needs a new acceptance; the accepted one stays in the history."
     },
     "action": {
@@ -2266,7 +2264,7 @@
       "builderText": "Structured requirements",
       "packsTitle": "Candidate Packs",
       "packsText": "Files and follow-up",
-      "note": "Proposals, the technician's acceptance and your organization's confirmation are recorded separately. Crew Flex facilitates the process; the contract between the parties is agreed outside the platform."
+      "note": "Proposals, the technician's acceptance and your organization's confirmation are recorded separately. CrewFlex facilitates the process; the contract between the parties is agreed outside the platform."
     },
     "applications": {
       "eyebrow": "Pipeline",
@@ -2339,5 +2337,77 @@
     },
     "noticesHint": "Urgent and AOG notices follow your urgency, mobilisation and quiet-hour preferences.",
     "noticesHintLink": "Set up notices"
+  },
+  "shell": {
+    "breadcrumb": "Breadcrumb",
+    "motto": "Qualification · Availability · Trust",
+    "dock": {
+      "label": "Quick access",
+      "home": "Home",
+      "offers": "Offers",
+      "calendar": "Calendar",
+      "applications": "Applications",
+      "tools": "Tools",
+      "administration": "Administration"
+    }
+  },
+  "profileHero": {
+    "status": "My profile status",
+    "statusTitle": "Profile status · {percent, number}%",
+    "statusIntro": "Information filled in; the review of documents and qualifications is separate.",
+    "allDone": "Every information item is complete.",
+    "close": "Close",
+    "photo": {
+      "add": "Add photo",
+      "change": "Change photo",
+      "saving": "Saving…",
+      "remove": "Remove photo",
+      "note": "Photo kept only in this browser · JPG, PNG or WebP · up to 2 MB",
+      "invalid": "Choose a JPG, PNG or WebP photo of up to 2 MB.",
+      "saveFailed": "The photo could not be saved. Check the file and the browser's storage.",
+      "removeFailed": "The photo could not be removed."
+    }
+  },
+  "badges": {
+    "stripLabel": "Profile badges",
+    "more": "Show {count, plural, one {# more badge} other {# more badges}}",
+    "less": "Hide the extra badges",
+    "close": "Close badge detail",
+    "footnote": "Profile summary; it grants no signing authority and does not certify training for taking part in challenges.",
+    "years": "{count, plural, one {# year} other {# years}}",
+    "yearsUnit": "YRS",
+    "status": {
+      "declared": "Declared",
+      "verified": "Verified",
+      "reviewValidity": "Check validity",
+      "restricted": "With restrictions",
+      "typeDeclared": "Type declared",
+      "experienceDeclared": "Declared experience"
+    },
+    "detail": {
+      "category": "Category declared in the profile; the scope is pending validation.",
+      "specialty": "Declared specialty. It does not certify methods, levels or authorisation.",
+      "verified": "A platform reviewer verified the qualification with this code; its validity is in Qualifications.",
+      "reviewValidity": "The declared date needs a review.",
+      "typeDeclared": "Declared type rating. Signing authority belongs to the organization; a badge does not imply it.",
+      "experience": "Experience stated by the professional; it is not a certification."
+    },
+    "passport": {
+      "label": "Professional badges",
+      "kicker": "Visual passport",
+      "empty": "Add categories, type ratings and experience to complete your visual passport.",
+      "footnote": "Badges summarise declared data. They grant no signing authority and do not replace the review of licence, type or competence."
+    },
+    "yearUnit": "YR"
+  },
+  "publicTools": {
+    "signIn": "Sign in to my account",
+    "note": "Without an account: calculations run in this browser and nothing is stored on the server. The daily challenge needs an account.",
+    "loginNote": "The tools can be used without opening an account.",
+    "open": "Open the tools"
+  },
+  "orgHome": {
+    "visibleNetwork": "Visible network",
+    "visibleNetworkDetail": "Subject to permissions and privacy"
   }
 }

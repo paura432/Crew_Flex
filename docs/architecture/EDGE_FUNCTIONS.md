@@ -165,6 +165,9 @@ deterministic 40001 loops (observed in the local E2E run; the passport conflict 
   DEFINER RPC checks the platform role in its body (42501 otherwise) and the audit read is the existing RLS
   policy (`audit_events_select`). The v2 diff allows it (#9 «Edge: no», #15 «RPC»); ADR-001 §4 otherwise
   reserves direct reads for the caller's own context — moving them behind a function is cheap if preferred.
+  The organization home's «Red visible» (T-146, PKG shell-visual) follows the same pattern:
+  `supabase.rpc('count_visible_network', { p_organization_id })` from `src/features/organizations/api.ts`
+  (DEFINER, admin/manager of that organization in the body, a count only).
 
 ### No service role for account deletion or invitation e-mail (PKG account, decided 2026-10-23)
 

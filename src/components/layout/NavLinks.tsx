@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BELL_PATH } from "@/features/notices/components/NoticeBell";
+import { isActiveHref } from "./nav-active";
 
 export interface NavItem {
   href: string;
@@ -54,8 +55,26 @@ const ICON_PATHS: Record<string, string> = {
     "M9 2h6v4H9zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M8 11h8M8 15h8M8 19h5",
 };
 
-/** Workspace homes: active only on their exact path, never for the pages under them. */
-const SECTION_ROOTS = new Set(["/app/organization", "/app/professional", "/app/admin"]);
+/** The menu icon of an entry (the mobile dock reuses it). */
+export const iconPath = (href: string) => ICON_PATHS[href] ?? BRIEFCASE;
+
+/** The inline 18 px stroke icon of an entry; the active one is accent in the sidebar. */
+export function NavIcon({ href, className }: { href: string; className: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d={iconPath(href)} />
+    </svg>
+  );
+}
 
 /**
  * Client only for `aria-current` on the active link. Below `lg` the items wrap onto as many rows as
@@ -67,9 +86,7 @@ export function NavLinks({ items, label }: { items: NavItem[]; label: string }) 
     <nav aria-label={label}>
       <ul className="flex flex-wrap gap-1 lg:flex-col">
         {items.map((item) => {
-          const active =
-            item.href === pathname ||
-            (!SECTION_ROOTS.has(item.href) && pathname.startsWith(`${item.href}/`));
+          const active = isActiveHref(item.href, pathname);
           return (
             <li key={item.href} className="shrink-0">
               <Link
@@ -78,18 +95,10 @@ export function NavLinks({ items, label }: { items: NavItem[]; label: string }) 
                 className="group flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm pointer-coarse:min-h-11 whitespace-nowrap text-[#c4d3e1] hover:bg-white/5 hover:text-white aria-[current=page]:bg-navy-700 aria-[current=page]:text-white"
               >
                 {/* V1.8 `.sidebar button.active svg{color:#ffad54}` */}
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
+                <NavIcon
+                  href={item.href}
                   className="size-[18px] shrink-0 group-aria-[current=page]:text-accent"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d={ICON_PATHS[item.href] ?? BRIEFCASE} />
-                </svg>
+                />
                 {item.label}
                 {item.badge && (
                   <>

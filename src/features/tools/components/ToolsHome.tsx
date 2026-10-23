@@ -18,16 +18,9 @@ import {
   WrenchIcon,
 } from "./icons";
 
-/** v1.8 order: daily, translator, torque, [fuel], convert, knowledge, duration (L-4). */
-export const TOOL_IDS = [
-  "daily",
-  "translator",
-  "torque",
-  "convert",
-  "knowledge",
-  "duration",
-] as const;
-export type ToolId = (typeof TOOL_IDS)[number];
+import { TOOL_IDS, TOOLS_BASE, type ToolId, type ToolsBase } from "../ids";
+
+export { TOOL_IDS, type ToolId };
 
 const FAVORITES_KEY = "crewflex-tool-favorites";
 const FAVORITES_EVENT = "crewflex-tool-favorites-change";
@@ -67,10 +60,22 @@ export function parseFavorites(raw: string): ToolId[] {
   }
 }
 
-export function ToolsHome() {
+/**
+ * `base` and `ids`: the public copy (/tools, T-145) links inside itself and leaves out the daily
+ * challenge, whose progress needs a signed-in user.
+ */
+export function ToolsHome({
+  base = TOOLS_BASE.app,
+  ids = TOOL_IDS,
+}: {
+  base?: ToolsBase;
+  ids?: readonly ToolId[];
+}) {
   const t = useTranslations("tools");
   // Server render and first paint have no favourites; the stored ones appear after hydration.
-  const favorites = parseFavorites(useSyncExternalStore(subscribe, readRaw, () => "[]"));
+  const favorites = parseFavorites(useSyncExternalStore(subscribe, readRaw, () => "[]")).filter(
+    (id) => ids.includes(id),
+  );
 
   function toggle(id: ToolId) {
     const next = favorites.includes(id) ? favorites.filter((x) => x !== id) : [...favorites, id];
@@ -96,7 +101,7 @@ export function ToolsHome() {
           </h2>
           <p className="mb-6 max-w-md text-sm text-tool-hero-text">{t("hero.body")}</p>
           <Link
-            href="/app/tools/torque"
+            href={`${base}/torque`}
             className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-tool-mint px-4 text-xs font-bold text-tool-mint-ink hover:brightness-95"
           >
             {t("hero.cta")} <ChevronIcon size={17} />
@@ -122,23 +127,25 @@ export function ToolsHome() {
             <StarIcon size={18} /> {t("favorites")}
           </h2>
           <div className="flex flex-wrap gap-2.5">
-            {TOOL_IDS.filter((id) => favorites.includes(id)).map((id) => (
-              <Link
-                key={id}
-                href={`/app/tools/${id}`}
-                className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#ccd9df] bg-white px-4 text-xs font-bold text-[#1d4458] hover:bg-canvas"
-              >
-                {/* 17 px in a chip, 26 px on a tile, as v1.8 (T-2) */}
-                {ICONS[id](17)}
-                {t(`tile.${id}.title`)}
-              </Link>
-            ))}
+            {ids
+              .filter((id) => favorites.includes(id))
+              .map((id) => (
+                <Link
+                  key={id}
+                  href={`${base}/${id}`}
+                  className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#ccd9df] bg-white px-4 text-xs font-bold text-[#1d4458] hover:bg-canvas"
+                >
+                  {/* 17 px in a chip, 26 px on a tile, as v1.8 (T-2) */}
+                  {ICONS[id](17)}
+                  {t(`tile.${id}.title`)}
+                </Link>
+              ))}
           </div>
         </section>
       )}
 
       <div className="grid gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
-        {TOOL_IDS.map((id) => {
+        {ids.map((id) => {
           const title = t(`tile.${id}.title`);
           const favorite = favorites.includes(id);
           return (
@@ -167,7 +174,7 @@ export function ToolsHome() {
               </h2>
               <p className="mb-6 text-xs text-[#587083]">{t(`tile.${id}.sub`)}</p>
               <Link
-                href={`/app/tools/${id}`}
+                href={`${base}/${id}`}
                 className="mt-auto inline-flex min-h-10 pointer-coarse:min-h-11 w-fit items-center gap-2 text-xs font-bold text-tool-strong hover:underline"
               >
                 {t("open")} <ChevronIcon size={17} />

@@ -3,7 +3,7 @@ import en from "../../messages/en.json";
 import es from "../../messages/es.json";
 
 // The browser tab names the page with the same words as its menu entry (v1.8's breadcrumb used the
-// menu label too), so «Documentos» in the menu is «Documentos · Crew Flex» in the tab.
+// menu label too), so «Documentos» in the menu is «Documentos · CrewFlex» in the tab.
 const TITLE_FOR_NAV: Record<keyof typeof es.nav, keyof typeof es.meta | null> = {
   organization: null, // section heading, not a page
   professional: null, // section heading, not a page

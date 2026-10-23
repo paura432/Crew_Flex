@@ -190,6 +190,13 @@ parity for every visibility × review state is asserted in `tests/db/admin-org.t
 requirement's organization are in the internal pool whatever their visibility. Applying is the professional's own
 act (S-7 exception): an applicant is visible to that organization whatever their visibility. IMPLEMENTED (local).
 
+**«Red visible» (v1.8 `Dashboard.jsx:24`, T-146; LOCAL `20261024600000`).** The organization home counts the
+professionals this organization can find in the network: `count_visible_network(org)` = the same candidate filter
+(this visibility table, a registered review for `verified_orgs`, not a member of the organization, not blocked by the
+professional — BR-18/T-35) without the requirement's qualification filter. A number only, for admin/manager of that
+organization (42501 otherwise); `tests/db/shell-visual.test.ts` proves it against `isExternallyMatchable`.
+IMPLEMENTED (local).
+
 ## BR-9 Roles
 
 Platform role (`profiles.platform_role`: `user` · `platform_admin`) is distinct from organization
@@ -499,3 +506,19 @@ expediente» on the requirement's applications, the organization's «Candidatura
   «Distribuida el {fecha}: {n} avisos internos.» on the need — and **no number** when fewer than 5 professionals of
   its external pool are eligible for the need and not already its applicants (the organization sees those). Never
   who received it nor why someone did not (ORG-06 #4, #5); the audit row `requirement.outreach_distributed` carries the count and the urgency. IMPLEMENTED (local).
+
+## BR-29 Profile medals (N-15, T-143) — `badges()` (`src/domain/badges.ts`)
+
+v1.8 `badges()` (`src/features/progress.js:3-11`) over the professional's **own declarations** (BR-18), shown only
+to them («Mi espacio» hero and «Pasaporte visual» of the passport):
+
+| Rule    | Statement                                                                                                                                                                                                |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-29.1 | One medal per declared category (the main one first); NDT and Sheet Metal are specialties (wrench), the rest licence shields. A declared NDT / sheet-metal skill without that category adds a specialty. |
+| BR-29.2 | One medal per declared type rating («{aircraft} · {category}»): «Revisar vigencia» when its declared validity ended before today (UTC), else «Con restricciones» with its text, else «Tipo declarado».   |
+| BR-29.3 | One experience medal when the declared years are > 0 («Experiencia declarada»).                                                                                                                          |
+| BR-29.4 | Next's «Verificada» replaces «Declarado» on a category whose code matches an active qualification a platform reviewer verified and whose expiry is not before today.                                     |
+| BR-29.5 | The main strip shows experience, the first category, the first aircraft and the first specialty; the rest behind «+N». Declared aircraft without a type rating make no medal (v1.8).                     |
+
+Display only: a medal makes nobody eligible (BR-2/BR-3) and grants no signing authority (v1.8 footnote, shown with
+every detail); organizations never see medals. IMPLEMENTED (local, no migration).

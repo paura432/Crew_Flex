@@ -31,7 +31,31 @@
   --color-tool-caption: #91c7c9;
   --color-tool-hero-text: #b6cbd5;
   --color-tool-ring: #2e5968;
+  /* «Mi espacio» hero (v1.8 `.personal-passport`, `styles/v17.css`; T-143): teal gradient, text #fff and
+     hero-text ≥ 4.5:1 on both stops; the initials avatar (v1.8 `.cf-avatar`, end stop darkened from
+     #2b9188 so white reads 4.7:1). */
+  --color-hero-from: #103a4c;
+  --color-hero-to: #186c72;
+  --color-hero-text: #d7ecee;
+  --color-hero-bar: #9ad9ca;
+  --color-avatar-from: #0c4959;
+  --color-avatar-to: #24807a;
+  /* v1.8 `.tiny-medal` experience (gold) and specialty (violet); category and aircraft use info/ok. */
+  --color-medal-gold: #82611d;
+  --color-medal-gold-bg: #fff8e8;
+  --color-medal-gold-line: #e5c98b;
+  --color-medal-violet: #72558a;
+  --color-medal-violet-bg: #f3eef9;
+  --color-medal-violet-line: #ddd0e8;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@utility bg-hero {
+  background: linear-gradient(140deg, var(--color-hero-from), var(--color-hero-to));
+}
+
+@utility bg-avatar {
+  background: linear-gradient(140deg, var(--color-avatar-from), var(--color-avatar-to));
 }
 
 /* V1.8 partial day (`styles/v18.css:1`): hatched, so it never reads as a solid state. */
@@ -44,9 +68,19 @@
     color: var(--color-ink);
     background: var(--color-canvas);
   }
+  /* Below `lg` the fixed dock (T-141) covers the bottom of the viewport: focus and in-page jumps stop above
+     it (WCAG 2.4.11, focus not obscured). */
+  @media (width < 64rem) {
+    html {
+      scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    }
+  }
   body {
     font-size: 15px;
     line-height: 1.6;
+    /* viewport-fit=cover (layout.tsx): keep text out of a notch in landscape; 0 elsewhere. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   /* Double ring (WCAG 2.4.11/1.4.11, ≥ 3:1 on every surface): navy fills the 2 px offset next to the
      control (16.3:1 on white, 15.2:1 on canvas) and the orange outline sits outside it (7.6:1 on the

@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
+import { FilterPill } from "@/components/ui/FilterPill";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
@@ -75,17 +76,17 @@ export default async function MyApplicationsPage({
   const status = APPLICATION_STATUSES.find((s) => s === statusParam) ?? null;
   const shown = status ? all.filter((a) => a.status === status) : all;
   const present = APPLICATION_STATUSES.filter((s) => all.some((a) => a.status === s));
+  // Area 50 #14: the active filter is `aria-current="true"`; «page» stays the menu entry's.
   const pill = (value: ApplicationStatus | null, label: string) => (
-    <Link
+    <FilterPill
       key={value ?? "all"}
       href={
         value ? `/app/professional/applications?status=${value}` : "/app/professional/applications"
       }
-      aria-current={status === value ? "true" : undefined}
-      className="inline-flex min-h-9 items-center rounded-full border border-line bg-white px-4 text-sm font-semibold text-muted pointer-coarse:min-h-11 aria-[current=true]:border-navy aria-[current=true]:bg-navy aria-[current=true]:text-white"
+      current={status === value}
     >
       {label}
-    </Link>
+    </FilterPill>
   );
 
   return (

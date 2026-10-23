@@ -1,19 +1,9 @@
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { KnowledgeTool } from "@/features/tools/components/KnowledgeTool";
-import { ToolsHeader } from "@/features/tools/components/ToolsHeader";
+import { TOOLS_BASE } from "@/features/tools/ids";
+import { ToolScreen, toolMetadata } from "@/features/tools/components/ToolScreen";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("tools");
-  return { title: t("tile.knowledge.title") };
-}
+export const generateMetadata = () => toolMetadata("knowledge");
 
-export default async function ToolsKnowledgePage() {
-  const t = await getTranslations("tools");
-  return (
-    <>
-      <ToolsHeader title={t("tile.knowledge.title")} back />
-      <KnowledgeTool />
-    </>
-  );
+// Signed-in workbench; the same screen is public at /tools (T-145).
+export default function ToolsKnowledgePage() {
+  return <ToolScreen id="knowledge" base={TOOLS_BASE.app} />;
 }

@@ -123,6 +123,19 @@ candidate's declarations).
   account; an organization recipient's notices are deleted when they lose admin/manager (the event trigger locks
   the memberships, so a concurrent demotion cannot leave one behind). Marking read is the only write a user makes.
 - Internal workforce data visible to own organization admins/managers only (OD-4).
+- Shell-visual (LOCAL, T-143…T-146): the profile medals are rendered for the professional only, from their own
+  rows; a restricted rating's medal shows their own restriction text, which organizations never receive. The avatar
+  photo (N-23) is a 320×320 JPEG data URL in **this browser's** `localStorage` under `crewflex-avatar-v1-<user id>`:
+  never uploaded, never shown to anyone else, readable by whoever uses the same browser profile (as the learning
+  progress, BR-16); only `data:image/(jpeg|png|webp)` values are ever rendered. «Red visible» is one number per
+  organization for its admins/managers (`count_visible_network`), no identity. The public `/tools` reads no session
+  and no data and keeps the same CSP. **Accepted after the independent review (2026-10-23, 4 LOW):** (a) the count is a
+  coarse oracle — an admin polling it sees it drop by one when someone blocks the organization, goes `private` or
+  closes the account, which the per-requirement pool summary already reveals (T9 residual risk); (b) the
+  visibility/block filter now lives in three SQL functions (`ranked_external_pool`, `count_viable_candidates`,
+  `count_visible_network`) — a future exclusion must land in all three, and `tests/db/shell-visual.test.ts` pins the
+  count to `isExternallyMatchable`; (c) the browser avatar and the learning progress are not cleared at sign-out
+  or account closure (the server holds neither; the person clears the browser).
 - Contact and economic data of the passport (LOCAL, package passport `20261023100100`): phone, current employer,
   minimum rate and blocked organizations live in owner-only tables (`technician_private_details`,
   `technician_organization_blocks`): not readable by the own organization or platform admins, written only by the
