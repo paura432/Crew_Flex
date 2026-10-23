@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261024600000. Do not edit by hand.
+// migrations up to 20261024700000. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -515,6 +515,53 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "work_requirements";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      organization_candidate_blocks: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          organization_id: string;
+          technician_profile_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          organization_id: string;
+          technician_profile_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          organization_id?: string;
+          technician_profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_candidate_blocks_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "organization_candidate_blocks_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "organization_candidate_blocks_technician_profile_id_fkey";
+            columns: ["technician_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_profiles";
+            referencedColumns: ["profile_id"];
           },
         ];
       };
@@ -2052,6 +2099,39 @@ export type Database = {
       save_professional_passport: {
         Args: { p_expected_updated_at?: string; p_passport: Json };
         Returns: string;
+      };
+      search_candidate_directory: {
+        Args: {
+          p_aircraft?: string;
+          p_base?: string;
+          p_blocked?: boolean;
+          p_category?: string;
+          p_country?: string;
+          p_english_level?: string;
+          p_from?: string;
+          p_limit?: number;
+          p_min_years?: number;
+          p_offset?: number;
+          p_organization_id: string;
+          p_to?: string;
+        };
+        Returns: {
+          candidate_base_location: string;
+          candidate_declarations: Json;
+          candidate_display_name: string;
+          candidate_ref: string;
+          candidate_years_experience: number;
+          total: number;
+        }[];
+      };
+      set_directory_block: {
+        Args: {
+          p_blocked: boolean;
+          p_candidate_ref: string;
+          p_organization_id: string;
+          p_request_id?: string;
+        };
+        Returns: boolean;
       };
       transition_application: {
         Args: {

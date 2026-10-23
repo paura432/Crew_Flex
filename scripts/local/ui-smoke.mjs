@@ -2577,9 +2577,10 @@ await logout();
     .evaluateAll((links) => [...new Set(links.map((a) => a.getAttribute("href")))]);
   const at = (href) => hpNav.indexOf(href);
   ok(
-    "PKG hiring-polish 3 menu: Requirements → Applications → Offers in the network",
+    "PKG hiring-polish 3 menu: Requirements → Find candidates → Applications → Offers in the network",
     at("/app/organization/requirements") >= 0 &&
-      at("/app/organization/applications") === at("/app/organization/requirements") + 1 &&
+      at("/app/organization/candidates") === at("/app/organization/requirements") + 1 &&
+      at("/app/organization/applications") === at("/app/organization/candidates") + 1 &&
       at("/app/organization/network") === at("/app/organization/applications") + 1,
     hpNav.join(" "),
   );
@@ -3866,7 +3867,10 @@ ok(
   "PKG directory f: «Compact» is pressed by default and the expanded block is hidden",
   (await compactBtn.getAttribute("aria-pressed")) === "true" &&
     (await expandedBtn.getAttribute("aria-pressed")) === "false" &&
-    !(await firstCard.getByText(/^Experience:/).isVisible()),
+    !(await firstCard
+      .getByText(/^Experience:/)
+      .first()
+      .isVisible()),
   "",
 );
 await expandedBtn.click();
@@ -3883,17 +3887,17 @@ ok(
   "",
 );
 await compactBtn.click();
-const echoCard = page.locator("article", { hasText: "Technician Echo" });
-await echoCard.getByRole("button", { name: "Open profile" }).click();
+const dirEchoCard = page.locator("article", { hasText: "Technician Echo" });
+await dirEchoCard.getByRole("button", { name: "Open profile" }).click();
 const profileDialog = page.getByRole("dialog", { name: "Professional profile" });
-const profileText = await profileDialog.innerText();
+const dirProfileText = await profileDialog.innerText();
 ok(
   "PKG directory h: «Professional profile» opens with the badges note and the privacy note, no e-mail or phone",
   (await profileDialog.isVisible()) &&
-    /Profile summary; it grants no sign-off authorisation/.test(profileText) &&
-    /Identity follows visibility/.test(profileText) &&
-    /Learning medals are private/.test(profileText) &&
-    !/@|\+34/.test(profileText),
+    /Profile summary; it grants no sign-off authorisation/.test(dirProfileText) &&
+    /Identity follows visibility/.test(dirProfileText) &&
+    /Learning medals are private/.test(dirProfileText) &&
+    !/@|\+34/.test(dirProfileText),
   "",
 );
 await page.keyboard.press("Escape");
@@ -3904,7 +3908,7 @@ ok(
     (await page.evaluate(() => document.activeElement?.textContent?.trim())) === "Open profile",
   "",
 );
-await echoCard.getByRole("button", { name: "Block" }).click();
+await dirEchoCard.getByRole("button", { name: "Block" }).click();
 await page.waitForLoadState("networkidle");
 await page.waitForTimeout(500);
 ok(
