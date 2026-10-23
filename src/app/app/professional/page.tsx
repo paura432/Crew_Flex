@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import { NavIcon } from "@/components/layout/NavLinks";
 import { ButtonLink } from "@/components/ui/Button";
 import { Metric } from "@/components/ui/Metric";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -93,27 +94,44 @@ export default async function ProfessionalOverviewPage({
     endsAt: w.ends_at,
     status: w.status,
   }));
+  const counts = activityCounts(activity);
 
   return (
     <>
-      {/* V1.8 home: the promise as the heading, the person in the hero below. */}
+      {/* V1.8 home: the promise as the heading (the `br` flows on phones, as v1.8 ≤ 390 px). */}
       <PageHeader
         eyebrow={t("overview.eyebrow")}
-        title={t.rich("overview.headline", { br: () => <br /> })}
-        actions={<ButtonLink href="/app/tools">{tNav("tools")}</ButtonLink>}
+        title={t.rich("overview.headline", { br: () => <br className="max-sm:hidden" /> })}
+        actions={
+          <ButtonLink href="/app/tools">
+            <NavIcon href="/app/tools" className="size-[18px]" />
+            {tNav("tools")}
+          </ButtonLink>
+        }
       />
       <div className="space-y-6">
-        <ProfessionalHero
-          userId={actor.id}
-          name={actor.profile.display_name}
-          baseLocation={overview.profile.base_location}
-          yearsExperience={overview.profile.years_experience}
-          medals={medalInputOf(overview, today)}
+        {/* v1.8 order (T-161): [passport | month] → «Oportunidades para ti» → «Mis candidaturas». */}
+        <ProfessionalActivity
+          reads={activity}
+          windows={windows}
+          month={month}
           today={today}
-          completeness={completeness}
-          {...activityCounts(activity)}
+          hero={
+            <ProfessionalHero
+              userId={actor.id}
+              name={actor.profile.display_name}
+              baseLocation={overview.profile.base_location}
+              yearsExperience={overview.profile.years_experience}
+              medals={medalInputOf(overview, today)}
+              today={today}
+              completeness={completeness}
+              compatible={counts.compatible}
+              confirmed={counts.confirmed}
+            />
+          }
         />
-        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {/* Next-only figures, folded below the v1.8 blocks. */}
+        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {/* Completeness of the profile items (BR-11) is not a verification status (8.2). */}
           <Metric
             label={t("overview.passport")}
@@ -142,9 +160,13 @@ export default async function ProfessionalOverviewPage({
             value={tDomain(`visibility.${overview.profile.visibility}.label`)}
             detail={tDomain(`visibility.${overview.profile.visibility}.detail`)}
           />
+          <Metric label={t("activity.active")} value={counts.active ?? "—"} />
+          <Metric
+            label={t("activity.toAccept")}
+            value={counts.toAccept ?? "—"}
+            tone={counts.toAccept ? "warn" : "neutral"}
+          />
         </dl>
-        {/* v1.8: counters, the month (a day filters the feed) next to «Oportunidades para ti». */}
-        <ProfessionalActivity reads={activity} windows={windows} month={month} today={today} />
         {(awaiting > 0 || rejected > 0) && (
           <Panel title={t("overview.nextTitle")}>
             <ul className="space-y-3 text-sm">

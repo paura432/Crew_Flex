@@ -652,7 +652,7 @@
       "itemDone": "hecho",
       "itemPending": "pendiente",
       "calendarTitle": "Tu disponibilidad",
-      "openAvailability": "Editar disponibilidad",
+      "openAvailability": "Actualizar disponibilidad",
       "reviewTitle": "Documentos y cursos próximos a revisar",
       "reviewNone": "Nada de lo declarado caduca en los próximos {days} días.",
       "reviewExpired": "Fecha superada",
@@ -756,17 +756,16 @@
       "document": "Documento aportado"
     },
     "activity": {
-      "label": "Oportunidades y candidaturas",
-      "compatible": "Oportunidades compatibles",
+      "compatible": "oportunidades compatibles",
       "active": "Candidaturas en curso",
       "toAccept": "Propuestas por aceptar",
-      "confirmed": "Asignaciones confirmadas",
+      "confirmed": "asignaciones confirmadas",
       "opportunitiesTitle": "Oportunidades para ti",
       "applicationsTitle": "Mis candidaturas",
       "viewAll": "Ver todas",
       "follow": "Ver seguimiento",
-      "noOpportunities": "Todavía no hay oportunidades compatibles.",
-      "noApplications": "Tu próxima candidatura empieza aquí.",
+      "noOpportunities": "Todavía no hay oportunidades compatibles",
+      "noApplications": "Tu próxima candidatura empieza aquí",
       "loadError": "No se ha podido cargar ahora. Recarga para reintentar.",
       "opportunitiesDay": "Oportunidades · {day}",
       "clearDay": "Quitar selección de fecha",
@@ -778,7 +777,11 @@
       "noOpportunitiesHint": "Revisa tu perfil o publica las fechas que quieras ofrecer. Los descansos privados no se envían a empresas.",
       "openCalendar": "Abrir mi calendario",
       "noApplicationsHint": "Explora las oportunidades y elige las condiciones y fechas que te encajen.",
-      "searchOpportunities": "Buscar oportunidades"
+      "searchOpportunities": "Buscar oportunidades",
+      "kicker": "Encuentra tu siguiente paso",
+      "applicationsKicker": "Tu actividad",
+      "days": "{count, plural, one {# jornada} other {# jornadas}}",
+      "rate": "{amount} / h"
     }
   },
   "qualifications": {
@@ -952,6 +955,15 @@
       "offersPotential": "{date}: {state}. {count, plural, one {# oportunidad posible} other {# oportunidades posibles}}, revisa la publicación de descanso",
       "legendOffers": "Oportunidades",
       "note": "Calendario en UTC. El punto rojo señala oportunidades en días compatibles o descansos que podrías publicar. No cambia tu disponibilidad."
+    },
+    "weekdayShort": {
+      "mon": "L",
+      "tue": "M",
+      "wed": "X",
+      "thu": "J",
+      "fri": "V",
+      "sat": "S",
+      "sun": "D"
     }
   },
   "organization": {

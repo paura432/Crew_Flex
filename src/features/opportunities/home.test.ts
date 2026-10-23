@@ -60,6 +60,24 @@ describe("homeOpportunities (N-03 / N-17 day → opportunities map)", () => {
       ["p", false],
     ]);
     expect(rows[0]).toMatchObject({ location: "Madrid (MAD)", licences: ["B1.1"] });
+    // v1.8 «{tarifa} / h» only when the need states one (T-62 informative conditions).
+    expect(rows.map((r) => r.hourlyRate)).toEqual([null, null]);
+    expect(
+      homeOpportunities(
+        [
+          {
+            ...opportunity("r", "2026-10-27T06:00:00Z", "2026-10-27T18:00:00Z"),
+            requirement: {
+              ...opportunity("r", "2026-10-27T06:00:00Z", "2026-10-27T18:00:00Z").requirement,
+              conditions: { hourlyRate: 52 },
+            },
+          } as Opportunity,
+        ],
+        [],
+        windows,
+        TODAY,
+      )[0]!.hourlyRate,
+    ).toBe(52);
   });
 
   it("a compatible need marks every day; a possible one only its rest days (no window) from today", () => {
