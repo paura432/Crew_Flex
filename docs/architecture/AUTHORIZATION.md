@@ -137,7 +137,7 @@ random id. `get_my_application_packs()` returns the caller's own copies (export)
 `get_my_candidate_pack_preview()` the caller's own copy as it would be frozen now (professionals only, 42501
 otherwise). The fixed column lists never carry the name, e-mail, phone, employer, blocks, documents or file metadata
 (`PACK_ACTIVATION` off); the minimum rate and the restriction texts, owner-only elsewhere (BR-18), are included
-because the apply panel previews exactly this content before the consent (T-111). Withdrawing or closing the account
+because the apply panel previews exactly this content before the consent (T-111). Withdrawal, rejection, cancellation or closing the account
 deletes the copies (T-113). Reads are not audited (T-114).
 **Account data rights and invitations (PKG account, LOCAL `20261023400000/400100`, T-40…T-44).** Any signed-in user
 exports and closes **their own** account only: `account` reads under RLS as the caller and `close_my_account()` takes

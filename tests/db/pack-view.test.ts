@@ -141,6 +141,22 @@ async function withdraw(tx: Transaction, technician: string, applicationId: stri
   ]);
 }
 
+/** Owner fixture: an application that went through proposal and acceptance and is `finished`. */
+async function finish(tx: Transaction, applicationId: string) {
+  await asOwner(tx);
+  const { rows } = await tx.query<{ id: string }>(
+    `insert into public.application_proposals (application_id, version, terms)
+     values ($1, 1, '{}'::jsonb) returning id`,
+    [applicationId],
+  );
+  await tx.query(
+    `update public.applications
+     set status = 'finished', current_proposal_id = $2, accepted_proposal_id = $2
+     where id = $1`,
+    [applicationId, rows[0]!.id],
+  );
+}
+
 async function packAs(tx: Transaction, userId: string, applicationId: string) {
   await actAs(tx, userId);
   const { rows } = await tx.query<PackRow>("select * from public.get_application_pack($1)", [
@@ -488,40 +504,64 @@ describe("pack copy: frozen at application time", () => {
     });
   });
 
-  it("rejected applications keep their copy (the organization's record)", async () => {
+  it("rejected and cancelled drop the copy for both parties; finished keeps it (T-113, review M-3)", async () => {
     await asUser(db, null, async (tx) => {
-      const need = await createNeed(tx, mroId, SEED.adminMro);
-      const app = await applyAs(tx, SEED.delta, need);
+      const needs = [
+        await createNeed(tx, mroId, SEED.adminMro),
+        await createNeed(tx, mroId, SEED.adminMro, false),
+        await createNeed(tx, mroId, SEED.adminMro, false),
+      ];
+      const [rejected, cancelled, finished] = [
+        await applyAs(tx, SEED.delta, needs[0]!),
+        await applyAs(tx, SEED.delta, needs[1]!),
+        await applyAs(tx, SEED.delta, needs[2]!),
+      ];
       await asOwner(tx);
       const { rows } = await tx.query<{ updated_at: Date }>(
         "select updated_at from public.applications where id = $1",
-        [app],
+        [rejected],
       );
       await actAs(tx, SEED.adminMro);
       await tx.query(
         "select * from public.transition_application($1, 'rejected', $2, $3, 'Not this time')",
-        [app, rows[0]!.updated_at.toISOString(), randomUUID()],
+        [rejected!, rows[0]!.updated_at.toISOString(), randomUUID()],
       );
-      expect(await packAs(tx, SEED.adminMro, app)).toHaveLength(1);
-      expect(await packAs(tx, SEED.delta, app)).toHaveLength(1);
+      // The state machine's later steps, written by the owner (the trigger only looks at the status).
+      await asOwner(tx);
+      await tx.query(
+        "update public.applications set status = 'cancelled', reason = 'Plans changed' where id = $1",
+        [cancelled],
+      );
+      await finish(tx, finished!);
+      for (const reader of [SEED.adminMro, SEED.delta]) {
+        expect(await packAs(tx, reader, rejected!), reader).toEqual([]);
+        expect(await packAs(tx, reader, cancelled!), reader).toEqual([]);
+        expect(await packAs(tx, reader, finished!), reader).toHaveLength(1);
+      }
     });
   });
 
-  it("an application row written by someone other than the applicant gets no copy", async () => {
+  it("an application row written by anyone but the applicant gets no copy (another user, no user)", async () => {
     await asUser(db, null, async (tx) => {
       const need = await createNeed(tx, mroId, SEED.adminMro);
-      // A future path inserting for someone else (simulated: owner insert under another user's JWT).
-      await actAs(tx, SEED.adminMro);
-      await tx.exec("reset role");
-      const { rows } = await tx.query<{ id: string }>(
-        "insert into public.applications (requirement_id, technician_profile_id) values ($1, $2) returning id",
-        [need, SEED.delta],
-      );
-      const { rows: packs } = await tx.query(
-        "select 1 from public.application_packs where application_id = $1",
-        [rows[0]!.id],
-      );
-      expect(packs).toEqual([]);
+      // A future path inserting for someone else (simulated: owner insert under another user's JWT), and
+      // a connection that names no user at all (operator SQL, a privileged key: security review L-2).
+      for (const writer of [SEED.adminMro, null]) {
+        await actAs(tx, writer);
+        await tx.exec("reset role");
+        const { rows } = await tx.query<{ id: string }>(
+          "insert into public.applications (requirement_id, technician_profile_id) values ($1, $2) returning id",
+          [need, SEED.delta],
+        );
+        const { rows: packs } = await tx.query(
+          "select 1 from public.application_packs where application_id = $1",
+          [rows[0]!.id],
+        );
+        expect(packs, String(writer)).toEqual([]);
+        await tx.query("update public.applications set status = 'withdrawn' where id = $1", [
+          rows[0]!.id,
+        ]);
+      }
     });
   });
 });
@@ -567,7 +607,7 @@ describe("pack copy: who reads it", () => {
     });
   });
 
-  it("a manager who loses the role loses the copy; the preview is for professionals only", async () => {
+  it("the role is read when reading: demoted or removed lose it, a manager added later has it", async () => {
     await asUser(db, null, async (tx) => {
       const need = await createNeed(tx, mroId, SEED.adminMro);
       const app = await applyAs(tx, SEED.delta, need);
@@ -576,10 +616,29 @@ describe("pack copy: who reads it", () => {
         "update public.organization_members set role = 'member' where organization_id = $1 and profile_id = $2",
         [mroId, SEED.managerMro],
       );
-      await actAs(tx, SEED.managerMro);
-      expect(
-        (await sqlError(tx, "select * from public.get_application_pack($1)", [app])).code,
-      ).toBe("P0002");
+      await tx.query(
+        "delete from public.organization_members where organization_id = $1 and profile_id = $2",
+        [mroId, SEED.adminMro],
+      );
+      await tx.query(
+        "insert into public.organization_members (organization_id, profile_id, role) values ($1, $2, 'manager')",
+        [mroId, SEED.adminOther],
+      );
+      for (const lost of [SEED.managerMro, SEED.adminMro]) {
+        await actAs(tx, lost);
+        expect(
+          (await sqlError(tx, "select * from public.get_application_pack($1)", [app])).code,
+          lost,
+        ).toBe("P0002");
+      }
+      // By design (T-113): access follows the organization's current admins/managers, like the
+      // application list; the copy goes when the application ends without an engagement.
+      expect(await packAs(tx, SEED.adminOther, app)).toHaveLength(1);
+    });
+  });
+
+  it("the preview is for professionals only", async () => {
+    await asUser(db, null, async (tx) => {
       await actAs(tx, SEED.adminMro);
       expect(
         (await sqlError(tx, "select * from public.get_my_candidate_pack_preview()")).code,
@@ -618,17 +677,9 @@ describe("pack copy: the professional's own records and account closure (T-42, T
       const need = await createNeed(tx, mroId, SEED.adminMro);
       const second = await createNeed(tx, mroId, SEED.adminMro, false);
       const inProgress = await applyAs(tx, SEED.delta, need);
-      const rejected = await applyAs(tx, SEED.delta, second);
-      await asOwner(tx);
-      const { rows: version } = await tx.query<{ updated_at: Date }>(
-        "select updated_at from public.applications where id = $1",
-        [rejected],
-      );
-      await actAs(tx, SEED.adminMro);
-      await tx.query(
-        "select * from public.transition_application($1, 'rejected', $2, $3, 'Not this time')",
-        [rejected, version[0]!.updated_at.toISOString(), randomUUID()],
-      );
+      const finished = await applyAs(tx, SEED.delta, second);
+      await finish(tx, finished);
+      expect(await packAs(tx, SEED.adminMro, finished)).toHaveLength(1);
 
       await actAs(tx, SEED.delta);
       await tx.query("select * from public.close_my_account()");
@@ -636,24 +687,24 @@ describe("pack copy: the professional's own records and account closure (T-42, T
       const { rows: apps } = await tx.query<{ id: string; status: string; t: string | null }>(
         `select id, status, technician_profile_id as t from public.applications
          where id = any ($1::uuid[]) order by status`,
-        [[inProgress, rejected]],
+        [[inProgress, finished]],
       );
       expect(apps).toEqual([
-        { id: rejected, status: "rejected", t: null },
+        { id: finished, status: "finished", t: null },
         { id: inProgress, status: "withdrawn", t: null },
       ]);
       const { rows: packs } = await tx.query(
         "select 1 from public.application_packs where application_id = any ($1::uuid[])",
-        [[inProgress, rejected]],
+        [[inProgress, finished]],
       );
       expect(packs).toEqual([]);
 
       // The organization is still a party of the kept application (no copy); a stranger still gets the
       // same P0002 as a random id, although the application has no technician any more (null-safe check).
-      expect(await packAs(tx, SEED.adminMro, rejected)).toEqual([]);
+      expect(await packAs(tx, SEED.adminMro, finished)).toEqual([]);
       await actAs(tx, SEED.adminOther);
       expect(
-        (await sqlError(tx, "select * from public.get_application_pack($1)", [rejected])).code,
+        (await sqlError(tx, "select * from public.get_application_pack($1)", [finished])).code,
       ).toBe("P0002");
     });
   });

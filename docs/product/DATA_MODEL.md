@@ -94,7 +94,8 @@ unique (`technician_profile_id`, `aircraft`, `category`); ≤ 40 per professiona
 `profile_id` PK → `technician_profiles` on delete cascade, `phone` (≤ 32, digits/spaces/`().-`, optional leading
 `+`), `current_employer_id` → `organizations` on delete set null, `min_rate` numeric(10,2) 0.01–100 000 nullable,
 `rate_unit` `hour` · `day` (default `day`), timestamps. Created by the first passport save. RLS select: **owner
-only** (not the own organization, not platform admins); no write grant. D-07: no function returns it to anyone else.
+only** (not the own organization, not platform admins); no write grant. D-07: no function returns it to anyone else,
+except `min_rate` / `rate_unit` inside the Candidate Pack copy of the professional's own application (BR-25, T-111).
 
 ### `technician_organization_blocks` (`20261023100100`, LOCAL ONLY) — owner only
 
@@ -285,7 +286,8 @@ phone or employer —, and three jsonb arrays with fixed keys: `type_ratings` (`
 review data) and `experience` (≤ 20, CHECK: `date`, `aircraft`, `ata`, `hours`, `category`, `environment`,
 `description` of the non-archived `cv_relevant` logbook entries, newest first; no ids). No name, contact, employer,
 blocks, documents or file metadata column exists. UPDATE refused (trigger, 55000). Deleted by trigger
-`applications_drop_pack` when the application becomes `withdrawn` or loses its technician (account closure: the
+`applications_drop_pack` when the application becomes `withdrawn`, `rejected` or `cancelled` (`PACK_DROPPED_STATUSES`)
+or loses its technician (account closure: the
 application stays without the profile, T-42; its copy does not, T-113), and with its application. RLS on; **no
 grant** to any API role (owner-only select policy as a second layer); read through `get_application_pack`,
 `get_my_application_packs` and, for the preview, `get_my_candidate_pack_preview` (table below). No backfill for older

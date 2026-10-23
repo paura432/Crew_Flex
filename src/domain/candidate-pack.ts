@@ -97,10 +97,18 @@ export interface PackExperience {
 }
 
 /**
- * T-113: withdrawing deletes the copy (v1.8 kept it, ✗ MKT-05 #14); every other status keeps it, so both
- * parties may open it. (An application sent before the copies existed has none: the read says so.)
+ * T-113: an application that ends without an engagement loses its copy — withdrawn (v1.8 kept it, ✗ MKT-05
+ * #14), rejected or cancelled (security review M-3) —, so both parties may open it only in the other statuses.
+ * (An application sent before the copies existed, or whose technician closed the account, has none: the read
+ * says so.) The database trigger `applications_drop_pack` repeats this list.
  */
-export const hasPackCopy = (status: ApplicationStatus): boolean => status !== "withdrawn";
+export const PACK_DROPPED_STATUSES: readonly ApplicationStatus[] = [
+  "withdrawn",
+  "rejected",
+  "cancelled",
+];
+export const hasPackCopy = (status: ApplicationStatus): boolean =>
+  !PACK_DROPPED_STATUSES.includes(status);
 
 /**
  * What the copy must declare as withheld while D-07 is not activated: identity and contact (P1/P4) and

@@ -89,6 +89,7 @@ export function ApplyPanel({
           <li>{t("sharedQualifications")}</li>
           <li>{t("sharedAvailability")}</li>
           <li>{t("sharedIdentity")}</li>
+          <li>{tRoot("candidatePack.sharedCopy")}</li>
           <li>{t("notShared")}</li>
         </ul>
       </div>

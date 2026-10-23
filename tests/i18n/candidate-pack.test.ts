@@ -44,5 +44,17 @@ describe("Candidate Pack copy", () => {
     expect(es.logbook.cvRelevantHint).toContain("Los expedientes ya enviados conservan su copia.");
     expect(en.logbook.cvRelevantHint).toContain("Dossiers already sent keep their copy.");
     expect(es.logbook.disclaimer).not.toContain("ninguna empresa tiene acceso");
+    expect(es.logbook.descriptionLabel).not.toMatch(/privada/i);
+  });
+
+  it("no form still promises that what the copy carries is private (security review M-1)", () => {
+    for (const m of [es, en]) {
+      expect(m.professional.passport.minRateHint).not.toMatch(
+        /ninguna organización|no organization/i,
+      );
+      expect(m.professional.passport.ratingsIntro).not.toMatch(/no el texto|not the text/i);
+      expect(m.professional.passport.generalRestrictionsHint).toMatch(/expediente|dossier/);
+      expect(m.logbook.cvRelevantHint).toMatch(/matrícula|registration/);
+    }
   });
 });

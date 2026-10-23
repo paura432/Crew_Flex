@@ -7,7 +7,7 @@
 -- perfil: {fecha}». Ported here WITHOUT the D-07 fields (P3 open): never the real name, e-mail, phone, current
 -- employer, blocked organizations, documents, file names or their metadata (`PACK_ACTIVATION` stays false in
 -- src/domain/candidate-pack.ts). And without v1.8's two ✗ (MKT-05 #14, HIRE-05 #17): the copy is NOT a column of
--- the application row, and it does not outlive a withdrawal.
+-- the application row, and it does not outlive a withdrawal (nor a rejection or cancellation).
 --
 -- NON-DESTRUCTIVE: one table (RLS on in this file, no grant to any API role), one private builder, two triggers on
 -- public.applications and three read RPCs. No existing function, table, grant or row is changed — in particular
@@ -41,9 +41,11 @@
 -- T-43).
 --
 -- Lifecycle: immutable once written (UPDATE refused); deleted with its application (cascade: requirement or
--- organization deletion), when the application is withdrawn and when the professional's account closes — the
--- application then stays without its technician (20261023400100, T-42) but its copy goes (T-113; rejected,
--- cancelled and finished applications of a live account keep theirs).
+-- organization deletion), when the application ends without an engagement (withdrawn, rejected, cancelled) and
+-- when the professional's account closes — the application then stays without its technician (20261023400100,
+-- T-42) but its copy goes (T-113). Only a `finished` application of a live account keeps its copy.
+-- Free text (restrictions, logbook aircraft and description) is copied as the professional wrote it: the preview
+-- and the logbook warn them not to write registrations, operators or names (residual risk, SECURITY_PRIVACY).
 -- Consistency: the builder is one STABLE SQL statement, so a copy never mixes two passport saves
 -- (save_professional_passport writes all its tables in one transaction). No lock and no race check: there is no
 -- cross-row invariant to protect.
@@ -174,10 +176,11 @@ revoke execute on function app_private.candidate_pack_content(uuid) from public,
 -- Triggers on public.applications.
 -- ---------------------------------------------------------------------------------------------
 
--- Freeze the copy of a NEW application, in its transaction. Only when the professional applied themself (the
--- JWT subject is the applicant) or the owner wrote the row (no JWT: seed, maintenance): an application created by
--- anyone else would carry a copy the professional never saw (T-111). Today apply_to_requirement() is the only
--- API path and its caller is always the applicant.
+-- Freeze the copy of a NEW application, in its transaction. Only when the professional applied themself: the
+-- JWT subject is the applicant. An application written by anyone else — another user, or a connection with no
+-- user at all (operator SQL, a privileged key; security review L-2) — gets no copy, because the professional
+-- never saw it (T-111). Today apply_to_requirement() is the only API path and its caller is always the applicant;
+-- the seed writes no application.
 create function public.freeze_application_pack()
 returns trigger
 language plpgsql
@@ -187,7 +190,7 @@ as $$
 declare
   v_uid uuid := (select auth.uid());
 begin
-  if v_uid is not null and v_uid is distinct from new.technician_profile_id then
+  if v_uid is null or v_uid is distinct from new.technician_profile_id then
     return null;
   end if;
   insert into public.application_packs (
@@ -207,12 +210,16 @@ create trigger applications_freeze_pack
   for each row execute function public.freeze_application_pack();
 
 -- The copy goes when the sharing ends (T-113):
---   * withdrawing (v1.8 kept it, ✗ MKT-05 #14 / HIRE-05 #17) — re-applying later inserts a new application,
---     hence a new copy of that day's data; closing the account withdraws the applications in progress
---     (20261023400100), so their copies go through this same path;
---   * the professional's account closes (T-42, BR-19): the applications that stay (rejected, cancelled,
---     finished) lose their technician (FK SET NULL, an UPDATE that fires this trigger) and their copy is
---     deleted with it — the organization keeps the application and its history, not the person's dossier.
+--   * the application ends without an engagement — `withdrawn` (v1.8 kept it, ✗ MKT-05 #14 / HIRE-05 #17),
+--     `rejected` or `cancelled` (security review M-3: otherwise it never expires and anyone who becomes
+--     admin/manager later reads it). Re-applying after `withdrawn` inserts a new application, hence a new copy
+--     of that day's data; closing the account withdraws the applications in progress (20261023400100), so their
+--     copies go through this same path. Only `finished` keeps it (an executed engagement) until the account
+--     closes — a retention period is the owner's decision (D-07 P3);
+--   * the professional's account closes (T-42, BR-19): the applications that stay (finished ones are the only
+--     terminal status that still has a copy) lose their technician (FK SET NULL, an UPDATE that fires this
+--     trigger) and their copy is deleted with it — the organization keeps the application and its history, not
+--     the person's dossier.
 create function public.drop_application_pack()
 returns trigger
 language plpgsql
@@ -227,7 +234,7 @@ $$;
 create trigger applications_drop_pack
   after update of status, technician_profile_id on public.applications
   for each row
-  when ((new.status = 'withdrawn' and old.status is distinct from 'withdrawn')
+  when ((new.status in ('withdrawn', 'rejected', 'cancelled') and old.status is distinct from new.status)
         or (old.technician_profile_id is not null and new.technician_profile_id is null))
   execute function public.drop_application_pack();
 

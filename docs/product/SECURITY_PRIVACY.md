@@ -70,6 +70,25 @@ flag — still no contact, employer, rate, blocks or restriction text.
   visible to **that** organization for **that** requirement only, under the candidate-pool rules (per-requirement
   pseudonym unless internal, name only for internal or `open`, relevant qualifications and overlapping windows; no
   contact data, no documents — D-07 not activated). `private` professionals are still never in the external pool.
+- **Candidate Pack copy (LOCAL `20261024300000`, BR-25, T-110…T-116).** Applying also hands **that** organization a
+  dated copy of the professional's technical profile — wider than the live card: every active qualification with its
+  verification state (pending and rejected included), the declared type ratings with their restriction texts, the
+  general restrictions, the declared minimum rate, and the logbook entries marked «Seleccionable para expediente»
+  (newest 20). The apply panel shows the exact copy (same builder) before the consent and nothing is sent while that
+  preview fails; the form hints say where each field goes. Never the name, e-mail, phone, employer, blocks or
+  documents. Readable only by the applicant and the organization's admins/managers of the moment
+  (`get_application_pack`); deleted when the application is withdrawn, rejected or cancelled and when the account
+  closes; a `finished` one keeps its copy (no retention period yet: owner decision, with D-07 P3). **Residual risks
+  (security review 2026-10-24, M-2/M-3/L-3):** (1) free text is copied as written — a registration, operator or
+  colleague's name in a logbook entry, or health data in a restriction, would reach the organization and can identify
+  the person or their employer; the logbook, the restrictions field and the preview warn against it, but the database
+  cannot filter it; (2) the copy's exact values (rate, restriction texts, entries) are a stable fingerprint that lets
+  one organization link the per-requirement pseudonyms of the same person across its requirements, weakening T-04
+  (base, years and expiry dates already allowed it in part, T9); (3) access follows the organization's admins/managers
+  at reading time, so a manager who joins later reads the copies of applications still in progress or finished; (4) the
+  copy is taken when the application is inserted: an edit made in another tab after the preview loaded is what is
+  copied (the professional reads their own copy afterwards). Including the rate and restriction texts reverses T-33 /
+  BR-18 for this one path and touches OD-7: it needs the owner's (and ideally legal) sign-off before any remote use.
 - Professionals read published requirements only through a fixed projection (`list_opportunities`: organization
   name, no ids of people or organizations, no counts of other applicants). **Accepted (T-95, LOCAL
   `20261024100000`):** members of any organization — plain `member`s included — read the same projection as
@@ -100,7 +119,8 @@ flag — still no contact, employer, rate, blocks or restriction text.
   minimum rate and blocked organizations live in owner-only tables (`technician_private_details`,
   `technician_organization_blocks`): not readable by the own organization or platform admins, written only by the
   DEFINER passport save, and returned by no function to anyone else (D-07 P1: contact is shared only with its
-  consent, and that sharing path does not exist yet). A blocked organization is not told; it simply no longer
+  consent, and that sharing path does not exist yet) — **except the minimum rate**, which the professional's own
+  application copies into that organization's Candidate Pack copy after previewing it (T-111, above). A blocked organization is not told; it simply no longer
   finds the professional in its external pool (T-35). **Residual risk (T9, security review LOW-1):** it can still
   infer a block — the external pool summary drops by one when the block is saved, and a second organization
   account posting the same need would see an `open` (or recognisable: base, years, expiry dates, declarations)
@@ -115,7 +135,8 @@ flag — still no contact, employer, rate, blocks or restriction text.
 **Deleted at once**, whatever deletes the account (the «Cerrar cuenta» button, the Auth Admin API, the dashboard):
 credentials (Auth user, sessions, identities, one-time tokens), the profile, the technician profile with its
 qualifications (and the reviewer's note on them), passport declarations, type ratings, owner-only details
-and organization blocks, the logbook, availability windows and saved rotation, notices addressed to them, memberships,
+and organization blocks, the logbook, the Candidate Pack copies of their applications (BR-25), availability windows
+and saved rotation, notices addressed to them, memberships,
 idempotency keys, every invitation of the address (they hold it) and the document rows. The documents' bytes:
 removed right after the closure with the person's own token; anything Storage leaves is a due `owner_delete`
 tombstone purged by `documents-maintenance` (`DOCUMENT_WALLET.md` §6). An operator deletion without the button

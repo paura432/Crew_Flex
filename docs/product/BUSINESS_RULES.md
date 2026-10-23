@@ -407,10 +407,13 @@ v1.8 «Candidate Pack» (`Workflow.jsx:17-33`, connected `server/app.mjs:110`) w
    (D-07 P3 open).
 4. **Consent sees the content (T-111):** the apply panel shows «Qué compartes con {organización}» — the copy as it
    would be frozen now, from the same builder, with «Experiencia que compartes» — above the consent; while that
-   preview cannot be loaded nothing can be sent.
+   preview cannot be loaded nothing can be sent. Free text (restrictions, logbook aircraft and description) is copied
+   as written: the restrictions field, the logbook flag and the preview warn against health data, registrations,
+   operators and names (residual risks in `SECURITY_PRIVACY.md`).
 5. **Who reads it (T-113):** the applicant and the admins/managers of the requirement's organization at reading
-   time; nobody else (the same answer as a missing id). Withdrawing deletes it; closing the account deletes every
-   copy of the person (BR-19); rejected, cancelled and finished applications of a live account keep theirs.
+   time; nobody else (the same answer as a missing id). An application that ends without an engagement —
+   withdrawn, rejected or cancelled — loses its copy; a finished one keeps it; closing the account deletes every copy
+   of the person (BR-19). Only the professional's own application writes a copy.
    Applications sent before the copies existed have none. Reads are not audited (T-114). The professional's own
    copies are part of «Exportar mis datos» (BR-19).
 

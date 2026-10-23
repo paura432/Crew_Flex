@@ -91,7 +91,12 @@ describe("the dated copy (v2-15, BR-25)", () => {
     expect(PACK_EXPERIENCE_MAX).toBe(20);
   });
 
-  it("withdrawing is the only status without a copy (T-113)", () => {
-    expect(APPLICATION_STATUSES.filter((s) => !hasPackCopy(s))).toEqual(["withdrawn"]);
+  it("ending without an engagement drops the copy; finished keeps it (T-113)", () => {
+    expect(APPLICATION_STATUSES.filter((s) => !hasPackCopy(s))).toEqual([
+      "rejected",
+      "withdrawn",
+      "cancelled",
+    ]);
+    expect(hasPackCopy("finished")).toBe(true);
   });
 });

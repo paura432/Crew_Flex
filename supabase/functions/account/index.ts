@@ -54,7 +54,7 @@ function one<T = ExportRecord>(result: Result<unknown>): T | null {
   return (result.data ?? null) as T | null;
 }
 
-async function exportFor(actor: Actor): Promise<AccountExport> {
+export async function exportFor(actor: Actor): Promise<AccountExport> {
   const db = actor.client;
   const [profileResult, memberships, technician, created, documentRows] = await Promise.all([
     db
