@@ -98,9 +98,12 @@ async function login(email, { ensureEnglish = true } = {}) {
   await page.fill("#password", PW);
   await page.click("button[type=submit]");
   // `/app` itself redirects by account type; wait for the workspace route, not the redirect page.
-  await page.waitForURL((u) => /^\/app\/(professional|organization|admin)/.test(u.pathname), {
-    timeout: 30000,
-  });
+  await page.waitForURL(
+    (u) => /^\/app\/(professional|organization|admin|recruiter)/.test(u.pathname),
+    {
+      timeout: 30000,
+    },
+  );
   await page.waitForLoadState("networkidle");
   // The English checks below assume the account's persisted language is English (seed = none).
   if (ensureEnglish && (await page.evaluate(() => document.documentElement.lang)) !== "en") {
@@ -1011,10 +1014,10 @@ await viewSwitcher.locator("a[href='/app/recruiter']").click();
 await page.waitForURL(/\/app\/recruiter$/);
 // The /app loading skeleton shows until the RSC payload streams in: wait for the text itself.
 ok(
-  "20b Recruiter view is the «coming later» placeholder",
+  "20b Recruiter view shows the admin's own account: no staffing agency membership, a note says so (PKG recruiter)",
   await page
     .locator("main")
-    .getByText("Coming later")
+    .getByText("Your account does not belong to a staffing agency")
     .waitFor({ timeout: 15000 })
     .then(() => true)
     .catch(() => false),
@@ -2871,6 +2874,207 @@ ok(
   `${wxIssue(wxPast)} · ${wxIssue(wxMoved)}`,
 );
 await logout();
+
+// PKG recruiter (v2-24 «Espacio recruiter con clientes», area 10 task 17; migrations 20261024500000/500100, function
+// `represented-clients`; BR-27, T-130…T-135). Demo Aero Services Lisbon becomes a staffing agency for the block (its
+// admin may change the type: column grant) and goes back to `mro` at the end. One client is added, activated by the
+// platform admin, used by a requirement (created through the API, setup only) and revoked; the requirement ends
+// closed and archived. Revoked clients and the archived requirement stay (no delete path), as in the other blocks.
+const RC_ADMIN = "admin.other@crewflex.test";
+const rcHeaders = await seedHeaders(RC_ADMIN);
+const [rcAgency] = await seedRest(
+  RC_ADMIN,
+  "organizations?select=id,type&name=eq.Demo%20Aero%20Services%20Lisbon",
+);
+const rcSetType = (type) =>
+  fetch(new URL(`/rest/v1/organizations?id=eq.${rcAgency.id}`, supabaseUrl), {
+    method: "PATCH",
+    headers: { ...rcHeaders, Prefer: "return=minimal" },
+    body: JSON.stringify({ type }),
+  }).then((r) => r.ok);
+const rcCall = (fn, init = {}) => {
+  const url = new URL(`/functions/v1/${fn}`, supabaseUrl);
+  for (const [k, v] of Object.entries(init.query ?? {})) url.searchParams.set(k, v);
+  return fetch(url, {
+    method: init.method ?? "GET",
+    headers: { ...rcHeaders, ...(init.headers ?? {}) },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  }).then((r) => r.json());
+};
+const rcClient = `Smoke client ${Date.now()}`;
+const rcTitle = `Local UI check · recruiter ${Date.now()}`;
+ok(
+  "PKG recruiter 0 Lisbon is a staffing agency for this block",
+  await rcSetType("staffing_agency"),
+);
+
+await login(RC_ADMIN);
+ok(
+  "PKG recruiter 1 an agency lands on «Recruiter workspace» with the organization's KPIs and the client portfolio",
+  new URL(page.url()).pathname === "/app/recruiter" &&
+    /Recruiter workspace/i.test(await page.locator("main header").first().innerText()) &&
+    /Client portfolio/.test(await page.locator("main").innerText()) &&
+    (await page.locator("aside a[href='/app/recruiter']").count()) > 0,
+  page.url(),
+);
+await responsiveShots("pkg-recruiter-workspace");
+await page.fill("#clientName", rcClient);
+await page.fill("#clientEmail", "ops@smoke-client.test");
+await page.getByRole("button", { name: "Add client" }).click();
+await page.waitForSelector("[role=status]:has-text('Client saved.')", { timeout: 15000 });
+await page.reload();
+await page.waitForLoadState("networkidle");
+const rcRow = page.locator("#clients li", { hasText: rcClient });
+ok(
+  "PKG recruiter 2 «Add client» saves it pending verification, with its e-mail (v1.8 «{name} · {email}»)",
+  /Pending verification/.test(await rcRow.innerText()) &&
+    /ops@smoke-client\.test/.test(await rcRow.innerText()),
+  "",
+);
+
+await page.goto(`${BASE}/app/organization/requirements/new`);
+await page.waitForLoadState("networkidle");
+await page.evaluate(() => localStorage.clear());
+const rcNoActive = /No active clients/.test(await page.locator("main").innerText());
+await page.getByRole("button", { name: "Publish requirement" }).click();
+const rcBuilder = await page.locator("main").innerText();
+ok(
+  "PKG recruiter 3 the builder is «Requirement for a client»; without an active client publishing says «Select a client.»; the recruiter's note is the agency's",
+  /Requirement for a client/i.test(await page.locator("main header").first().innerText()) &&
+    rcNoActive &&
+    /Select a client\./.test(rcBuilder) &&
+    /The recruiter manages the requirement/.test(rcBuilder),
+  "",
+);
+await logout();
+
+await login("platform.admin@crewflex.test");
+await page.goto(`${BASE}/app/admin/representations`);
+await page.waitForLoadState("networkidle");
+const rcCard = page.locator("main li", { hasText: rcClient });
+await rcCard.locator("textarea").fill("Smoke mandate reference · checked by phone");
+await rcCard.getByRole("button", { name: "Record evidence and activate" }).click();
+await page.waitForSelector(`[role=status]:has-text('Representation of ${rcClient} activated.')`, {
+  timeout: 15000,
+});
+ok(
+  "PKG recruiter 4 the platform admin records the evidence and activates the representation",
+  /Demo Aero Services Lisbon/.test(await page.locator("main").innerText()),
+  "",
+);
+await logout();
+
+// Setup through the API (the builder's own steps are the requirement-builder block): a requirement for the client.
+const rcClients = await rcCall("represented-clients", { query: { organizationId: rcAgency.id } });
+const rcClientId = rcClients.data.clients.find((c) => c.name === rcClient)?.id;
+const rcTypes = await seedRest(RC_ADMIN, "qualification_types?select=id&code=in.(B1.1)");
+const rcStart = new Date(Date.now() + 40 * 86_400_000);
+rcStart.setUTCHours(6, 0, 0, 0);
+const rcCreated = await rcCall("work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: rcAgency.id,
+    title: rcTitle,
+    location: "Lisbon (LIS)",
+    startsAt: rcStart.toISOString(),
+    endsAt: new Date(rcStart.getTime() + 36 * 3_600_000).toISOString(),
+    shift: "day",
+    headcount: 1,
+    urgency: "planned",
+    qualifications: rcTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+    onBehalfOfClientId: rcClientId,
+  },
+});
+const rcId = rcCreated.data?.requirement?.id;
+ok(
+  "PKG recruiter 5 a requirement for the active client is published",
+  Boolean(rcId) && rcCreated.data.requirement.client?.name === rcClient,
+  JSON.stringify(rcCreated.error ?? {}),
+);
+
+await login(RC_ADMIN);
+await page.goto(`${BASE}/app/organization/requirements/${rcId}`);
+await page.waitForLoadState("networkidle");
+const rcDetail = await page.locator("main").innerText();
+await page.goto(`${BASE}/app/organization/requirements/new`);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG recruiter 6 the detail names the client; the builder now offers it",
+  /client/i.test(rcDetail) &&
+    rcDetail.includes(rcClient) &&
+    (await page.locator("#onBehalfOfClientId option", { hasText: rcClient }).count()) === 1,
+  "",
+);
+await logout();
+
+// Delta available over the period (setup; removed at the end), so the detail offers the application step.
+const rcWindow = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    startsAt: new Date(rcStart.getTime() - 86_400_000).toISOString(),
+    endsAt: new Date(rcStart.getTime() + 3 * 86_400_000).toISOString(),
+    status: "available",
+  },
+});
+await login("delta@crewflex.test");
+await page.goto(`${BASE}/app/professional/opportunities?q=${encodeURIComponent(rcTitle)}`);
+await page.waitForLoadState("networkidle");
+const rcCardText = await page.locator("main article", { hasText: rcTitle }).first().innerText();
+await page.goto(`${BASE}/app/professional/opportunities/${rcId}`);
+await page.waitForLoadState("networkidle");
+const rcOpportunity = await page.locator("main").innerText();
+const rcPublished = `Published by Demo Aero Services Lisbon for the client ${rcClient}`;
+ok(
+  "PKG recruiter 7 the professional reads «Published by {org} for the client {client}» on the card and the detail; the consent names both; never the client's e-mail",
+  rcCardText.includes(rcPublished) &&
+    rcOpportunity.includes(rcPublished) &&
+    rcOpportunity.includes(`with Demo Aero Services Lisbon, for its client ${rcClient}`) &&
+    !rcOpportunity.includes("smoke-client.test") &&
+    !rcCardText.includes("smoke-client.test"),
+  rcCardText.split("\n").slice(0, 4).join(" | "),
+);
+await logout();
+
+await login(RC_ADMIN);
+await page.getByRole("button", { name: `Revoke the representation of ${rcClient}` }).click();
+await page.getByRole("button", { name: "Revoke for good" }).click();
+await page.waitForSelector(`[role=status]:has-text('Representation of ${rcClient} revoked.')`, {
+  timeout: 15000,
+});
+await page.goto(`${BASE}/app/organization/requirements/${rcId}`);
+await page.waitForLoadState("networkidle");
+const rcRevokedNote = /is no longer active/.test(await page.locator("main").innerText());
+const rcHidden = await asSeedUser("delta@crewflex.test", "opportunities", { query: { id: rcId } });
+ok(
+  "PKG recruiter 8 revoked: the agency is told why, the requirement leaves the professionals' opportunities",
+  rcRevokedNote && rcHidden.error?.code === "NOT_FOUND",
+  JSON.stringify(rcHidden.error ?? {}),
+);
+await logout();
+
+// Restore: close and archive the requirement (winding down still works), Lisbon back to an MRO.
+const rcClosed = await rcCall("work-requirements", {
+  method: "PATCH",
+  body: { id: rcId, status: "closed" },
+});
+const rcArchived = await rcCall("work-requirements", {
+  method: "PATCH",
+  body: { id: rcId, archive: true },
+});
+const rcWindowRemoved = await asSeedUser("delta@crewflex.test", "professional-availability", {
+  method: "DELETE",
+  query: { id: rcWindow.data?.window?.id ?? "" },
+});
+ok(
+  "PKG recruiter 9 restored: requirement closed and archived after the revocation; Delta's window removed; Lisbon is an MRO again",
+  rcClosed.ok === true &&
+    rcArchived.ok === true &&
+    rcWindowRemoved.ok === true &&
+    (await rcSetType("mro")),
+  JSON.stringify(rcClosed.error ?? rcArchived.error ?? rcWindowRemoved.error ?? {}),
+);
 
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).

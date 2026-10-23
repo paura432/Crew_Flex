@@ -15,3 +15,12 @@ if [ "${1:-}" = "--dry-run" ]; then
 fi
 # work_requirement_qualifications cascade with the requirement; audit rows stay (append-only, synthetic).
 bash scripts/local/sb-local.sh db query "delete from public.work_requirements where $WHERE returning title"
+# PKG recruiter: the browser smoke's revoked «Smoke client …» rows once nothing references them, and Lisbon back to
+# an MRO if an interrupted run left it a staffing agency (no-ops before migration 20261024500000).
+bash scripts/local/sb-local.sh db query "do \$\$ begin
+  if to_regclass('public.represented_clients') is not null then
+    delete from public.represented_clients rc where rc.name like 'Smoke client %'
+      and not exists (select 1 from public.work_requirements wr where wr.on_behalf_of_client_id = rc.id);
+  end if;
+  update public.organizations set type = 'mro' where name = 'Demo Aero Services Lisbon' and type <> 'mro';
+end \$\$"
