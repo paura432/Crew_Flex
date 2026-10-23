@@ -4,7 +4,7 @@ import {
   createWorkRequirementInput,
   updateWorkRequirementInput,
 } from "../../../src/lib/validation/work-requirement.ts";
-import { createArgs, handler, updateArgs } from "./index.ts";
+import { createArgs, handler, requirementWriteError, updateArgs } from "./index.ts";
 
 const silence = () => {
   const { log, error } = console;
@@ -77,6 +77,8 @@ Deno.test("the edit sends the whole requirement and the version; never the organ
     p_shifts: null,
     p_conditions: null,
     p_status: null,
+    // Recruiter (20261024500100): no client sent = no client (full replacement).
+    p_on_behalf_of_client_id: null,
   });
 });
 
@@ -188,3 +190,59 @@ Deno.test("work-requirements PATCH (archive) rejects unauthenticated requests", 
   restore();
   assertEquals([res.status, (await res.json()).error.code], [401, "UNAUTHORIZED"]);
 });
+
+Deno.test(
+  "recruiter: the client goes to the create and the edit; the organization never comes from it",
+  () => {
+    const client = "44444444-4444-4444-8444-000000000001";
+    const created = createArgs(
+      parseValue({ ...builderInput, onBehalfOfClientId: client }, createWorkRequirementInput),
+      "k",
+    );
+    assertEquals(
+      [created.p_organization_id, created.p_on_behalf_of_client_id],
+      [builderInput.organizationId, client],
+    );
+    const { organizationId: _org, ...fields } = builderInput;
+    const edited = updateArgs(
+      parseValue(
+        {
+          id: "33333333-3333-4333-8333-000000000001",
+          expectedUpdatedAt: "2031-01-01T10:00:00.123Z",
+          ...fields,
+          onBehalfOfClientId: client,
+        },
+        updateWorkRequirementInput,
+      ),
+    );
+    assertEquals(edited.p_on_behalf_of_client_id, client);
+    assertEquals("p_organization_id" in edited, false);
+    assertEquals(
+      createWorkRequirementInput.safeParse({ ...builderInput, onBehalfOfClientId: "nope" }).success,
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "recruiter: CFR01/CFR02 on a create or edit are errors of the client field, without the DB message",
+  () => {
+    const required = requirementWriteError({ code: "CFR01", message: "internal detail" });
+    assertEquals(
+      [required.status, required.code, required.issues],
+      [
+        400,
+        "VALIDATION_ERROR",
+        [{ path: "onBehalfOfClientId", message: "v.requirement.client.required" }],
+      ],
+    );
+    const inactive = requirementWriteError({ code: "CFR02", message: "internal detail" });
+    assertEquals(inactive.issues, [
+      { path: "onBehalfOfClientId", message: "v.requirement.client.inactive" },
+    ]);
+    assertEquals(JSON.stringify(inactive).includes("internal detail"), false);
+    // Anything else maps as before.
+    assertEquals(requirementWriteError({ code: "CFA12" }).reason, "HAS_APPLICATIONS");
+    assertEquals(requirementWriteError({ code: "22023" }).issues, undefined);
+  },
+);

@@ -513,3 +513,9 @@ import_map = "./functions/deno.json"
 [functions.invitations]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+# Local only, not deployed (PKG recruiter, D-12 provisional): an agency's represented clients and their
+# activation by a platform admin. Deploy only after migrations 20261024500000/500100.
+[functions.represented-clients]
+verify_jwt = false
+import_map = "./functions/deno.json"

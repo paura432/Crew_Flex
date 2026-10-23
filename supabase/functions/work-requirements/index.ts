@@ -20,6 +20,10 @@
 //                                      409 when changed since `expectedUpdatedAt` or closed; nothing changed
 //                                      is a 200 no-op; `intent: "draft"` saves a draft as a draft, `publish`
 //                                      publishes it. RPC update_work_requirement (DEFINER), audited.
+// Recruiter (BR-27, LOCAL 20261024500100): `onBehalfOfClientId` (POST/PUT, full replacement) names the represented
+// client of a staffing agency — required to publish (400 `onBehalfOfClientId` «Indica el cliente representado.»), an
+// active representation of that organization (400 «…no está activa»). The database decides; a status change that
+// publishes or resumes without one is 409 `CLIENT_REQUIRED` / `CLIENT_NOT_ACTIVE`.
 import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
@@ -67,7 +71,27 @@ function fieldArgs(input: RequirementPayload) {
     p_description: input.description || null,
     p_shifts: input.shifts?.length ? input.shifts : null,
     p_conditions: input.conditions ?? null,
+    p_on_behalf_of_client_id: input.onBehalfOfClientId ?? null,
   };
+}
+
+const CLIENT_FIELD_MESSAGE = {
+  CLIENT_REQUIRED: "v.requirement.client.required",
+  CLIENT_NOT_ACTIVE: "v.requirement.client.inactive",
+} as const;
+
+/**
+ * A refused create/edit: the represented-client rules (CFR01/CFR02) become an error on the builder's client field;
+ * anything else as every write (`fromDatabaseError`).
+ */
+export function requirementWriteError(error: { code?: string; message?: string }): ApiError {
+  const mapped = fromDatabaseError(error);
+  if (mapped.reason === "CLIENT_REQUIRED" || mapped.reason === "CLIENT_NOT_ACTIVE") {
+    return new ApiError("VALIDATION_ERROR", undefined, [
+      { path: "onBehalfOfClientId", message: CLIENT_FIELD_MESSAGE[mapped.reason] },
+    ]);
+  }
+  return mapped;
 }
 
 /** RPC arguments of the create: `intent: "draft"` → a draft, anything else → open (published). */
@@ -149,7 +173,7 @@ export const handler = createHandler("work-requirements", {
       "create_work_requirement_idempotent",
       createArgs(input, key),
     );
-    if (error) throw fromDatabaseError(error); // CF409 → CONFLICT (key reused, other payload)
+    if (error) throw requirementWriteError(error); // CF409 → CONFLICT (key reused, other payload)
     const { id, replayed } = createdRow(data);
 
     const requirement = await loadRequirement(actor, id);
@@ -191,7 +215,8 @@ export const handler = createHandler("work-requirements", {
         .update({ status: input.status })
         .eq("id", input.id)
         .select("id");
-      if (error) throw fromDatabaseError(error); // 55000 → CONFLICT
+      // 55000 → CONFLICT · CFR01/CFR02 → 409 CLIENT_REQUIRED / CLIENT_NOT_ACTIVE (publish or resume, BR-27)
+      if (error) throw fromDatabaseError(error);
       if (!data?.length) throw new ApiError("FORBIDDEN"); // RLS matched no row (role revoked meanwhile)
     }
     const requirement = await loadRequirement(actor, input.id);
@@ -207,8 +232,8 @@ export const handler = createHandler("work-requirements", {
     await requireOrganizationRole(actor, current.organizationId, ["admin", "manager"]);
     const { error } = await actor.client.rpc("update_work_requirement", updateArgs(input));
     // CF412 (stale) · CFA12 (has applications, + reason) · 55000 (closed, or a draft save of a published one)
-    // → 409; 22023/23514 → 400
-    if (error) throw fromDatabaseError(error);
+    // → 409; 22023/23514 → 400; CFR01/CFR02 → 400 on `onBehalfOfClientId`
+    if (error) throw requirementWriteError(error);
     const requirement = await loadRequirement(actor, input.id);
     return { data: { requirement } satisfies WorkRequirementResponse };
   },

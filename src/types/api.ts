@@ -24,6 +24,7 @@ import type {
 } from "../domain/passport.ts";
 import type { NoticeAudience, NoticeKind, NoticeRequirementStatus } from "../domain/notices.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
+import type { RecruiterConflict, RepresentationStatus } from "../domain/recruiter.ts";
 import type { Locale } from "../i18n/config.ts";
 import type {
   QualificationCategory,
@@ -60,10 +61,11 @@ export interface ApiErrorBody {
   message: string;
   issues?: { path: string; message: string }[];
   /**
-   * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`) or an
-   * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`).
+   * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`), an
+   * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`) or an action
+   * for a represented client (BR-27; `RECRUITER_CONFLICTS`).
    */
-  reason?: ApplicationConflict | AvailabilityConflict;
+  reason?: ApplicationConflict | AvailabilityConflict | RecruiterConflict;
 }
 
 export type ApiResponse<T> =
@@ -458,6 +460,12 @@ export interface OpportunityRequirement {
   description?: string | null;
   shifts?: RequirementShift[] | null;
   conditions?: RequirementConditions | null;
+  /**
+   * Recruiter (BR-27, LOCAL 20261024500100): the client a staffing agency publishes for — «Publicada por {org} para el
+   * cliente {cliente}», named in the consent (the professional must know who receives the data). Only while the
+   * representation is active. Optional: absent from older functions; null = no client.
+   */
+  clientName?: string | null;
 }
 
 export interface Opportunity {
@@ -717,4 +725,37 @@ export interface Invitation {
 
 export interface InvitationResponse {
   invitation: Invitation;
+}
+
+// --- Recruiter: represented clients (D-12 provisional, LOCAL 20261024500000; BR-27) ------------------------------
+
+/** A client in an agency's portfolio (v1.8 «Cartera de clientes»), as the agency's members read it. */
+export interface RepresentedClient {
+  id: string;
+  organizationId: string;
+  name: string;
+  contactEmail: string | null;
+  status: RepresentationStatus;
+  createdAt: string;
+  activatedAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface RepresentedClientListResponse {
+  clients: RepresentedClient[];
+}
+
+export interface RepresentedClientResponse {
+  client: Pick<RepresentedClient, "id" | "status">;
+}
+
+/** A representation as a platform admin reviews it: the agency's name, and whether the reviewer belongs to it. */
+export interface RepresentationReviewItem extends RepresentedClient {
+  agencyName: string;
+  /** The reviewer is a member of the agency: they may not activate it (BR-20 rule). */
+  ownAgency: boolean;
+}
+
+export interface RepresentationReviewListResponse {
+  clients: RepresentationReviewItem[];
 }

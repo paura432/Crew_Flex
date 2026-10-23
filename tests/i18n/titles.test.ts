@@ -31,6 +31,7 @@ const TITLE_FOR_NAV: Record<keyof typeof es.nav, keyof typeof es.meta | null> = 
   administration: "admin",
   adminOrganizations: "adminOrganizations",
   audit: "audit",
+  representations: "representations",
 };
 
 describe("page titles match the menu", () => {

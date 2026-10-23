@@ -83,6 +83,7 @@ const me = (
 Deno.test("rows map to the fixed projection: organization name only, ISO UTC, hard first", () => {
   const requirement = toOpportunityRequirement(row);
   assertEquals(Object.keys(requirement).sort(), [
+    "clientName", // recruiter (20261024500100): null without a represented client
     "conditions",
     "country",
     "createdAt",
@@ -104,6 +105,12 @@ Deno.test("rows map to the fixed projection: organization name only, ISO UTC, ha
   assertEquals(
     [requirement.country, requirement.timeZone, requirement.shifts, requirement.conditions],
     [null, null, null, null],
+  );
+  // … nor the recruiter's client (BR-27).
+  assertEquals(requirement.clientName, null);
+  assertEquals(
+    toOpportunityRequirement({ ...row, client_name: "Operador cliente 1" }).clientName,
+    "Operador cliente 1",
   );
   assertEquals(requirement.startsAt, "2031-01-10T06:00:00.000Z");
   assertEquals(

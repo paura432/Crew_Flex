@@ -1,4 +1,5 @@
 import { EU_COUNTRIES, type EuCountry } from "./organization.ts";
+import type { RepresentationStatus } from "./recruiter.ts";
 
 export const SHIFTS = ["day", "night", "split", "flexible"] as const;
 export type Shift = (typeof SHIFTS)[number];
@@ -156,6 +157,18 @@ export interface WorkRequirement {
   conditions?: RequirementConditions | null;
   /** v1.8 «Archivada» (T-64): set once, on a closed requirement. */
   archivedAt?: string | null;
+  /**
+   * Recruiter (D-12 provisional, LOCAL `20261024500100`, BR-27): the represented client a staffing agency publishes
+   * for, as the agency's members read it. Optional: absent from older functions; null = no client.
+   */
+  client?: RequirementClient | null;
+}
+
+/** The represented client of a requirement (never its contact e-mail here). */
+export interface RequirementClient {
+  id: string;
+  name: string;
+  status: RepresentationStatus;
 }
 
 /**

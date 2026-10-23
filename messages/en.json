@@ -60,7 +60,8 @@
     "logbook": "Logbook",
     "organizationApplications": "Applications",
     "network": "Offers in the network",
-    "networkOpportunity": "Network offer"
+    "networkOpportunity": "Network offer",
+    "representations": "Representations"
   },
   "nav": {
     "organization": "Organization",
@@ -93,7 +94,8 @@
     "applications": "My applications",
     "logbook": "Logbook",
     "organizationApplications": "Applications",
-    "network": "Offers in the network"
+    "network": "Offers in the network",
+    "representations": "Representations"
   },
   "landing": {
     "eyebrow": "Aircraft maintenance workforce",
@@ -349,6 +351,11 @@
         "contractType": "Choose a contract type",
         "mobilization": "Maximum mobilisation must be a whole number from 1 to 168 hours",
         "arrival": "Incorporation must have between 1 and 160 characters"
+      },
+      "client": {
+        "select": "Select a client.",
+        "required": "Enter the represented client.",
+        "inactive": "This client's representation is not active: choose an active client."
       }
     },
     "qualifications": {
@@ -503,6 +510,12 @@
       "blocks": {
         "max": "At most 200 blocked organizations."
       }
+    },
+    "recruiter": {
+      "clientName": "Enter a valid client in the recruiter workspace.",
+      "clientEmail": "Enter a valid e-mail for the client.",
+      "noteRequired": "Enter the evidence of the representation",
+      "noteMax": "Use at most 2000 characters"
     }
   },
   "domain": {
@@ -1340,10 +1353,82 @@
     "platformRole": "Platform role"
   },
   "recruiter": {
-    "eyebrow": "Recruiter",
-    "title": "Recruiter workspace",
-    "soonTitle": "Coming later",
-    "soonBody": "The workspace for agencies that represent clients arrives in a later phase. Its model is still pending a decision."
+    "eyebrow": "Recruiter workspace",
+    "title": "Recruiter and clients",
+    "description": "From a concrete need to an available team.",
+    "noAgencyTitle": "Your account does not belong to a staffing agency",
+    "noAgencyBody": "The recruiter workspace is for organizations of type “Staffing agency” that represent clients. Open it with an agency account.",
+    "networkEyebrow": "Recruiter network · matching preview",
+    "requirementEyebrow": "Requirement for a client",
+    "clients": {
+      "title": "Client portfolio",
+      "empty": "No clients in the portfolio yet.",
+      "noEmail": "No e-mail",
+      "status": {
+        "pending": "Pending verification",
+        "active": "Active",
+        "revoked": "Revoked"
+      },
+      "addedOn": "Added on {date}",
+      "activatedOn": "Active since {date}",
+      "revokedOn": "Revoked on {date}",
+      "formTitle": "Add a client",
+      "name": "New client",
+      "email": "Client e-mail",
+      "emailHint": "Optional. Only your agency sees it.",
+      "add": "Add client",
+      "adding": "Adding…",
+      "added": "Client saved. It stays pending until the Crew Flex administration records the evidence of the representation.",
+      "duplicate": "That client is already in the portfolio.",
+      "limit": "The portfolio holds at most 200 pending or active clients.",
+      "notAgency": "Only a staffing agency represents clients.",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "revokeAria": "Revoke the representation of {name}",
+      "revokeConfirm": "Confirm: revoke the representation of {name}. Its requirements are no longer shown to professionals and do not move forward; this cannot be undone.",
+      "revokeConfirmButton": "Revoke for good",
+      "cancel": "Cancel",
+      "revoked": "Representation of {name} revoked.",
+      "note": "The recruiter receives the applications and coordinates on behalf of the identified client. No files are sent outside.",
+      "verificationNote": "A new client stays pending until the Crew Flex administration records the evidence of the representation. Requirements are published only for active clients.",
+      "managersOnly": "Adding and revoking clients is for the agency's managers and administrators.",
+      "loadError": "The client portfolio could not be loaded."
+    },
+    "builder": {
+      "client": "Client receiving the candidate file",
+      "choose": "Select client",
+      "hint": "Required to publish. Only the portfolio's active clients are listed.",
+      "noActive": "No active clients. Add them in the portfolio; they become active once the administration records the evidence.",
+      "manage": "Go to the client portfolio",
+      "note": "The recruiter manages the requirement and confirms on behalf of the client. The recipients are identified in the application. There is no legal contract and nothing is sent outside.",
+      "summary": "For the client {client}"
+    },
+    "requirement": {
+      "client": "Client",
+      "revokedNote": "The representation of {client} is no longer active: the requirement is not shown to professionals and does not move forward. You can pause or close it.",
+      "forClient": "For {client}"
+    },
+    "opportunity": {
+      "publishedFor": "Published by {organization} for the client {client}",
+      "sharedTitle": "What {organization} will see for the client {client}",
+      "consent": "I authorise sharing this data with {organization}, for its client {client}, for this requirement."
+    },
+    "review": {
+      "eyebrow": "Administration",
+      "title": "Representations",
+      "description": "Clients that staffing agencies say they represent. They become active once you record the evidence.",
+      "evidenceNote": "Check the representation mandate or contract and record its reference here. Nobody activates clients of an agency they belong to, belonged to or acted for.",
+      "emptyTitle": "No representations",
+      "agency": "Agency",
+      "email": "Client e-mail",
+      "note": "Evidence of the representation",
+      "noteHint": "Reference of the mandate or contract and how it was checked (max. 2000 characters). Only the administration sees it.",
+      "activate": "Record evidence and activate",
+      "activating": "Recording…",
+      "activated": "Representation of {name} activated.",
+      "own": "You belong to this agency: you cannot activate its clients.",
+      "changed": "The representation changed while you were reviewing it. Reload the page."
+    }
   },
   "admin": {
     "home": {
@@ -1971,7 +2056,9 @@
       "REAPPLY_NOT_ALLOWED": "Cannot apply again: the previous application ended.",
       "ACTIVE_COMMITMENTS": "Resolve the active assignments first (accepted or confirmed).",
       "HAS_APPLICATIONS": "This requirement already received applications: it cannot be edited.",
-      "OWN_ORGANIZATION": "You cannot apply to a requirement of your own organization."
+      "OWN_ORGANIZATION": "You cannot apply to a requirement of your own organization.",
+      "CLIENT_REQUIRED": "A staffing agency publishes only for a represented client: enter the client.",
+      "CLIENT_NOT_ACTIVE": "The agency no longer represents this client: this requirement cannot move forward."
     },
     "stale": "The application changed in the meantime. Reload to see its current state.",
     "orgOnlyTitle": "«My applications» is for professionals",

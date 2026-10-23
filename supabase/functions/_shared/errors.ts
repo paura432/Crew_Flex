@@ -8,6 +8,10 @@ import {
   AVAILABILITY_CONFLICTS,
   type AvailabilityConflict,
 } from "../../../src/domain/availability.ts";
+import { RECRUITER_CONFLICTS, type RecruiterConflict } from "../../../src/domain/recruiter.ts";
+
+/** Every 409 reason a function may name (`ApiErrorBody.reason`). */
+export type ConflictReason = ApplicationConflict | AvailabilityConflict | RecruiterConflict;
 
 export const ERROR_STATUS = {
   UNAUTHORIZED: 401,
@@ -46,10 +50,10 @@ export class ApiError extends Error {
     message: string = DEFAULT_MESSAGES[code],
     readonly issues?: FieldIssue[],
     /**
-     * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`) or
-     * availability (`AVAILABILITY_CONFLICTS`, BR-4.9).
+     * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`),
+     * availability (`AVAILABILITY_CONFLICTS`, BR-4.9) or a represented client (`RECRUITER_CONFLICTS`, BR-27).
      */
-    readonly reason?: ApplicationConflict | AvailabilityConflict,
+    readonly reason?: ConflictReason,
   ) {
     super(message);
     this.name = "ApiError";
@@ -69,15 +73,19 @@ interface PostgrestLikeError {
 
 /**
  * Our business conflicts: SQLSTATE `CFA01`…`CFA13` are the entries of `APPLICATION_CONFLICTS` in order
- * (migrations 20261022130300, 20261024100000), `CFV01`… those of `AVAILABILITY_CONFLICTS` (20261023300000). Custom codes,
- * never `40001` (PostgREST retries that one forever).
+ * (migrations 20261022130300, 20261024100000), `CFV01`… those of `AVAILABILITY_CONFLICTS` (20261023300000),
+ * `CFR01`… those of `RECRUITER_CONFLICTS` (20261024500100). Custom codes, never `40001` (PostgREST retries that
+ * one forever).
  */
-export function conflictReason(
-  sqlstate: string | undefined,
-): ApplicationConflict | AvailabilityConflict | undefined {
-  const match = /^CF([AV])(\d{2})$/.exec(sqlstate ?? "");
+export function conflictReason(sqlstate: string | undefined): ConflictReason | undefined {
+  const match = /^CF([AVR])(\d{2})$/.exec(sqlstate ?? "");
   if (!match) return undefined;
-  const list = match[1] === "A" ? APPLICATION_CONFLICTS : AVAILABILITY_CONFLICTS;
+  const list: readonly ConflictReason[] =
+    match[1] === "A"
+      ? APPLICATION_CONFLICTS
+      : match[1] === "V"
+        ? AVAILABILITY_CONFLICTS
+        : RECRUITER_CONFLICTS;
   return list[Number(match[2]) - 1];
 }
 

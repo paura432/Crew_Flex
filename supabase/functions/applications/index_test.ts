@@ -141,6 +141,11 @@ Deno.test(
       assertFalse(error.message.includes("internal detail"));
     });
     assertEquals(fromDatabaseError({ code: "CFA13" }).reason, "OWN_ORGANIZATION"); // v2-27, T-90
+    // Recruiter (20261024500100, BR-27): an action for a client whose representation is not active.
+    assertEquals(fromDatabaseError({ code: "CFR01" }).reason, "CLIENT_REQUIRED");
+    assertEquals(fromDatabaseError({ code: "CFR02" }).reason, "CLIENT_NOT_ACTIVE");
+    assertEquals(fromDatabaseError({ code: "CFR02" }).status, 409);
+    assertEquals(fromDatabaseError({ code: "CFR99" }).reason, undefined);
     assertEquals(fromDatabaseError({ code: "CFA14" }).code, "INTERNAL_ERROR");
     assertEquals(fromDatabaseError({ code: "CF412" }).reason, undefined);
   },

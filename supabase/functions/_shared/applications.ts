@@ -62,6 +62,8 @@ const opportunityRow = z.object({
   qualifications: z.array(qualification),
   ...termsColumns,
   time_zone: timeZoneColumn,
+  // Recruiter (LOCAL 20261024500100): the active represented client's name; absent from older functions.
+  client_name: z.string().nullish(),
   total: z.number(),
 });
 
@@ -80,6 +82,7 @@ export function toOpportunityRequirement(raw: unknown): OpportunityRequirement {
     createdAt: toIso(row.created_at),
     qualifications: [...row.qualifications].sort(byLevelThenCode),
     ...toTerms(row, row.time_zone),
+    clientName: row.client_name ?? null,
   };
 }
 

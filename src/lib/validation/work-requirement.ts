@@ -122,6 +122,12 @@ const requirementFields = {
   shifts: z.array(requirementShiftInput).max(MAX_SHIFTS, "v.requirement.shifts.tooMany").optional(),
   conditions: requirementConditionsInput.optional(),
   /**
+   * Recruiter (D-12 provisional, LOCAL 20261024500100, BR-27): the represented client a staffing agency publishes
+   * for — an ACTIVE representation of that organization (the database checks it). Full replacement like the other
+   * terms: absent = no client. A staffing agency must send it to publish (`clientRequired`, CFR01 otherwise).
+   */
+  onBehalfOfClientId: z.uuid("v.requirement.client.select").optional(),
+  /**
    * `draft` saves an incomplete requirement (v1.8 «Guardar borrador»: no qualification-count and no
    * start-in-the-future rule); `publish` (or nothing) applies every creation rule — on an edit, `publish` also
    * publishes a draft (draft → open).
@@ -232,6 +238,7 @@ export function toRequirementFields(r: WorkRequirement) {
     ...(r.description ? { description: r.description } : {}),
     ...(r.shifts?.length ? { shifts: r.shifts } : {}),
     ...(r.conditions ? { conditions: r.conditions } : {}),
+    ...(r.client ? { onBehalfOfClientId: r.client.id } : {}),
   };
 }
 

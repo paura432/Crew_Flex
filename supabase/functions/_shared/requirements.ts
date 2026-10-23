@@ -16,6 +16,7 @@ import {
   type WorkRequirement,
 } from "../../../src/domain/work-requirement.ts";
 import type { CandidatePassport } from "../../../src/domain/passport.ts";
+import { REPRESENTATION_STATUSES } from "../../../src/domain/recruiter.ts";
 import { toCandidate, toCandidatePassport } from "../../../src/lib/candidate-pool.ts";
 import {
   requirementConditionsRow,
@@ -30,7 +31,8 @@ import { ApiError, fromDatabaseError } from "./errors.ts";
 export const REQUIREMENT_SELECT = `
   id, organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_at,
   updated_at, country, timezone, description, shifts, conditions, archived_at,
-  work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) )
+  work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) ),
+  represented_clients ( id, name, status )
 `;
 
 /**
@@ -82,6 +84,10 @@ const requirementRow = z.object({
   ...termsColumns,
   timezone: timeZoneColumn,
   archived_at: z.string().nullish(),
+  // Recruiter (LOCAL 20261024500100): the represented client, readable by the agency's members (RLS); null = none.
+  represented_clients: z
+    .object({ id: z.string(), name: z.string(), status: z.enum(REPRESENTATION_STATUSES) })
+    .nullish(),
   work_requirement_qualifications: z.array(
     z.object({
       requirement_level: z.enum(REQUIREMENT_LEVELS),
@@ -121,6 +127,7 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
       .sort(byLevelThenCode),
     ...toTerms(row, row.timezone),
     archivedAt: row.archived_at ? toIso(row.archived_at) : null,
+    client: row.represented_clients ?? null,
   };
 }
 

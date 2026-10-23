@@ -60,7 +60,8 @@
     "logbook": "Logbook",
     "organizationApplications": "Candidaturas",
     "network": "Ofertas en la red",
-    "networkOpportunity": "Oferta en la red"
+    "networkOpportunity": "Oferta en la red",
+    "representations": "Representaciones"
   },
   "nav": {
     "organization": "Organización",
@@ -93,7 +94,8 @@
     "applications": "Mis candidaturas",
     "logbook": "Logbook",
     "organizationApplications": "Candidaturas",
-    "network": "Ofertas en la red"
+    "network": "Ofertas en la red",
+    "representations": "Representaciones"
   },
   "landing": {
     "eyebrow": "Personal de mantenimiento aeronáutico",
@@ -349,6 +351,11 @@
         "contractType": "Elige un tipo de contrato",
         "mobilization": "La movilización máxima debe ser un número entero de 1 a 168 horas",
         "arrival": "La incorporación debe tener entre 1 y 160 caracteres"
+      },
+      "client": {
+        "select": "Selecciona un cliente.",
+        "required": "Indica el cliente representado.",
+        "inactive": "La representación de este cliente no está activa: elige un cliente activo."
       }
     },
     "qualifications": {
@@ -503,6 +510,12 @@
       "blocks": {
         "max": "Como máximo 200 organizaciones bloqueadas."
       }
+    },
+    "recruiter": {
+      "clientName": "Indica un cliente válido en el espacio recruiter.",
+      "clientEmail": "Introduce un correo válido para el cliente.",
+      "noteRequired": "Indica la evidencia de la representación",
+      "noteMax": "Usa como máximo 2000 caracteres"
     }
   },
   "domain": {
@@ -1340,10 +1353,82 @@
     "platformRole": "Rol de plataforma"
   },
   "recruiter": {
-    "eyebrow": "Recruiter",
-    "title": "Espacio recruiter",
-    "soonTitle": "Próximamente",
-    "soonBody": "El espacio para agencias que representan a clientes llegará en una fase posterior. Su modelo todavía está pendiente de decisión."
+    "eyebrow": "Espacio recruiter",
+    "title": "Recruiter y clientes",
+    "description": "De una necesidad concreta a un equipo disponible.",
+    "noAgencyTitle": "Tu cuenta no pertenece a una agencia de personal",
+    "noAgencyBody": "El espacio recruiter es para organizaciones de tipo «Agencia de personal» que representan a clientes. Ábrelo con una cuenta de una agencia.",
+    "networkEyebrow": "Red recruiter · vista previa del matching",
+    "requirementEyebrow": "Necesidad para cliente",
+    "clients": {
+      "title": "Cartera de clientes",
+      "empty": "Aún no hay clientes en la cartera.",
+      "noEmail": "Sin correo",
+      "status": {
+        "pending": "Pendiente de verificación",
+        "active": "Activo",
+        "revoked": "Revocado"
+      },
+      "addedOn": "Añadido el {date}",
+      "activatedOn": "Activo desde el {date}",
+      "revokedOn": "Revocado el {date}",
+      "formTitle": "Añadir un cliente",
+      "name": "Nuevo cliente",
+      "email": "Correo del cliente",
+      "emailHint": "Opcional. Solo lo ve tu agencia.",
+      "add": "Añadir cliente",
+      "adding": "Añadiendo…",
+      "added": "Cliente guardado. Queda pendiente hasta que la administración de Crew Flex registre la evidencia de la representación.",
+      "duplicate": "Ese cliente ya está en la cartera.",
+      "limit": "La cartera admite como máximo 200 clientes pendientes o activos.",
+      "notAgency": "Solo una agencia de personal representa a clientes.",
+      "revoke": "Revocar",
+      "revoking": "Revocando…",
+      "revokeAria": "Revocar la representación de {name}",
+      "revokeConfirm": "Confirmar: revocar la representación de {name}. Sus necesidades dejan de mostrarse a los profesionales y no avanzan; no se puede deshacer.",
+      "revokeConfirmButton": "Revocar definitivamente",
+      "cancel": "Cancelar",
+      "revoked": "Representación de {name} revocada.",
+      "note": "El recruiter recibe las candidaturas y coordina en nombre del cliente identificado. No se envían archivos externamente.",
+      "verificationNote": "Un cliente nuevo queda pendiente hasta que la administración de Crew Flex registre la evidencia de la representación. Solo se publica para clientes activos.",
+      "managersOnly": "Añadir y revocar clientes corresponde a los managers y administradores de la agencia.",
+      "loadError": "No se pudo cargar la cartera de clientes."
+    },
+    "builder": {
+      "client": "Cliente destinatario del expediente",
+      "choose": "Seleccionar cliente",
+      "hint": "Obligatorio para publicar. Solo aparecen los clientes activos de la cartera.",
+      "noActive": "No hay clientes activos. Añádelos en la cartera; se activan cuando la administración registra la evidencia.",
+      "manage": "Ir a la cartera de clientes",
+      "note": "El recruiter gestiona la oferta y confirma en nombre del cliente. Los destinatarios están identificados en la candidatura. No hay contrato legal ni envío externo.",
+      "summary": "Para el cliente {client}"
+    },
+    "requirement": {
+      "client": "Cliente",
+      "revokedNote": "La representación de {client} ya no está activa: la necesidad no se muestra a los profesionales ni avanza. Puedes pausarla o cerrarla.",
+      "forClient": "Para {client}"
+    },
+    "opportunity": {
+      "publishedFor": "Publicada por {organization} para el cliente {client}",
+      "sharedTitle": "Qué verá {organization} para el cliente {client}",
+      "consent": "Autorizo compartir con {organization}, para su cliente {client}, estos datos para esta necesidad."
+    },
+    "review": {
+      "eyebrow": "Administración",
+      "title": "Representaciones",
+      "description": "Clientes que las agencias de personal dicen representar. Se activan cuando registras la evidencia.",
+      "evidenceNote": "Comprueba el mandato o contrato de representación y registra aquí su referencia. Nadie activa clientes de una agencia a la que pertenece, perteneció o para la que actuó.",
+      "emptyTitle": "No hay representaciones",
+      "agency": "Agencia",
+      "email": "Correo del cliente",
+      "note": "Evidencia de la representación",
+      "noteHint": "Referencia del mandato o contrato y cómo se comprobó (máx. 2000 caracteres). Solo la ve la administración.",
+      "activate": "Registrar evidencia y activar",
+      "activating": "Registrando…",
+      "activated": "Representación de {name} activada.",
+      "own": "Perteneces a esta agencia: no puedes activar sus clientes.",
+      "changed": "La representación cambió mientras la revisabas. Recarga la página."
+    }
   },
   "admin": {
     "home": {
@@ -1971,7 +2056,9 @@
       "REAPPLY_NOT_ALLOWED": "No se puede volver a presentar: la candidatura anterior terminó.",
       "ACTIVE_COMMITMENTS": "Resuelve antes las asignaciones activas (aceptadas o confirmadas).",
       "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar.",
-      "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización."
+      "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización.",
+      "CLIENT_REQUIRED": "Una agencia de personal publica solo para un cliente representado: indica el cliente.",
+      "CLIENT_NOT_ACTIVE": "La agencia ya no representa a este cliente: esta necesidad no puede avanzar."
     },
     "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual.",
     "orgOnlyTitle": "«Mis candidaturas» es para profesionales",
