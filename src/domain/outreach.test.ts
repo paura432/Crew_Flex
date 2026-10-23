@@ -35,12 +35,13 @@ describe("outreach domain (BR-26)", () => {
     );
   });
 
-  it("keeps the SQLSTATE order CFO01…CFO04", () => {
+  it("keeps the SQLSTATE order CFO01…CFO05", () => {
     expect(OUTREACH_CONFLICTS).toEqual([
       "OUTREACH_NOT_OPEN",
       "OUTREACH_PLANNED",
       "OUTREACH_ALREADY_SENT",
       "OUTREACH_STARTED",
+      "OUTREACH_DAILY_LIMIT",
     ]);
   });
 

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
-import { OUTREACH_CONFLICTS, type OutreachConflict } from "@/domain/outreach";
+import { OUTREACH_CONFLICTS, OUTREACH_REPORT_MIN, type OutreachConflict } from "@/domain/outreach";
 import { distributeOutreachAction } from "../actions";
 
 const isOutreachConflict = (reason: unknown): reason is OutreachConflict =>
@@ -32,7 +32,15 @@ export function DistributeOutreachButton({
       setNotice(null);
       const result = await callAction(() => distributeOutreachAction(requirementId));
       if (result.ok) {
-        setNotice({ tone: "ok", text: t("result", { count: result.distribution.notified }) });
+        const notified = result.distribution.notified;
+        setNotice({
+          tone: "ok",
+          // T-128: below OUTREACH_REPORT_MIN eligible professionals the number is not reported.
+          text:
+            notified === null
+              ? t("resultWithheld", { min: OUTREACH_REPORT_MIN })
+              : t("result", { count: notified }),
+        });
       } else if (result.code === "CONFLICT" && isOutreachConflict(result.reason)) {
         setNotice({
           tone: "danger",

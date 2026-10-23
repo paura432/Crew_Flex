@@ -30,8 +30,18 @@ export const OUTREACH_CONFLICTS = [
   "OUTREACH_PLANNED", // CFO02: a planned need is not distributed (the button is not offered)
   "OUTREACH_ALREADY_SENT", // CFO03: one distribution per requirement (T-125)
   "OUTREACH_STARTED", // CFO04: the period has started — nobody can apply any more
+  "OUTREACH_DAILY_LIMIT", // CFO05: the organization distributed OUTREACH_DAILY_MAX needs in the last 24 h
 ] as const;
 export type OutreachConflict = (typeof OUTREACH_CONFLICTS)[number];
+
+/**
+ * T-128 (security review MEDIUM-1): below this many professionals of the external pool eligible for the
+ * need, the number of notices is not reported (`notified: null`) — with so few, it would tell the
+ * organization who opted in, declared what mobilization or is asleep. The notices are still created.
+ */
+export const OUTREACH_REPORT_MIN = 5;
+/** T-128: distributions per organization in any 24 h (bounds how often the count can be read). */
+export const OUTREACH_DAILY_MAX = 10;
 
 /** The professional's preferences as stored (T-120…T-123). */
 export interface NoticePreferences {
@@ -85,7 +95,7 @@ export function isValidQuietHours(start: string | null, end: string | null): boo
 /**
  * Whether «Distribuir aviso Urgente / AOG» is offered (v1.8 `Account.jsx:69`: only on a published
  * job): an urgent or AOG need that is open, has not started and was not distributed yet. The database
- * re-checks every condition (CFO01…CFO04).
+ * re-checks every condition (CFO01…CFO05).
  */
 export function canDistributeOutreach(
   requirement: Pick<WorkRequirement, "status" | "urgency" | "startsAt">,

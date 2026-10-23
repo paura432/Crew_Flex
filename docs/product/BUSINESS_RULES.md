@@ -480,14 +480,14 @@ expediente» on the requirement's applications, the organization's «Candidatura
 - **Who may distribute:** an admin or manager of the requirement's organization (role from the database), on an
   `open` need (not draft, paused, covered, closed or archived) whose declared urgency is `urgent` or `aog` (C-8:
   never deduced from the date) and that has not started — **once** per requirement (two clicks at once: one wins, the
-  other «Esta necesidad ya se distribuyó.»). `canDistributeOutreach` decides whether «Distribuir aviso Urgente / AOG»
-  shows; the database refuses everything else (`OUTREACH_CONFLICTS`, SQLSTATE CFO01…CFO04).
+  other «Esta necesidad ya se distribuyó.») and at most 10 needs per organization in 24 h. `canDistributeOutreach` decides whether «Distribuir aviso Urgente / AOG»
+  shows; the database refuses everything else (`OUTREACH_CONFLICTS`, SQLSTATE CFO01…CFO05).
 - **Audience** (all in one database function, v1.8 `server/app.mjs:89-105`): professionals the organization may reach
   outside itself — its external candidate pool: not `private`, `verified_orgs` only for a reviewed organization (BR-8),
   not a member of the organization, not blocking it (N-08) — who have no general restriction and no restricted type
   rating the need asks for (T-124), opted in for **that** urgency, declared a mobilization the start respects (and
   within the need's `maxMobilizationHours` when stated), are outside their quiet hours in their own time zone now,
-  have no application to that need other than a withdrawn one, no confirmed assignment overlapping it, are eligible
+  have no application to that need other than a withdrawn one, are eligible
   (`app_private.hard_eligibility`: hard qualifications valid for the period, availability covering it) and were not
   notified for it before — nor more than 3 times by that organization in the last 24 h (flood bound, T-126).
 - **What each recipient gets:** one in-app notice «{Urgente|AOG}: {título}» · «{organización} · Consulta las
@@ -495,5 +495,5 @@ expediente» on the requirement's applications, the organization's «Candidatura
   listed only while the need is published and current. E-mail, SMS and push: OUT.
 - **What the organization learns:** the count only — «{count, plural, one {# aviso interno creado} other {# avisos
   internos creados}}. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.», then
-  «Distribuida el {fecha}: {n} avisos internos.» on the need. Never who received it nor why someone did not (ORG-06 #4,
-  #5); the audit row `requirement.outreach_distributed` carries the count and the urgency. IMPLEMENTED (local).
+  «Distribuida el {fecha}: {n} avisos internos.» on the need — and **no number** when fewer than 5 professionals of
+  its external pool are eligible for the need. Never who received it nor why someone did not (ORG-06 #4, #5); the audit row `requirement.outreach_distributed` carries the count and the urgency. IMPLEMENTED (local).

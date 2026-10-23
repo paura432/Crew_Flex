@@ -34,7 +34,10 @@ create table public.technician_notice_preferences (
   constraint technician_notice_preferences_quiet_pair check ((quiet_start is null) = (quiet_end is null)),
   constraint technician_notice_preferences_quiet_distinct check (quiet_start is null or quiet_start <> quiet_end),
   constraint technician_notice_preferences_quiet_minutes check (
-    extract(second from quiet_start) = 0 and extract(second from quiet_end) = 0)
+    extract(second from quiet_start) = 0 and extract(second from quiet_end) = 0),
+  -- `time` admits 24:00 (security review INFO): never a stored bound — the form could not show it.
+  constraint technician_notice_preferences_quiet_before_midnight check (
+    quiet_start < time '24:00' and quiet_end < time '24:00')
 );
 alter table public.technician_notice_preferences enable row level security;
 

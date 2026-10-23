@@ -795,7 +795,8 @@ export interface NoticePreferencesResponse {
 export interface OutreachDistribution {
   requirementId: string;
   urgency: OutreachUrgency;
-  notified: number;
+  /** Null = not reported: fewer than `OUTREACH_REPORT_MIN` eligible professionals (T-128). */
+  notified: number | null;
   distributedAt: string;
 }
 

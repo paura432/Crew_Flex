@@ -15,6 +15,8 @@ let lisbonId: string;
 
 const FOXTROT = "00000000-0000-4000-8000-000000000023";
 const GOLF = "00000000-0000-4000-8000-000000000024"; // B1.1 still pending: not eligible
+const INDIA = "00000000-0000-4000-8000-000000000026";
+const KILO = "00000000-0000-4000-8000-000000000041";
 
 beforeAll(async () => {
   db = await createTestDatabase();
@@ -54,14 +56,17 @@ interface NeedOptions {
   conditions?: Record<string, unknown> | null;
 }
 
-/** Owner fixture: a need (default: open AOG of Demo MRO Madrid, hard B1.1 + TR-A320, in 5 days). */
+/**
+ * Owner fixture: a need (default: open AOG of Demo MRO Madrid, hard B1.1 + TR-A320, in 60 days — past
+ * the seed's windows, so only those a case makes available are eligible).
+ */
 async function createNeed(tx: Transaction, options: NeedOptions = {}) {
   const {
     org = mroId,
     createdBy = SEED.adminMro,
     urgency = "aog",
     status = "open",
-    startsIn = "5 days",
+    startsIn = "60 days",
     codes = ["B1.1", "TR-A320"],
     conditions = null,
   } = options;
@@ -166,7 +171,8 @@ async function audienceAfter(
     const before = await recipientsOf(tx, requirementId);
     const result = await distribute(tx, SEED.adminMro, requirementId);
     const added = (await recipientsOf(tx, requirementId)).filter((r) => !before.includes(r));
-    expect(result.notified).toBe(added.length);
+    // T-128: Delta and Foxtrot (plus whoever a case adds) are fewer than 5 eligible: not reported.
+    expect(result.notified === null || result.notified === added.length).toBe(true);
     expect(added, "the positive control is always notified").toContain(FOXTROT);
     return added;
   });
@@ -299,6 +305,8 @@ describe("outreach: notice preferences are owner-only (migration 20261024400100)
         [24, null, "07:00"],
         [24, "22:00", "22:00"],
         [24, "22:00:30", "07:00"],
+        [24, "24:00", "07:00"],
+        [24, "22:00", "24:00"],
         [721, null, null],
         [-1, null, null],
       ] as const) {
@@ -529,9 +537,10 @@ describe("outreach: the audience (BR-26), one rule per case, Foxtrot as the posi
       await savePreferences(tx, SEED.delta, { mobilization });
     };
     expect(await audienceAfter(hours(null))).not.toContain(SEED.delta);
-    // The need starts in 5 days = 120 hours.
-    expect(await audienceAfter(hours(130))).not.toContain(SEED.delta);
-    expect(await audienceAfter(hours(0))).toContain(SEED.delta);
+    // A need that starts in 5 days = 120 hours.
+    const soon = { startsIn: "5 days" };
+    expect(await audienceAfter(hours(130), soon)).not.toContain(SEED.delta);
+    expect(await audienceAfter(hours(0), soon)).toContain(SEED.delta);
     // ORG-02 #29: the need's maximum mobilization (requirement-builder conditions; Foxtrot declares 12).
     const capped = { conditions: { maxMobilizationHours: 12 } };
     expect(await audienceAfter(hours(24), capped)).not.toContain(SEED.delta);
@@ -561,6 +570,61 @@ describe("outreach: the audience (BR-26), one rule per case, Foxtrot as the posi
     });
     expect(recipients).not.toContain(SEED.alpha);
     expect(recipients).not.toContain(SEED.managerMro);
+  });
+
+  it("a booking with ANOTHER organization is not a filter (the count would reveal it; CFA05 guards the confirmation)", async () => {
+    const recipients = await audienceAfter(async (tx, id) => {
+      // Delta is confirmed on a Lisbon need over the same period.
+      await asOwner(tx);
+      const { rows } = await tx.query<{ starts_at: Date; ends_at: Date }>(
+        "select starts_at, ends_at from public.work_requirements where id = $1",
+        [id],
+      );
+      const lisbon = await tx.query<{ id: string }>(
+        `insert into public.work_requirements
+           (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
+         values ($1, 'Lisbon booking', 'Lisboa (LIS)', $2, $3, 'day', 1, 'planned', 'open', $4) returning id`,
+        [lisbonId, rows[0]!.starts_at, rows[0]!.ends_at, SEED.adminOther],
+      );
+      const other = lisbon.rows[0]!.id;
+      await tx.query(
+        `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+         select $1, id, 'hard' from public.qualification_types where code = 'B1.1'`,
+        [other],
+      );
+      await actAs(tx, SEED.delta);
+      const applied = await tx.query<{ id: string }>(
+        "select * from public.apply_to_requirement($1, $2, true)",
+        [other, randomUUID()],
+      );
+      const app = applied.rows[0]!.id;
+      const move = async (actor: string, to: string) => {
+        await asOwner(tx);
+        const state = await tx.query<{ updated_at: Date; current_proposal_id: string | null }>(
+          "select updated_at, current_proposal_id from public.applications where id = $1",
+          [app],
+        );
+        await actAs(tx, actor);
+        await tx.query("select * from public.transition_application($1, $2, $3, $4, null, $5)", [
+          app,
+          to,
+          state.rows[0]!.updated_at.toISOString(),
+          randomUUID(),
+          to === "accepted" ? state.rows[0]!.current_proposal_id : null,
+        ]);
+      };
+      await move(SEED.adminOther, "shortlisted");
+      await move(SEED.adminOther, "proposed");
+      await move(SEED.delta, "accepted");
+      await move(SEED.adminOther, "confirmed");
+      await asOwner(tx);
+      const status = await tx.query<{ status: string }>(
+        "select status from public.applications where id = $1",
+        [app],
+      );
+      expect(status.rows[0]!.status).toBe("confirmed");
+    });
+    expect(recipients).toContain(SEED.delta);
   });
 
   it("already notified or already applied: no second notice", async () => {
@@ -695,10 +759,13 @@ describe("outreach: the notice and what the organization learns", () => {
   it("the organization gets a count — never who: not in the answer, the row or the audit trail", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       const need = await createNeed(tx);
-      await qualifying(tx, [SEED.delta, FOXTROT]);
+      // Five eligible in the pool (Echo too, excluded by her restricted rating): the count is reported.
+      await qualifying(tx, [SEED.delta, FOXTROT, INDIA, KILO]);
+      await makeAvailable(tx, [SEED.echo]);
       const result = await distribute(tx, SEED.adminMro, need);
       expect(Object.keys(result).sort()).toEqual(["distributed_at", "notified", "urgency"]);
-      expect(result.notified).toBe(2);
+      expect(result.notified).toBe(4);
+      expect(await recipientsOf(tx, need)).toEqual([SEED.delta, FOXTROT, INDIA, KILO].sort());
       await asOwner(tx);
       const { rows } = await tx.query<{
         actor_profile_id: string;
@@ -711,9 +778,15 @@ describe("outreach: the notice and what the organization learns", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]!.actor_profile_id).toBe(SEED.adminMro);
       expect(rows[0]!.organization_id).toBe(mroId);
-      expect(Object.keys(rows[0]!.metadata).sort()).toEqual(["notified", "request_id", "urgency"]);
+      expect(rows[0]!.metadata).toMatchObject({ notified: 4, withheld: false, urgency: "aog" });
+      expect(Object.keys(rows[0]!.metadata).sort()).toEqual([
+        "notified",
+        "request_id",
+        "urgency",
+        "withheld",
+      ]);
       const trail = JSON.stringify(rows);
-      for (const person of [SEED.delta, FOXTROT]) expect(trail).not.toContain(person);
+      for (const person of [SEED.delta, FOXTROT, INDIA, KILO]) expect(trail).not.toContain(person);
       const row = await tx.query(
         "select * from public.outreach_distributions where requirement_id = $1",
         [need],
@@ -724,6 +797,58 @@ describe("outreach: the notice and what the organization learns", () => {
         "requirement_id",
         "urgency",
       ]);
+    });
+  });
+
+  it("below 5 eligible professionals the count is withheld everywhere — the notices are still created", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const need = await createNeed(tx);
+      await qualifying(tx, [SEED.delta, FOXTROT, INDIA, KILO]);
+      const result = await distribute(tx, SEED.adminMro, need);
+      expect(result.notified).toBeNull();
+      expect(await recipientsOf(tx, need)).toHaveLength(4);
+      await actAs(tx, SEED.adminMro);
+      const stored = await tx.query<{ notified_count: number | null }>(
+        "select notified_count from public.outreach_distributions where requirement_id = $1",
+        [need],
+      );
+      expect(stored.rows[0]!.notified_count).toBeNull();
+      const audit = await tx.query<{ metadata: { notified: number | null; withheld: boolean } }>(
+        "select metadata from public.audit_events where action = 'requirement.outreach_distributed' and entity_id = $1",
+        [need],
+      );
+      expect(audit.rows[0]!.metadata).toMatchObject({ notified: null, withheld: true });
+    });
+  });
+
+  it("an organization distributes at most 10 needs in 24 h (CFO05), closed ones included", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      for (let i = 0; i < 10; i++) {
+        const need = await createNeed(tx);
+        await distribute(tx, SEED.adminMro, need);
+        if (i === 0) {
+          await actAs(tx, SEED.adminMro);
+          await tx.query("update public.work_requirements set status = 'closed' where id = $1", [
+            need,
+          ]);
+        }
+      }
+      const eleventh = await createNeed(tx);
+      await actAs(tx, SEED.managerMro);
+      expect(
+        (await sqlError(tx, "select * from public.requirement_outreach($1)", [eleventh])).code,
+      ).toBe("CFO05");
+      // Another organization is not affected.
+      const lisbon = await createNeed(tx, { org: lisbonId, createdBy: SEED.adminOther });
+      expect((await distribute(tx, SEED.adminOther, lisbon)).urgency).toBe("aog");
+      // A day later the slot is free again.
+      await asOwner(tx);
+      await tx.query(
+        `update public.outreach_distributions d set created_at = d.created_at - interval '25 hours'
+         from public.work_requirements wr where wr.id = d.requirement_id and wr.organization_id = $1`,
+        [mroId],
+      );
+      expect((await distribute(tx, SEED.adminMro, eleventh)).urgency).toBe("aog");
     });
   });
 

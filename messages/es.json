@@ -2316,16 +2316,19 @@
     },
     "distribution": {
       "title": "Distribución {urgency}",
-      "explain": "Crea un aviso interno, una sola vez, para cada profesional que acepta avisos de esta urgencia, es visible para tu organización y no la ha bloqueado, no declara restricciones en la habilitación pedida, cumple los requisitos, está disponible todo el periodo, ha declarado una movilización que el inicio respeta y no está en sus horas de silencio. Solo sabrás cuántos avisos se han creado, nunca a quién.",
+      "explain": "Crea un aviso interno, una sola vez, para cada profesional que acepta avisos de esta urgencia, es visible para tu organización y no la ha bloqueado, no declara restricciones en la habilitación pedida, cumple los requisitos, está disponible todo el periodo, ha declarado una movilización que el inicio respeta y no está en sus horas de silencio. Nunca sabrás a quién llega; con menos de 5 candidatos posibles, tampoco cuántos.",
       "button": "Distribuir aviso Urgente / AOG",
       "result": "{count, plural, one {# aviso interno creado} other {# avisos internos creados}}. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.",
+      "resultWithheld": "Avisos internos creados. Con menos de {min} candidatos posibles no se muestra cuántos, para proteger sus preferencias. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.",
       "done": "Distribuida el {date}: {count, plural, one {# aviso interno} other {# avisos internos}}.",
+      "doneWithheld": "Distribuida el {date}. Con menos de {min} candidatos posibles no se muestra cuántos avisos se crearon.",
       "notOffered": "La distribución solo está disponible mientras la necesidad está publicada y no ha empezado.",
       "conflict": {
         "OUTREACH_NOT_OPEN": "Publica o reanuda la necesidad primero.",
         "OUTREACH_PLANNED": "Las necesidades planificadas no se distribuyen.",
         "OUTREACH_ALREADY_SENT": "Esta necesidad ya se distribuyó.",
-        "OUTREACH_STARTED": "La necesidad ya ha empezado: ya no se distribuye."
+        "OUTREACH_STARTED": "La necesidad ya ha empezado: ya no se distribuye.",
+        "OUTREACH_DAILY_LIMIT": "Tu organización ya ha distribuido 10 necesidades en las últimas 24 horas. Inténtalo más tarde."
       }
     },
     "notice": {

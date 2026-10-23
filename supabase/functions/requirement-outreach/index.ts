@@ -3,9 +3,11 @@
 // GET  /requirement-outreach?requirementId=<uuid> → OutreachStatusResponse { distribution | null }
 // POST /requirement-outreach { requirementId }     → 201 OutreachDistributeResponse { distribution }
 // The audience is computed by ONE database function (requirement_outreach, DEFINER): one in-app notice
-// per recipient, once per requirement. The answer is the COUNT only — never who was notified (S-7).
+// per recipient, once per requirement. The answer is the COUNT only — never who was notified (S-7) — and
+// not even that below 5 eligible professionals (`notified: null`, T-128).
 // Refusals: 404 not visible (same as a missing id), 403 not admin/manager, 409 `reason` =
-// OUTREACH_CONFLICTS (not open, planned, already distributed, started). No e-mail, SMS or push (OUT).
+// OUTREACH_CONFLICTS (not open, planned, already distributed, started, daily limit). No e-mail, SMS or
+// push (OUT).
 import { z } from "zod";
 import { type Actor, requireActor, requireOrganizationRole } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
@@ -23,12 +25,13 @@ import type {
 const distributionRow = z.object({
   requirement_id: z.uuid(),
   urgency: z.enum(OUTREACH_URGENCIES),
-  notified_count: z.number().int().min(0),
+  // Null = not reported (fewer than 5 eligible professionals, T-128).
+  notified_count: z.number().int().min(0).nullable(),
   created_at: z.string(),
 });
 
 const outreachResult = z.object({
-  notified: z.number().int().min(0),
+  notified: z.number().int().min(0).nullable(),
   distributed_at: z.string(),
   urgency: z.enum(OUTREACH_URGENCIES),
 });

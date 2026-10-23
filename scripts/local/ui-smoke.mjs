@@ -3202,7 +3202,8 @@ const distributed = await distribution
   .getByRole("status")
   .filter({
     hasText:
-      /^[1-9]\d* in-app notices? created\. Consent, availability and quiet hours are respected\. No e-mails were sent\./,
+      // Below 5 eligible professionals (here: Delta alone) the number is withheld (T-128).
+      /^(?:[1-9]\d* in-app notices? created|In-app notices created\. With fewer than 5 possible candidates the number is not shown, to protect their preferences)\. Consent, availability and quiet hours are respected\. No e-mails were sent\./,
   })
   .waitFor({ timeout: 20000 })
   .then(() => true)
@@ -3210,11 +3211,13 @@ const distributed = await distribution
 await page.reload();
 await page.waitForLoadState("networkidle");
 ok(
-  "PKG outreach c: «Distribute Urgent / AOG notice» reports the count (ICU plural), then the button is gone and the count stays",
+  "PKG outreach c: «Distribute Urgent / AOG notice» reports the count (ICU plural; withheld below 5 eligible), then the button is gone and the outcome stays",
   distributed &&
     (await distribution.getByRole("button", { name: "Distribute Urgent / AOG notice" }).count()) ===
       0 &&
-    /Distributed on .*: [1-9]\d* in-app notices?\./.test(await distribution.innerText()),
+    /Distributed on .*(?:: [1-9]\d* in-app notices?\.|\. With fewer than 5 possible candidates the number of notices is not shown\.)/.test(
+      await distribution.innerText(),
+    ),
   "",
 );
 await logout();

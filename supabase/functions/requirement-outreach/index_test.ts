@@ -47,9 +47,9 @@ Deno.test(
 );
 
 Deno.test(
-  "CFO01…CFO04 are 409 with the stable reason, in OUTREACH_CONFLICTS order, without the DB message",
+  "CFO01…CFO05 are 409 with the stable reason, in OUTREACH_CONFLICTS order, without the DB message",
   () => {
-    const reasons = ["CFO01", "CFO02", "CFO03", "CFO04"].map((code) => {
+    const reasons = ["CFO01", "CFO02", "CFO03", "CFO04", "CFO05"].map((code) => {
       const error = fromDatabaseError({ code, message: "internal detail" });
       assertEquals([error.status, error.code], [409, "CONFLICT"]);
       assertEquals(error.message.includes("internal"), false);
@@ -60,6 +60,7 @@ Deno.test(
       "OUTREACH_PLANNED",
       "OUTREACH_ALREADY_SENT",
       "OUTREACH_STARTED",
+      "OUTREACH_DAILY_LIMIT",
     ]);
     // An unknown code of the family is not a business conflict (generic 500, never a guessed reason).
     assertEquals(fromDatabaseError({ code: "CFO09" }).code, "INTERNAL_ERROR");
@@ -94,6 +95,22 @@ Deno.test(
       "urgency",
     ]);
     assertEquals(sent.notified, 0);
+    // T-128: below 5 eligible professionals the number is not reported, here or in the stored row.
+    assertEquals(
+      toDistributeResponse(REQ, [
+        { notified: null, distributed_at: "2026-10-23T08:00:00Z", urgency: "aog" },
+      ]).notified,
+      null,
+    );
+    assertEquals(
+      toDistribution({
+        requirement_id: REQ,
+        urgency: "aog",
+        notified_count: null,
+        created_at: "2026-10-23T08:00:00Z",
+      }).notified,
+      null,
+    );
     // Planned never comes back as a distributed urgency; negative counts are refused.
     assertThrows(() =>
       toDistribution({

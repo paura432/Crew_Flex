@@ -2316,16 +2316,19 @@
     },
     "distribution": {
       "title": "{urgency} distribution",
-      "explain": "Creates one in-app notice, only once, for each professional who accepts notices of this urgency, is visible to your organization and has not blocked it, declares no restrictions on the required rating, meets the requirements, is available for the whole period, has declared a mobilisation the start respects and is not in their quiet hours. You only learn how many notices were created, never to whom.",
+      "explain": "Creates one in-app notice, only once, for each professional who accepts notices of this urgency, is visible to your organization and has not blocked it, declares no restrictions on the required rating, meets the requirements, is available for the whole period, has declared a mobilisation the start respects and is not in their quiet hours. You never learn who receives it; with fewer than 5 possible candidates, not even how many.",
       "button": "Distribute Urgent / AOG notice",
       "result": "{count, plural, one {# in-app notice created} other {# in-app notices created}}. Consent, availability and quiet hours are respected. No e-mails were sent.",
+      "resultWithheld": "In-app notices created. With fewer than {min} possible candidates the number is not shown, to protect their preferences. Consent, availability and quiet hours are respected. No e-mails were sent.",
       "done": "Distributed on {date}: {count, plural, one {# in-app notice} other {# in-app notices}}.",
+      "doneWithheld": "Distributed on {date}. With fewer than {min} possible candidates the number of notices is not shown.",
       "notOffered": "Distribution is only available while the need is published and has not started.",
       "conflict": {
         "OUTREACH_NOT_OPEN": "Publish or resume the need first.",
         "OUTREACH_PLANNED": "Planned needs are not distributed.",
         "OUTREACH_ALREADY_SENT": "This need was already distributed.",
-        "OUTREACH_STARTED": "The need has already started: it is no longer distributed."
+        "OUTREACH_STARTED": "The need has already started: it is no longer distributed.",
+        "OUTREACH_DAILY_LIMIT": "Your organization has already distributed 10 needs in the last 24 hours. Try again later."
       }
     },
     "notice": {

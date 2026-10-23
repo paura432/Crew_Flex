@@ -46,13 +46,18 @@ create unique index notifications_outreach_once
 -- ---------------------------------------------------------------------------------------------
 -- 2. One distribution per requirement (T-125): who may see it and what it says — the urgency it was sent
 -- for and how many notices it created. No recipient, no actor (the audit row has the actor).
+-- `notified_count` is NULL when fewer than 5 professionals of the external pool were eligible for the need
+-- (T-128, security review MEDIUM-1): with so few, the number would tell the organization which of them
+-- opted in, declared what mobilization or sleeps when — the exact count is never stored then.
+-- Requirements cannot be deleted through the API, so every distribution stays counted for the daily limit.
 -- ---------------------------------------------------------------------------------------------
 create table public.outreach_distributions (
   requirement_id uuid primary key references public.work_requirements (id) on delete cascade,
   urgency public.requirement_urgency not null check (urgency in ('urgent', 'aog')),
-  notified_count integer not null check (notified_count >= 0),
+  notified_count integer check (notified_count >= 0),
   created_at timestamptz not null default now()
 );
+create index outreach_distributions_created_idx on public.outreach_distributions (created_at);
 alter table public.outreach_distributions enable row level security;
 
 -- Read-only for the requirement's admins/managers (and platform admins, support); nobody writes it
@@ -117,11 +122,15 @@ from public, anon, authenticated;
 -- ---------------------------------------------------------------------------------------------
 -- 4. The distribution (v1.8 `job.outreach`). One transaction:
 --   1. signed-in caller (42501); admin/manager of the requirement's organization from the database, or
---      the same 42501 as a missing id (no existence oracle); then the requirement row locked FOR UPDATE
---      — two admins clicking at once serialise here and the second finds the distribution (CFO03);
+--      the same 42501 as a missing id (no existence oracle); then a transaction lock per ORGANIZATION
+--      (every distribution of one organization runs one at a time, so the daily limit and the flood bound
+--      hold under concurrency — security review LOW-1; nothing else takes it, so it cannot deadlock),
+--      then the requirement row FOR UPDATE (two admins clicking at once: the second finds the
+--      distribution, CFO03) and the role read again on the locked row;
 --   2. CFO03 already distributed · CFO02 planned urgency (the button is not offered) · CFO01 not open
 --      (draft, paused, covered, closed or archived: v1.8 «Publica o reanuda la oferta primero.») · CFO04
---      started;
+--      started · CFO05 the organization already distributed 10 needs in the last 24 h (T-128: bounds
+--      how often the count can be read);
 --   3. the audience (BR-26), every rule in SQL, read as the owner:
 --      in the requirement's external candidate pool (app_private.ranked_external_pool, called: visibility
 --      not `private`, `verified_orgs` only for a reviewed organization, BR-8; not a member of the
@@ -129,13 +138,17 @@ from public, anon, authenticated;
 --      requirement asks for (T-124) · opted in for THIS urgency (urgent vs AOG) · mobilization declared,
 --      the start at least that many hours away and, when the requirement states one, within its
 --      `conditions.maxMobilizationHours` (ORG-02 #29) · outside their quiet hours in their time zone (an
---      unknown zone = no notice) · no application to it that is not withdrawn (T-126) · no confirmed
---      assignment overlapping the period · eligible by app_private.hard_eligibility (called, not
---      copied: qualifications valid for the period and availability covering it) · not already notified
---      for it, and fewer than 3 outreach notices from this organization in the last 24 h (T-126);
+--      unknown zone = no notice) · no application to it that is not withdrawn (T-126) · eligible by
+--      app_private.hard_eligibility (called, not copied: qualifications valid for the period and
+--      availability covering it) · not already notified for it, and fewer than 3 outreach notices from
+--      this organization in the last 24 h (T-126). No filter on bookings with OTHER organizations (v1.8
+--      skipped overlapping confirmed assignments: the count would reveal them; CFA05 still refuses the
+--      confirmation);
 --   4. one notice per recipient, the recipients' retention pruned, the distribution row (the PK is the
---      backstop) and the audit `requirement.outreach_distributed` with the count only (S-9).
--- Returns { notified, distributed_at, urgency }.
+--      backstop) and the audit `requirement.outreach_distributed` (S-9: count, urgency, request id).
+-- Returns { notified, distributed_at, urgency }; `notified` is NULL when fewer than 5 professionals of the
+-- external pool are eligible for the need (that base the organization can already count through matching;
+-- T-128) — the notices are still created.
 -- ---------------------------------------------------------------------------------------------
 create function public.requirement_outreach(p_requirement_id uuid, p_request_id uuid default null)
 returns table (notified integer, distributed_at timestamptz, urgency public.requirement_urgency)
@@ -152,6 +165,7 @@ declare
   v_aircraft text[];
   v_licences text[];
   v_recipients uuid[];
+  v_base integer;
   v_count integer;
 begin
   if v_uid is null then
@@ -163,7 +177,12 @@ begin
      or not public.has_org_role(v_req.organization_id, array['admin', 'manager']::public.organization_role[]) then
     raise exception using errcode = '42501', message = 'not authorized';
   end if;
+  perform pg_advisory_xact_lock(hashtextextended('outreach:' || v_req.organization_id::text, 0));
   select * into v_req from public.work_requirements wr where wr.id = p_requirement_id for update;
+  -- Demoted or removed while waiting for the locks: the same answer as before.
+  if not public.has_org_role(v_req.organization_id, array['admin', 'manager']::public.organization_role[]) then
+    raise exception using errcode = '42501', message = 'not authorized';
+  end if;
   if exists (select 1 from public.outreach_distributions d where d.requirement_id = v_req.id) then
     raise exception using errcode = 'CFO03', message = 'the requirement was already distributed';
   end if;
@@ -177,19 +196,31 @@ begin
   if v_req.starts_at <= v_now then
     raise exception using errcode = 'CFO04', message = 'the requirement has started';
   end if;
+  if (select count(*) from public.outreach_distributions d
+      join public.work_requirements o on o.id = d.requirement_id
+      where o.organization_id = v_req.organization_id
+        and d.created_at > v_now - interval '24 hours') >= 10 then
+    raise exception using errcode = 'CFO05', message = 'the organization reached its daily distributions';
+  end if;
 
   v_max_mobilization := (v_req.conditions ->> 'maxMobilizationHours')::numeric;
   select r.aircraft, r.licences into v_aircraft, v_licences
   from app_private.outreach_required_ratings(v_req.id) r;
 
-  select coalesce(array_agg(c.profile_id order by c.profile_id), '{}') into v_recipients
-  from (
-    select tp.profile_id
-    -- Who this organization may reach outside itself, as its external candidate pool decides it (one
-    -- definition, BR-7/BR-8/N-08): visibility not `private` (`verified_orgs` only for a reviewed
-    -- organization), not a member of the organization, not blocking it.
+  -- The base: who this organization may reach outside itself, as its external candidate pool decides it
+  -- (one definition, BR-7/BR-8/N-08: visibility not `private`, `verified_orgs` only for a reviewed
+  -- organization, not a member, not blocking it), eligible for the need. The organization can already
+  -- count this set (matching, the builder's live count); everything filtered after it is private.
+  with base as (
+    select pool.profile_id
     from app_private.ranked_external_pool(v_req.id) pool
-    join public.technician_profiles tp on tp.profile_id = pool.profile_id
+    cross join lateral app_private.hard_eligibility(v_req.id, pool.profile_id) e
+    where coalesce(e.qualifications_ok, false) and coalesce(e.availability_ok, false)
+  ),
+  audience as (
+    select tp.profile_id
+    from base
+    join public.technician_profiles tp on tp.profile_id = base.profile_id
     join public.technician_notice_preferences p on p.profile_id = tp.profile_id
     -- the zone as the database knows it now; an unknown one leaves the professional out (fail closed)
     join pg_catalog.pg_timezone_names z on z.name = p.time_zone
@@ -209,10 +240,6 @@ begin
       and not exists (select 1 from public.applications a
                       where a.requirement_id = v_req.id and a.technician_profile_id = tp.profile_id
                         and a.status <> 'withdrawn')
-      and not exists (select 1 from public.applications a
-                      join public.work_requirements o on o.id = a.requirement_id
-                      where a.technician_profile_id = tp.profile_id and a.status = 'confirmed'
-                        and o.starts_at < v_req.ends_at and o.ends_at > v_req.starts_at)
       and not exists (select 1 from public.notifications n
                       where n.kind = 'outreach' and n.requirement_id = v_req.id
                         and n.recipient_id = tp.profile_id)
@@ -223,20 +250,27 @@ begin
            where n.kind = 'outreach' and n.recipient_id = tp.profile_id
              and o.organization_id = v_req.organization_id
              and n.created_at > v_now - interval '24 hours') < 3
-  ) c
-  cross join lateral app_private.hard_eligibility(v_req.id, c.profile_id) e
-  where coalesce(e.qualifications_ok, false) and coalesce(e.availability_ok, false);
+  )
+  select (select count(*)::integer from base),
+         coalesce((select array_agg(a.profile_id order by a.profile_id) from audience a), '{}')
+  into v_base, v_recipients;
 
   insert into public.notifications (recipient_id, kind, requirement_id)
   select r, 'outreach', v_req.id from unnest(v_recipients) r;
   v_count := cardinality(v_recipients);
   perform app_private.prune_notifications(v_recipients);
 
+  -- T-128: below 5 eligible professionals the number is not reported (nor stored, nor audited).
+  if v_base < 5 then
+    v_count := null;
+  end if;
+
   insert into public.outreach_distributions (requirement_id, urgency, notified_count, created_at)
   values (v_req.id, v_req.urgency, v_count, v_now);
   insert into public.audit_events (actor_profile_id, organization_id, action, entity_type, entity_id, metadata)
   values (v_uid, v_req.organization_id, 'requirement.outreach_distributed', 'work_requirement', v_req.id,
-          jsonb_build_object('notified', v_count, 'urgency', v_req.urgency, 'request_id', p_request_id));
+          jsonb_build_object('notified', v_count, 'withheld', v_count is null, 'urgency', v_req.urgency,
+                             'request_id', p_request_id));
 
   return query select v_count, v_now, v_req.urgency;
 end;

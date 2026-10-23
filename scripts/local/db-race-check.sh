@@ -452,21 +452,42 @@ outreach_ready() {
   fail "migrations 20261024400000…400200 are not applied to the local stack (outreach scenario not run)"
   return 1
 }
-outreach_twice() {
-  echo "== outreach: an admin and a manager distribute the same need at once — one distribution, one notice"
-  applications_ready || return 0
-  outreach_ready || return 0
-  : >"$OUT_A"; : >"$OUT_B"
-  race_available "$DELTA"
-  local saved; saved="$(echo "select row_to_json(p) from public.technician_notice_preferences p where profile_id = '$DELTA';" | psql_owner)"
+OUTREACH_SAVED=""
+outreach_opt_in() { # Delta accepts AOG notices for the scenario (previous row kept in OUTREACH_SAVED)
+  OUTREACH_SAVED="$(echo "select row_to_json(p) from public.technician_notice_preferences p where profile_id = '$DELTA';" | psql_owner)"
   psql_owner >/dev/null <<SQL
 insert into public.technician_notice_preferences (profile_id, urgent_opt_in, aog_opt_in, mobilization_hours)
 values ('$DELTA', true, true, 12)
 on conflict (profile_id) do update set urgent_opt_in = true, aog_opt_in = true, mobilization_hours = 12,
   time_zone = 'Europe/Madrid', quiet_start = null, quiet_end = null;
 SQL
+}
+outreach_restore() {
+  if [ -z "$OUTREACH_SAVED" ]; then
+    echo "delete from public.technician_notice_preferences where profile_id = '$DELTA';" | psql_owner >/dev/null
+  else
+    psql_owner >/dev/null <<SQL
+update public.technician_notice_preferences p
+set urgent_opt_in = s.urgent_opt_in, aog_opt_in = s.aog_opt_in, mobilization_hours = s.mobilization_hours,
+    time_zone = s.time_zone, quiet_start = s.quiet_start, quiet_end = s.quiet_end
+from json_populate_record(null::public.technician_notice_preferences, '$OUTREACH_SAVED'::json) s
+where p.profile_id = '$DELTA';
+SQL
+  fi
+}
+aog_need() { # an open AOG need of Demo MRO Madrid over the race period; prints its id
   local req; req="$(race_need 'Demo MRO Madrid' 1)"
   echo "update public.work_requirements set urgency = 'aog' where id = '$req';" | psql_owner >/dev/null
+  echo "$req"
+}
+outreach_twice() {
+  echo "== outreach: an admin and a manager distribute the same need at once — one distribution, one notice"
+  applications_ready || return 0
+  outreach_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"
+  outreach_opt_in
+  local req; req="$(aog_need)"
   printf "begin;\nselect notified from public.requirement_outreach('%s');\nselect pg_sleep(1.5);\ncommit;\n" "$req" \
     | psql_as "$ADMIN_MRO" >"$OUT_A" &
   local pa=$!
@@ -480,18 +501,36 @@ SQL
   if [ "$runs" = 1 ] && [ "$audits" = 1 ] && [ "$notices" = 1 ] && grep -q 'already distributed' "$OUT_B"; then
     pass "the requirement lock ordered both; the second got OUTREACH_ALREADY_SENT and nobody got two notices"
   else fail "distributions=$runs audits=$audits delta notices=$notices"; cat "$OUT_A" "$OUT_B"; fi
-  if [ -z "$saved" ]; then
-    echo "delete from public.technician_notice_preferences where profile_id = '$DELTA';" | psql_owner >/dev/null
-  else
-    psql_owner >/dev/null <<SQL
-update public.technician_notice_preferences p
-set urgent_opt_in = s.urgent_opt_in, aog_opt_in = s.aog_opt_in, mobilization_hours = s.mobilization_hours,
-    time_zone = s.time_zone, quiet_start = s.quiet_start, quiet_end = s.quiet_end
-from json_populate_record(null::public.technician_notice_preferences, '$saved'::json) s
-where p.profile_id = '$DELTA';
-SQL
-  fi
+  outreach_restore
   race_cleanup "$req"
+}
+outreach_flood() {
+  echo "== outreach: four needs of one organization distributed at once — the 3-per-24 h bound still holds"
+  applications_ready || return 0
+  outreach_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"
+  outreach_opt_in
+  local needs=() i
+  for i in 1 2 3 4; do needs+=("$(aog_need)"); done
+  printf "begin;\nselect notified from public.requirement_outreach('%s');\nselect pg_sleep(1.5);\ncommit;\n" "${needs[0]}" \
+    | psql_as "$ADMIN_MRO" >"$OUT_A" &
+  local pids=($!)
+  sleep 0.4
+  for i in 1 2 3; do
+    printf "select notified from public.requirement_outreach('%s');\n" "${needs[$i]}" | psql_as "$MANAGER_MRO" >>"$OUT_B" &
+    pids+=($!)
+  done
+  wait "${pids[@]}" || true
+  local list; list="$(printf "'%s'," "${needs[@]}")"; list="${list%,}"
+  local runs notices
+  runs="$(echo "select count(*) from public.outreach_distributions where requirement_id in ($list);" | psql_owner)"
+  notices="$(echo "select count(*) from public.notifications where kind = 'outreach' and recipient_id = '$DELTA' and requirement_id in ($list);" | psql_owner)"
+  if [ "$runs" = 4 ] && [ "$notices" = 3 ]; then
+    pass "the organization lock serialised the four distributions; Delta got 3 notices, not 4"
+  else fail "distributions=$runs delta notices=$notices"; cat "$OUT_A" "$OUT_B"; fi
+  outreach_restore
+  race_cleanup "${needs[@]}"
 }
 
 case "${1:-all}" in
@@ -502,10 +541,10 @@ case "${1:-all}" in
   applications) applications; pause_vs_confirm; double_booking; apply_vs_edit ;;
   notices) notices_role_loss ;;
   wallet-trash) wallet_trash ;;
-  outreach) outreach_twice ;;
+  outreach) outreach_twice; outreach_flood ;;
   all) e3; e3_simultaneous; idempotency; review; availability
        applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash
-       outreach_twice ;;
+       outreach_twice; outreach_flood ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"

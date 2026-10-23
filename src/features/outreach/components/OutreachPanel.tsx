@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { Panel } from "@/components/ui/Panel";
-import { canDistributeOutreach, isOutreachUrgency } from "@/domain/outreach";
+import { canDistributeOutreach, isOutreachUrgency, OUTREACH_REPORT_MIN } from "@/domain/outreach";
 import type { WorkRequirement } from "@/domain/work-requirement";
 import type { Locale } from "@/i18n/config";
 import { formatDateTime } from "@/i18n/format";
@@ -46,10 +46,15 @@ export async function OutreachPanel({
         <p className="max-w-prose text-sm text-muted">{t("explain")}</p>
         {distribution ? (
           <p className="text-sm font-medium">
-            {t("done", {
-              date: formatDateTime(locale, distribution.distributedAt),
-              count: distribution.notified,
-            })}
+            {distribution.notified === null
+              ? t("doneWithheld", {
+                  date: formatDateTime(locale, distribution.distributedAt),
+                  min: OUTREACH_REPORT_MIN,
+                })
+              : t("done", {
+                  date: formatDateTime(locale, distribution.distributedAt),
+                  count: distribution.notified,
+                })}
           </p>
         ) : (
           !offered && <p className="text-sm text-muted">{t("notOffered")}</p>

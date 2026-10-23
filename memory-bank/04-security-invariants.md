@@ -44,8 +44,8 @@ null without a JWT subject. Proof: `tests/db/wallet-extras.test.ts`.
 **Package outreach (LOCAL `20261024400000`…`400200`), extends S-7/S-9/S-10:** «Distribuir aviso Urgente / AOG» is
 one DEFINER function (`requirement_outreach`): admin/manager from the database (checked before the row lock), the
 audience read inside it (external pool rules: never `private`, never a member, never a blocker), and the organization
-learns **only the count** — no recipient in the answer, in `outreach_distributions` or in the audit metadata; notice
-preferences are owner-only. Proof: `tests/db/outreach.test.ts`, `db-race-check.sh outreach` (two clicks, one run).
+learns **only the count** — no recipient in the answer, in `outreach_distributions` or in the audit metadata, and no
+number below 5 eligible professionals (T-128; residual SECURITY_PRIVACY T43); notice preferences are owner-only. Proof: `tests/db/outreach.test.ts`, `db-race-check.sh outreach` (two clicks, one run).
 
 S-7 also binds the applicant label of organization-side notices (`get_my_notifications`, LOCAL `20261023800000`):
 the same pool rules as `get_requirement_applications`, applied at read time (`tests/db/notices.test.ts`).
