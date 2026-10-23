@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import Link from "next/link";
 import {
   useEffect,
   useMemo,
@@ -45,11 +46,13 @@ import {
 } from "../actions";
 import {
   autosaveKey,
+  clientIssue,
   type ConditionsDraft,
   draftFromRequirement,
   draftPeriod,
   draftToFields,
   emptyDraft,
+  keepSelectableClient,
   mobilizationFor,
   nextDayInputs,
   readAutosave,
@@ -89,6 +92,7 @@ export function RequirementForm({
   qualificationTypes,
   initial,
   copyOf,
+  recruiter,
 }: {
   organizationId: string;
   qualificationTypes: QualificationType[];
@@ -96,17 +100,26 @@ export function RequirementForm({
   initial?: WorkRequirement;
   /** Duplicate (v2-14): a new requirement prefilled with this copy (already moved by `duplicateSchedule`). */
   copyOf?: WorkRequirement;
+  /**
+   * A staffing agency's builder (v1.8 «NECESIDAD PARA CLIENTE», BR-27): the active clients it may publish for;
+   * publishing needs one («Selecciona un cliente.»). Absent for any other organization.
+   */
+  recruiter?: { clients: { id: string; name: string }[] };
 }) {
+  const tRecruiter = useTranslations("recruiter.builder");
   const t = useTranslations("organization.new");
   const tDomain = useTranslations("domain");
   const tRoot = useTranslations();
   const locale = useLocale() as Locale;
   const [draft, setDraft] = useState<RequirementDraft>(() =>
-    initial
-      ? draftFromRequirement(initial)
-      : copyOf
-        ? draftFromRequirement(copyOf)
-        : emptyDraft(t("defaults.arrival")),
+    keepSelectableClient(
+      initial
+        ? draftFromRequirement(initial)
+        : copyOf
+          ? draftFromRequirement(copyOf)
+          : emptyDraft(t("defaults.arrival")),
+      recruiter?.clients,
+    ),
   );
   const [dirty, setDirty] = useState(false);
   const [rawErrors, setErrors] = useState<FieldErrors>({});
@@ -150,12 +163,17 @@ export function RequirementForm({
     if (!restorable) return;
     const base = emptyDraft(t("defaults.arrival"));
     const saved = restorable.draft;
-    update(() => ({
-      ...base,
-      ...saved,
-      nextShift: { ...base.nextShift, ...saved.nextShift },
-      conditions: { ...base.conditions, ...saved.conditions },
-    }));
+    update(() =>
+      keepSelectableClient(
+        {
+          ...base,
+          ...saved,
+          nextShift: { ...base.nextShift, ...saved.nextShift },
+          conditions: { ...base.conditions, ...saved.conditions },
+        },
+        recruiter?.clients,
+      ),
+    );
     setRestoreResolved(true);
   };
 
@@ -232,8 +250,12 @@ export function RequirementForm({
           ...(intent === "draft" ? { intent } : {}),
         });
     setServerError(null);
-    if (!parsed.success) {
-      setErrors(toBuilderErrors(parsed.error));
+    const missingClient = clientIssue(Boolean(recruiter), intent, draft.clientId);
+    if (!parsed.success || missingClient) {
+      setErrors({
+        ...(parsed.success ? {} : toBuilderErrors(parsed.error)),
+        ...(missingClient ? { onBehalfOfClientId: missingClient } : {}),
+      });
       return;
     }
     setErrors({});
@@ -439,6 +461,42 @@ export function RequirementForm({
               onChange={(e) => set("headcount", e.target.value)}
             />
           </Field>
+          {recruiter && (
+            <div className="md:col-span-2">
+              <Field
+                id="onBehalfOfClientId"
+                label={tRecruiter("client")}
+                hint={recruiter.clients.length ? tRecruiter("hint") : tRecruiter("noActive")}
+                error={errors.onBehalfOfClientId}
+              >
+                <select
+                  {...control("onBehalfOfClientId")}
+                  aria-describedby={describedBy(
+                    "onBehalfOfClientId",
+                    errors.onBehalfOfClientId,
+                    recruiter.clients.length ? tRecruiter("hint") : tRecruiter("noActive"),
+                  )}
+                  value={draft.clientId}
+                  onChange={(e) => set("clientId", e.target.value)}
+                >
+                  <option value="">{tRecruiter("choose")}</option>
+                  {recruiter.clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {!recruiter.clients.length && (
+                <Link
+                  href="/app/recruiter#clients"
+                  className="mt-1 inline-flex items-center text-sm font-semibold text-blue hover:underline pointer-coarse:min-h-11"
+                >
+                  {tRecruiter("manage")}
+                </Link>
+              )}
+            </div>
+          )}
           <Field id="urgency" label={t("fields.urgency")} error={errors.urgency}>
             <select
               {...control("urgency")}
@@ -799,6 +857,13 @@ export function RequirementForm({
         <p className="text-lg font-semibold break-words">
           {draft.title.trim() || t("summary.untitled")}
         </p>
+        {recruiter && draft.clientId && (
+          <p>
+            {tRecruiter("summary", {
+              client: recruiter.clients.find((c) => c.id === draft.clientId)?.name ?? "",
+            })}
+          </p>
+        )}
         {draft.location.trim() && (
           <p>
             {draft.country
@@ -835,6 +900,8 @@ export function RequirementForm({
         </p>
         <RequirementPreview requirement={preview} />
         {isDraft && <p className="text-white/85">{t("summary.draftNote")}</p>}
+        {/* v1.8 Company2.jsx:125, shown to the agency only (the client company never sees it: ORG-03 #13). */}
+        {recruiter && <p className="text-white/85">{tRecruiter("note")}</p>}
         <div className="flex flex-col gap-2 border-t border-white/20 pt-3">
           {isDraft && (
             <Button

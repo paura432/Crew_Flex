@@ -21,6 +21,7 @@ import {
 } from "@/domain/work-requirement";
 import { listRequirementApplications } from "@/features/applications/api";
 import { CoverageMeter } from "@/features/requirements/components/CoverageMeter";
+import { canActForClient } from "@/domain/recruiter";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -34,13 +35,15 @@ const expiredNow = (r: Pick<WorkRequirement, "status" | "endsAt">) => isExpired(
 export default async function RequirementDetailPage({
   params,
 }: PageProps<"/app/organization/requirements/[id]">) {
-  const [{ id }, { organization, canManage }, t, tDashboard, tApplications] = await Promise.all([
-    params,
-    requireOrganizationContext(),
-    getTranslations("organization.detail"),
-    getTranslations("organization.dashboard"),
-    getTranslations("applications"),
-  ]);
+  const [{ id }, { organization, canManage }, t, tDashboard, tApplications, tRecruiter] =
+    await Promise.all([
+      params,
+      requireOrganizationContext(),
+      getTranslations("organization.detail"),
+      getTranslations("organization.dashboard"),
+      getTranslations("applications"),
+      getTranslations("recruiter.requirement"),
+    ]);
   const result = await getRequirement(id);
   if (!result.ok) {
     if (result.error.code === "NOT_FOUND" || result.error.code === "VALIDATION_ERROR") notFound();
@@ -110,6 +113,12 @@ export default async function RequirementDetailPage({
             <div className="mt-4 space-y-3 border-t border-line pt-4">
               {requirement.status === "paused" && (
                 <p className="text-sm text-muted">{t("status.pausedNote")}</p>
+              )}
+              {/* BR-27.5: a revoked representation hides the requirement and stops it moving forward. */}
+              {requirement.client && !canActForClient(requirement.client.status) && (
+                <p className="rounded-lg border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
+                  {tRecruiter("revokedNote", { client: requirement.client.name })}
+                </p>
               )}
               {draft && <p className="text-sm text-muted">{t("draft.note")}</p>}
               {/* ORG-05 #10: why «Editar» is gone once the requirement received applications. */}

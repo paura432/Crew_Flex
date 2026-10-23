@@ -72,7 +72,10 @@ export async function RequirementsList({
                 >
                   {r.title}
                 </Link>
-                <div className="text-muted">{r.location}</div>
+                {/* v1.8 «Madrid (MAD) · Operador cliente 1» (ORG-04 #16, BR-27) */}
+                <div className="text-muted">
+                  {r.client ? `${r.location} · ${r.client.name}` : r.location}
+                </div>
               </td>
               <td className="py-3 pr-4 whitespace-nowrap tabular-nums">
                 {formatPeriod(locale, r.startsAt, r.endsAt)}
@@ -116,8 +119,9 @@ export async function RequirementsList({
               {r.title}
             </Link>
             <p className="text-sm text-muted tabular-nums">
-              {r.location} · {formatPeriod(locale, r.startsAt, r.endsAt)} ·{" "}
-              {tDomain(`shift.${r.shift}`)} · {r.headcount} ×
+              {r.location} {r.client && `· ${r.client.name} `}·{" "}
+              {formatPeriod(locale, r.startsAt, r.endsAt)} · {tDomain(`shift.${r.shift}`)} ·{" "}
+              {r.headcount} ×
             </p>
             <QualificationChips qualifications={r.qualifications} />
             {seats && (

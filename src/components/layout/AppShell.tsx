@@ -5,6 +5,7 @@ import { signOutAction } from "@/features/auth/actions";
 import { getUnreadNoticeCount } from "@/features/notices/api";
 import { NoticeBell } from "@/features/notices/components/NoticeBell";
 import { unreadBadge } from "@/features/notices/view";
+import { isStaffingAgency } from "@/domain/recruiter";
 import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/feature-flags";
 import { primaryMembership, type SessionActor } from "@/server/session";
 import { accountSummaryKeys } from "./account-summary";
@@ -30,7 +31,11 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
   const isProfessional = actor.profile.account_type === "professional";
 
   const organizationNav: NavItem[] = [
-    { href: "/app/organization", label: tNav("dashboard") },
+    // A staffing agency's «Resumen» is its «Espacio recruiter» (v1.8 «ESPACIO RECRUITER», BR-27).
+    {
+      href: isStaffingAgency(organization?.type) ? "/app/recruiter" : "/app/organization",
+      label: tNav("dashboard"),
+    },
     { href: "/app/organization/requirements", label: tNav("requirements") },
     // v1.8 company order: Resumen, Nueva necesidad, Ofertas y cobertura, Buscar candidatos,
     // Candidaturas, Ofertas en la red, Organización (v2-05, v2-20); Plantilla is Next's own.
@@ -72,6 +77,8 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
       ? [{ href: "/app/admin/verifications", label: tNav("verifications") }]
       : []),
     { href: "/app/admin/organizations", label: tNav("adminOrganizations") },
+    // Agencies' represented clients awaiting the evidence (D-12 provisional, T-130).
+    { href: "/app/admin/representations", label: tNav("representations") },
     { href: "/app/admin/audit", label: tNav("audit") },
   ];
 

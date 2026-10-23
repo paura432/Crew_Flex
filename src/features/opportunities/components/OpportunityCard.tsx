@@ -36,8 +36,9 @@ async function JobCard({
   chips?: ReactNode;
   children: ReactNode;
 }) {
-  const [t, locale] = await Promise.all([
+  const [t, tRecruiter, locale] = await Promise.all([
     getTranslations("opportunities.card"),
+    getTranslations("recruiter.opportunity"),
     getLocale() as Promise<Locale>,
   ]);
   // v1.8 card «{€/día} / día · {€} / h» (Marketplace.jsx:90), informative (OD-7).
@@ -55,7 +56,11 @@ async function JobCard({
         </Link>
       </h2>
       <p className="text-sm text-muted">
-        {r.organizationName} · {r.location}
+        {/* v1.8 «Publicada por {company} para el cliente {client}» (Marketplace.jsx:36-44, BR-27). */}
+        {r.clientName
+          ? tRecruiter("publishedFor", { organization: r.organizationName, client: r.clientName })
+          : r.organizationName}{" "}
+        · {r.location}
         {r.country && ` · ${formatCountry(locale, r.country)}`}
       </p>
       {rate !== undefined && (

@@ -9,6 +9,7 @@ import { listRequirementApplications } from "@/features/applications/api";
 import { listQualificationTypes } from "@/features/qualifications/api";
 import { getRequirement } from "@/features/requirements/api";
 import { RequirementForm } from "@/features/requirements/components/RequirementForm";
+import { recruiterBuilder } from "@/features/recruiter/builder";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,10 +40,11 @@ export default async function EditRequirementPage({
       />
     );
   }
-  const [result, applications, qualificationTypes] = await Promise.all([
+  const [result, applications, qualificationTypes, recruiter] = await Promise.all([
     getRequirement(id),
     listRequirementApplications(id),
     listQualificationTypes(),
+    recruiterBuilder(organization),
   ]);
   if (!result.ok) {
     if (result.error.code === "NOT_FOUND" || result.error.code === "VALIDATION_ERROR") notFound();
@@ -63,7 +65,7 @@ export default async function EditRequirementPage({
   return (
     <>
       <PageHeader
-        eyebrow={t("eyebrow")}
+        eyebrow={recruiter?.eyebrow ?? t("eyebrow")}
         title={requirement.status === "draft" ? t("draft.complete") : t("edit")}
         description={requirement.title}
       />
@@ -83,6 +85,7 @@ export default async function EditRequirementPage({
           organizationId={organization.id}
           qualificationTypes={qualificationTypes}
           initial={requirement}
+          recruiter={recruiter?.builder}
         />
       )}
     </>

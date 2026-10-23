@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { isStaffingAgency } from "@/domain/recruiter";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { evaluateRequirementMatches } from "@/features/matching/api";
 import { MatchCard } from "@/features/matching/components/MatchCard";
@@ -32,14 +33,16 @@ export default async function RequirementMatchesPage({
   params,
   searchParams,
 }: PageProps<"/app/organization/requirements/[id]/matches">) {
-  const [{ id }, search, { organization, canManage }, t, tDashboard, locale] = await Promise.all([
-    params,
-    searchParams,
-    requireOrganizationContext(),
-    getTranslations("organization.matches"),
-    getTranslations("organization.dashboard"),
-    getLocale(),
-  ]);
+  const [{ id }, search, { organization, canManage }, t, tDashboard, tRecruiter, locale] =
+    await Promise.all([
+      params,
+      searchParams,
+      requireOrganizationContext(),
+      getTranslations("organization.matches"),
+      getTranslations("organization.dashboard"),
+      getTranslations("recruiter"),
+      getLocale(),
+    ]);
   // Same gate as the detail page and the dashboard; the RPC re-checks the role on its own.
   if (!canManage) {
     return (
@@ -77,7 +80,7 @@ export default async function RequirementMatchesPage({
   return (
     <>
       <PageHeader
-        eyebrow={t("eyebrow")}
+        eyebrow={isStaffingAgency(organization.type) ? tRecruiter("networkEyebrow") : t("eyebrow")}
         title={requirement.title}
         description={t("description", {
           location: requirement.location,

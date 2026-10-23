@@ -17,15 +17,26 @@ export async function RequirementFacts({
     Partial<
       Pick<
         WorkRequirement,
-        "status" | "archivedAt" | "country" | "timeZone" | "description" | "shifts" | "conditions"
+        | "status"
+        | "archivedAt"
+        | "country"
+        | "timeZone"
+        | "description"
+        | "shifts"
+        | "conditions"
+        | "client"
       >
-    >;
+    > & {
+      /** An opportunity's represented client (BR-27; the professional's projection carries the name only). */
+      clientName?: string | null;
+    };
   /** Organization view: confirmed seats, for «Cobertura por jornada». */
   confirmedSeats?: number | null;
 }) {
-  const [t, tDomain, locale] = await Promise.all([
+  const [t, tDomain, tRecruiter, locale] = await Promise.all([
     getTranslations("organization.detail.facts"),
     getTranslations("domain"),
+    getTranslations("recruiter.requirement"),
     getLocale() as Promise<Locale>,
   ]);
   const facts: [string, string][] = [
@@ -42,6 +53,9 @@ export async function RequirementFacts({
     [t("headcount"), String(requirement.headcount)],
   ];
   if (requirement.timeZone) facts.push([t("timeZone"), requirement.timeZone]);
+  // Recruiter (v1.8 «Cliente representado», BR-27): who the agency publishes for.
+  const client = requirement.client?.name ?? requirement.clientName;
+  if (client) facts.push([tRecruiter("client"), client]);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">

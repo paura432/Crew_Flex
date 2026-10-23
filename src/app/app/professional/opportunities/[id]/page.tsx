@@ -24,10 +24,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function OpportunityPage({
   params,
 }: PageProps<"/app/professional/opportunities/[id]">) {
-  const [{ id }, actor, t] = await Promise.all([
+  const [{ id }, actor, t, tRecruiter] = await Promise.all([
     params,
     requireSessionActor(),
     getTranslations("opportunities.detail"),
+    getTranslations("recruiter.opportunity"),
   ]);
   if (actor.profile.account_type !== "professional") notFound();
   const result = await getOpportunity(id);
@@ -43,7 +44,14 @@ export default async function OpportunityPage({
       <PageHeader
         eyebrow={t("eyebrow")}
         title={requirement.title}
-        description={t("publishedBy", { organization: requirement.organizationName })}
+        description={
+          requirement.clientName
+            ? tRecruiter("publishedFor", {
+                organization: requirement.organizationName,
+                client: requirement.clientName,
+              })
+            : t("publishedBy", { organization: requirement.organizationName })
+        }
         actions={<ButtonLink href="/app/professional/opportunities">{t("back")}</ButtonLink>}
       />
       <div className="space-y-6">
@@ -63,6 +71,7 @@ export default async function OpportunityPage({
             <ApplyPanel
               requirementId={requirement.id}
               organizationName={requirement.organizationName}
+              clientName={requirement.clientName ?? null}
               blocker={applyBlocker}
               myStatus={myApplication?.status ?? null}
             />

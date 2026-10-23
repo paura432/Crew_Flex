@@ -13,20 +13,26 @@ import { useIdempotencyKey } from "@/lib/idempotency";
 /**
  * «Presentar candidatura» (D-06 ∅ → received). The technician authorises, explicitly and for this
  * requirement only, that its organization sees what the candidate pool shows (v1.8 consent; D-07
- * keeps contact and documents locked). The server re-checks every rule (T-08, Q5, Q6).
+ * keeps contact and documents locked). The server re-checks every rule (T-08, Q5, Q6). For a staffing
+ * agency's requirement the consent names the agency AND its represented client (RECRUITER_MODEL §2,
+ * v1.8 «Alcance y destinatario: {org} para {cliente}», BR-27).
  */
 export function ApplyPanel({
   requirementId,
   organizationName,
+  clientName = null,
   blocker,
   myStatus,
 }: {
   requirementId: string;
   organizationName: string;
+  clientName?: string | null;
   blocker: ApplyBlocker | null;
   myStatus: ApplicationStatus | null;
 }) {
   const t = useTranslations("opportunities.apply");
+  const tRecruiter = useTranslations("recruiter.opportunity");
+  const recipients = { organization: organizationName, client: clientName ?? "" };
   const tDomain = useTranslations("domain");
   const tRoot = useTranslations();
   const [consent, setConsent] = useState(false);
@@ -76,7 +82,11 @@ export function ApplyPanel({
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="rounded-lg border border-line bg-canvas px-4 py-3 text-sm">
-        <p className="font-semibold">{t("sharedTitle", { organization: organizationName })}</p>
+        <p className="font-semibold">
+          {clientName
+            ? tRecruiter("sharedTitle", recipients)
+            : t("sharedTitle", { organization: organizationName })}
+        </p>
         <ul className="mt-1 list-disc space-y-1 pl-5 text-muted">
           <li>{t("sharedQualifications")}</li>
           <li>{t("sharedAvailability")}</li>
@@ -92,7 +102,9 @@ export function ApplyPanel({
           disabled={pending}
           onChange={(e) => setConsent(e.target.checked)}
         />
-        {t("consent", { organization: organizationName })}
+        {clientName
+          ? tRecruiter("consent", recipients)
+          : t("consent", { organization: organizationName })}
       </label>
       <Button type="submit" variant="primary" disabled={pending || !consent} aria-busy={pending}>
         {pending ? t("sending") : t("submit")}

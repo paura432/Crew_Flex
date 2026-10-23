@@ -3,11 +3,13 @@ import type { WorkRequirement } from "@/domain/work-requirement";
 import { createWorkRequirementInput } from "@/lib/validation/work-requirement";
 import {
   autosaveKey,
+  clientIssue,
   draftFromRequirement,
   draftPeriod,
   draftToFields,
   emptyDraft,
   errorField,
+  keepSelectableClient,
   mobilizationFor,
   nextDayInputs,
   readAutosave,
@@ -180,5 +182,29 @@ describe("requirement builder form (v2-09/10/12/14)", () => {
     expect(readAutosave(good)?.draft.country).toBe("ES");
     for (const bad of [null, "", "{", "[]", '{"savedAt":1}', '{"savedAt":"x","draft":{}}'])
       expect(readAutosave(bad)).toBeNull();
+  });
+});
+
+describe("recruiter client in the builder (BR-27.3, v1.8 «Selecciona un cliente.»)", () => {
+  const CLIENT = "44444444-4444-4444-8444-000000000001";
+
+  it("an agency publishes only with a client; a draft may wait; other organizations never need one", () => {
+    expect(clientIssue(true, undefined, "")).toBe("v.requirement.client.select");
+    expect(clientIssue(true, "publish", "")).toBe("v.requirement.client.select");
+    expect(clientIssue(true, "draft", "")).toBeNull();
+    expect(clientIssue(true, "publish", CLIENT)).toBeNull();
+    expect(clientIssue(false, "publish", "")).toBeNull();
+  });
+
+  it("the client reaches the payload; none chosen sends none (full replacement clears it)", () => {
+    expect(draftToFields({ ...emptyDraft(""), clientId: CLIENT }).onBehalfOfClientId).toBe(CLIENT);
+    expect("onBehalfOfClientId" in draftToFields(emptyDraft(""))).toBe(false);
+  });
+
+  it("a saved client comes back on edit unless the builder no longer offers it", () => {
+    const draft = { ...emptyDraft(""), clientId: CLIENT };
+    expect(keepSelectableClient(draft, [{ id: CLIENT }]).clientId).toBe(CLIENT);
+    expect(keepSelectableClient(draft, []).clientId).toBe("");
+    expect(keepSelectableClient(emptyDraft(""), undefined).clientId).toBe("");
   });
 });

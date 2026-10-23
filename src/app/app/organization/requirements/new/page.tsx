@@ -6,6 +6,7 @@ import { duplicateSchedule } from "@/domain/work-requirement";
 import { listQualificationTypes } from "@/features/qualifications/api";
 import { getRequirement } from "@/features/requirements/api";
 import { RequirementForm } from "@/features/requirements/components/RequirementForm";
+import { recruiterBuilder } from "@/features/recruiter/builder";
 import { requireOrganizationContext } from "@/server/session";
 import { z } from "@/lib/validation/zod";
 
@@ -40,9 +41,10 @@ export default async function NewRequirementPage({
     );
   }
   const sourceId = z.uuid().safeParse(from);
-  const [qualificationTypes, source] = await Promise.all([
+  const [qualificationTypes, source, recruiter] = await Promise.all([
     listQualificationTypes(),
     sourceId.success ? getRequirement(sourceId.data) : null,
+    recruiterBuilder(organization),
   ]);
   // Someone else's or a missing requirement is simply not copied (RLS hides it; no oracle either way).
   const original =
@@ -54,7 +56,7 @@ export default async function NewRequirementPage({
   return (
     <>
       <PageHeader
-        eyebrow={organization.name}
+        eyebrow={recruiter?.eyebrow ?? organization.name}
         title={original ? t("copyTitle") : t("title")}
         description={original ? t("copyDescription", { title: original.title }) : t("description")}
       />
@@ -69,6 +71,7 @@ export default async function NewRequirementPage({
           organizationId={organization.id}
           qualificationTypes={qualificationTypes}
           copyOf={copy}
+          recruiter={recruiter?.builder}
         />
       )}
     </>

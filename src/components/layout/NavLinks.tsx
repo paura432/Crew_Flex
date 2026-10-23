@@ -50,6 +50,10 @@ const ICON_PATHS: Record<string, string> = {
     "M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4",
   "/app/admin": DASHBOARD,
   "/app/admin/organizations": "M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4",
+  // PKG recruiter: an agency's «Resumen» (v1.8 home) and the platform admin's «Representaciones» (users)
+  "/app/recruiter": DASHBOARD,
+  "/app/admin/representations":
+    "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   "/app/admin/audit":
     "M9 2h6v4H9zM16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M8 11h8M8 15h8M8 19h5",
 };

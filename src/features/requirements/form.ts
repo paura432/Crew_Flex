@@ -16,6 +16,7 @@ import {
   type Urgency,
   type WorkRequirement,
 } from "@/domain/work-requirement";
+import { clientRequired } from "@/domain/recruiter";
 import { toLocalInput, toUtcIso } from "@/lib/format";
 import type { ZodError } from "@/lib/validation/zod";
 import type { FieldErrors } from "@/lib/validation/errors";
@@ -54,6 +55,8 @@ export interface RequirementDraft {
   qualifications: [string, RequirementLevel][];
   conditions: ConditionsDraft;
   description: string;
+  /** Recruiter (BR-27): the represented client a staffing agency publishes for; "" = none chosen. */
+  clientId: string;
 }
 
 /** v1.8 «Movilización máxima»: 48 h, 12 h for AOG while the value is still one of those two defaults. */
@@ -92,6 +95,7 @@ export function emptyDraft(arrival: string): RequirementDraft {
       ownTools: false,
     },
     description: "",
+    clientId: "",
   };
 }
 
@@ -129,6 +133,7 @@ export function draftFromRequirement(r: WorkRequirement): RequirementDraft {
       ownTools: c.ownTools ?? false,
     },
     description: r.description ?? "",
+    clientId: r.client?.id ?? "",
   };
 }
 
@@ -184,8 +189,31 @@ export function draftToFields(draft: RequirementDraft) {
     ...(draft.description.trim() ? { description: draft.description } : {}),
     ...(draft.shifts.length ? { shifts: sortShifts(draft.shifts) } : {}),
     conditions,
+    ...(draft.clientId ? { onBehalfOfClientId: draft.clientId } : {}),
   };
 }
+
+/**
+ * v1.8 «Selecciona un cliente.» (Company2.jsx:103, BR-27.3): a staffing agency's builder (`recruiter`) publishes only
+ * with a client; a draft may wait. The database refuses it too (CFR01 → «Indica el cliente representado.»).
+ */
+export const clientIssue = (
+  recruiter: boolean,
+  intent: "draft" | "publish" | undefined,
+  clientId: string,
+) =>
+  recruiter && clientRequired("staffing_agency", intent) && !clientId
+    ? "v.requirement.client.select"
+    : null;
+
+/** A saved client the builder no longer offers (revoked, or not active) is not kept: the agency picks again. */
+export const keepSelectableClient = (
+  draft: RequirementDraft,
+  clients: readonly { id: string }[] | undefined,
+): RequirementDraft =>
+  !draft.clientId || clients?.some((c) => c.id === draft.clientId)
+    ? draft
+    : { ...draft, clientId: "" };
 
 /**
  * The shift the «add» inputs describe, or null when they are incomplete. Added as typed: the list's rules

@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 import { updateSession } from "@/lib/supabase/proxy";
+import { isStaffingAgency } from "@/domain/recruiter";
 import { isQualificationReviewEnabled } from "@/server/feature-flags";
+import { actingMembership } from "@/server/membership";
+import type { OrganizationRole, OrganizationType } from "@/types/database";
 
 /**
  * Nonce-based CSP (T18, V1.8 app.mjs:151), **report-only** until a clean violation window has been
@@ -56,17 +59,34 @@ export async function proxy(request: NextRequest) {
   }
   // X-11: platform-only pages answer a real 404. Their own notFound() runs after the /app loading
   // boundary has streamed a 200, with the requested page's title; this decides before the stream.
+  // «Espacio recruiter» (BR-27) also opens for a member whose acting organization is a staffing agency.
   if (userId && /^\/app\/(admin|recruiter)(\/|$)/.test(pathname)) {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("platform_role")
-      .eq("id", userId)
-      .maybeSingle();
+    const recruiter = /^\/app\/recruiter(\/|$)/.test(pathname);
+    const [{ data, error }, memberships] = await Promise.all([
+      supabase.from("profiles").select("platform_role").eq("id", userId).maybeSingle(),
+      recruiter
+        ? supabase
+            .from("organization_members")
+            .select("role, organization:organizations ( id, type )")
+            .eq("profile_id", userId)
+            .overrideTypes<
+              { role: OrganizationRole; organization: { id: string; type: OrganizationType } }[],
+              { merge: false }
+            >()
+        : null,
+    ]);
     // A failed read fails closed (404); logged without the user id.
     if (error) console.warn("proxy: profile read failed for a platform page", error.code);
+    const agencyMember =
+      recruiter &&
+      !memberships?.error &&
+      isStaffingAgency(
+        actingMembership({ memberships: memberships?.data ?? [] })?.organization.type,
+      );
     const allowed =
-      data?.platform_role === "platform_admin" &&
-      (!pathname.startsWith("/app/admin/verifications") || isQualificationReviewEnabled());
+      agencyMember ||
+      (data?.platform_role === "platform_admin" &&
+        (!pathname.startsWith("/app/admin/verifications") || isQualificationReviewEnabled()));
     if (!allowed) {
       // A path no route matches renders the root not-found page with a 404 status (R-X L1: not
       // Next's internal `/_not-found` name).

@@ -23,11 +23,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NetworkOpportunityPage({
   params,
 }: PageProps<"/app/organization/network/[id]">) {
-  const [{ id }, , t, tDetail] = await Promise.all([
+  const [{ id }, , t, tDetail, tRecruiter] = await Promise.all([
     params,
     requireOrganizationContext(),
     getTranslations("hiring.network"),
     getTranslations("opportunities.detail"),
+    getTranslations("recruiter.opportunity"),
   ]);
   const result = await getNetworkOpportunity(id);
   if (!result.ok) {
@@ -40,7 +41,14 @@ export default async function NetworkOpportunityPage({
       <PageHeader
         eyebrow={t("detailEyebrow")}
         title={requirement.title}
-        description={tDetail("publishedBy", { organization: requirement.organizationName })}
+        description={
+          requirement.clientName
+            ? tRecruiter("publishedFor", {
+                organization: requirement.organizationName,
+                client: requirement.clientName,
+              })
+            : tDetail("publishedBy", { organization: requirement.organizationName })
+        }
         actions={<ButtonLink href={NETWORK_PATH}>{t("back")}</ButtonLink>}
       />
       <Panel>
