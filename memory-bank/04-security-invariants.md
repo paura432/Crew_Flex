@@ -38,8 +38,10 @@ bind the professional's own side — `list_opportunities` (and so the detail by 
 (`CFA16` after the state, before the history and eligibility) — through one private predicate
 `app_private.technician_blocks_organization(profile, organization)` (INVOKER, `search_path = ''`, no execute for
 `public`/`anon`/`authenticated`), always evaluated for `auth.uid()` only. Existing applications, pools, counts,
-directory and outreach are unchanged; the pool bodies keep their inline copy (the directory package re-creates them).
-Proof: `tests/db/professional-block.test.ts`.
+directory and outreach are unchanged; the pool bodies (`ranked_external_pool`, `count_viable_candidates`,
+`count_visible_network`) keep their inline copy, each pinned by its own test (the directory package re-creates
+`count_visible_network` and adds a copy in `directory_visible`; the helper's profile parameter is for them — a public
+function passes the caller only). Proof: `tests/db/professional-block.test.ts`.
 
 **Package wallet-extras (LOCAL `20261024200000`), S-10 and the maintenance gate:** `document_maintenance_batch`
 checks `auth.uid()` and the platform role in its body (S-10 holds), but since N-19 its apply mode also **deletes

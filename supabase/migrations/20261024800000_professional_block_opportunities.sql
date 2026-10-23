@@ -15,9 +15,11 @@
 --       a blocked organization is absent, one the professional already applied to is still readable (that
 --       application stays, as every existing one does — the block never touches applications).
 -- One predicate for the three: app_private.technician_blocks_organization(profile, organization), a STABLE private
--- helper with no API grant. The three pool bodies keep their inline `not exists` copy on purpose: the directory
--- package (20261024700000, pending integration) re-creates them, and a later file that rewrote them would silently
--- undo it; they can adopt the helper in the package that next touches them.
+-- helper with no API grant. The pool bodies (ranked_external_pool, count_viable_candidates, count_visible_network)
+-- keep their inline `not exists` copy on purpose: the directory package (20261024700000, pending integration and
+-- still moving) re-creates count_visible_network and adds its own copy in app_private.directory_visible, and a later
+-- file that rewrote any of them would silently undo it; each copy is pinned by its own test, and they can adopt the
+-- helper in the package that next touches them.
 --
 -- NON-DESTRUCTIVE: one private helper and `create or replace` of three existing DEFINER functions with the SAME
 -- signatures, return types and privileges — list_opportunities from its current body (20261024500100),
@@ -29,6 +31,9 @@
 -- ---------------------------------------------------------------------------------------------
 -- 1. The predicate. SECURITY INVOKER: called from the DEFINER bodies below it reads as their owner; a user could
 --    read only their own rows anyway (RLS), and the API roles cannot execute it at all (app_private is not exposed).
+--    Contract for callers (security review 2026-10-23): p_profile_id is the CALLER (auth.uid()) in every public
+--    function — the profile parameter exists so the pool bodies, which iterate over candidates, can adopt it; a
+--    public function must never pass another user's id and expose someone else's blocks.
 -- ---------------------------------------------------------------------------------------------
 create function app_private.technician_blocks_organization(p_profile_id uuid, p_organization_id uuid)
 returns boolean

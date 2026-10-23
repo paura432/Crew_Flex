@@ -280,8 +280,9 @@ any eligibility (no «Compatibles»), its own organization's requirements exclud
 **Never a requirement of an organization the caller blocked** in the passport (BR-18, v2-16, T-160, LOCAL
 `20261024800000`; v1.8 `profile.blocked`): the list, the detail by id (404) and the professional-side rules
 (`get_requirement_profile_rules`) leave them out — the same predicate for professionals and for a member's network
-view — until the professional unblocks it; a requirement already applied to keeps its rules and its application.
-IMPLEMENTED (local).
+view — until the professional unblocks it; a requirement already applied to keeps its rules and its application
+(withdraw and accept keep working, the organization still reads it), but its detail page is a 404 like any other
+blocked need — the card stays in «Mis candidaturas». IMPLEMENTED (local).
 
 **BR-14.1 «Posible en descanso»** (N-17, v1.8 demo `homeModel.js:6-15`, T-17): an opportunity the professional could
 apply to but for availability — `applyBlocker` is `NOT_ELIGIBLE` and every blocker is `NOT_AVAILABLE` or

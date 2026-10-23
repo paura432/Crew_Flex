@@ -315,6 +315,32 @@ describe("professional block (v2-16, 20261024800000)", () => {
         id: before.id,
         replayed: true,
       });
+      // The organization side observes nothing: its admin still reads the application as before…
+      await actAs(tx, SEED.adminMro);
+      expect(
+        (
+          await tx.query<{ application_id: string; status: string }>(
+            "select application_id, status from public.get_requirement_applications($1)",
+            [applied],
+          )
+        ).rows,
+      ).toEqual([{ application_id: before.id, status: "received" }]);
+      // …and the professional still withdraws it (the block never touches an existing application).
+      await actAs(tx, SEED.delta);
+      const version = (
+        await tx.query<{ u: string }>(
+          "select updated_at::text as u from public.applications where id = $1",
+          [before.id],
+        )
+      ).rows[0]!.u;
+      expect(
+        (
+          await tx.query<{ status: string }>(
+            "select status from public.transition_application($1, 'withdrawn', $2::timestamptz, $3)",
+            [before.id, version, randomUUID()],
+          )
+        ).rows,
+      ).toEqual([{ status: "withdrawn" }]);
     });
   });
 

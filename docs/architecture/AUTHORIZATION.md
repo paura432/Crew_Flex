@@ -131,10 +131,15 @@ organization's requirement (so the detail by id is a 404, for professionals and 
 `get_requirement_profile_rules` leaves its published rules out (an applied-to requirement stays readable), and
 `apply_to_requirement` refuses it with `CFA16` `ORGANIZATION_BLOCKED` after the requirement's state and before the
 history and the eligibility. Every function keeps its `auth.uid()` + role check and evaluates the block for the
-caller only — nobody can ask about another professional's blocks. Applications made before the block, the pools,
-counts, directory and outreach audience (which already excluded the professional, T-35) are unchanged; the three pool
-bodies keep their inline predicate until the package that next re-creates them (the directory, `20261024700000`).
-Proof: `tests/db/professional-block.test.ts`.
+caller only — nobody can ask about another professional's blocks (the helper's profile parameter exists for the pool
+bodies, which iterate over candidates; a public function passes `auth.uid()` and nothing else). Applications made
+before the block are untouched on both sides (the professional withdraws or accepts as before; the organization
+still reads them through `get_requirement_applications`), but the opportunity detail page of such a requirement is a
+404 like any other blocked need — the application and its card stay in «Mis candidaturas». The pools, counts,
+directory and outreach audience (which already excluded the professional, T-35) are unchanged; the pool bodies
+(`ranked_external_pool`, `count_viable_candidates`, `count_visible_network`) keep their inline predicate, each pinned
+by its own test (the directory package, `20261024700000`, re-creates `count_visible_network` and adds a copy in
+`directory_visible`), until the package that next touches them. Proof: `tests/db/professional-block.test.ts`.
 
 **Shell and «Red visible» (PKG shell-visual, LOCAL `20261024600000`).** `count_visible_network(org)` (DEFINER) answers
 admins/managers of that organization only (42501 for members, professionals, other organizations, platform admins
