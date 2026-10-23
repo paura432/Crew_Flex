@@ -381,3 +381,20 @@ v1.8 demo «Archivar» / «Papelera» / «Restaurar» (`Professional2.jsx:210-21
 
 Display and storage only: no rule here changes eligibility (qualifications decide, BR-2/BR-3), and nothing is shared
 (D-07/D-10). IMPLEMENTED (local, `20261024200000`).
+
+## BR-27 Recruiter: represented clients (D-12 provisional model; T-130…T-135) — `src/domain/recruiter.ts` / `represented_clients`
+
+A recruiter is an ordinary organization of type `staffing_agency` that represents clients (`docs/product/RECRUITER_MODEL.md`;
+v1.8 `Company2.jsx:103,211`, `Marketplace.jsx:36-44`). No platform or cross-organization role; `platform_role` is untouched.
+
+| Rule    | Statement                                                                                                                                                                                                                                                                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| BR-27.1 | Only a staffing agency represents clients. Its admins/managers add a client (name 2–120, optional contact e-mail; one live client per name, ≤ 200 pending or active) and revoke it; every member of the agency reads the portfolio; nobody else does (platform admins aside).                                                               |
+| BR-27.2 | A client is `pending` when added and becomes `active` only when a platform admin records the evidence of the representation — never for an agency they belong to, belonged to or acted for (the BR-20 rule). Revocation is final; the client is added again as a new one (T-130).                                                           |
+| BR-27.3 | A staffing agency publishes (creates as non-draft, publishes a draft, resumes a paused requirement) only for an **active** client of its own: «Selecciona un cliente.» in the builder, «Indica el cliente representado.» from the server (CFR01); a draft may wait (v1.8). Other organization types never carry a client (T-132).           |
+| BR-27.4 | The client of a requirement is fixed once it received an application (the applicant consented for that agency **and** that client; CFA12, as every field, M05) and when it is closed.                                                                                                                                                       |
+| BR-27.5 | While the representation is not active nobody acts for that client: the requirement is not listed in «Oportunidades» / «Ofertas en la red», refuses new applications and every forward step (shortlist, propose, accept, confirm: CFR02). Withdraw, reject, cancel, finish, pause and close stay possible; nothing moves by itself (T-133). |
+| BR-27.6 | Professionals see the client's **name** next to the agency's — «Publicada por {org} para el cliente {cliente}» on the card and the detail — and the apply consent names both («Autorizo compartir con {org}, para su cliente {cliente}, …»). Never the client's contact (T-134).                                                            |
+
+Every rule is enforced in the database for every path (RPCs and BEFORE triggers, `20261024500000/500100`); the domain
+functions only let the screens say it first (`clientRequired`, `canActForClient`, `activationBlocker`). IMPLEMENTED (local).

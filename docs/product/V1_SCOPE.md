@@ -65,7 +65,10 @@ Current phase: **Foundation + Prototype V0**. Milestone:
 - Urgent / AOG outreach intensity, opt-in priority contact.
 - In-app notices («Avisos internos», v2-18): IMPLEMENTED locally 2026-10-23 (migration `20261023800000`, not
   deployed); the Urgent/AOG distribution notices wait for the outreach item above. E-mail, SMS and push stay OUT.
-- Recruiter workspace and client representation (platform admins see a «Próximamente» placeholder since 2026-10-22, D-13).
+- Recruiter workspace and client representation: IMPLEMENTED (local only, 2026-10-23, PKG recruiter; migrations
+  `20261024500000`/`500100`, `represented-clients`, `/app/recruiter`, BR-27, D-12 provisional model with defaults
+  T-130…T-135; not deployed). The «Ver como» Recruiter view now opens the admin's own agency, if any. Commissions
+  stay OUT; the pack export to the client waits for D-07 P3.
 - Tools hub beyond D-11: fuel sheet (after a technical review of its wording), glossary/ATA, daily challenge, translator; logbook from the prototype. Contractor calculators stay OUT.
   Glossary/ATA («English and acronyms», `/app/tools/knowledge`), translator (`/app/tools/translator`) and the daily
   challenge with its learning medals (`/app/tools/daily`, «Learning achievements» in Mi espacio, BR-16): IMPLEMENTED

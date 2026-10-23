@@ -66,6 +66,11 @@ flag — still no contact, employer, rate, blocks or restriction text.
 ## Privacy by design
 
 - Default visibility `private`. The profile never becomes a public directory automatically.
+- Recruiter (PKG recruiter, LOCAL `20261024500000/500100`, BR-27): an agency's represented clients are its own data
+  (members and platform admins read them; the contact e-mail never reaches professionals or other organizations). A
+  professional who applies to an agency's requirement consents to share with **that agency for that client** — the
+  consent names both, and the client cannot change afterwards; while the representation is not active nobody acts
+  for it. Representations are verified by a platform admin with evidence, never self-declared.
 - Applying is the professional's own act of disclosure (D-06/D-12, LOCAL `20261022130300`): the applicant becomes
   visible to **that** organization for **that** requirement only, under the candidate-pool rules (per-requirement
   pseudonym unless internal, name only for internal or `open`, relevant qualifications and overlapping windows; no

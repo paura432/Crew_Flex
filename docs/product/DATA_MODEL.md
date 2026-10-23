@@ -21,7 +21,9 @@ auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualific
                   │                        └──────────1─* technician_organization_blocks *─1 organizations (owner only)
                   │
                   └─* organization_members *─1 organizations 1─* work_requirements 1─* work_requirement_qualifications *─1 qualification_types
-                                                       └─* organization_reviews (evidence, platform admins only)
+                                                       ├─* organization_reviews (evidence, platform admins only)
+                                                       └─* represented_clients (staffing agency) 1─* represented_client_reviews
+                                                              0..1 ─ work_requirements.on_behalf_of_client_id (recruiter, LOCAL 20261024500100)
                                                                                  │
 technician_profiles 1─* applications *──────────────────────────────────────────┘  (one per technician × requirement, except withdrawn)
                           ├─* application_proposals (immutable versions, R-08)
@@ -229,6 +231,34 @@ until partial coverage (v2-30) needs them (T-60). Drafts (`draft`, created by th
 qualifications; BR-1.4 still applies when they are published. The opportunity projection (`list_opportunities`,
 `app_private.requirement_cards`) and therefore every proposal's `terms` carry `country`, `timeZone`, `description`,
 `shifts`, `conditions` — still no ids of people or organizations, never `archived_at`.
+
+**Requirement on behalf of a client (PKG recruiter, LOCAL `20261024500100`, BR-27, T-132…T-134).** One more nullable
+column, `on_behalf_of_client_id` → `represented_clients` (NULL = no client, every non-agency requirement). No INSERT or
+UPDATE grant: the create overload with `p_on_behalf_of_client_id` (INVOKER) hands it to its insert through the
+transaction-local setting `crewflex.requirement_client` (the `crewflex.system_status` pattern; API clients cannot call
+`set_config`), the edit overload (DEFINER) writes it. BEFORE trigger `work_requirements_with_client`
+(`guard_requirement_client`, every path): the client is an `active` representation of the requirement's organization
+(22023 / `CFR02`); a staffing agency's insert as non-draft, draft → open, paused → open or client change leaves a
+client (`CFR01`); the client is frozen once applied to (`CFA12`) and when closed (55000). Changes audited
+`requirement.client_changed {client_id, previous_client_id}` (agency as organization). BEFORE trigger
+`applications_client_active` (`guard_application_client`) refuses an application and every forward step (shortlisted,
+proposed, accepted, confirmed) while the representation is not active (`CFR02`). `list_opportunities` returns
+`client_name` (active representations only; the others are not listed); `app_private.requirement_cards` is unchanged.
+
+### `represented_clients` (`20261024500000`, LOCAL ONLY — recruiter, D-12 provisional, BR-27)
+
+`id`, `agency_id` → `organizations` (cascade), `name` (2–120, trimmed), `contact_email` (nullable, lower-case),
+`status` `representation_status` (`pending` · `active` · `revoked`, with the matching `activated_at` / `revoked_at`
+CHECK), `created_by` → `profiles` (set null), `created_at`, `updated_at`. One live (pending/active) client per name
+per agency (unique index on `lower(name)` where not revoked); ≤ 200 live per agency (in the add RPC). RLS select:
+members of the agency, platform admins; no write grant — `add_represented_client` (admin/manager of a staffing
+agency), `revoke_represented_client` (admin/manager, final), `activate_represented_client` (platform admin with
+evidence, never their own agency) are the only writers.
+
+### `represented_client_reviews` (`20261024500000`, LOCAL ONLY)
+
+`id`, `client_id` → `represented_clients` (cascade), `reviewed_by` → `profiles` (set null), `note` (1–2000, the
+evidence), `created_at`. Platform admins only (as `organization_reviews`); written by `activate_represented_client`.
 
 ### `work_requirement_qualifications`
 
@@ -478,6 +508,9 @@ block's Candidate Pack (D-07, not implemented) will use `pack.contact_viewed` / 
 | `invitation_status(code, email)` · `invitation_signup_required()` (`20261023400000`, local only)                                                                                         | DEFINER, stable | **Anon-callable on purpose** (the sign-up page is public): a status (`valid` · `other_email` · `invalid` · `off`) and the account type, or one boolean. Never an address or an id; codes carry 244 random bits.                                                                                                                                                                                           |
 | `close_my_account(request_id)` (`20261023400100`, local only)                                                                                                                            | DEFINER         | The caller only (no argument names the account): own document rows, then the Auth user (rules above); returns the deleted documents' storage paths.                                                                                                                                                                                                                                                       |
 | `before_account_deleted()` · `audit_account_closed()` · `guard_application_technician_removed()` (`20261023400100`, local only)                                                          | DEFINER trigger | Closure rules for every deletion path · `account.closed` · no application in progress loses its technician.                                                                                                                                                                                                                                                                                               |
+| `add_represented_client(org, name, email, req)` · `revoke_represented_client(id, req)` · `activate_represented_client(id, note, req)` (`20261024500000`, local)                          | DEFINER         | Recruiter portfolio: add (admin/manager of a staffing agency, pending), revoke (final), activate (platform admin with evidence, never own agency); audited `client.added` / `client.revoked` / `client.activated`                                                                                                                                                                                         |
+| `create_work_requirement(…, on_behalf_of_client_id)` + `…_idempotent` · `update_work_requirement(…, on_behalf_of_client_id)` (`20261024500100`, local)                                   | INVOKER/DEFINER | The builder overloads with the represented client; they call the `20261023600100` overloads (rules unchanged)                                                                                                                                                                                                                                                                                             |
+| `guard_requirement_client()` · `audit_requirement_client()` · `guard_application_client()` (`20261024500100`, local)                                                                     | DEFINER         | Triggers: the client rules (BR-27.3–27.5) on every path, `requirement.client_changed` audit                                                                                                                                                                                                                                                                                                               |
 | `set_updated_at()`                                                                                                                                                                       | trigger         | Reusable `updated_at` maintenance.                                                                                                                                                                                                                                                                                                                                                                        |
 
 ### `app_private` schema (not exposed by PostgREST)

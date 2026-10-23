@@ -20,8 +20,9 @@ database, never from the client.
 
 `profiles.account_type` only chooses the default workspace route. It grants nothing. Platform admins start at
 `/app/admin` and get a «Ver como» switcher (D-13: Técnico / Empresa / Recruiter / Administración) that only links
-to their own workspaces: it grants nothing and opens no new read path; `/app/admin` and `/app/recruiter` are 404
-for anyone else.
+to their own workspaces: it grants nothing and opens no new read path; `/app/admin` is 404 for anyone else and
+`/app/recruiter` for anyone who is neither a platform admin nor a member whose acting organization is a staffing agency
+(PKG recruiter; a platform admin without one sees a note).
 
 ## Permission matrix (RLS)
 
@@ -45,6 +46,8 @@ for anyone else.
 | `technician_type_ratings` (LOCAL, `20261023100100`)   | own · admin/manager of technician's org · platform admin (like the qualifications)                                                                | – (`save_professional_passport` only)                                                         | – (RPC only)                                                                                                                                                                                                                                                                                                                                  | – (RPC only)                                                                            |
 | `technician_private_details` (LOCAL)                  | **own only** (not the organization, not platform admins)                                                                                          | – (RPC only)                                                                                  | – (RPC only)                                                                                                                                                                                                                                                                                                                                  | – (cascade)                                                                             |
 | `technician_organization_blocks` (LOCAL)              | **own only**                                                                                                                                      | – (RPC only)                                                                                  | –                                                                                                                                                                                                                                                                                                                                             | – (RPC only)                                                                            |
+| `represented_clients` (LOCAL, recruiter)              | members of the agency · platform admin                                                                                                            | – (`add_represented_client`: admin/manager of a `staffing_agency`)                            | – (`revoke_represented_client`: the agency's admin/manager; `activate_represented_client`: platform admin, never their own agency)                                                                                                                                                                                                            | – (cascades with the agency)                                                            |
+| `represented_client_reviews` (LOCAL, recruiter)       | platform admin                                                                                                                                    | – (`activate_represented_client` only)                                                        | –                                                                                                                                                                                                                                                                                                                                             | – (cascade)                                                                             |
 | `notifications` (LOCAL)                               | – (no grant). The recipient's own, through `get_my_notifications` only (access and retention re-checked)                                          | – (DEFINER triggers of the event only)                                                        | – (no grant). Own `read_at` through `mark_notifications_read` (DEFINER, `auth.uid()` in the body)                                                                                                                                                                                                                                             | – (cascades, retention, cap, role loss)                                                 |
 
 | `app_private.feature_flags` | – (no grant; owner only) | – | – | – |
@@ -146,6 +149,21 @@ included. `count_viable_candidates` (DEFINER) answers admins/managers of the giv
 internal members plus the external pool's candidates (`anonymous`/`open`, `verified_orgs` for a reviewed
 organization, never `private` (S-7) nor a professional who blocked it) passing the hard filters — no identities: the same people matching already shows pseudonymously for a saved requirement. Professionals see the new terms
 only through the fixed projection of `list_opportunities` and the proposal `terms` (no ids, no `archived_at`).
+
+**Recruiter (PKG recruiter, LOCAL `20261024500000/500100`, D-12 provisional, BR-27, T-130…T-135).** An agency is an
+ordinary organization of type `staffing_agency`: its members keep exactly their organization role, there is no
+cross-organization or platform role. Its portfolio (`represented_clients`) is read by its members and platform admins
+only; nobody writes it directly: admins/managers of the agency add (`pending`) and revoke (final) through DEFINER RPCs
+that check the role **and** the organization type in the body (missing and not allowed are the same 42501); only a
+platform admin activates one, with evidence kept apart (`represented_client_reviews`, platform admins only), never for
+an agency they belong to, belonged to or acted for (the BR-20 rule), audited without the agency's id (T-52). The
+requirement's `on_behalf_of_client_id` has no column grant: the create/edit RPC overloads write it and BEFORE triggers
+check, for every path, that it is an **active** representation of the requirement's own organization, that an agency
+publishes or resumes only with one (CFR01/CFR02), and that it is frozen once applied to; while a representation is not
+active no application and no forward step is accepted (CFR02 on `applications`). Professionals and other
+organizations learn the client's **name** only, through `list_opportunities` (`client_name`, active representations
+only) — never its contact e-mail or id; the consent names agency and client. Another organization's commission is
+never shown (OUT).
 
 ## Edge Function checklist
 
