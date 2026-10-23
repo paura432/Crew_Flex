@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-23 CEST. Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-23 CEST (paused by the owner: «para por ahora»). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -10,12 +10,14 @@ at extra-high effort. Branch `feat/v18-html-parity` (local, NOT pushed): X-01…
 **diff v2** (`C:\Users\perfo\Downloads\CrewFlex_DIFF_HTML_v18_vs_Next_2026-10-22-v2\`, 1 587 rows, parity 56,1 %) and
 its implementation packages, one worktree each, merged one by one with the full gate (table and gate numbers in
 `15-autonomous-migration-backlog.md` §6.3):
-MERGED learning, calendar, logbook, passport, admin-org, notices, requirement-builder, account, wallet-extras
-(+N-26), hiring-polish, pack-view, matching-v18, outreach · IN_PROGRESS recruiter, shell-visual, directory.
-Last full gate (HEAD `258aeb4`, db reset in file order): `pnpm check` 0 (1050 Vitest, 181 Deno), E2E 48/48,
-`db-race-check.sh all` 17/17; ui-smoke 218 PASS at `258aeb4` with 4 smoke-side fixes (`b32dc8c`), re-run pending.
+MERGED (15) learning, calendar, logbook, passport, admin-org, notices, requirement-builder, account, wallet-extras
+(+N-26), hiring-polish, pack-view, matching-v18, outreach, shell-visual, recruiter · directory: agent STOPPED at the
+owner's pause with 4 commits in worktree `.claude/worktrees/agent-a233810a77af48968` (branch
+`worktree-agent-a233810a77af48968`, tip `d20d278`, based on `6df3bca`, gates NOT finished, not reviewed, not merged).
+Last full gate (HEAD `c093523`, db reset in file order): `pnpm check` 0 (1123 Vitest, 188 Deno), E2E 48/48,
+`db-race-check.sh all` 19/19, ui-smoke **259/259** on `next build && next start`.
 Real defects found by the smoke this loop and fixed: sign-up enumeration (`4ff9852`), archive notice lost on
-re-render (`51d1292`). Local DB: all 53 migrations applied (reset in file order after every package whose files sort
+re-render (`51d1292`). Local DB: all 57 migrations applied (reset in file order after every package whose files sort
 before an applied one); after ANY reset: pipe the flag inserts to `db-owner-sql.sh` (STDIN!) and restart
 `functions serve` (wait for the NEW edge_runtime container). Local Auth now has e-mail confirmations ON + 12 h timebox
 (account package): an auth config change needs `sb-local.sh stop` + `start`.
@@ -50,7 +52,8 @@ Pushes/deploys (hotfix X-01 included), Next upgrade go/no-go, D-07 P3 + scanner,
 
 ## Next step (one)
 
-Read smoke 19; integrate recruiter, shell-visual and directory with the same procedure (pick → file-order reset +
-flags + types → functions serve → check/E2E/race → smoke); then the final pass: whole-branch adversarial security
-review (Fable xhigh), `10-master-matrix.md` rows, `ROLLOUT_PLAN_V18_LOOP.md` with every migration/function,
-`01-current-state.md`, blockers report to the owner. Never push or deploy.
+Resume the directory package: in its worktree run the gates (`pnpm check`, build), an independent security review
+(Fable xhigh; focus: requirement-less search as an oracle, pseudonym linkability), then integrate with the usual
+procedure (rebase onto the tip → file-order db reset + flags (STDIN) + types → `functions serve` → check/E2E/race →
+smoke). Then the final pass: whole-branch adversarial security review, `10-master-matrix.md` rows,
+`ROLLOUT_PLAN_V18_LOOP.md` with every migration/function, `01-current-state.md`, blockers report. Never push or deploy.
