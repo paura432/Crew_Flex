@@ -527,6 +527,46 @@ v1.8 `Company2.jsx:103,211`, `Marketplace.jsx:36-44`). No platform or cross-orga
 Every rule is enforced in the database for every path (RPCs and BEFORE triggers, `20261024500000/500100`); the domain
 functions only let the screens say it first (`clientRequired`, `canActForClient`, `activationBlocker`). IMPLEMENTED (local).
 
+## BR-28 Candidate directory «Buscar candidatos» and employer block (PKG directory, v2-22 / v2-23 / v2-16; T-150…T-159) — `search_candidate_directory` / `src/domain/directory.ts`
+
+- **Who searches:** an admin or manager of the organization (role from the database; a plain member sees the
+  managers-only notice). The menu entry «Buscar candidatos» follows «Necesidades» (v1.8 company order, SH-03 #19); the mobile dock shows «Candidatos» (SH-05 #2) and the organization home offers «Red profesional» → the directory (ORG-01 #26).
+  IMPLEMENTED (local).
+- **Whom it finds (S-7 without a requirement):** the organization's external pool rules — `anonymous`/`open`,
+  `verified_orgs` only for a reviewed organization (BR-8), never a member, never a professional who blocked it (BR-18,
+  N-08) — minus the professionals the organization blocked (below). Never `private`. It is the per-need pool without
+  the «≥ 1 required qualification» predicate (there is no requirement); `tests/db/directory.test.ts` proves the sets
+  agree on randomized profiles, and that the directory with a need's rules and period equals the pool's hard-eligible set.
+- **What it shows (T-151, T-153):** a per-organization pseudonym «Profesional anónimo CF-…» (stable for the
+  organization, different from any other organization's and from the per-need refs), the name only when `open`, base
+  («Base no compartida»), declared years, the passport card (main category, categories, aircraft, English, work permits
+  as country names, «Restricciones declaradas»); initials avatar («CF» while anonymous); `MedalStrip` = declared
+  years, main category, first aircraft, «+N» for the rest (declarations only; no learning medals, T-156). Never
+  contact, employer, rate, blocks, documents, qualifications, engines, capabilities, type ratings or restriction text.
+  20 per page («{p} / {P} · 20 perfiles por página»), declared experience first, then the pseudonym.
+- **Filters (T-154), the seven v1.8 controls:** «Base habitual» (substring, case-insensitive), «Categoría»,
+  «Aeronave», «Inglés mínimo» (CEFR order; no level declared never meets a minimum), «Experiencia mínima (años)»
+  (0–60; «Introduce un mínimo de años válido (0 a 60).»), «Permiso de trabajo» (BR-3.7), «Disponibilidad desde/hasta»
+  (every day of the window published as available — BR-4 as a planned need, `aog_only` is not availability —; both
+  dates, from today, at most 365 days: «Completa ambas fechas con un intervalo válido de hasta un año.»). An invalid
+  filter shows its error and no list. Category, aircraft, permit and years run through `app_private.profile_rules_ok`
+  (BR-3.8, BR-3.9, BR-3.7, BR-3.12); the window through `app_private.hard_eligibility_for`. `isValidDirectoryWindow`,
+  the schema `directorySearchQuery`; the database re-checks every bound.
+- **View and dialog (T-152):** «Compacta» / «Ampliada» with `aria-pressed`, remembered per browser
+  (`crewflex-directory-view`); «Abrir perfil» opens the `<dialog>` «Perfil profesional» (Escape and «Cerrar» return
+  the focus) with the same data and «Identidad según visibilidad. Contacto y archivos se comparten desde la candidatura
+  con los consentimientos correspondientes.»
+- **«Evaluar para la oferta» (T-155):** a published, current need → its «Profesionales elegibles»; the directory itself
+  evaluates nobody.
+- **Throttle (T-157):** at most 60 directory calls (searches and block/unblock) per organization per minute («Tu organización ha hecho demasiadas búsquedas
+  en el último minuto. Espera un momento e inténtalo de nuevo.», `DIRECTORY_CONFLICTS`, SQLSTATE CFD01).
+- **Employer block (v2-16, T-158):** «Bloquear» on a card (admin/manager) hides the professional from the
+  organization's directory, its per-need pools and counts and its outreach audience; «Ver perfiles
+  bloqueados» lists them with «Desbloquear». Resolved by the pseudonym — a private profile, a member or a blocker never
+  resolves («Este perfil ya no está disponible para tu organización.», CFD02) —, idempotent, audited without the
+  profile id. The professional is never told: their opportunities and applications are unchanged (symmetric with
+  T-35). IMPLEMENTED (local). Known consequence (security review 2026-10-23, Medium-1, owner decision pending): the block removes exactly one chosen professional from the organization's own pools, so blocking and unblocking lets that organization link a directory ref to the same person's per-requirement refs (the pool row that disappears; the applicant row keeps listing them) — the refs themselves stay unlinkable and the linkage costs two audited acts per need; pinned in `tests/db/directory.test.ts`.
+
 ## BR-29 Profile medals (N-15, T-143) — `badges()` (`src/domain/badges.ts`)
 
 v1.8 `badges()` (`src/features/progress.js:3-11`) over the professional's **own declarations** (BR-18), shown only

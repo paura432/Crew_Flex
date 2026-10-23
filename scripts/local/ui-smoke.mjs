@@ -3786,6 +3786,176 @@ await asSeedUser("delta@crewflex.test", "notifications", { method: "PATCH", body
   await svAnon.close();
 }
 
+// PKG directory (v2-22 / v2-23 «Buscar candidatos», v2-16 employer block; migration 20261024700000, BR-28,
+// T-150…T-159): the menu entry in the v1.8 order, the free directory and its count, a v1.8 filter error, a
+// narrowing filter, Compact/Expanded (aria-pressed, remembered across a reload), the «Professional profile»
+// dialog (Escape returns the focus), blocking Echo (gone from the directory, listed under blocked, back after
+// unblocking) and a plain member's managers-only notice. Setup/restore through the local API: Echo's ref is
+// read first and the block removed at the end whatever happened in between.
+const dirPage = `${BASE}/app/organization/candidates`;
+const dirRows = await asSeedUser("admin.mro@crewflex.test", "candidate-directory", {
+  query: { organizationId: mroOrg.id, base: "Madrid" },
+});
+const echoRef = dirRows.data.candidates.find((c) => c.displayName === "Technician Echo")?.ref;
+ok(
+  "PKG directory 0: the local API lists Echo (open, Madrid) with a CF- ref",
+  /^CF-[0-9A-F]{10}$/.test(echoRef ?? ""),
+  echoRef ?? "",
+);
+await login("admin.mro@crewflex.test");
+await page.goto(dirPage);
+await page.waitForLoadState("networkidle");
+const dirNavItems = await page
+  .locator("nav a")
+  .evaluateAll((as) => as.map((a) => a.textContent.trim()));
+ok(
+  "PKG directory a: «Find candidates» follows «Requirements» in the organization menu (v1.8 order)",
+  dirNavItems.indexOf("Find candidates") === dirNavItems.indexOf("Requirements") + 1,
+  dirNavItems.slice(0, 6).join(" | "),
+);
+const dirSummaryText = async () =>
+  page
+    .getByRole("status")
+    .filter({ hasText: /profiles? · page/ })
+    .first()
+    .innerText();
+const dirTotal = Number(/^(\d+) profiles?/.exec(await dirSummaryText())?.[1]);
+ok(
+  "PKG directory b: «{n} profiles · page 1 of P» counts the visible network",
+  Number.isInteger(dirTotal) && dirTotal > 3 && /page 1 of \d+$/.test(await dirSummaryText()),
+  await dirSummaryText(),
+);
+const dirMain = await page.locator("main").innerText();
+ok(
+  "PKG directory c: anonymous profiles show «Anonymous professional CF-…», open ones their name, never Hotel (private) nor a member",
+  /Anonymous professional CF-[0-9A-F]{10}/.test(dirMain) &&
+    /Technician Echo/.test(dirMain) &&
+    !/Technician Hotel/.test(dirMain) &&
+    !/Technician Alpha/.test(dirMain),
+  "",
+);
+await page.locator("summary", { hasText: "More filters" }).click();
+await page.getByLabel("Available from").fill("2027-01-10");
+await page.getByRole("button", { name: "Apply filters" }).click();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG directory d: half a window shows v1.8's «Fill in both dates…» and no list",
+  (await page
+    .getByRole("status")
+    .filter({ hasText: "Fill in both dates with a valid range of up to one year." })
+    .count()) === 1 && (await page.locator("article").count()) === 0,
+  "",
+);
+await page.getByLabel("Available from").fill("");
+await page.getByLabel("Minimum English").selectOption("C1");
+await page.getByRole("button", { name: "Apply filters" }).click();
+await page.waitForLoadState("networkidle");
+const dirC1 = Number(/^(\d+) profiles?/.exec(await dirSummaryText())?.[1]);
+const dirC1Text = await page.locator("main").innerText();
+ok(
+  "PKG directory e: «Minimum English C1» narrows the list (Delta C1 stays, Echo B1 leaves)",
+  dirC1 < dirTotal && /Barcelona \(BCN\)/.test(dirC1Text) && !/Technician Echo/.test(dirC1Text),
+  `${dirC1} < ${dirTotal}`,
+);
+await page.goto(dirPage);
+await page.waitForLoadState("networkidle");
+const compactBtn = page.getByRole("button", { name: "Compact" });
+const expandedBtn = page.getByRole("button", { name: "Expanded" });
+const firstCard = page.locator("article").first();
+ok(
+  "PKG directory f: «Compact» is pressed by default and the expanded block is hidden",
+  (await compactBtn.getAttribute("aria-pressed")) === "true" &&
+    (await expandedBtn.getAttribute("aria-pressed")) === "false" &&
+    !(await firstCard.getByText(/^Experience:/).isVisible()),
+  "",
+);
+await expandedBtn.click();
+await page.reload();
+await page.waitForLoadState("networkidle");
+const expandedText = await page.locator("article").first().innerText();
+ok(
+  "PKG directory g: «Expanded» shows experience, English, aircraft and work countries, and is remembered after a reload",
+  (await expandedBtn.getAttribute("aria-pressed")) === "true" &&
+    /Experience:/.test(expandedText) &&
+    /English/.test(expandedText) &&
+    /Aircraft:/.test(expandedText) &&
+    /Work countries:/.test(expandedText),
+  "",
+);
+await compactBtn.click();
+const echoCard = page.locator("article", { hasText: "Technician Echo" });
+await echoCard.getByRole("button", { name: "Open profile" }).click();
+const profileDialog = page.getByRole("dialog", { name: "Professional profile" });
+const profileText = await profileDialog.innerText();
+ok(
+  "PKG directory h: «Professional profile» opens with the badges note and the privacy note, no e-mail or phone",
+  (await profileDialog.isVisible()) &&
+    /Profile summary; it grants no sign-off authorisation/.test(profileText) &&
+    /Identity follows visibility/.test(profileText) &&
+    /Learning medals are private/.test(profileText) &&
+    !/@|\+34/.test(profileText),
+  "",
+);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(200);
+ok(
+  "PKG directory i: Escape closes the dialog and the focus returns to «Open profile»",
+  !(await profileDialog.isVisible()) &&
+    (await page.evaluate(() => document.activeElement?.textContent?.trim())) === "Open profile",
+  "",
+);
+await echoCard.getByRole("button", { name: "Block" }).click();
+await page.waitForLoadState("networkidle");
+await page.waitForTimeout(500);
+ok(
+  "PKG directory j: a blocked profile leaves the directory and the count drops by one",
+  (await page.locator("article", { hasText: "Technician Echo" }).count()) === 0 &&
+    Number(/^(\d+) profiles?/.exec(await dirSummaryText())?.[1]) === dirTotal - 1,
+  await dirSummaryText(),
+);
+await page.getByRole("link", { name: "View blocked profiles" }).click();
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG directory k: «Profiles blocked by your organization» lists Echo with «Unblock»",
+  (await page.getByRole("heading", { name: "Profiles blocked by your organization" }).count()) ===
+    1 &&
+    (await page
+      .locator("article", { hasText: "Technician Echo" })
+      .getByRole("button", { name: "Unblock" })
+      .count()) === 1,
+  "",
+);
+await page
+  .locator("article", { hasText: "Technician Echo" })
+  .getByRole("button", { name: "Unblock" })
+  .click();
+await page.waitForLoadState("networkidle");
+await page.goto(dirPage);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG directory l: unblocking brings Echo back to the directory",
+  (await page.locator("article", { hasText: "Technician Echo" }).count()) === 1,
+  "",
+);
+await responsiveShots("directory");
+await logout();
+await login("charlie@crewflex.test");
+await page.goto(dirPage);
+await page.waitForLoadState("networkidle");
+ok(
+  "PKG directory m: a plain member sees the managers-only notice and no directory",
+  /available for managers and administrators/i.test(await page.locator("main").innerText()) &&
+    (await page.locator("article").count()) === 0,
+  "",
+);
+await logout();
+if (echoRef) {
+  await asSeedUser("admin.mro@crewflex.test", "candidate-directory", {
+    method: "PUT",
+    body: { organizationId: mroOrg.id, candidateRef: echoRef, blocked: false },
+  });
+}
+
 // 18 (batch 10, V1.8 v12.css min-height 44): on a touch screen every control of the main flows
 // is at least 44 px tall (desktop keeps its density).
 const touch = await browser.newContext({
