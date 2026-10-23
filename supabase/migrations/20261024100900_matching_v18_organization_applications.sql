@@ -6,7 +6,8 @@
 -- evaluate those applicants without the rules.
 -- Named after hiring-polish's file so it runs after it (a later definition of the same function); the
 -- package's own migrations are 20261023900000…200.
--- NON-DESTRUCTIVE: drop + create of get_organization_applications with the same arguments and body, the
+-- NON-DESTRUCTIVE: drop + create of get_organization_applications with the same arguments and body (as
+-- amended by hiring-polish's security review: no reason for a closed account), the
 -- return type grows by seven columns (PostgreSQL only allows that through drop + create); same grants
 -- re-applied in this transaction. No table, column, policy or data changes.
 
@@ -74,7 +75,9 @@ begin
     from (select distinct p.requirement_id from page p) r
     cross join lateral public.get_requirement_applications(r.requirement_id) ra
   )
-  select a.id, a.requirement_id, a.status, a.created_at, a.updated_at, a.reason,
+  select a.id, a.requirement_id, a.status, a.created_at, a.updated_at,
+         -- hiring-polish review LOW-1: the reject/cancel text does not outlive a closed account here.
+         case when s.application_id is null then null else a.reason end,
          app_private.proposal_json(a.current_proposal_id), a.accepted_proposal_id,
          app_private.application_history(a.id),
          s.candidate_ref, s.candidate_pool, s.candidate_display_name, s.candidate_base_location,
