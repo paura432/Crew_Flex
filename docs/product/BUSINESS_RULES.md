@@ -489,11 +489,13 @@ expediente» on the requirement's applications, the organization's «Candidatura
   within the need's `maxMobilizationHours` when stated), are outside their quiet hours in their own time zone now,
   have no application to that need other than a withdrawn one, are eligible
   (`app_private.hard_eligibility`: hard qualifications valid for the period, availability covering it) and were not
-  notified for it before — nor more than 3 times by that organization in the last 24 h (flood bound, T-126).
+  notified for it before. Of those, whoever already got 3 outreach notices from that organization in the last
+  24 h is not sent another one (delivery bound, T-126); the count still includes them.
 - **What each recipient gets:** one in-app notice «{Urgente|AOG}: {título}» · «{organización} · Consulta las
   condiciones y decide si quieres presentar candidatura.», «Nuevo» until opened, «Ver oportunidad» → the opportunity;
   listed only while the need is published and current. E-mail, SMS and push: OUT.
 - **What the organization learns:** the count only — «{count, plural, one {# aviso interno creado} other {# avisos
   internos creados}}. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.», then
   «Distribuida el {fecha}: {n} avisos internos.» on the need — and **no number** when fewer than 5 professionals of
-  its external pool are eligible for the need. Never who received it nor why someone did not (ORG-06 #4, #5); the audit row `requirement.outreach_distributed` carries the count and the urgency. IMPLEMENTED (local).
+  its external pool are eligible for the need and not already its applicants (the organization sees those). Never
+  who received it nor why someone did not (ORG-06 #4, #5); the audit row `requirement.outreach_distributed` carries the count and the urgency. IMPLEMENTED (local).

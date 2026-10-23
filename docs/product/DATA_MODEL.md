@@ -368,8 +368,8 @@ a technician who closed the account (technician → NULL) are neither listed nor
 ### `outreach_distributions` (`20261024400200`, LOCAL ONLY — PKG outreach v2-17, T-125…T-128)
 
 PK `requirement_id` → `work_requirements` on delete cascade (one distribution per need); `urgency` (`urgent` | `aog`,
-the declared one at distribution time); `notified_count` ≥ 0, **null** when fewer than 5 professionals of the external
-pool were eligible (T-128: the number is then neither shown nor stored); `created_at` (also counted for the limit of
+the declared one at distribution time); `notified_count` ≥ 0 (who the rules reach, before the 3-per-24 h delivery bound), **null** when fewer than
+5 professionals of the external pool were eligible and not applicants (T-128: the number is then neither shown nor stored); `created_at` (also counted for the limit of
 10 distributions per organization per 24 h). **No recipient and no actor** (the audit
 row `requirement.outreach_distributed` has the actor, the count and the urgency). RLS select: admin/manager of the
 requirement's organization · platform admin; no write grant — `requirement_outreach()` is its only writer.

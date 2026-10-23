@@ -185,7 +185,7 @@ the organization's external candidate pool (`ranked_external_pool`: never `priva
 reviewed organization, never members, never someone who blocked it), the preferences, restrictions, applications,
 assignments and `hard_eligibility` — and the organization receives **only the count** (the answer,
 `outreach_distributions`, the audit row's `notified`), and no number at all when fewer than 5 professionals of its
-external pool are eligible (T-128); distributions of one organization are serialised and limited to 10 per 24 h. No function returns who was notified or why someone was not.
+external pool are eligible and not its applicants (T-128; the count is taken before the per-person delivery bound); distributions of one organization are serialised and limited to 10 per 24 h. No function returns who was notified or why someone was not.
 Each recipient reads their notice through `get_my_notifications` as their own, only while the need is published.
 
 ## Edge Function checklist

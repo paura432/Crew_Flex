@@ -146,9 +146,10 @@ from public, anon, authenticated;
 --      confirmation);
 --   4. one notice per recipient, the recipients' retention pruned, the distribution row (the PK is the
 --      backstop) and the audit `requirement.outreach_distributed` (S-9: count, urgency, request id).
--- Returns { notified, distributed_at, urgency }; `notified` is NULL when fewer than 5 professionals of the
--- external pool are eligible for the need (that base the organization can already count through matching;
--- T-128) — the notices are still created.
+-- Returns { notified, distributed_at, urgency }: `notified` = how many the rules reach (before the delivery
+-- bound of 3 per organization and professional per 24 h), NULL when fewer than 5 professionals of the
+-- external pool are eligible for the need and not its applicants (a base the organization can already
+-- count through matching and its applications; T-128) — the notices are still created.
 -- ---------------------------------------------------------------------------------------------
 create function public.requirement_outreach(p_requirement_id uuid, p_request_id uuid default null)
 returns table (notified integer, distributed_at timestamptz, urgency public.requirement_urgency)
@@ -209,14 +210,20 @@ begin
 
   -- The base: who this organization may reach outside itself, as its external candidate pool decides it
   -- (one definition, BR-7/BR-8/N-08: visibility not `private`, `verified_orgs` only for a reviewed
-  -- organization, not a member, not blocking it), eligible for the need. The organization can already
-  -- count this set (matching, the builder's live count); everything filtered after it is private.
+  -- organization, not a member, not blocking it), eligible for the need, and not an applicant to it (the
+  -- organization sees its applicants: they would not count towards anyone's anonymity — security review
+  -- LOW-A). The organization can already count this set (matching, the builder's live count, its
+  -- applications); everything filtered after it is private.
   with base as (
     select pool.profile_id
     from app_private.ranked_external_pool(v_req.id) pool
     cross join lateral app_private.hard_eligibility(v_req.id, pool.profile_id) e
     where coalesce(e.qualifications_ok, false) and coalesce(e.availability_ok, false)
+      and not exists (select 1 from public.applications a
+                      where a.requirement_id = v_req.id and a.technician_profile_id = pool.profile_id
+                        and a.status <> 'withdrawn')
   ),
+  -- Who the rules reach (T-126): this is what the count reports.
   audience as (
     select tp.profile_id
     from base
@@ -237,27 +244,30 @@ begin
                         and r.restrictions is not null
                         and r.aircraft = any (v_aircraft)
                         and (cardinality(v_licences) = 0 or r.category = any (v_licences)))
-      and not exists (select 1 from public.applications a
-                      where a.requirement_id = v_req.id and a.technician_profile_id = tp.profile_id
-                        and a.status <> 'withdrawn')
       and not exists (select 1 from public.notifications n
                       where n.kind = 'outreach' and n.requirement_id = v_req.id
                         and n.recipient_id = tp.profile_id)
-      -- Flood bound (T-126): at most 3 outreach notices from one organization to one professional per
-      -- 24 h, so a stream of needs never pushes the professional's other notices out of the 200 kept.
-      and (select count(*) from public.notifications n
+  ),
+  -- Who actually gets a notice now: the flood bound (T-126) — at most 3 outreach notices from one
+  -- organization to one professional per 24 h, so a stream of needs never pushes the professional's
+  -- other notices out of the 200 kept. It is a delivery bound and does not change the reported count:
+  -- otherwise saturating known professionals would single out the one left (security review LOW-A).
+  reached as (
+    select a.profile_id
+    from audience a
+    where (select count(*) from public.notifications n
            join public.work_requirements o on o.id = n.requirement_id
-           where n.kind = 'outreach' and n.recipient_id = tp.profile_id
+           where n.kind = 'outreach' and n.recipient_id = a.profile_id
              and o.organization_id = v_req.organization_id
              and n.created_at > v_now - interval '24 hours') < 3
   )
   select (select count(*)::integer from base),
-         coalesce((select array_agg(a.profile_id order by a.profile_id) from audience a), '{}')
-  into v_base, v_recipients;
+         (select count(*)::integer from audience),
+         coalesce((select array_agg(r.profile_id order by r.profile_id) from reached r), '{}')
+  into v_base, v_count, v_recipients;
 
   insert into public.notifications (recipient_id, kind, requirement_id)
   select r, 'outreach', v_req.id from unnest(v_recipients) r;
-  v_count := cardinality(v_recipients);
   perform app_private.prune_notifications(v_recipients);
 
   -- T-128: below 5 eligible professionals the number is not reported (nor stored, nor audited).

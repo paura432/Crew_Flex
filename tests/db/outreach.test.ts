@@ -821,6 +821,48 @@ describe("outreach: the notice and what the organization learns", () => {
     });
   });
 
+  it("applicants the organization already sees do not count towards the anonymity of the rest (LOW-A v1)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const need = await createNeed(tx);
+      // Five eligible (Echo too, excluded by her restricted rating), as the reported case…
+      await qualifying(tx, [SEED.delta, FOXTROT, INDIA, KILO]);
+      await makeAvailable(tx, [SEED.echo]);
+      // …but four of them applied: the organization knows them, Echo would stand alone.
+      for (const who of [SEED.delta, FOXTROT, INDIA, KILO]) {
+        await actAs(tx, who);
+        await tx.query("select * from public.apply_to_requirement($1, $2, true)", [
+          need,
+          randomUUID(),
+        ]);
+      }
+      const result = await distribute(tx, SEED.adminMro, need);
+      expect(result.notified).toBeNull();
+      expect(await recipientsOf(tx, need)).toEqual([]);
+    });
+  });
+
+  it("the flood bound trims the delivery, never the reported count (LOW-A v2)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      // Four known base members already got 3 notices from this organization today.
+      for (let i = 0; i < 3; i++) {
+        const earlier = await createNeed(tx);
+        await asOwner(tx);
+        await tx.query(
+          `insert into public.notifications (recipient_id, kind, requirement_id)
+           select p, 'outreach', $1 from unnest($2::uuid[]) p`,
+          [earlier, [SEED.delta, FOXTROT, INDIA, KILO]],
+        );
+      }
+      const need = await createNeed(tx);
+      await qualifying(tx, [SEED.delta, FOXTROT, INDIA, KILO]);
+      await makeAvailable(tx, [SEED.echo]);
+      const result = await distribute(tx, SEED.adminMro, need);
+      // The count reads 4 (who the rules reach), although nobody is sent a 4th notice today.
+      expect(result.notified).toBe(4);
+      expect(await recipientsOf(tx, need)).toEqual([]);
+    });
+  });
+
   it("an organization distributes at most 10 needs in 24 h (CFO05), closed ones included", async () => {
     await asUser(db, SEED.adminMro, async (tx) => {
       for (let i = 0; i < 10; i++) {
