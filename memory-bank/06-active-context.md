@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-26 17:30 CET (F2 closed locally; F3 starting). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-26 19:45 CET (F3: P02, P03, P04 integrated locally; P05 next). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -11,23 +11,23 @@ inventory imported in F3.0 as the 18-v18-inventory directory next to the matrix 
 Packages run one at a time (the local stack is shared), each in its own worktree and branch, then an independent review
 and the integrator's gate (`tmp/f2/gate.sh`, git-ignored) before a fast-forward here. SCOPE-2 + DEFAULTS stand; sensitive
 open decisions stay NEEDS_DECISION; every subagent: Fable, xhigh.
-F2 (done 2026-10-26): F2.1 v2-16 merge `e87ef87`; F2.2 P01 merge `4d78d6d` + recruiter revoke confirmation `ef0cedc` +
-CSP hash `855f724`; F2.3 P01 matrix `71edd7b` (28 VERIFIED_LOCAL · 5 IMPLEMENTED_UNVERIFIED · 1 NEEDS_DECISION).
-Correction: the smokes of F1b, of the first F2.1 gate and of the first P01 gates ran against a stale `next start` of the
-F1a worktree (port 3002 held; `lsof` does not see it in this WSL). Re-run on each state's own build (server cwd + BUILD_ID
-checked): F2.1 278/278, final `855f724` 278/278. F1b changed no frontend. The runner now refuses a foreign server.
+F2 done (P01 matrix `71edd7b`). F3 so far: F3.0 inventory `a073683`; P02 passport (gate `3220560`, review fix `b13e6a6`);
+P03 calendar (merge `9ee9d8e`, gate `5ffe68e`); P04 opportunities fast-forwarded at `eb21de2` — review: no blockers,
+fixed «{n} días» (one `requirementDays` in `src/domain`) and the decision id D-06 Q6 (was a non-existent «D-08 · Q6»);
+full gate on `e8b5843` green but smoke 322/323 (a test bug in `PKG P04 10`, fixed `bb37569`), then smoke 323/323.
+Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
 After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime
 container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the functions’ `.env`) into a worktree.
 
 ## State
 
-| Item         | State                                                                                                                         |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories     |
-| Local `main` | = `origin/main` `51c835a`                                                                                                     |
-| Branch       | `feat/v18-html-parity` = this commit on `71edd7b`: 59 migrations (39 not applied remotely), 23 functions; deployed nowhere    |
-| Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)          |
-| Parity       | baseline 2026-10-22: 699 / 1 246 = 56,1 % (161 decision/SCOPE-held); not recounted until the F3 packages re-verify their rows |
+| Item         | State                                                                                                                        |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories    |
+| Local `main` | = `origin/main` `51c835a`                                                                                                    |
+| Branch       | `feat/v18-html-parity` = this commit on `eb21de2`: 59 migrations (39 not applied remotely), 23 functions; deployed nowhere   |
+| Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)         |
+| Parity       | inventory `recount.py` after P04: 769 / 1 248 = 61,6 % (157 decision-held, 133 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
 
 ## Risks
 
@@ -49,5 +49,5 @@ other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-
 
 ## Next step (one)
 
-F3.0: import the inventory (18-v18-inventory), re-verify P01's rows (TEC-01, SHOT-01), then P02 passport (TEC-02,
-TEC-03, TEC-08, SHOT-03) with the common brief. Never push or deploy.
+P05 Applications (HIRE-01…HIRE-05, SHOT-11; package map in `18-v18-inventory/README.md`) in its own worktree with the
+common brief; it also brings the data P01-26 needs. Then P06…P14 one at a time. Never push or deploy.
