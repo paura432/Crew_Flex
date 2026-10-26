@@ -36,7 +36,7 @@ export function ProfileStatusDialog({
     <>
       <Button
         ref={opener}
-        variant="inverse"
+        variant="inverseLink"
         aria-haspopup="dialog"
         onClick={() => dialog.current?.showModal()}
       >

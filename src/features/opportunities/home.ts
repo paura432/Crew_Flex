@@ -24,6 +24,8 @@ export interface HomeOpportunity {
   endsAt: string;
   /** true = compatible now; false = «Posible en descanso» (BR-14.1). */
   published: boolean;
+  /** v1.8 «{tarifa} / h»: only when the need states one (informative conditions, T-62); null otherwise. */
+  hourlyRate: number | null;
   /**
    * UTC days from today where it shows on the calendar: every day of a compatible one; only the rest
    * days (no window at all) of a possible one, the days the professional could publish (v1.8).
@@ -68,6 +70,7 @@ export function homeOpportunities(
         startsAt: r.startsAt,
         endsAt: r.endsAt,
         published,
+        hourlyRate: r.conditions?.hourlyRate ?? null,
         days,
         month: (days[0] ?? r.startsAt).slice(0, 7),
       });

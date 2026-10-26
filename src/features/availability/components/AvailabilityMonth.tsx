@@ -12,15 +12,18 @@ import {
   type DayState,
 } from "../calendar";
 
-const LEGEND: DayState[] = ["available", "aog_only", "unavailable", "mixed", "none"];
+/** v1.8 `.mini-legend` order («Trabajo · Descanso · Disponible · Asignado · ● Oportunidades») plus our two states. */
+const LEGEND: DayState[] = ["unavailable", "none", "available", "aog_only", "mixed"];
 
 /**
- * «Mi espacio» month (v1.8 `TechnicianHome.jsx:15` / `ConnectedHome.jsx:15`): own day states with BR-4.8
- * precedence, «Asignado» on the days of a confirmed assignment, a red dot on days with opportunities.
- * A day is a toggle (`aria-pressed`) that filters the feed next to it; past days are disabled (demo).
- * Month navigation by link (`?month=`). Editing stays on the availability page.
+ * «Mi espacio» month (v1.8 `TechnicianHome.jsx:15` / `ConnectedHome.jsx:15`): kicker «TU DISPONIBILIDAD»,
+ * the month as the heading, own day states with BR-4.8 precedence, «Asignado» on the days of a confirmed
+ * assignment, a red dot on days with opportunities. A day is a toggle (`aria-pressed`) that filters the
+ * feed below; past days are disabled (demo). Month navigation by link (`?month=`). Editing stays on the
+ * availability page.
  */
 export function AvailabilityMonth({
+  kicker,
   title,
   month,
   today,
@@ -30,6 +33,7 @@ export function AvailabilityMonth({
   prevHref,
   nextHref,
 }: {
+  kicker: string;
   /** The month as a title, formatted on the server (X-18). */
   title: string;
   month: string;
@@ -45,10 +49,13 @@ export function AvailabilityMonth({
     "grid size-9 place-items-center rounded-lg border border-line hover:bg-canvas pointer-coarse:size-11";
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="font-semibold" aria-live="polite">
-          {title}
-        </p>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold tracking-[0.16em] text-muted uppercase">{kicker}</p>
+          <h2 id="home-month" className="mt-1 text-lg font-semibold tracking-tight">
+            {title}
+          </h2>
+        </div>
         <div className="flex gap-1">
           <Link href={prevHref} aria-label={t("prevMonth")} className={nav}>
             ←
@@ -58,10 +65,11 @@ export function AvailabilityMonth({
           </Link>
         </div>
       </div>
+      {/* v1.8 «L M X J V S D»: one letter per weekday; the full names stay on the editable calendar. */}
       <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold text-muted uppercase">
         {WEEKDAYS.map((d) => (
           <div key={d} className="py-1">
-            {t(`weekday.${d}`)}
+            {t(`weekdayShort.${d}`)}
           </div>
         ))}
       </div>

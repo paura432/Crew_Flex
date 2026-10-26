@@ -658,7 +658,7 @@
       "itemDone": "done",
       "itemPending": "pending",
       "calendarTitle": "Your availability",
-      "openAvailability": "Edit availability",
+      "openAvailability": "Update availability",
       "reviewTitle": "Documents and courses to review",
       "reviewNone": "Nothing declared expires within the next {days} days.",
       "reviewExpired": "Date passed",
@@ -762,17 +762,16 @@
       "document": "Document provided"
     },
     "activity": {
-      "label": "Opportunities and applications",
-      "compatible": "Compatible opportunities",
+      "compatible": "compatible opportunities",
       "active": "Applications in progress",
       "toAccept": "Proposals to accept",
-      "confirmed": "Confirmed assignments",
+      "confirmed": "confirmed assignments",
       "opportunitiesTitle": "Opportunities for you",
       "applicationsTitle": "My applications",
       "viewAll": "See all",
       "follow": "Follow up",
-      "noOpportunities": "No compatible opportunities yet.",
-      "noApplications": "Your next application starts here.",
+      "noOpportunities": "No compatible opportunities yet",
+      "noApplications": "Your next application starts here",
       "loadError": "Could not load right now. Reload to retry.",
       "opportunitiesDay": "Opportunities · {day}",
       "clearDay": "Clear date selection",
@@ -784,7 +783,11 @@
       "noOpportunitiesHint": "Review your profile or publish the dates you want to offer. Private rest days are never sent to companies.",
       "openCalendar": "Open my calendar",
       "noApplicationsHint": "Explore the opportunities and choose the terms and dates that suit you.",
-      "searchOpportunities": "Find opportunities"
+      "searchOpportunities": "Find opportunities",
+      "kicker": "Find your next step",
+      "applicationsKicker": "Your activity",
+      "days": "{count, plural, one {# shift} other {# shifts}}",
+      "rate": "{amount} / h"
     }
   },
   "qualifications": {
@@ -958,6 +961,15 @@
       "offersPotential": "{date}: {state}. {count, plural, one {# possible opportunity} other {# possible opportunities}}, review your rest-day publishing",
       "legendOffers": "Opportunities",
       "note": "Calendar in UTC. The red dot marks opportunities on compatible days or on rest days you could publish. It does not change your availability."
+    },
+    "weekdayShort": {
+      "mon": "M",
+      "tue": "T",
+      "wed": "W",
+      "thu": "T",
+      "fri": "F",
+      "sat": "S",
+      "sun": "S"
     }
   },
   "organization": {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { APPLICATION_TRANSITIONS } from "@/domain/applications";
 import { applicationErrorCopy } from "./error-copy";
-import { transitionLabelKey, withPackParam } from "./view";
+import { applicationDays, transitionLabelKey, withPackParam } from "./view";
 
 describe("applications view helpers", () => {
   it("«Ver expediente» sets ?pack= and keeps the other filters; closing removes it", () => {
@@ -50,5 +50,13 @@ describe("applications view helpers", () => {
     expect(applicationErrorCopy(t, { code: "FORBIDDEN", message: "x" }).text).toBe(
       "«api.FORBIDDEN.description»",
     );
+  });
+
+  it("«{n} jornadas»: the shifts when published, else the UTC days of the period (D-06 Q6)", () => {
+    const period = { startsAt: "2026-12-21T06:00:00.000Z", endsAt: "2026-12-22T18:00:00.000Z" };
+    expect(applicationDays(period)).toBe(2);
+    expect(applicationDays({ ...period, shifts: null })).toBe(2);
+    const shift = { startsAt: period.startsAt, endsAt: period.endsAt, baseHours: 8 };
+    expect(applicationDays({ ...period, shifts: [shift, shift, shift] })).toBe(3);
   });
 });
