@@ -1,0 +1,1547 @@
+# 30 · Diff v1.8 ↔ Next — Empresa/recruiter, marketplace y contratación
+
+Filas 393 · = 25 · ≈ 138 · ≠ 26 · − 123 · + 50 · ✗ 31 (v2 del 22/10 tarde, SNAP2 `038329f`; xhigh del 22/10: filas 379 · = 14 · ≈ 89 · ≠ 24 · − 184 · + 37 · ✗ 31; refresco de la mañana: filas 378 · = 14 · ≈ 89 · ≠ 23 · − 184 · + 37 · ✗ 31; 21/10: filas 374 · = 13 · ≈ 83 · ≠ 24 · − 189 · + 34 · ✗ 31)
+
+Alcance: lo que la v1.8 ofrece a la **organización** (empresa y recruiter), el **mercado** de ofertas entre organizaciones
+y técnicos, y el **circuito de contratación** (candidatura → propuesta → aceptación → confirmación → cierre), con
+Candidate Pack, conversación, avisos y comisiones. Next de esta versión (v2, 22/10/2026 tarde): SNAP2 =
+`wt-diff2`, commit `038329f` (rama `feat/v18-html-parity`, sin push), servido con `next start` en `localhost:3004` sobre
+la BD Supabase local. Versión anterior (xhigh): HEAD `5c2d1a2` + D-13 sin commit (hoy `d3b876f`). Línea base del
+21/10: `51c835a`. El lado v1.8 no cambia (zip con el mismo sha256); el modo conectado está ahora en ejecución en
+`127.0.0.1:3125` con datos ricos (J1…J9).
+
+## Verificación v2 (22/10/2026, tras el bucle)
+
+**Método.**
+- Las 379 filas del xhigh, una a una, contra SNAP2 (`038329f`): cada `archivo:línea` de un fichero cambiado desde `d3b876f` reasignado por script (difflib sobre `git show`) y revisado a mano, y cada `es:N` reasignado por clave al `messages/es.json` de SNAP2. Leídos los ficheros nuevos de M05/M07/M08/M09: migraciones `20261022130000`…`130300`, funciones `opportunities`, `applications` y `work-requirements`, `src/domain/{applications,candidate-pack,work-requirement}.ts`, `src/lib/validation/applications.ts`, `src/features/{opportunities,applications}/**`, las páginas `/app/professional/{opportunities,applications}` y `/requirements/[id]/{applications,edit}`, `RequirementStatusActions` y `RequirementForm` (edición).
+- Next en ejecución (:3004, BD local), con escrituras permitidas al área 30: dos necesidades «E2E diff v2 · A · B1.1 A320 ciclo completo» (AOG, 1 plaza, 14:53-14:59 UTC) y «E2E diff v2 · B · B1.1 A320 cancelaciones» (Urgente, 2 plazas, 28-29 oct) de Demo MRO Madrid, y 11 candidaturas de `delta`, `echo`, `foxtrot`, `hotel` y `alpha`. Recorrido en la UI: crear, pausar, ver lista y matching pausados, reanudar, editar, presentarse con consentimiento (es y en), preseleccionar, proponer, rechazar con motivo, cancelar una aceptada (Q2), aceptar la v1, nueva versión v2, confirmar → «Cubierta», cerrar con una confirmada (defecto), «Finalizar» desactivado a las 14:58 y finalizar a las 14:59, cerrar; retirar, cancelar una asignación desde el técnico (Q3), «Asignada» en el calendario, Mi espacio con contadores, vistas de `alpha` (miembro), `admin.mro` (cuenta de organización) y `platform.admin`, y 390 px. Por API: sin consentimiento (400), duplicada (`ALREADY_APPLIED`), volver tras retirar (201) y tras rechazar (`REAPPLY_NOT_ALLOWED`), versión antigua (`PROPOSAL_STALE`), aceptar sin casilla (400), actor equivocado (403), `accepted → rejected` (409, Q7), editar con candidaturas (`HAS_APPLICATIONS`), cerrar con una aceptada (`ACTIVE_COMMITMENTS`), pausada fuera de «Oportunidades» (404) y miembro que se presenta a su organización (201, retirada después). No se han añadido ventanas de disponibilidad (`delta`, `echo` y `foxtrot` ya estaban disponibles todo octubre). Las filas «E2E diff v2 · …» quedan para `scripts/local/cleanup-test-rows.sh`.
+- v1.8 conectado en ejecución (`127.0.0.1:3125`), solo lectura y con las sesiones guardadas (ningún inicio de sesión): 18 pantallas de Empresa, Recruiter, Técnico 1 y Técnico 2 con todos los `<details>` abiertos (`*-v18c-1440.jpg` y su texto). v1.8 demo en ejecución (`127.0.0.1:56390`): Empresa (Resumen, Ofertas, Candidaturas), Técnico (Oportunidades, Candidaturas, Inicio) y Recruiter (`*-v18-1440.jpg`). Los literales del lado v1.8 ya se comprobaron en el xhigh contra el bundle; el zip no cambia.
+
+**Cobertura.**
+- Código, los dos lados: 393 de 393 filas (379 del xhigh + 14 nuevas).
+- Next en ejecución en v2: 84 filas — ORG-01 8, 10, 11, 32 · ORG-02 1, 4, 40 · ORG-03 9 · ORG-04 11, 14, 25, 29, 31 · ORG-05 3, 4, 5, 9, 10, 14-16 · MKT-01 29 · MKT-02 20 · MKT-03 1-10, 13, 15, 16 · MKT-04 9, 11 · MKT-05 1, 2, 5, 6, 9-13 · HIRE-01 1-4, 6-10, 12, 13 · HIRE-02 3, 5-7, 9, 11, 12, 14-16, 18-21, 24 · HIRE-03 3, 4, 6, 12 · HIRE-04 1, 6, 8, 9, 11, 12, 16 (las de la mañana siguen valiendo donde el código no cambió).
+- v1.8 conectado en ejecución: 94 filas — ORG-01 3-6, 8, 10-12, 27, 32 · ORG-02 1, 7-13, 15, 16, 19-21, 23-25, 27, 32, 37 · ORG-03 11, 12 · ORG-04 3, 11, 17, 18, 21, 22, 29 · ORG-05 1, 3, 4, 14 · ORG-06 8 · ORG-07 1, 4, 5, 7 · ORG-08 1, 6 · MKT-01 1-4, 9, 10, 12, 16, 23, 24 · MKT-03 3, 4, 12, 13 · HIRE-01 2, 7-9 · HIRE-02 5, 7, 9, 12, 15-18, 20 · HIRE-03 2, 4, 6, 7 · HIRE-04 6, 12 · HIRE-05 10 · HIRE-06 1, 2, 7 · HIRE-07 1-5 · HIRE-08 6-8.
+- v1.8 demo en ejecución en v2: 45 filas — ORG-01 3-11, 21-23, 25, 26 · ORG-04 1-5, 10, 11, 15, 20, 21, 25 · ORG-05 3, 8, 9, 11 · ORG-06 1-3, 7 · HIRE-01 2, 4, 5 · MKT-03 1, 3, 7-10, 13 · ORG-08 1 (más las 229 de la mañana, que no cambian).
+
+**No verificado en ejecución, y por qué.**
+- Next: `CFA05` (solape) y `CFA06` (plazas completas), porque exigían una tercera necesidad solapada con una confirmada; `covered → open` al cancelar una confirmada de una necesidad cubierta (A se finalizó y B tiene 2 plazas); `CFA08` contra la API (la UI lo impide). Quedan verificadas en código y en los tests de SNAP2 (suites V/W, `db-race-check.sh`, `tests/e2e/hiring.test.ts`), que no se han vuelto a ejecutar aquí.
+- v1.8 conectado: ninguna acción que cambie datos (proponer, aceptar, confirmar, distribuir, mensajes): la base es compartida con los otros revisores y la README ya documenta esos caminos; tampoco «No quedan plazas» / «Existe una asignación solapada» (no ejercitados en la siembra).
+- v1.8 demo: lo mismo que en el xhigh (aceptación real del técnico, «Finalizar trabajo» activo, cliente obligatorio del recruiter).
+
+**Correcciones v2** (filas cuyo símbolo o severidad cambia; el texto de Next de cada una se ha reescrito con `archivo:línea` de SNAP2):
+
+| Fila | Qué se corrigió | Antes | Ahora | Evidencia |
+|---|---|---|---|---|
+| ORG-01 #10 | Diff/Sev. y Next | `−` P1 | `≈` P3 | `evidencias/v2/30/ORG-01-10-next-1440-counters.jpg` |
+| ORG-01 #11 | Diff/Sev. y Next | `−` P1 | `≈` — | `evidencias/v2/30/ORG-01-10-next-1440-counters.jpg` |
+| ORG-04 #11 | Diff/Sev. y Next | `≈` P2 | `≈` P3 | `evidencias/v2/30/ORG-04-11-next-1440-paused-list.jpg` |
+| ORG-04 #14 | Diff/Sev. y Next | `−` P1 | `≈` — | `evidencias/v2/30/ORG-04-14-next-1440-covered-detail.jpg` |
+| ORG-04 #20 | Diff/Sev. y Next | `−` P1 | `−` P2 | código SNAP2 |
+| ORG-04 #21 | Diff/Sev. y Next | `−` P1 | `−` P2 | código SNAP2 |
+| ORG-04 #25 | Diff/Sev. y Next | `−` P1 | `≈` P2 | `evidencias/v2/30/HIRE-01-1-next-1440.jpg` |
+| ORG-04 #31 | Diff/Sev. y Next | `+` P3 | `+` — | `evidencias/v2/30/ORG-04-31-next-1440-page99.jpg` |
+| ORG-05 #1 | Diff/Sev. y Next | `≈` P1 | `≈` P3 | código SNAP2 |
+| ORG-05 #3 | Diff/Sev. y Next | `−` P1 | `≈` — | `evidencias/v2/30/ORG-05-3-next-1440-paused.jpg` |
+| ORG-05 #5 | Diff/Sev. y Next | `−` P1 | `≠` P2 | `evidencias/v2/30/ORG-05-5-next-1440-close-refused.jpg` |
+| ORG-05 #9 | Diff/Sev. y Next | `−` P1 | `≈` P3 | `evidencias/v2/30/ORG-05-9-next-1440-edit.jpg` |
+| ORG-05 #10 | Diff/Sev. y Next | `−` P3 | `≈` P3 | código SNAP2 |
+| ORG-05 #13 | Diff/Sev. y Next | `−` P3 | `≈` P3 | código SNAP2 |
+| MKT-02 #20 | Diff/Sev. y Next | `≠` P3 | `≈` — | `evidencias/v2/30/MKT-02-20-next-1440.jpg` |
+| MKT-03 #1 | Diff/Sev. y Next | `−` P0 | `≈` — | `evidencias/v2/30/MKT-03-1-next-1440.jpg` |
+| MKT-03 #3 | Diff/Sev. y Next | `−` P0 | `=` — | `evidencias/v2/30/MKT-03-1-next-1440.jpg` |
+| MKT-03 #4 | Diff/Sev. y Next | `−` P0 | `≈` P3 | `evidencias/v2/30/MKT-03-1-v18c-1440.jpg` |
+| MKT-03 #5 | Diff/Sev. y Next | `−` P2 | `≈` — | código SNAP2 |
+| MKT-03 #6 | Diff/Sev. y Next | `−` P2 | `≈` P3 | `evidencias/v2/30/MKT-03-6-next-1440-search.jpg` |
+| MKT-03 #7 | Diff/Sev. y Next | `−` P2 | `≈` P3 | `evidencias/v2/30/MKT-03-7-next-1440-compatibles.jpg` |
+| MKT-03 #8 | Diff/Sev. y Next | `−` P0 | `≈` P2 | `evidencias/v2/30/MKT-03-1-next-1440.jpg` |
+| MKT-03 #9 | Diff/Sev. y Next | `−` P1 | `≈` — | código SNAP2 |
+| MKT-03 #10 | Diff/Sev. y Next | `−` P0 | `≈` P3 | `evidencias/v2/30/MKT-03-10-next-1440-applied-chips.jpg` |
+| MKT-03 #11 | Diff/Sev. y Next | `−` P3 | `=` — | código SNAP2 |
+| MKT-03 #12 | Diff/Sev. y Next | `−` P0 | `≈` P2 | código SNAP2 |
+| MKT-03 #13 | Diff/Sev. y Next | `−` P1 | `≈` P2 | `evidencias/v2/30/MKT-03-13-next-1440-home.jpg` |
+| MKT-04 #9 | Diff/Sev. y Next | `−` P1 | `≈` P3 | `evidencias/v2/30/MKT-04-9-next-1440.jpg` |
+| MKT-05 #1 | Diff/Sev. y Next | `−` P0 | `≈` P3 | código SNAP2 |
+| MKT-05 #2 | Diff/Sev. y Next | `−` P1 | `≈` P3 | código SNAP2 |
+| MKT-05 #3 | Diff/Sev. y Next | `−` P0 | `≠` P2 | código SNAP2 |
+| MKT-05 #5 | Diff/Sev. y Next | `−` P1 | `≈` — | `evidencias/v2/30/MKT-05-6-next-1440-consent.jpg` |
+| MKT-05 #6 | Diff/Sev. y Next | `−` P0 | `≈` — | código SNAP2 |
+| MKT-05 #9 | Diff/Sev. y Next | `−` P2 | `≈` P3 | código SNAP2 |
+| MKT-05 #10 | Diff/Sev. y Next | `−` P1 | `≈` P3 | código SNAP2 |
+| MKT-05 #11 | Diff/Sev. y Next | `−` P1 | `≈` — | código SNAP2 |
+| MKT-05 #12 | Diff/Sev. y Next | `−` P0 | `≈` — | `evidencias/v2/30/MKT-05-12-next-1440-sent.jpg` |
+| MKT-05 #13 | Diff/Sev. y Next | `≠` P2 | `≠` P3 | `evidencias/v2/30/MKT-05-13-next-1440-after-withdraw.jpg` |
+| HIRE-01 #1 | Diff/Sev. y Next | `−` P0 | `≈` P2 | `evidencias/v2/30/HIRE-01-1-v18c-1440.jpg` |
+| HIRE-01 #2 | Diff/Sev. y Next | `−` P1 | `≈` P3 | código SNAP2 |
+| HIRE-01 #3 | Diff/Sev. y Next | `−` P2 | `≈` P3 | código SNAP2 |
+| HIRE-01 #4 | Diff/Sev. y Next | `−` P2 | `≈` P3 | `evidencias/v2/30/HIRE-01-1-next-1440-tech.jpg` |
+| HIRE-01 #5 | Diff/Sev. y Next | `−` P3 | `≈` — | código SNAP2 |
+| HIRE-01 #6 | Diff/Sev. y Next | `−` P1 | `≈` P3 | `evidencias/v2/30/HIRE-01-1-next-1440-mixed.jpg` |
+| HIRE-01 #7 | Diff/Sev. y Next | `−` P1 | `≈` P2 | `evidencias/v2/30/HIRE-01-9-next-1440-history.jpg` |
+| HIRE-01 #8 | Diff/Sev. y Next | `−` P1 | `≈` — | `evidencias/v2/30/HIRE-01-1-next-1440.jpg` |
+| HIRE-01 #9 | Diff/Sev. y Next | `−` P2 | `≈` — | `evidencias/v2/30/HIRE-01-9-next-1440-history.jpg` |
+| HIRE-01 #10 | Diff/Sev. y Next | `−` P2 | `=` — | código SNAP2 |
+| HIRE-02 #3 | Diff/Sev. y Next | `−` P0 | `=` — | código SNAP2 |
+| HIRE-02 #14 | Diff/Sev. y Next | `≠` P2 | `≈` — | código SNAP2 |
+| HIRE-02 #15 | Diff/Sev. y Next | `≈` P2 | `=` — | `evidencias/v2/30/HIRE-02-15-next-1440-cancel-accepted.jpg` |
+| HIRE-02 #16 | Diff/Sev. y Next | `≈` P1 | `=` — | `evidencias/v2/30/HIRE-04-9-next-1440-finish-disabled.jpg` |
+| HIRE-02 #17 | Diff/Sev. y Next | `≈` P1 | `=` — | código SNAP2 |
+| HIRE-02 #18 | Diff/Sev. y Next | `≈` P1 | `=` — | `evidencias/v2/30/HIRE-04-11-next-1440-tech-cancel.jpg` |
+| HIRE-02 #19 | Diff/Sev. y Next | `≈` P2 | `≈` P3 | código SNAP2 |
+| HIRE-02 #20 | Diff/Sev. y Next | `≈` P2 | `≈` — | código SNAP2 |
+| HIRE-02 #21 | Diff/Sev. y Next | `−` P2 | `+` — | `evidencias/v2/30/HIRE-03-2-next-1440-propose-confirm.jpg` |
+| HIRE-02 #24 | Diff/Sev. y Next | `−` P3 | `≈` — | código SNAP2 |
+| HIRE-02 #25 | Diff/Sev. y Next | `≠` P2 | `≠` P3 | código SNAP2 |
+| HIRE-03 #1 | Diff/Sev. y Next | `−` P1 | `≠` P2 | código SNAP2 |
+| HIRE-03 #2 | Diff/Sev. y Next | `−` P0 | `≈` P3 | código SNAP2 |
+| HIRE-03 #5 | Diff/Sev. y Next | `−` P2 | `≈` P2 | código SNAP2 |
+| HIRE-03 #6 | Diff/Sev. y Next | `−` P1 | `≈` P3 | `evidencias/v2/30/HIRE-01-9-next-1440-history.jpg` |
+| HIRE-04 #1 | Diff/Sev. y Next | `−` P0 | `=` — | `evidencias/v2/30/HIRE-04-1-next-1440-confirm-hint.jpg` |
+| HIRE-04 #2 | Diff/Sev. y Next | `−` P0 | `≈` — | código SNAP2 |
+| HIRE-04 #3 | Diff/Sev. y Next | `−` P0 | `≈` P2 | código SNAP2 |
+| HIRE-04 #6 | Diff/Sev. y Next | `−` P1 | `≈` P2 | `evidencias/v2/30/HIRE-04-6-next-1440-assigned.jpg` |
+| HIRE-04 #8 | Diff/Sev. y Next | `−` P1 | `≈` P3 | `evidencias/v2/30/ORG-01-10-next-1440-counters.jpg` |
+| HIRE-04 #9 | Diff/Sev. y Next | `−` P1 | `=` — | `evidencias/v2/30/HIRE-04-9-next-1440-finish-enabled.jpg` |
+| HIRE-04 #11 | Diff/Sev. y Next | `−` P1 | `≈` P3 | `evidencias/v2/30/HIRE-04-11-next-1440-tech-cancel.jpg` |
+| HIRE-04 #12 | Diff/Sev. y Next | `−` P1 | `≈` — | `evidencias/v2/30/HIRE-04-12-next-1440-tech-cancelled.jpg` |
+| HIRE-05 #2 | Diff/Sev. y Next | `−` P2 | `≈` P3 | código SNAP2 |
+| HIRE-05 #3 | Diff/Sev. y Next | `−` P1 | `≈` P3 | código SNAP2 |
+| HIRE-05 #4 | Diff/Sev. y Next | `−` P1 | `≈` P2 | código SNAP2 |
+| HIRE-05 #5 | Diff/Sev. y Next | `−` P2 | `≈` P3 | código SNAP2 |
+| HIRE-05 #13 | Diff/Sev. y Next | `−` P2 | `≈` P3 | código SNAP2 |
+| HIRE-05 #14 | Diff/Sev. y Next | `≈` — | `≠` P3 | código SNAP2 |
+| ORG-01 #7, 9, 12, 23, 25, 26, 27, 29 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| ORG-02 #4, 5, 9, 10, 11, 12, 13, 14, 16, 19, 20, 24, 25, 27, 28, 29, 32, 33, 34, 35, 36, 37 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| ORG-03 #1, 3, 6, 7, 8, 9, 11, 12, 13, 18, 20, 21 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| ORG-04 #12, 16, 22, 27 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| ORG-05 #2, 8, 11, 12 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| ORG-06 #1, 5, 8, 9, 10, 11 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| ORG-07 #1, 2, 3, 4, 5, 7, 8, 11, 12, 15 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| ORG-08 #1, 2, 3, 4, 5, 6, 7, 8, 11 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| MKT-01 #1, 6, 7, 11, 12, 13, 15, 16, 18, 21, 27, 28 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| MKT-02 #2, 3, 5, 6, 7, 9, 11, 13, 15, 19 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| MKT-03 #2, 14 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| MKT-04 #1, 2, 3, 4, 6, 7, 8 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| MKT-05 #4, 7, 8 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| HIRE-01 #11 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| HIRE-02 #4, 5, 6, 7, 8, 9, 10, 12, 13, 22 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| HIRE-03 #4, 7, 8 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| HIRE-04 #4, 5, 7, 13, 14 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| HIRE-05 #1, 6, 7, 8, 9, 10, 11, 12 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| HIRE-07 #1, 2, 3, 4, 5, 6, 8 | Bloqueo y acción (alcance nuevo) | el de la xhigh | el de SCOPE-2 (ver la celda) | `08-product-decisions.md` §2026-10-22 |
+| 14 filas «(nueva v2)» | Elementos que Next tiene ahora y nadie listó | — | ORG-01 #32, ORG-02 #40, ORG-05 #16, MKT-01 #29, MKT-03 #15-16, MKT-04 #11, MKT-05 #16, HIRE-01 #12-13, HIRE-02 #27-28, HIRE-03 #12, HIRE-04 #16 | ver cada fila |
+| Todas | Referencias | `es:N` de `d3b876f`, `archivo:línea` de `5c2d1a2` | `es:N` y `archivo:línea` de SNAP2 (`038329f`) | script `esmap.py`/`refmap.py` + revisión a mano |
+| Encabezados y «Estado global» | Estado de 13 secciones | AUSENTE / PARCIAL (solo contrato) | ver cada sección y el resumen | — |
+| Hallazgos 4, 7-9 | Estado | abiertos | RESUELTOS (`db05af1`, `7eb8059`, `46f40e8`, `f740447`) | evidencias de las filas |
+| Hallazgos 11-16 (nuevos) | Defecto, conflictos de decisión y docs | — | ver «Hallazgos» | `evidencias/v2/30/ORG-05-5-next-1440-close-refused.jpg` |
+| Backlog | Reescrito para «copiarlo todo» | 9 tareas (5 HECHO, 1 BLOQUEADO, 3 PENDIENTE) | 44 entradas: 13 HECHO, 26 PENDIENTE, 5 BLOQUEADO | — |
+
+Recuento (script `recount.py` sobre las tablas de elementos): 379 → 393 filas; = 14 → 25 · ≈ 89 → 138 · ≠ 24 → 26 ·
+− 184 → 123 · + 37 → 50 · ✗ 31 → 31. Severidad de las `−`, `≠` y `≈`: P0 16 → 0 · P1 52 → 19 · P2 72 → 67 · P3 108 → 134
+(con las `+` que la tienen, P3 109 → 137). Ninguna P0: todas eran el circuito de contratación y existe en Next. Bloqueo
+de las 287 `−`, `≠` y `≈`: 243 portables ya («—», default v1.8 o alcance LATER; 21 de ellas con una parte SCOPE OUT,
+p. ej. el % de comisión), 28 SCOPE OUT, 11 con D-07 P3 + D-10 (3 solo en parte: HIRE-01 #7, HIRE-04 #3, HIRE-05 #1),
+3 en conflicto Q6 ↔ SCOPE-2 y 2 que una decisión ya tomada deja como están (T-03, T-04). 143 filas cambian solo
+de bloqueo.
+
+## Verificación exhaustiva (xhigh, 22/10/2026)
+
+**Método.** Las 378 filas del refresco, una a una, en los dos lados. v1.8: cada literal «…» de la columna v1.8 buscado
+por script en `CrewFlex_v1.8.html` (el bundle real), en `src/` vivo (sin el código muerto) y en `server/`; las cadenas
+compuestas en tiempo de ejecución (`${label}: dato no válido.`, «1 jornadas», «48,75 € / h»…) se han comprobado a mano, y
+todas las referencias `archivo:línea` se han abierto. Next: cada literal contra `messages/es.json` y `src/` de la copia
+congelada (`SNAP`, idéntica al árbol vivo en `src/`, `supabase/` y `messages/`), cada `es:N` y cada `archivo:línea`
+resuelto y leído, y el comportamiento leído en el código. Después, ejecución: Next en `localhost:3000` con `manager.mro`,
+`alpha` (miembro) y `platform.admin`, con todas las peticiones no-GET bloqueadas por script (no se envió nada); la v1.8
+demo en `127.0.0.1:56390` en un contexto desechable, recorriendo Empresa, Recruiter y el circuito simulado completo
+(candidatura → preselección → propuesta → aceptación simulada → confirmación → cancelación, Pack, conversación, aviso,
+y la candidatura desde el técnico). Lectura directa de la API local (inicio de sesión de las cuentas de prueba y peticiones GET
+a PostgREST y a `work-requirements`) para aislar la causa de dos comportamientos. Tests: `pnpm vitest run src/features/requirements src/features/matching
+src/domain/applications.test.ts src/lib/validation/work-requirement.test.ts` → 7 ficheros, 47 tests en verde.
+
+**Cobertura.**
+- Código, ambos lados: 379 de 379 filas (las 378 del refresco y la nueva MKT-02 #20).
+- Next en ejecución: 112 filas (ORG-01 1-6, 8, 13-17, 19-22, 24, 28, 31 · ORG-02 1-8, 10-12, 15-18, 21-23, 26, 30, 31, 38
+  · ORG-03 8, 14, 16, 17, 22, 24 · ORG-04 1-3, 5-7, 9-11, 13, 15, 17-19, 24, 26-28, 30-32 · ORG-05 4, 6, 14 · ORG-07 1, 9,
+  14-16 · ORG-08 1, 2, 11 · MKT-01 1-5, 7-10, 18-22, 24, 26 · MKT-02 1, 2, 4, 5, 7, 8, 10-12, 15-17, 20 · MKT-03 1 · MKT-04
+  1, 8 · HIRE-01 1). `MatchCard` medido a 1440, 768 y 390 px.
+- v1.8 demo en ejecución: 229 filas (ORG-01 1, 3-11, 21-26, 29-31 · ORG-02 1, 3-9, 11-17, 19-37 · ORG-03 1-6, 8, 10, 13-15
+  · ORG-04 1-8, 10, 11, 15, 17, 20, 21, 23, 25 · ORG-05 1-3, 8-12 · ORG-06 1-7 · ORG-07 1-3, 7-13 · ORG-08 1-4, 6, 11 ·
+  MKT-01 1-4, 6, 7, 9-19, 21, 23 · MKT-02 1-8, 10-16, 19 · MKT-03 1-3, 7-11, 13 · MKT-04 1-5, 7-10 · MKT-05 1-9, 12, 15 ·
+  HIRE-01 1, 2, 4-6, 8-10 · HIRE-02 1, 4-7, 9, 11, 12, 14, 16, 17, 20, 21, 23, 24 · HIRE-03 1, 3, 5, 11 · HIRE-04 1, 6,
+  8, 9, 11 · HIRE-05 1-6, 10, 13-16 · HIRE-06 1-7 · HIRE-07 8 · HIRE-08 1, 10, 12). 70 filas se han visto en ejecución
+  en los dos lados.
+- Las `−` del circuito de contratación (HIRE-01…08, MKT-03, MKT-05) se confirman por búsqueda en la copia: ninguna ruta
+  de `src/app` con candidatura, oferta, oportunidad, aviso, comisión, conversación o pack; ninguna función de
+  `supabase/functions` para ello; ninguna migración crea tablas, tipos o funciones de candidaturas, propuestas, packs,
+  comisiones, avisos, conversaciones, asignaciones o clientes representados; el enum `requirement_status` tiene
+  `covered`, pero nada lo escribe; ninguna clave de `messages/es.json` es de ese circuito; `src/domain/applications.ts`
+  (9 estados, 16 transiciones, 6 tests) no lo importa nadie en `src/` ni en `supabase/`. El lado v1.8 de esas filas se
+  ha visto en ejecución en la demo (lista de filas de arriba).
+
+**No verificado en ejecución, y por qué.**
+- La necesidad del brief `9f50725f-…` no existe en la BD local (404 incluso para `manager.mro`; la API da
+  `NOT_FOUND`): las pruebas se han hecho con `9e280aa3-…` (Demo MRO, abierta pero «Vencida» desde el 22/10 06:00 UTC).
+- Next, porque exigen crear, cerrar o cambiar datos (prohibido) o datos que la BD local no tiene: «50+» del KPI
+  (ORG-01 #8: hacen falta 50 abiertas); el foco y su capacidad en el Resumen (ORG-01 #18, #19 «Detalle de la
+  necesidad»: no hay ninguna abierta vigente; el bloque se ha visto en el detalle); detalle de una cerrada (ORG-04 #29);
+  cierre confirmado y congelado (ORG-05 #4 segunda mitad, #7); errores de servidor y redirección tras crear (ORG-03 #24
+  servidor, #25, #26; ORG-02 #39); vacíos del matching y las otras dos variantes del aviso del pool (MKT-01 #8, #25).
+  Esas filas quedan verificadas solo en código.
+- v1.8 modo conectado (todas las filas `S-CON-*`/`C-*` o su mitad «Conectado»): el servidor no está levantado; se han
+  comprobado en `src/beta/*` y `server/*` y en las capturas del 21/10.
+- v1.8 demo, por necesitar otra persona técnica o el paso del tiempo: aceptación desde el técnico (se usó «Simular
+  aceptación del técnico»), «1 asignaciones confirmadas» del Inicio técnico (HIRE-04 #8), «Finalizar trabajo» activo
+  (HIRE-04 #9), cliente obligatorio del recruiter (ORG-08 #5), respuesta simulada de distribución (ORG-06 #6) y
+  «Fechas propuestas» desordenadas (HIRE-05 #2: con todas las fechas salen en orden).
+
+**Correcciones.**
+
+| Fila | Qué se corrigió | Antes | Ahora | Evidencia |
+|---|---|---|---|---|
+| ORG-04 #31 | Comportamiento de una página fuera de rango y acción | «Una página fuera de rango (`?page=99` con 30 necesidades) pinta la tabla vacía y dice «página 2 de 2»»; acción «Mantener; … redirigir a la última o mostrar el vacío» | «Error del servidor» con referencia: PostgREST 416 `PGRST103` → `fromDatabaseError` → 500 `INTERNAL_ERROR`; `?page=abc`/`0` → página 1; acción «Corregir» (backlog 7). Símbolo y severidad sin cambio (`+` P3) | `evidencias/xhigh/30/ORG-04-31-next-1440-page2.jpg`, `…-page99.jpg`; `next-mgr-log.json`; API local (416 / 500) |
+| ORG-01 #31 | Referencias | `src/components/layout/views.ts:26-38`; `ViewSwitcher.tsx:51-89` (el fichero tiene 77 líneas) | `views.ts:35-48` (`switcherViews`); `ViewSwitcher.tsx:34-77` | copia congelada; `evidencias/xhigh/30/ORG-01-31-next-1440-admin-empresa.jpg` |
+| ORG-08 #11 | Referencia | `views.ts:8-13,30-38` | `views.ts:8-13,35-48` | copia congelada; `evidencias/xhigh/30/ORG-08-11-next-1440-admin-recruiter.jpg` |
+| ORG-01 #20 | Cuándo ve el miembro el aviso de rol | «Un `member` ve «El análisis de capacidad…»» (sin condición) | Solo si hay necesidad foco (`focus && !canManage`); en el detalle y en `/matches`, siempre | `evidencias/xhigh/30/ORG-01-20-next-1440-member.jpg`, `MKT-01-26-next-1440-member.jpg` |
+| ORG-04 #11 | Estados que se ven | «Hoy solo se alcanzan Abierta, Cerrada y Vencida» | Desde la UI, esos tres; la semilla trae una «Cancelada» que se ve en la lista | `evidencias/xhigh/30/ORG-04-1-next-1440.jpg` |
+| ORG-04 #32 | Alcance de la verificación | Solo código | Ejecución con `platform.admin` (404 en detalle y matching de `9e280aa3-…` aunque la API se la devuelve), HEAD sin guardas pero sin membresía, llamada previa a `matching-evaluate`, la necesidad del brief no existe | `evidencias/xhigh/30/ORG-04-32-next-1440-admin-404.jpg`, `next-admin-log.json` |
+| ORG-01 #8 | Acción | «Opcional: usar el `total` exacto…» | «Usar el `total` exacto… (backlog 8)», en línea con la tarea 8 | código y API local |
+| MKT-02 #20 (nueva xhigh) | Elemento sin comparar | — | `≠` P3: porcentajes con punto decimal en español («48.78%») | `evidencias/xhigh/30/MKT-02-7-next-1440.txt:287,315` |
+| HIRE-07 #8 | Cómo se llega a los avisos de la demo | «campana y pantalla `#notifications`» | Campana «Ver notificaciones» → «ACTIVIDAD · Notificaciones.»; `#notifications` abre Inicio | `evidencias/xhigh/30/HIRE-07-8-v18-1440-bell.jpg`, `HIRE-07-8-v18-1440.jpg` |
+| Hallazgo 7 | Descripción | Tabla vacía con «30 necesidades · página 2 de 2» | 500 «Error del servidor», con causa y reproducción | igual que ORG-04 #31 |
+| Hallazgos 8-10 | Verificación y nuevos | 8 sin comprobar contra la API | 8 comprobado contra la API; 9 nuevo (porcentajes); 10 observación (necesidad del brief inexistente) | — |
+| Backlog 7 | Título, ficheros y aceptación | Aceptación «nunca una tabla vacía con «página 2 de 2»» | Aceptación «sin «Error del servidor» ni 500», con la opción de tratar el 416 en la función | — |
+| Backlog 9 (nueva) | Tarea nueva | — | PENDIENTE S, sin BD ni Edge | — |
+
+Sin cambio de veredicto en las demás filas: lo que dicen se ha confirmado. A varias filas `≈`/`≠`/`−` con verificación
+en ejecución se les ha añadido la evidencia (ORG-01 #8, ORG-02 #22, ORG-04 #7, ORG-05 #4, MKT-01 #18 y #22, MKT-02 #7,
+MKT-05 #13, HIRE-02 #14, HIRE-05 #16) y cada sección lleva una línea «Capturas xhigh».
+
+Recuento (script sobre las tablas de elementos): 378 → 379 filas; = 14 → 14 · ≈ 89 → 89 · ≠ 23 → 24 · − 184 → 184 ·
++ 37 → 37 · ✗ 31 → 31. Severidad de las `−`, `≠` y `≈`: P0 16 → 16 · P1 52 → 52 · P2 72 → 72 · P3 107 → 108 (contando
+también las `+` con severidad, P3 108 → 109). Las 16 P0 siguen siendo `−` y bloqueadas.
+
+## Cambios desde el 21/10/2026
+
+| Fila | Elemento | Antes | Ahora | Origen (commit o «árbol de trabajo») |
+|---|---|---|---|---|
+| ORG-01 #2 | Destino al entrar | `≈` | `≈`; el administrador de plataforma entra en `/app/admin` y llega con «Ver como → Empresa» | árbol de trabajo (D-13) |
+| ORG-01 #5 | Descripción | `−` P3 | `=` «De una necesidad concreta a un equipo disponible.» | `07eb07a` (W2-03) |
+| ORG-01 #8 | KPI de necesidades activas | `−` P2 | `≈` P3 «Necesidades abiertas» / «De tu organización» | `07eb07a` (W2-03) |
+| ORG-01 #16 | KPI «Cobertura» | `≠` P3 | `+` «Cobertura interna» (capacidad, no contratación) | `d82450e` (W2-04) |
+| ORG-01 #21 | Panel de necesidades | `≠` P2 | `≈` vigentes primero | `80f14a4` (W1-07) |
+| ORG-01 #29 | Variante recruiter | `−` | `−`; se cita el marcador de la vista «Recruiter» | árbol de trabajo (D-13) |
+| ORG-01 #31 (nueva) | Vista «Empresa» del selector de rol | — | `≈` | árbol de trabajo (D-13) |
+| ORG-02 #22 | Inicio en el pasado | `−` P2 | `≈` se rechaza con 15 min de margen | `4b2ecb1` (W5-01) |
+| ORG-02 #37 | Descripción | `−` P2, sin bloqueo (backlog 6) | `−` P2, bloqueo Q-02 del owner | `dc744b3` (doc 16, Q-02) |
+| ORG-03 #17 | Mensaje de inicio pasado | `−` P2 | `≈` «El inicio no puede estar en el pasado» | `4b2ecb1` (W5-01) |
+| ORG-04 #8 | Orden y cantidad | `≠` P2 | `≈` más nuevas primero, 20 por página | `ad03283` (W5-02) |
+| ORG-04 #31 (nueva) | Paginador de la lista | — | `+` (página fuera de rango sin corregir, P3) | `ad03283` (W5-02) |
+| ORG-04 #32 (nueva) | Necesidad de otra organización | — | `+` 404 también para el administrador de plataforma | árbol de trabajo (D-13) |
+| ORG-07 #9 | Organización activa | `✗` | `✗`; Configuración ya usa `primaryMembership` | `c7956b2` (W1-09) |
+| ORG-08 #1 | Rol recruiter | `≈` | `≈`; se cita la vista «Recruiter» del administrador | árbol de trabajo (D-13) |
+| ORG-08 #2 | Textos propios | `−` P3 | `≠` P3: «Recruiter» y «Espacio recruiter» solo en el marcador | árbol de trabajo (D-13) |
+| ORG-08 #11 (nueva) | Vista «Recruiter» del selector de rol | — | `≠` P3, marcador «Próximamente» | árbol de trabajo (D-13) |
+| MKT-02 #7 | Cobertura de la oferta | `≈` | `≈`; «Disponibilidad» ya no tapa el detalle | `9a99f89` (W1-02) |
+| MKT-04 #2 | Descripción | `−` P2, sin bloqueo (backlog 6) | `−` P2, bloqueo Q-02 del owner | `dc744b3` (doc 16, Q-02) |
+| HIRE-02 #21 | Confirmación de acciones destructivas | `−` | `−`; `ConfirmButton` como patrón | `73de8ff` (W1-10) |
+
+Recuento: 378 filas (374 + 4 nuevas); cambia el veredicto de 8 filas y el texto de Next o el bloqueo de otras 8. Además se han
+corregido las referencias de línea de 91 filas sin cambio de veredicto (`es:N` tras las 54 claves nuevas de
+`messages/es.json`, `AppShell.tsx`, `CapacityOverview.tsx`, `MatchCard.tsx`, `MatchList.tsx`, `[id]/page.tsx`,
+`matches/page.tsx`, `requirements/page.tsx`, `src/server/session.ts`, `work-requirement.ts`, `V1_SCOPE.md`,
+`07-decisions-index.md`). El circuito de contratación (HIRE-01…08, MKT-03/05) no cambia: `src/domain/applications.ts`
+sigue sin importarse, no hay ruta, función, tabla ni clave de candidaturas.
+
+**Resumen (v2).** 21 secciones y 393 elementos comparados (379 del xhigh + 14 nuevos).
+
+Por tipo de diff (xhigh → v2):
+
+| = | ≈ | ≠ | − | + | ✗ |
+|---|---|---|---|---|---|
+| 14 → 25 | 89 → 138 | 24 → 26 | 184 → 123 | 37 → 50 | 31 → 31 |
+
+Por severidad (filas `−`, `≠` y `≈` que la tienen; xhigh → v2):
+
+| P0 | P1 | P2 | P3 |
+|---|---|---|---|
+| 16 → 0 | 52 → 19 | 72 → 67 | 108 → 134 |
+
+De las 19 P1, 12 se pueden portar ya con el default v1.8 o el alcance LATER (ORG-02 #9, #11-13, #19, #24, #32; ORG-07 #7;
+MKT-01 #1, #7, #27; MKT-02 #11), 5 siguen bloqueadas por D-07 P3 + D-10 (MKT-05 #4, #7; HIRE-05 #6, #8, #10),
+HIRE-05 #1 es mixta (identidad bloqueada, resto portable) y ORG-02 #25 espera al owner (Q6 ↔ SCOPE-2).
+
+| Sección | Estado global | Elementos |
+|---|---|---|
+| ORG-01 Resumen de la organización | PARCIAL | 32 |
+| ORG-02 Constructor: campos | PARCIAL | 40 |
+| ORG-03 Constructor: revisión y publicación | PARCIAL | 26 |
+| ORG-04 Ofertas y cobertura | PARCIAL | 32 |
+| ORG-05 Ciclo de vida de la oferta | PARCIAL (pausar, reanudar, editar y cerrar ya existen) | 16 |
+| ORG-06 Distribución Urgente/AOG | AUSENTE EN NEXT (portable, LATER) | 12 |
+| ORG-07 Organización y plantilla | PARCIAL | 16 |
+| ORG-08 Recruiter | AUSENTE EN NEXT (portable, LATER) | 11 |
+| MKT-01 Buscar candidatos: filtros y páginas | PARCIAL | 29 |
+| MKT-02 Tarjeta, perfil y comparación | PARCIAL | 20 |
+| MKT-03 Oportunidades / Ofertas en la red | PARCIAL (v2: antes AUSENTE) | 16 |
+| MKT-04 Detalle de oferta | PARCIAL (también para el profesional) | 11 |
+| MKT-05 Presentar candidatura | PARCIAL (v2: antes AUSENTE) | 16 |
+| HIRE-01 Pantalla de candidaturas | PARCIAL (v2: antes AUSENTE) | 13 |
+| HIRE-02 Estados y transiciones | IGUAL en lo ratificado (v2: antes PARCIAL, solo contrato) | 28 |
+| HIRE-03 Propuesta y aceptación | PARCIAL (v2: antes AUSENTE) | 12 |
+| HIRE-04 Confirmación, finalización, cancelación | PARCIAL (v2: antes AUSENTE) | 16 |
+| HIRE-05 Candidate Pack | PARCIAL (v2: antes AUSENTE; contacto y documentos bloqueados) | 18 |
+| HIRE-06 Conversación | NO PORTAR (SCOPE OUT) | 9 |
+| HIRE-07 Avisos internos | AUSENTE EN NEXT (portable, LATER) | 8 |
+| HIRE-08 Comisiones, facturas y planes | NO PORTAR (SCOPE OUT) | 12 |
+
+Las tres diferencias más graves (v2):
+
+1. **La necesidad de Next no tiene el modelo de la v1.8** (ORG-02, ORG-04, MKT-02 #11). P1, ahora portable con el default
+   v1.8: jornadas sueltas con zona y horas base, país, experiencia mínima, «aeronaves aceptadas» como «cualquiera de»,
+   motores, restricciones, tarifas, logística, contrato y descripción (backlog v2-09…v2-12).
+2. **Falta la amplitud del lado de la organización**: directorio libre y su recuento (MKT-01 #1, ORG-01 #9), pantalla
+   global de candidaturas (HIRE-01 #1), bloqueo de empleador (MKT-01 #27), revisión de la organización (ORG-07 #7),
+   recruiter (ORG-08), avisos internos y distribución Urgente/AOG (HIRE-07, ORG-06). Todo portable (default v1.8 o LATER).
+3. **El Candidate Pack sigue sin identidad, contacto ni documentos** (MKT-05 #4, #7; HIRE-05 #6, #8, #10): bloqueado por
+   D-07 P3 + D-10; M09 está preparado y apagado. Y la cobertura parcial choca con Q6 ratificada (ORG-02 #25).
+
+Defecto nuevo de Next (P2): al cerrar una necesidad con una candidatura aceptada o confirmada, la BD lo rechaza bien
+(`CFA11`) pero la UI dice «Ya has declarado esta cualificación. Edita la existente.» (ORG-05 #5, hallazgo 11, backlog v2-01).
+
+Backlog derivado (v2): 44 entradas. 13 HECHO (las 8 tareas resueltas del xhigh y M05, M07, M08 y M09 preparado),
+26 PENDIENTE portables ya (P1 8 · P2 11 · P3 7; S 6 · M 10 · L 10; 21 necesitan migración o Edge Function, que el
+owner despliega) y 5 BLOQUEADO (despliegue remoto, contacto e identidad del Pack, documentos, cobertura parcial por Q6,
+SCOPE OUT). La tarea 6 del xhigh (descripción, Q-02) pasa a v2-12.
+
+**Método.**
+- v1.8 estático: `out/parts/D1-company-market.md` (demo), `out/parts/C-connected-admin.md` §3.5, §3.8-3.12 y §4.1
+  (conectado) y `out/parts/B-server-data.md` §4.3-4.6 y §5.5 (servidor y máquinas de estados).
+- v1.8 runtime:
+  - demo: `out/v18-runtime-demo.md` §2.E, §2.R, D-FLOW-01 y §2.T (D-TEC-04/05);
+  - conectado: `out/v18-runtime-connected.md` §1-§4, leído al final, en la versión de las 14:16.
+- Código v1.8 comprobado a mano en los puntos de los que depende una fila (sin ejecutar nada):
+  - tabla de transiciones: `server/app.mjs:115-117`;
+  - formularios conectados: `src/beta/Account.jsx:64-71,79`;
+  - comisiones: `src/business.js:21-25`;
+  - aeronaves y motores «cualquiera de» (`some`): `src/business.js:140-150`;
+  - `src/components/v11/Company2.jsx:9` y `src/components/v11/Dashboard.jsx:24`.
+- Next: cada afirmación se ha comprobado en el código. Ficheros leídos:
+  - `src/app/app/organization/**`;
+  - `src/features/{requirements,capacity,matching,workforce}/**`;
+  - `src/domain/{work-requirement,capacity,applications}.ts`;
+  - `src/lib/validation/work-requirement.ts`;
+  - `supabase/functions/work-requirements/index.ts`;
+  - `messages/es.json`;
+  - la documentación de producto y de decisiones citada en cada fila.
+  - El código gana a la documentación.
+- Revisión del 22/10/2026: se han releído en el código actual (HEAD `5c2d1a2` + árbol de trabajo) todas las filas que
+  citan un fichero cambiado desde `51c835a` y todas las `−`, `≠` y `≈` que podían tocar los 39 commits o D-13. Ficheros
+  nuevos o cambiados que se han leído:
+  - `src/app/app/organization/{page.tsx,requirements/page.tsx,requirements/[id]/page.tsx,requirements/[id]/matches/page.tsx}`;
+  - `src/features/requirements/{api.ts,dashboard.ts,pagination.ts,components/RequirementsPager.tsx}`;
+  - `src/features/capacity/components/CapacityOverview.tsx`; `src/features/matching/components/{MatchCard,MatchList}.tsx`;
+  - `src/lib/validation/work-requirement.ts`; `supabase/functions/work-requirements/index.ts`;
+  - `src/components/layout/{AppShell.tsx,views.ts,ViewSwitcher.tsx}`; `src/app/app/{page.tsx,recruiter/page.tsx,settings/page.tsx}`;
+  - `src/server/session.ts`; `src/components/ui/ConfirmButton.tsx`; `supabase/seed.sql`; `messages/es.json`;
+  - `docs/product/V1_SCOPE.md`, `memory-bank/07-decisions-index.md` y la tabla de tareas del doc 16 (cada «VERIFIED»
+    se ha comprobado en el código, no se ha dado por bueno).
+- Textos (`string-diff.json` recalculado el 22/10 sobre el `messages/es.json` actual, mismo esquema que
+  `textos/string-diff.json`; filtrado por los ficheros v1.8 del alcance). Los porcentajes del 21/10 salían de
+  `textos/string-coverage.md`, que asigna cada cadena a un solo fichero y no se puede reproducir desde el JSON; aquí cada
+  cadena cuenta en todos los ficheros v1.8 que la contienen, con el mismo criterio en las dos fechas. Cobertura literal
+  (exactas + próximas de total), 21/10 → 22/10:
+  - `Company2.jsx` 27 + 5 de 197 (16 %) → 30 + 5 (18 %);
+  - `Workflow.jsx` 18 + 2 de 140 (14 %) → 19 + 2 (15 %);
+  - `Marketplace.jsx` 21 + 6 de 139 (19 %) → 22 + 6 (20 %);
+  - `CandidateDirectory.jsx` 19 + 3 de 87 (25 %) → 20 + 3 (26 %);
+  - `Dashboard.jsx` 15 + 1 de 100 (16 %) → 16 + 1 (17 %);
+  - `ConnectedDirectory.jsx` 6 + 1 de 40 (18 %), sin cambios;
+  - `ConnectedHome.jsx` 16 + 1 de 74 (23 %) → 18 + 1 (26 %);
+  - `Account.jsx` 45 + 7 de 293 (18 %) → 50 + 7 (19 %).
+
+  Coincidencias nuevas del alcance: «De una necesidad concreta a un equipo disponible.» →
+  `organization.dashboard.description`; «De tu organización» → `organization.dashboard.openRequirementsDetail`;
+  «ESPACIO RECRUITER» → `recruiter.title` («Espacio recruiter»); «Técnico», «Empresa», «Recruiter» y «Administración» →
+  `nav.views.*` del selector «Ver como»; «Anterior» / «Siguiente» suman `organization.requirements.previous/next`. El
+  resto de las nuevas son del área técnica o del shell («Editar perfil», «Completar», «Sesión cerrada.», «Abrir
+  documentos»). «Cobertura» ya solo casa con `landing.flow.coverage`: el KPI es «Cobertura interna». Se pierden
+  «ESPACIO PROFESIONAL» y «Pasaporte» (Next dice ahora «Mi espacio» y «Mi pasaporte»).
+
+  Las coincidencias exactas del circuito siguen siendo palabras sueltas que Next usa para otra cosa: «Rechazada» →
+  `domain.verification.rejected`, «Retirada» → `domain.held.withdrawn`, «Cancelada» →
+  `domain.requirementStatus.cancelled`. **Ningún texto de candidatura, propuesta, Candidate Pack, conversación, avisos,
+  oportunidades o comisiones tiene clave en `messages/es.json`.** Las únicas menciones de «oportunidad» son del inicio
+  técnico: «Tu próxima oportunidad.» y «Completar los datos te ayuda a encontrar oportunidades.» (es:492,463).
+
+**Convenciones.**
+- Rutas:
+  - v1.8, relativas a `~/pau/Crew_Flex/tmp/CrewFlex_v1.8/CrewFlex-v1.8` (copia idéntica en
+    `tmp/references/crewflex-v18/CrewFlex-v1.8`); capturas v1.8, relativas a la raíz del informe
+    (`CrewFlex_DIFF_HTML_v18_vs_Next_2026-10-21/`; el 21/10 la ruta quedó vacía);
+  - Next, relativas a `~/pau/Crew_Flex`; `es:N` = `messages/es.json:N`.
+- Ids v1.8: `S-*` estático · `D-*` runtime demo · `C-*` runtime conectado.
+- **Flujo principal** a efectos de severidad (P0): el de la v1.8, publicar → ver ofertas → presentar candidatura →
+  preseleccionar → proponer → aceptar → confirmar. Next tiene hoy otro flujo principal: necesidad → capacidad interna →
+  matching explicado (`docs/product/V1_SCOPE.md:3-6`).
+- El owner fijó la v1.8 como objetivo de migración (`docs/integration/crewflex-v13/14-decision-pack.md:23`). Por eso la
+  severidad de una fila `−` bloqueada mide el impacto de no tener paridad, no la urgencia de hoy.
+
+**Bloqueos usados** (fuente):
+
+| Id | Qué decide | Fuente |
+|---|---|---|
+| D-06 (Q2…Q7) | Máquina de estados de candidaturas | `docs/product/APPLICATIONS_STATE_MACHINE.md` §4; `14-decision-pack.md:30` |
+| D-07 (P1…P4) | Consentimientos e identidad | `docs/product/CANDIDATE_PACK.md` §4; `:31` |
+| D-10 | Escáner documental | `memory-bank/07-decisions-index.md:60` |
+| D-12 | Visibilidad de necesidades publicadas y modelo recruiter | `:32`; `docs/product/RECRUITER_MODEL.md` |
+| C-9/D-08 | Condiciones, tarifas, logística, días sueltos | `docs/product/OPEN_DECISIONS.md:52` |
+| C-10/D-02/D-03 | Entradas del matching | `:53`; `14-decision-pack.md:34` |
+| OD-4/D-09 · OD-5/C-14 · OD-6/D-04 · OD-7 | Invitaciones · KYB · países · modelo comercial | `07-decisions-index.md:46-49` |
+| R-D3 · R-D4 | Más de 100 en el pool · borradores incompletos | `07-decisions-index.md:63-64` |
+| C-11 | Canales de aviso | `07-decisions-index.md:54` |
+| OD-3 | Verificación de cualificaciones | `07-decisions-index.md:44` |
+| LIFECYCLE | Fila «Requirement lifecycle»: pausar/reabrir, editar sin candidaturas, cancelar desde la UI | `14-decision-pack.md:33` |
+| AOG-OPTIN | Fila «AOG opt-in» | `14-decision-pack.md:39` |
+| AUDIT-VIEW | Fila «Audit view privacy» | `14-decision-pack.md:40` |
+| SCOPE | LATER u OUT | `docs/product/V1_SCOPE.md:54-67` |
+| DEMO-ONLY | Solo tiene sentido en la demo | — |
+| C-8/D-05 · T-03 · T-04 | Decisiones ya tomadas: la fila es `✗` | AOG declarado; sin puntuación 75/25; sin referencias `T-<uuid>` |
+| Q-02 | Pregunta abierta al owner: ¿la descripción libre de la necesidad es parte de C-9? (necesita migración) | `docs/integration/crewflex-v13/16-html-v18-diff.md`, «Owner first» |
+| D-13 | Decisión tomada el 22/10 (no bloquea): selector «Ver como» del administrador de plataforma sobre su propia cuenta; «Recruiter» es un marcador | `docs/integration/crewflex-v13/08-product-decisions.md` §«Owner decisions of 2026-10-22»; `07-decisions-index.md:31` (ambos sin commit) |
+| v2 · D-06 Q2-Q7, D-12 (visibilidad), M05, D-07 P1/P2/P4 | Ratificadas el 22/10 para implementación local: ya no bloquean (Q7 = sin `accepted → rejected`; Q5 + T-09 = volver solo tras retirar; Q6 = un periodo por candidatura) | `08-product-decisions.md` §«Owner decisions of 2026-10-22» |
+| v2 · SCOPE-2 | NOW + NEXT + LATER se pueden portar en local; OUT sigue fuera. «(v2: desbloqueado, alcance LATER)» en la celda | `08-product-decisions.md` §2026-10-22 (tarde); `V1_SCOPE.md` «LATER» |
+| v2 · DEFAULTS | Decisión abierta (C-9/D-08, C-10, R-D4, archivar/duplicar, OD-5, OD-6, OD-7 sin dinero real, AUDIT-VIEW, R-D3, D-12 recruiter) → comportamiento v1.8 como default técnico documentado y reversible: «— (v2: default v1.8)» | ídem |
+| v2 · D-07 P3 + D-10 | Siguen bloqueando contacto, identidad real y documentos del Pack (M09 apagado) | `CANDIDATE_PACK.md` §4; `07-decisions-index.md` |
+| v2 · Conflicto Q6 ↔ SCOPE-2 | La cobertura parcial (LATER) choca con Q6 ratificada: lo decide el owner (hallazgo 12) | — |
+
+Capturas Next: `docs/audit/evidence/v18-compare/next-after/*` son del **lote 11** (en inglés, anteriores a los lotes
+13-19); `docs/audit/evidence/local-*.jpg` son de la fase V0.
+
+---
+
+## ORG-01 · Resumen de la organización — v1.8 `S-EMP-01, D-EMP-01, D-REC-01, S-CON-01b, C-EMP-01/20, C-REC-11` ↔ Next `N-ORG-01, N-APP-02`
+
+**Estado global:** PARCIAL. Next cambia el «centro de operaciones» de la v1.8 por un panel «Operaciones».
+- v1.8: KPIs de demanda y de cobertura confirmada, 3 necesidades con % cubierto y accesos rápidos.
+- Next: KPI «Necesidades abiertas», capacidad **interna** de una sola necesidad foco y 5 necesidades, las vigentes
+  primero.
+- Solo «Necesidades abiertas» coincide en fórmula con la v1.8 («Necesidades activas»). La capacidad interna se llama
+  ahora «Cobertura interna», así que ya no choca con la cobertura confirmada de la v1.8.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Entrada | Demo: lateral «Resumen» y dock «Inicio», hash `#home` (`src/LegacyApp.jsx:25,69`). Conectado: «Resumen» (`home`) en el menú de empresa y recruiter (runtime §1.3) | Entrada «Resumen» del grupo de la organización, `/app/organization` (`src/components/layout/AppShell.tsx:23-27,48-57`, es:62); sin dock (C-12) | ≈ | — | — | Mantener |
+| 2 | Destino al entrar | La demo y el conectado abren `#home` del rol | `/app` redirige a `/app/organization` si hay membresía (`src/app/app/page.tsx:8`). Un administrador de plataforma entra en `/app/admin` y llega aquí con «Ver como → Empresa» (`page.tsx:7`; fila 31) | ≈ | — | — | Mantener |
+| 3 | Eyebrow | Demo: «CENTRO DE OPERACIONES»; recruiter «ESPACIO RECRUITER» (`Dashboard.jsx:24`). Conectado: «ORGANIZACIÓN CONECTADA» (`src/beta/ConnectedHome.jsx:14`) | Nombre de la organización (`src/app/app/organization/page.tsx:79`) | ≠ | P3 | — | Mantener (patrón de cabecera de Next) |
+| 4 | h1 | Demo: nombre de la organización. Conectado: nombre o «Completa tu organización» (`ConnectedHome.jsx:14`) | «Operaciones» (es:748) | ≠ | P3 | — | Mantener |
+| 5 | Descripción | Demo: «De una necesidad concreta a un equipo disponible.» (`Dashboard.jsx:24`). Conectado: «Datos de tu cuenta guardados en el servidor local.» | «De una necesidad concreta a un equipo disponible.» (es:749; `page.tsx:81`) | = (antes −) | — | — | Mantener (hecho en W2-03) |
+| 6 | CTA de cabecera | Demo: «Publicar necesidad» ↗ → `create`. Conectado: «Editar organización» → `org` | «Nueva necesidad», solo para managers y administradores (`page.tsx:70-74`, es:758) | ≈ | P3 | — | Mantener |
+| 7 | Hero | «CrewFlex Aviation» · «Capacidad técnica flexible» · h2 «El técnico adecuado. Las fechas adecuadas.» · «Define cualificaciones, ventanas de disponibilidad y condiciones para encontrar perfiles realmente viables.» · botón «Explorar candidatos» → `candidates` · marca «CF / AVIATION» (`Dashboard.jsx:24`; `evidencias/shots/demo/D-EMP-01-resumen-1440.png`) | No hay hero | − | P3 | — (v2: default v1.8); el botón espera al directorio libre (MKT-01 #1) | Portar el texto del hero; el botón «Explorar candidatos», con el directorio (backlog v2-22) |
+| 8 | KPI de necesidades activas | Demo «Necesidades activas» = propias con `effectiveStatus==='Publicada'`, detalle «De tu organización». Conectado «Ofertas publicadas» = `published` y `end > ahora` (`ConnectedHome.jsx:14`). Runtime: 3 | «Necesidades abiertas» = `total` exacto de la petición filtrada `status=open&endsAfter=ahora` (X-06 `46f40e8`; `src/features/requirements/dashboard.ts:25-33`; `page.tsx:94-105`; es:750-751), detalle «De tu organización»; `ApiErrorState` si esa petición falla. v2, en ejecución: «NECESIDADES ABIERTAS 1 · De tu organización» con una abierta vigente (`evidencias/v2/30/ORG-01-10-next-1440-counters.jpg`). v1.8 conectado: «5 Ofertas publicadas» (`evidencias/v2/30/ORG-01-1-v18c-1440.jpg`); demo «Necesidades activas 3» (`evidencias/v2/30/ORG-01-1-v18-1440.jpg`) | ≈ | P3 | — | Mantener (hecho X-06 `46f40e8`: ya no sale «50+») |
+| 9 | KPI «Red visible» | `allCandidates.filter(canSeeCandidate).length`, «Según permisos y privacidad». Runtime: 99 (`Dashboard.jsx:24`) | No hay recuento global de la red. El pool solo existe por necesidad (`get_requirement_external_pool_summary`, next-static §5.3) | − | P2 | — (v2: default v1.8) (OD-5/C-14); S-7: el recuento no debe permitir enumerar la red | Portar con el directorio libre (MKT-01 #1): perfiles visibles para la organización, sin privados ni bloqueos (backlog v2-22) |
+| 10 | KPI «Candidaturas» | Demo: nº de candidaturas a ofertas propias + «{n} pendientes de confirmar» (Aceptada). Conectado: `applications.length` | «Candidaturas en curso» = candidaturas no terminales de la organización y detalle «{count, plural, one {# pendiente de confirmar} other {# pendientes de confirmar}}» (aceptadas), tono warn si hay alguna; solo managers y administradores (`page.tsx:49-53,60-64,106-113`; `get_application_counts`, `supabase/migrations/20261022130300_applications.sql:1040-1079`; es:759-760). v2, en ejecución: «CANDIDATURAS EN CURSO 4 · 0 pendientes de confirmar» (`evidencias/v2/30/ORG-01-10-next-1440-counters.jpg`). La v1.8 cuenta **todas** las candidaturas (conectado «9 Candidaturas», `evidencias/v2/30/ORG-01-1-v18c-1440.jpg`; demo «Candidaturas 0 · 0 pendientes de confirmar», `evidencias/v2/30/ORG-01-1-v18-1440.jpg`) | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Mantener; valorar contar todas como la v1.8 (la etiqueta «en curso» lo explica) |
+| 11 | KPI de cobertura confirmada | Demo «Jornadas cubiertas» = Σ `coverage(j).filled`, «Solo asignaciones confirmadas». Conectado «Asignaciones confirmadas» = nº en `confirmed` | «Asignaciones confirmadas» = nº de candidaturas `confirmed`, detalle «Solo asignaciones confirmadas» (`page.tsx:114-118`; es:761-762); las `finished` no cuentan. v2, en ejecución: «ASIGNACIONES CONFIRMADAS 1» (`evidencias/v2/30/ORG-01-10-next-1440-counters.jpg`). Igual que el conectado («2 Asignaciones confirmadas»); la demo suma jornadas («Jornadas cubiertas») | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener (como el conectado) |
+| 12 | KPI «Comisión reconocida» | Conectado: `money(Σ commissionCents con status≠'void' / 100)`. Runtime: «29,88 €» | — | − | P3 | SCOPE (OUT: comisiones) | No portar (ver HIRE-08) |
+| 13 | KPI «Necesarios» | — | `headcount` de la necesidad foco (`src/domain/capacity.ts:38-58`; `src/features/capacity/components/CapacityOverview.tsx`, es:902) | + | — | — | Mantener |
+| 14 | KPI «Elegibles internos» | — | Miembros con `evaluateMatch().eligible`; tono ok si > 0 (es:903) | + | — | — | Mantener |
+| 15 | KPI «Déficit» | — | `max(0, required − eligible)`; detalle «{count} × a cubrir externamente» o «Cubierto internamente» (es:904-906) | + | — | — | Mantener |
+| 16 | KPI «Cobertura» | En la v1.8, «cobertura» es siempre cobertura **confirmada**: asignaciones / plazas (`business.js:121-132`) | «Cobertura interna» = `min(100, round2(elegibles internos / necesarios × 100))`: capacidad interna, no contratación; la cobertura confirmada es la fila 11 (es:907; `capacity.ts:55`; `CapacityOverview.tsx:9-12,60`) | + (antes ≠) | — | — | Mantener (hecho en W2-04) |
+| 17 | Cabecera del bloque de capacidad | — | h2 «Capacidad técnica» + «DD MMM → DD MMM · {ubicación} · {TURNO}» + título + chips de cualificaciones (`CapacityOverview.tsx:30-45`, es:901) | + | — | — | Mantener |
+| 18 | Elección de la necesidad foco | No hay foco | Primera abierta y no vencida, por inicio ascendente (`page.tsx:29-35,60-68`) | + | — | — | Mantener |
+| 19 | Acceso a candidatos | «Explorar candidatos» (hero) y tarjeta «Red profesional» → directorio libre | «Ver profesionales externos elegibles» (primario si hay déficit) y «Detalle de la necesidad» (`CapacityOverview.tsx:65-75`, es:908-909) | ≈ | — | — | Mantener (una necesidad por vista) |
+| 20 | Visibilidad por rol | La v1.8 no tiene roles dentro de la organización | Un `member` ve «El análisis de capacidad está disponible para managers y administradores» / «Pide el rol de manager a un administrador de la organización.» (es:754-755; `page.tsx:126-131`) **solo si hay necesidad foco** (`focus && !canManage`); sin foco ve el KPI y el panel sin aviso. En el detalle y en `/matches` el aviso sale siempre (`[id]/page.tsx:94-98`; `matches/page.tsx:44-51`). xhigh, `alpha` en ejecución: Resumen sin aviso (no hay foco), detalle y matching con aviso (`evidencias/xhigh/30/ORG-01-20-next-1440-member.jpg`, `evidencias/xhigh/30/MKT-01-26-next-1440-member.jpg`) | + | — | — | Mantener |
+| 21 | Panel de necesidades | «Necesidades en seguimiento» + «Ver todas» → `manage`. `myJobs.slice(0,3)` en orden de datos (las más nuevas primero), sin filtrar estado (`Dashboard.jsx:24`) | Panel «Necesidades» + «Ver todas» → `RequirementsList` con 5 filas: primero las abiertas no vencidas por inicio ascendente y después el resto de la lista por inicio ascendente, sin repetir (`page.tsx:132-143`, es:756-757; `dashboardRequirements`, `src/features/requirements/dashboard.ts:7-19`) | ≈ (antes ≠) | — | — | Mantener (hecho en W1-07; 5 frente a 3 y vigentes primero, no las más nuevas) |
+| 22 | Fila del panel | Icono Zap naranja si AOG o avión; título; «{location} · {día inicio} – {día fin}»; «{percent}% cubierto»; clic → `manage` con la oferta | Tabla con chips de urgencia y estado, periodo UTC, «N ×», cualificaciones; enlace al detalle (`RequirementsList.tsx:18-67`) | ≈ | P3 | — | Mantener |
+| 23 | «% cubierto» por necesidad | `coverage(j).percent` | No existe: el panel enseña chips de urgencia y estado («Cubierta» incluida), no el % (`RequirementsList.tsx`); el dato existe (confirmadas + finalizadas frente a `headcount`, `20261022130300_applications.sql:285-293`) | − | P2 | — (v2: D-06 ratificada) | Portar «{p}% cubierto» por necesidad (backlog v2-08) |
+| 24 | Vacío | «Publica tu primera necesidad» / «El constructor conserva requisitos, condiciones y logística.» (`evidencias/shots/demo/D-REC-01-resumen-1440.png`) | «Aún no hay necesidades» / «Crea una necesidad para ver tu capacidad técnica y el déficit a cubrir.» + botón (es:752-753) | ≈ | P3 | — | Mantener |
+| 25 | Panel «Cómo cerrar una cobertura» | 1. «Publica fechas y requisitos.» 2. «Compara candidatos elegibles.» 3. «Revisa el Candidate Pack y propone.» 4. «El técnico acepta y confirmas la asignación.» | No hay. Los 4 pasos ya existen en Next (necesidad, matching, candidatura con propuesta, aceptación y confirmación); la landing tiene 5 pasos «01 Necesidad … 05 Cobertura» (`src/app/page.tsx`) | − | P3 | — (v2: D-06 ratificada; el paso 3 sin contacto ni documentos, D-07 P3) | Portar el panel (backlog v2-21) |
+| 26 | Accesos rápidos | «Constructor / Necesidades estructuradas» → `create`; «Red profesional / Matching y comparación» → `candidates`; «Candidate Packs / Expedientes y seguimiento» → `applications` (`Dashboard.jsx:44-59`) | No hay | − | P3 | — (v2: default v1.8); «Red profesional» espera a MKT-01 #1 | Portar «Constructor» y «Candidaturas»; «Red profesional» con el directorio (backlog v2-21) |
+| 27 | Panel conectado «Continúa tu actividad» | «Publicar o gestionar ofertas», «Consultar directorio», «Revisar candidaturas», «Ver comisiones» + «Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado. CrewFlex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma.» | No hay panel. La nota no contractual existe solo dentro de cada propuesta: «CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.» (es:1337) | − | P3 | — (v2: D-06 ratificada) · «Ver comisiones»: SCOPE OUT | Portar el panel y la nota, sin «Ver comisiones» (backlog v2-21) |
+| 28 | Errores | Demo: no aplica. Conectado: `role=alert` inline | `ApiErrorState` para la lista, para el KPI y el foco, y para la capacidad, con «Referencia: {id}» (`page.tsx:39,84-85,123`) | + | — | — | Mantener |
+| 29 | Variante recruiter | Eyebrow «ESPACIO RECRUITER»; mismos KPIs (`evidencias/shots/demo/D-REC-01-resumen-1440.png`) | Ninguna. El tipo «Agencia de personal» existe en el alta (es:158), pero el panel es idéntico. La vista «Recruiter» del selector del administrador es un marcador, no una variante de este panel (ORG-08 #11) | − | P3 | — (v2: desbloqueado, alcance LATER); modelo D-12 provisional como default | Portar con el espacio recruiter (ORG-08, backlog v2-24) |
+| 30 | Selector de organización | Demo: «Explora otra organización» (13 empresas o 5 recruiters) | Membresía primaria (`src/server/session.ts:99-115`) | ✗ | — | DEMO-ONLY | No portar (V1.8 tampoco tiene varias organizaciones por cuenta: V18-46) |
+| 31 (nueva) | Vista «Empresa» del selector de rol | Demo: «Probar como» (`select` «Rol de demostración»: Técnico · Empresa · Recruiter, `src/LegacyApp.jsx:84`) → Empresa abre el Resumen de una organización de demo (fila 30). Conectado: el rol lo da la invitación | Solo administradores de plataforma: «Ver como» (Técnico · Empresa · Recruiter · Administración) → «Empresa» abre este mismo panel sobre **su propia** organización, con sus permisos de admin y sin suplantar a nadie; solo se ofrece si tiene membresía (`src/components/layout/views.ts:35-48`; `src/components/layout/ViewSwitcher.tsx:34-77`; es:74-79). La semilla local le da «CrewFlex Operaciones» (`supabase/seed.sql:69-73`). xhigh, en ejecución: `platform.admin` entra en `/app/admin`; «Ver como» ofrece Técnico · Empresa · Recruiter · Administración (enlaces, `aria-current` en la vista actual); «Empresa» abre «CREWFLEX OPERACIONES · Operaciones» con «Aún no hay necesidades» y el lateral de esa organización (`evidencias/xhigh/30/ORG-01-31-next-1440-admin-empresa.jpg`, `evidencias/xhigh/30/ORG-01-31-next-390-admin-empresa.jpg`) | ≈ | — | — | Mantener (D-13) |
+| 32 (nueva v2) | Contadores según el rol | La v1.8 no tiene roles dentro de la organización: el dueño ve todos los KPIs (`evidencias/v2/30/ORG-01-1-v18c-1440.jpg`) | «Candidaturas en curso» y «Asignaciones confirmadas» solo para admin/manager (`canManage`, `page.tsx:63,106`); un `member` ve «Necesidades abiertas» y la lista. v2, en ejecución: `manager.mro` y `admin.mro` ven los tres KPIs (`evidencias/v2/30/ORG-01-10-next-1440-counters.jpg`, `evidencias/v2/30/ORG-01-10-next-1440-admin.jpg`) | + | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-01-resumen-1440.png`, `evidencias/shots/demo/D-EMP-01-resumen-390.png`,
+`evidencias/shots/demo/D-REC-01-resumen-1440.png`, `evidencias/shots/connected/C-EMP-01-home-empty-1440.png`,
+`evidencias/shots/connected/C-EMP-20-home-active-1440.png`, `evidencias/shots/connected/C-EMP-20-home-390.png`,
+`evidencias/shots/connected/C-REC-11-home-active-1440.png`. Next (lote 11, EN):
+`docs/audit/evidence/v18-compare/next-after/org-home-{360,390,768,1024,1440}.jpg`; V0
+`docs/audit/evidence/local-04-organization-dashboard.jpg`.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/ORG-01-1-next-1440.jpg`, `evidencias/xhigh/30/ORG-01-20-next-1440-member.jpg`, `evidencias/xhigh/30/ORG-01-31-next-1440-admin-landing.jpg`, `evidencias/xhigh/30/ORG-01-31-next-1440-admin-empresa.jpg`, `evidencias/xhigh/30/ORG-01-31-next-390-admin-empresa.jpg`; v1.8 `evidencias/xhigh/30/ORG-01-1-v18-1440.jpg`, `evidencias/xhigh/30/ORG-08-1-v18-1440-home.jpg`.
+Capturas v2 (22/10, SNAP2 `038329f` en :3004; v1.8 demo y conectado en ejecución): Next `evidencias/v2/30/ORG-01-10-next-1440-counters.jpg`, `evidencias/v2/30/ORG-01-10-next-1440-counters-end.jpg`, `evidencias/v2/30/ORG-01-10-next-1440-admin.jpg`; v1.8 `evidencias/v2/30/ORG-01-1-v18-1440.jpg` (demo), `evidencias/v2/30/ORG-01-1-v18c-1440.jpg`, `evidencias/v2/30/ORG-08-1-v18c-1440.jpg` (conectado).
+
+---
+
+## ORG-02 · Constructor de necesidad: campos y opciones — v1.8 `S-EMP-02, S-EMP-02a, D-EMP-02, D-REC-02, S-CON-05a, S-CON-05b, C-EMP-10…13, C-REC-05` ↔ Next `N-ORG-03`
+
+**Estado global:** PARCIAL. Next cubre título, ubicación, personas, periodo, turno, urgencia declarada y cualificaciones
+del catálogo con nivel obligatorio o deseable.
+- Falta la mitad del formulario de la v1.8: país, días sueltos y cobertura parcial, experiencia mínima, motores,
+  movilización, tarifas, logística, contrato, descripción y cliente.
+- Categoría y aeronave existen solo como cualificaciones del catálogo, y con otra semántica: en Next son todas
+  obligatorias (Y); en la v1.8, «Aeronaves aceptadas» basta con una (O).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Entrada | Demo: lateral «Nueva necesidad» con «+» naranja, `#create`; también Editar, Duplicar y Completar (`LegacyApp.jsx:25`). Conectado: `<details>` «Publicar una necesidad» dentro de Ofertas, abierto si la organización no tiene ofertas (`Account.jsx:68`) | Página propia `/app/organization/requirements/new`, título «Nueva necesidad» (es:758); editar: «Editar necesidad» en el detalle → `/requirements/{id}/edit` con el mismo formulario relleno (`[id]/page.tsx:73-78`; `edit/page.tsx:24-89`; es:810) | ≈ | — | — | Mantener |
+| 2 | Quién puede crear | Demo: cualquier rol ve el formulario; el técnico recibe al enviar «Cambia al rol empresa o recruiter.» (`AppState.jsx:148-169`). Conectado: `company`/`recruiter` (`server/app.mjs:85-87`) | Solo admin o manager. Si no: «No tienes permiso» / «Solo los managers y administradores de la organización pueden crear necesidades.» (`new/page.tsx:21-29`, es:815-816) | + | — | — | Mantener (BR-1.8) |
+| 3 | Eyebrow | «CONSTRUCTOR»; recruiter «NECESIDAD PARA CLIENTE» (`Company2.jsx:114`) | Nombre de la organización (`new/page.tsx:34`) | ≠ | P3 | — | Mantener |
+| 4 | h1 | «Define el trabajo real.»; editando, «Editar necesidad.» | «Nueva necesidad de personal» (es:813); editando, h1 «Editar necesidad» con el título como descripción (`edit/page.tsx:66`; es:810). v2, en ejecución (`evidencias/v2/30/ORG-05-9-next-1440-edit.jpg`) | ≠ | P3 | — (v2: M05 ratificada) | Mantener; la edición ya dice «Editar necesidad» como la v1.8 |
+| 5 | Descripción | «Guarda un borrador, revisa requisitos y publica cuando esté completo.» | «Describe la necesidad operativa real. Crew Flex evalúa primero tu capacidad interna.» (es:814) | ≠ | P3 | — (v2: default v1.8) (R-D4: el texto habla de borradores) | Mantener |
+| 6 | Secciones | «01 · Perfil técnico» · «02 · Tiempo y cobertura» · «03 · Condiciones y logística» (`Company2.jsx:114-125`) | «01 · Necesidad» · «02 · Periodo (UTC)» · «03 · Cualificaciones» (es:818-820) | ≠ | P3 | — | Mantener |
+| 7 | Título | Demo: «Título», text sin `required`; vacío → «Indica el título de la necesidad.», también en borrador (`business.js:196-212`). Conectado: «Título» required, `text(…,'Título',160)` → «Título: dato no válido.» (`rules.mjs:11-22`) | «Título», placeholder «B1.1 · Refuerzo de línea A320»; trim 3-120 → «El título es obligatorio» / «El título debe tener al menos 3 caracteres» / «El título debe tener como máximo 120 caracteres» (`src/lib/validation/work-requirement.ts:28`, es:274-276) | ≈ | P3 | — | Mantener (120 frente a 160) |
+| 8 | Base | Demo: select «Base operativa» con `AIRPORTS`: Madrid (MAD), Barcelona (BCN), Lisboa (LIS), París (CDG), Frankfurt (FRA), Londres (LHR); por defecto la de la organización. Conectado: text «Base / aeropuerto» required, ≤ 60 | «Ubicación», text, placeholder «Madrid (MAD)», trim 2-80 → «La ubicación es obligatoria» / «…al menos 2…» / «…como máximo 80…» (`work-requirement.ts:29-33`, es:279-281) | ≈ | P3 | — | Mantener texto libre, como el conectado |
+| 9 | País | Demo: «País vinculado a la base», solo lectura y derivado de `BASES` (España, Portugal, Francia, Alemania, Reino Unido); «La base y el país deben coincidir.». Conectado: select «País del trabajo», 27 UE (AT…SE, `rules.mjs:1`), por defecto ES; si no: «Selecciona un país de la Unión Europea.» | No existe. Solo `organizations.country` (next-static §5.5) | − | P1 | — (v2: default v1.8) (OD-6/D-04) | Portar el select «País del trabajo» (27 UE, por defecto ES) y «La base y el país deben coincidir.» (backlog v2-10; migración) |
+| 10 | Zona horaria | Conectado: «Zona IANA de la base», por defecto `Europe/Madrid` → «Zona horaria no válida.»; las jornadas se validan por fecha local. Demo: fechas de Madrid | Todo en UTC, sin zona (BR-10; es:819) | ≠ | P2 | — (v2: default v1.8) (C-9/D-08) | Portar la zona IANA junto con las jornadas (backlog v2-09) |
+| 11 | Categoría | Demo: select «Categoría obligatoria» con 12 `CATEGORIES`: B1.1, B1.2, B1.3, B1.4, B2, B3, Cat A, Cat C, Mecánico, Sheet Metal, NDT, Helper; por defecto B1.1 (`business.js:7`). Conectado: text **libre** «Categoría requerida», required, ≤ 80; una errata deja la oferta sin candidatos (hallazgo C-§3 #5) | Sin campo. La categoría se pide como cualificación `LICENSE` del catálogo: B1.1, B1.3, B2, CAT-A, CAT-C (next-static §5.6). No están B1.2, B1.4, B3, Mecánico, Sheet Metal ni Helper; NDT solo como `NDT-UT2` (APPROVAL) | ≈ | P1 | — (v2: default v1.8) (C-10/D-02) | Ampliar el catálogo con las 12 categorías de la v1.8 (migración de datos, backlog v2-11) |
+| 12 | Aeronave | Demo: chips «Aeronaves aceptadas» con 12 `AIRCRAFT`: A320 Family, B737 NG, B737 MAX, ATR 72, Embraer E-Jets, A330, A350, B787, EC135/145, Cessna 172, Piper PA-28, Robinson R44; por defecto A320 Family. **Basta una** (`j.aircraft.some(…)`, `business.js:142`). Conectado: text libre «Aeronave», ≤ 100 | Solo como `TYPE_RATING` del catálogo: TR-A320, TR-A330, TR-A350, TR-B737, TR-B787, TR-ATR72. Cada cualificación obligatoria marcada se exige **toda** (Y, `src/domain/matching.ts:80-102`). Faltan B737 MAX separado, Embraer, EC135/145, Cessna, Piper y R44 | ≠ | P1 | — (v2: default v1.8) (C-10: «cualquiera de») | Portar «Aeronaves aceptadas» como grupo «cualquiera de» en el motor y en el pool SQL (backlog v2-11) |
+| 13 | Habilitación de tipo | Demo: toggle «Exigir habilitación de tipo», por defecto activo; exige habilitación de esa categoría y aeronave, vigente y **sin restricciones**. Conectado: casilla «Requiere licencia revisada y vigente», marcada por defecto (`eligible`, `rules.mjs:27`) | Una `TYPE_RATING` obligatoria exige estar `verified` y vigente todo el periodo (BR-2/BR-3). Las restricciones no se modelan | ≈ | P1 | — (v2: default v1.8) (C-10: restricción ⇒ no elegible) | Modelar restricciones de habilitación y excluirlas (backlog v2-11) |
+| 14 | Motores | Demo: chips «Motores» con `ENGINES`: CFM56-5B/7B, LEAP-1A, LEAP-1B, PW1100G, PW127, Trent 700/1000, GE90; por defecto vacío; basta uno (`business.js:143`). Conectado: no | No existe | − | P2 | — (v2: default v1.8) (C-10/D-03) | Portar «Motores» (basta uno) (backlog v2-11) |
+| 15 | Cursos obligatorios | Demo: chips «Cursos obligatorios» con `COURSES`: Human Factors, EWIS, FTS, SMS; por defecto HF, EWIS y FTS. Conectado: text «Cursos obligatorios (separados por coma)», `stringList` ≤ 40 | Cualificaciones `TRAINING` del catálogo: EWIS, HF, FTS, SMS, cada una obligatoria o deseable (next-static §5.6) | ≈ | — | — | Mantener (el catálogo evita erratas) |
+| 16 | Capacidades obligatorias | Demo: chips con `SKILLS` (`Company2.jsx:9`): Line Maintenance, Base Maintenance, AOG Support, Troubleshooting, Engine Change, Sheet Metal, NDT, Boroscopia, Cabin Systems. Conectado: text «Capacidades obligatorias (separadas por coma)» | Solo `BORESCOPE` (SKILL) y `NDT-UT2` (APPROVAL); las otras 7 no tienen equivalente | ≈ | P2 | — (v2: default v1.8) (C-10) | Ampliar el catálogo de capacidades (backlog v2-11) |
+| 17 | Capacidades deseables | Demo: chips «Capacidades deseables» (mismas 9). Conectado: no | Nivel «Deseable» en cualquier cualificación (es:414) | ≈ | — | — | Mantener |
+| 18 | Nivel obligatoria/deseable | Campos separados (obligatorias frente a deseables) | Select por cualificación, `aria-label` «Nivel del requisito {code}» (es:833). Texto: «Los requisitos **obligatorios** descartan candidatos; los **deseables** solo afectan a la puntuación. Hace falta al menos un requisito obligatorio.» (es:832). Reglas: 1-20, sin duplicados, al menos una obligatoria → «Añade al menos una cualificación», «Como máximo 20 cualificaciones», «Cada cualificación solo puede añadirse una vez», «Al menos una cualificación debe ser obligatoria» (es:300-303) | + | — | — | Mantener |
+| 19 | Experiencia mínima | Demo: «Experiencia mínima (años)», número 0-60, por defecto 3 → «Revisa tarifa, horas, dietas y experiencia.». Conectado: igual, por defecto 0 → `eligible`: «No alcanza la experiencia mínima.» | No existe. Los años son informativos (BR-5.4) | − | P1 | — (v2: default v1.8) (C-10/D-02) | Portar «Experiencia mínima (años)» como requisito obligatorio (backlog v2-11) |
+| 20 | Cliente (recruiter) | Demo: select «Cliente destinatario del expediente» con «Seleccionar cliente» + cartera; sin cliente → «Selecciona un cliente.» (`Company2.jsx:103`). Conectado: text «Cliente representado (obligatorio para recruiter)» → «Indica el cliente representado.» | No existe | − | P2 | — (v2: desbloqueado, alcance LATER); D-12 provisional como default | Ver ORG-08 (backlog v2-24) |
+| 21 | Inicio y fin | Demo: date (por días); «Inicio» con `min=today()` y por defecto hoy+45; «Fin» con `min=inicio`, `max=inicio+365` y por defecto hoy+51. Conectado: `datetime-local` «Inicio UTC» / «Fin UTC», required, se envían con `Z` | `datetime-local` «Inicio (UTC)» / «Fin (UTC)» (es:826-827), se envían con `…:00Z` (`src/lib/format.ts:5`); «El fin debe ser posterior al inicio», «Una necesidad puede durar como máximo 366 días» (es:263,287) | ≈ | — | — | Mantener |
+| 22 | Inicio en el pasado | Demo: «La fecha de inicio no puede estar en el pasado.» (nunca se ve: antes salta el mensaje de modo, hallazgo D1 #4). Conectado: «El trabajo debe comenzar en el futuro.» (`rules.mjs:11-22`) | Se rechaza un inicio de hace más de 15 minutos: «El inicio no puede estar en el pasado» en el campo «Inicio (UTC)» (es:259; `src/lib/validation/work-requirement.ts:21-25,57-59`). El esquema lo comparten el formulario, la acción de servidor y la Edge Function `work-requirements`; la RPC y la BD no lo comprueban. El `datetime-local` no lleva `min`. xhigh, en ejecución: Next muestra «El inicio no puede estar en el pasado» bajo «Inicio (UTC)» sin enviar nada (`evidencias/xhigh/30/ORG-03-1-next-1440-validation.jpg`); en la v1.8 demo, un inicio pasado da «El modo debe corresponder a la fecha: Estándar ≥40, Urgente 11–39, AOG ≤10 días.», así que el mensaje de fecha pasada sigue sin verse (`evidencias/xhigh/30/v18-c-log.json`) | ≈ (antes −) | — | — | Mantener (hecho en W5-01). El servidor lo aplica cuando el owner despliegue `work-requirements` |
+| 23 | Personas o plazas | Demo: «Personas por fecha», 1-100, por defecto 1 → «Revisa personas y mínimo de días.». Conectado: «Plazas», `min="0.25" step="0.01"` (error de la UI), y el servidor exige un entero de 1 a 100 → «Las plazas deben ser un número entero.» | «Personas», número `min 1 max 50`, por defecto 1; entero → «El número de personas debe ser un entero», «Se necesita al menos 1 persona», «Como máximo 50 personas» (`RequirementForm.tsx:159-167`, es:288-290) | ≈ | P3 | — | Mantener (BR-1.2: 50) |
+| 24 | Días o jornadas | Demo: selector de días (`.day-picker`), un botón `aria-pressed` por fecha del rango, todos marcados → «Selecciona fechas válidas dentro de un período máximo de un año.». Conectado (`ShiftEditor`): h3 «Jornadas y cobertura parcial», «Una sola jornada utiliza el inicio, fin y horas de arriba. Para varios días, introduce cada intervalo y añádelo a la lista. Las horas son UTC.», «Añadir intervalo a las jornadas», filas «{inicio} → {fin} · {h} h» + «Quitar», «**{Σ} horas base** en {n} jornadas de la lista. Solo se publican las jornadas añadidas.»; errores «Solo se admite una jornada por fecha local de inicio.», «Las jornadas no pueden solaparse.», «Máximo 366 jornadas.» | Un solo periodo continuo `[inicio, fin)`; no hay días sueltos | − | P1 | — (v2: default v1.8) (C-9/D-08); una candidatura sigue cubriendo todas las jornadas (D-06 Q6 ratificada) | Portar la lista de jornadas de la necesidad (backlog v2-09) |
+| 25 | Cobertura parcial | Demo: toggle «Permitir cobertura parcial» (activo), «Mínimo de días» (≥ 1, por defecto 2) y toggle «Cada bloque debe cumplir el mínimo consecutivo» (activo); errores «El mínimo de días supera las fechas requeridas.» y «Cada bloque requerido debe permitir el mínimo consecutivo.». Conectado: casilla «Permitir candidaturas para parte de las jornadas» → «Mínimo de jornadas por candidatura» (min 1 step 1) y casilla «Cada bloque debe ser consecutivo y alcanzar el mínimo.»; «El mínimo de jornadas debe ser entero.» | No existe. La disponibilidad parcial no es elegible (BR-4.4, C-4) | − | P1 | Conflicto: SCOPE-2 desbloquea «cobertura parcial» (LATER) pero D-06 Q6 (ratificada el 22/10) fija «una candidatura = el periodo entero» → owner | Pedir al owner que reconcilie Q6 con SCOPE-2 antes de portar (backlog v2-30, BLOQUEADO) |
+| 26 | Turno | Demo: text «Turno», por defecto «Día · 08:00–16:00». Conectado: no (horas concretas por jornada) | Select «Turno»: Día · Noche · Partido · Flexible, por defecto Día (`RequirementForm.tsx:197-205`, es:391-396) | ≈ | — | — | Mantener |
+| 27 | Horas por jornada | Demo: «Horas por turno», 1-24 step 0,01, por defecto 8. Conectado: «Horas base de esta jornada» (min 0,25) → «Las horas base superan la duración del intervalo.», «Divide los trabajos de varios días en jornadas de hasta 24 horas.» | No existe (se deduce del periodo) | − | P2 | — (v2: default v1.8) (C-9/D-08) | Portar con las jornadas (backlog v2-09) |
+| 28 | Incorporación | Demo: «Incorporación», por defecto «Antes del inicio del turno» | No existe | − | P3 | — (v2: default v1.8) (C-9/D-08) | Portar (backlog v2-12) |
+| 29 | Movilización máxima | Demo: «Movilización máxima (horas)», 1-168, por defecto 48; pasa sola a 12 en AOG o 48 al cambiar la fecha (`Company2.jsx:83-94`) | No existe | − | P2 | — (v2: default v1.8) (C-10; AOG opt-in = NEXT) | Portar con la movilización del pasaporte (área 20) y la distribución (ORG-06) (backlog v2-12) |
+| 30 | Urgencia | Demo: **se deduce de la fecha** (≤ 10 días AOG, < 40 Urgente, si no Planificado) y se muestra en solo lectura «Modo calculado por fecha»: «{Estándar\|Urgente\|AOG} · inicio en {n} días» o «Indica una fecha válida». Conectado: el servidor la deduce al publicar (`urgency()`, `rules.mjs:7`) | Select «Urgencia» declarado: Planificada · Urgente · AOG, por defecto `planned` (`RequirementForm.tsx:168-176`, es:399-401, es:825) | ✗ | — | C-8/D-05 | No portar la deducción: AOG es declarada y nunca se infiere |
+| 31 | Nombre del modo normal | «Planificado» en badges y filtros; «Estándar» en comisión y «Modo calculado» | «Planificada» (es:399) | ≈ | P3 | — | Mantener |
+| 32 | Tarifa por hora | Demo: «EUR por hora», min 0 step 0,01, por defecto 50 → «Revisa tarifa, horas, dietas y experiencia.». Conectado: «Tarifa €/hora» (min 0,25 en la UI; el servidor exige 1-2000 → «Tarifa por hora: valor no válido.») | No existe | − | P1 | — (v2: desbloqueado, alcance LATER) (tarifas); OD-7 solo por dinero real: sin cobro | Portar «EUR por hora» (backlog v2-12; migración) |
+| 33 | Hora extra y dietas | «EUR por hora extra» (por defecto 60) y «Dietas EUR por día» (por defecto 30), mínimo 0 | No existen | − | P2 | — (v2: desbloqueado, alcance LATER) (condiciones) | Portar (backlog v2-12) |
+| 34 | Contrato | Select «Contrato»: Contractor · Temporal · Permanente · Por proyecto (por defecto Contractor) | No existe | − | P2 | — (v2: desbloqueado, alcance LATER) (condiciones de contrato) | Portar (backlog v2-12) |
+| 35 | Presupuesto obligatorio | Toggle «Tratar presupuesto como requisito obligatorio» (desactivado) → requisito «Tarifa mínima dentro del presupuesto» | No existe | − | P3 | — (v2: default v1.8) (OD-7, CO-90) | Portar con la tarifa (backlog v2-12) |
+| 36 | Logística | Toggles «Vuelos incluidos» ✔ · «Alojamiento incluido» ✔ · «Transporte local incluido» ✔ · «Comidas incluidas» ☐ · «Herramientas propias requeridas» ☐ (este último también es requisito: «Herramientas propias») | No existe | − | P2 | — (v2: desbloqueado, alcance LATER) (logística); «Herramientas propias» como requisito: C-10 default v1.8 | Portar (backlog v2-12) |
+| 37 | Descripción | Demo: textarea «Descripción» (4 filas), opcional. Conectado: «Descripción y condiciones», textarea required, ≤ 4000 | No existe; tampoco en la edición (sin columna, `20261022130300_applications.sql:444-560` no la tiene) | − | P2 | — (v2: default v1.8) (Q-02 cae en «condiciones», LATER) | Portar (backlog v2-12, antes tarea 6) |
+| 38 | Botón Cancelar | No hay: el borrador se autoguarda | «Cancelar» → lista (`RequirementForm.tsx:276`) | + | — | — | Mantener |
+| 39 | Reintentos | Demo: cola de `commit`. Conectado: ninguno | `Idempotency-Key` por contenido (`RequirementForm.tsx:42,87`; `src/lib/idempotency.ts`) | + | — | — | Mantener |
+| 40 (nueva v2) | Guardar al editar | Demo: «Guardar y publicar · {x %}» y `revision+1` si el cambio es material; error «Esta oferta tiene candidaturas. Duplica la oferta para cambiar condiciones; la propuesta individual se puede revisar antes de confirmar.» (`src/context/AppState.jsx:170-193`). Conectado: no se edita | «Guardar cambios» / «Guardando…» (es:839-840) → `PUT work-requirements` con `expectedUpdatedAt`; cambiada mientras tanto: «La necesidad cambió mientras la editabas. Recarga para ver la versión actual; no se ha guardado nada.»; con candidaturas: «Esta necesidad ya recibió candidaturas: no se puede editar.» (es:841-842; `RequirementForm.tsx:74-105`; `supabase/functions/work-requirements/index.ts:149-159`). Mismas validaciones que al crear. v2, en ejecución: cambio de ubicación guardado y redirección al detalle (`evidencias/v2/30/ORG-05-9-next-1440-edited.jpg`); API con candidaturas → 409 `HAS_APPLICATIONS` | ≈ | P3 | — (sin %: SCOPE OUT) | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-02-nueva-necesidad-1440.png`, `evidencias/shots/demo/D-EMP-02-nueva-necesidad-390.png`,
+`evidencias/shots/demo/D-EMP-02c-editar-oferta-1440.png`, `evidencias/shots/demo/D-REC-02-nueva-necesidad-1440.png`,
+`evidencias/shots/connected/C-EMP-10-job-form-filled-1440.png`, `evidencias/shots/connected/C-EMP-11-job-J1-form-1440.png`,
+`evidencias/shots/connected/C-EMP-12-job-J2-form-1440.png`, `evidencias/shots/connected/C-EMP-13-job-J3-form-1440.png`,
+`evidencias/shots/connected/C-REC-05-job-J4-form-1440.png`. Next (lote 11, EN):
+`docs/audit/evidence/v18-compare/next-after/org-new-requirement-{1440,390}.jpg`; V0
+`docs/audit/evidence/local-08-requirement-created.jpg`.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/ORG-02-1-next-1440.jpg`; v1.8 `evidencias/xhigh/30/ORG-02-1-v18-1440.jpg` (constructor completo y lateral), `evidencias/xhigh/30/v18-a-log.json` (valores por defecto, `min`/`max`).
+Capturas v2: Next `evidencias/v2/30/ORG-02-1-next-1440-filled.jpg` (alta con AOG y HF deseable), `evidencias/v2/30/ORG-05-9-next-1440-edit.jpg`; v1.8 conectado `evidencias/v2/30/ORG-04-1-v18c-1440.jpg` (formulario «Publicar una necesidad» completo, abierto).
+
+---
+
+## ORG-03 · Constructor: revisión, borrador, publicación y comisión mostrada — v1.8 `S-EMP-02 (lateral), S-MOD-EMP-01, S-SUB-MKT-04, S-CON-05a (bloque de comisión), D-EMP-02b` ↔ Next `N-ORG-03`
+
+**Estado global:** PARCIAL. Next crea la necesidad ya `open` y lleva al detalle.
+- No hay resumen lateral, vista previa, borrador, recuento de candidatos ni comisión.
+- Los mensajes de validación equivalen en lo que Next modela. Desde W5-01, Next también rechaza un inicio en el pasado.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Lateral «Revisar antes de publicar» | Panel oscuro con: badge `{urgencia}`; h2 `{título \|\| 'Nueva necesidad'}`; «Inicio en {n} días. Estándar: ≥40; Urgente: 11–39; AOG: ≤10 días.»; «{base} · {país}»; «{tarifa×horas} / jornada de {h} h»; «{días×personas} jornadas requeridas»; «{n} candidatos con requisitos y bloques viables» (`Company2.jsx:125`). Plurales fijos: «1 jornadas», «1 candidatos» | No existe | − | P2 | — (v2: default v1.8) (filas 2-4) | — |
+| 2 | Días hasta el inicio y bandas de urgencia | Ver arriba | — | ✗ | — | C-8/D-05 | No portar |
+| 3 | Precio de jornada y jornadas requeridas | Ver arriba | — | − | P2 | — (v2: desbloqueado, alcance LATER) (tarifas, C-9) | Portar con la tarifa (backlog v2-12) |
+| 4 | Recuento de candidatos en vivo | `pool = candidatos visibles con matching elegible y que cubren` (`Company2.jsx:112`) | No existe | − | P2 | — (técnico: CO-17 DEFERRED, hace falta una RPC de pool para una necesidad sin guardar) | Portar: recuento de candidatos viables para un borrador (RPC nueva, backlog v2-13) |
+| 5 | Vista previa | Botón «Previsualizar requisitos» → modal «Vista previa» con `JobDetails` del borrador (`Company2.jsx:125`; `evidencias/shots/demo/D-EMP-02b-previsualizar-requisitos-1440.png`) | No hay. Tras crear, la página de detalle muestra los datos (`N-ORG-04`) | − | P3 | — (CO-18 DEFERRED) | Portar la vista previa (backlog v2-13) |
+| 6 | «Guardar borrador» | `submit('Borrador')`: solo valida el título → toast «Borrador guardado»; queda en Ofertas como «Borrador». Conectado: no hay borradores | No hay. El enum `draft` existe y nadie lo crea (next-static §4) | − | P2 | — (v2: default v1.8) (R-D4) | Portar «Guardar borrador» (estado `draft` ya existe; backlog v2-14) |
+| 7 | Autoguardado | `useDraft`: guarda cada 350 ms en IndexedDB (`crewflex-v12`), clave `job-{org}-{id\|new}` (`Company2.jsx:25`, `Professional2.jsx:10-27`); el borrador manda sobre la oferta al editar | Se pierde al salir de la página | − | P3 | — (v2: default v1.8) (R-D4) | Portar el autoguardado local (backlog v2-14) |
+| 8 | Botón de publicar | Demo: «Publicar necesidad · {2,3 %}» o, editando o completando un borrador, «Guardar y publicar · {x %}», desactivado mientras guarda. Conectado: «Publicar oferta» | «Crear necesidad» / «Creando…», `aria-busy` (es:834-835; `RequirementForm.tsx:271-275`) | ≈ | P3 | SCOPE OUT (el %) | Mantener |
+| 9 | Estado al crear | Demo: «Publicada» (o «Borrador»). Conectado: `published` | `open` («Abierta»). Desde M07 (D-12) una necesidad `open` y no terminada sale en «Oportunidades» para todos los profesionales (`list_opportunities`, `supabase/migrations/20261022130200_opportunities.sql:71-120`). v2, en ejecución: la necesidad creada aparece a `echo` y `delta` (`evidencias/v2/30/MKT-03-1-next-1440.jpg`) | ≈ | — | — (v2: D-12 ratificada) | Mantener (el nombre, ORG-04 #12) |
+| 10 | Resumen de comisión | Demo `FeeSummary` en vivo: h3 «Comisión CrewFlex · {Estándar\|Urgente\|AOG}»; «Personal base»; «Comisión {x %}»; «Dietas»; «Total estimado». Textos: «La paga la empresa o recruiter. El porcentaje se fija al publicar; una propuesta aceptada conserva sus condiciones. Se calcula sobre el personal base; dietas, viajes, alojamiento, transporte y horas extra no entran en la comisión. La tarifa del técnico se conserva íntegra.» y «Estándar 2,3 % · Urgente 4 % · AOG 10 %. Estimación de demo, sin cobro ni factura. No incluye impuestos ni logística pendiente.» (`Pricing.jsx:7-13`) | No existe | − | P3 | SCOPE (OUT :65), OD-7 | No portar (HIRE-08) |
+| 11 | Bloque de comisión del conectado | «Comisión fijada al publicar» → «{rate×100} % {modo}» o «— %»; «Estándar ≥40 días · Urgente 11–39 · AOG 0–10. Sobre horas base, sin dietas ni logística.»; «Por técnico: base {€} + comisión {€}. Comisión para {n} plazas: {€}.» (sin plural); el 2,3 sale como «2.3» (`Account.jsx:68`) | No existe | − | P3 | SCOPE (OUT), OD-7 | No portar |
+| 12 | Aceptar la comisión | Casilla obligatoria «Acepto la comisión mostrada, a cargo de mi organización.»; sin ella el servidor responde «Acepta la comisión antes de publicar.» (`app.mjs:85-87`) | No existe | − | P3 | SCOPE (OUT), OD-7 | No portar |
+| 13 | Nota del recruiter | «El recruiter gestiona la oferta y confirma en nombre del cliente. Los destinatarios están identificados en la candidatura. No hay contrato legal ni envío externo.», que **también ve la empresa** (`Company2.jsx:125`, hallazgo D1 #11) | No existe | ✗ | — | — (v2: desbloqueado, alcance LATER) (recruiter) | Al portar el recruiter, mostrarla solo al recruiter |
+| 14 | Mensaje del título | «Indica el título de la necesidad.» | «El título es obligatorio» y longitudes (es:274-276) | ≈ | — | — | Mantener |
+| 15 | Mensaje de modo | «El modo debe corresponder a la fecha: Estándar ≥40, Urgente 11–39, AOG ≤10 días.» | — | ✗ | — | C-8/D-05 | No portar |
+| 16 | Mensaje de duración máxima | «Selecciona fechas válidas dentro de un período máximo de un año.» / «El intervalo máximo es de un año.» | «Una necesidad puede durar como máximo 366 días» (es:296) | ≈ | — | — | Mantener |
+| 17 | Mensaje de inicio pasado | «La fecha de inicio no puede estar en el pasado.» / «El trabajo debe comenzar en el futuro.» | «El inicio no puede estar en el pasado» (`v.start.future`, es:259), sin punto final como el resto de mensajes de campo | ≈ (antes −) | — | — | Mantener (hecho en W5-01) |
+| 18 | Mensaje de base y país | «La base y el país deben coincidir.» | — | − | P3 | — (v2: default v1.8) (OD-6/D-04) | Portar con el país (backlog v2-10) |
+| 19 | Requisito de aeronave | «Selecciona una aeronave si exiges habilitación de tipo.» | «Al menos una cualificación debe ser obligatoria» (es:303) | ≈ | — | — | Mantener |
+| 20 | Mensajes de cobertura parcial | «El mínimo de días supera las fechas requeridas.» · «Cada bloque requerido debe permitir el mínimo consecutivo.» · «Revisa personas y mínimo de días.» | Solo los de personas (es:288-290) | − | P2 | Conflicto D-06 Q6 ↔ SCOPE-2 (ORG-02 #25) | Esperar al owner (backlog v2-30) |
+| 21 | Mensaje de tarifas | «Revisa tarifa, horas, dietas y experiencia.» | — | − | P3 | — (v2: desbloqueado, alcance LATER) | Portar con la tarifa (backlog v2-12) |
+| 22 | Mensaje de intervalo | «Intervalo no válido: usa fechas con zona horaria y final posterior.» | «El fin debe ser posterior al inicio» / «El fin debe ser una fecha y hora (UTC)» (es:261-263) | ≈ | — | — | Mantener |
+| 23 | Organización incompleta | Conectado: «Completa primero tu organización.» | No aplica: la organización se crea con el alta (`handle_new_user`, next-static §5.5) | ≈ | — | — | Mantener |
+| 24 | Presentación de errores | Demo: `<p class="inline-error" role="alert">` + toast. Conectado: `role=alert` + validación nativa (inglés en el runtime) | Error por campo (`aria-invalid`, `aria-describedby`) y alerta de servidor con «Referencia: {id}»: «Tu rol no puede crear necesidades en esta organización.», «No se ha podido contactar con el servicio. Tus datos siguen aquí; reintenta.», «Tu sesión ha caducado. Vuelve a iniciar sesión.», «Revisa los campos marcados.»; editando, además «…ya recibió candidaturas…» y «…cambió mientras la editabas…» (`RequirementForm.tsx:84-139`, es:836-842) | + | — | — | Mantener |
+| 25 | Después de guardar | Demo: toast «Oferta publicada» o «Borrador guardado» y salto a `#manage`. Conectado: «Cambios guardados.»; el formulario **no se vacía** y el `<details>` se cierra | Redirección al detalle de la necesidad creada o editada (`src/features/requirements/actions.ts:65,99`) | + | — | — | Mantener |
+| 26 | Validación duplicada | Demo: solo cliente. Conectado: solo servidor | zod en cliente, en la acción de servidor y en la Edge Function (`actions.ts:33-48`; `work-requirement.ts:1-3`) | + | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-02-nueva-necesidad-1440.png` (lateral),
+`evidencias/shots/demo/D-EMP-02b-previsualizar-requisitos-1440.png`, `evidencias/shots/connected/C-EMP-10-job-form-filled-1440.png` (comisión).
+Next (lote 11, EN): `docs/audit/evidence/v18-compare/next-after/org-new-requirement-1440.jpg`.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/ORG-03-1-next-1440-validation.jpg` (validación de cliente, nada enviado); v1.8 `evidencias/xhigh/30/ORG-03-1-v18-1440-validation.jpg`, `evidencias/xhigh/30/v18-c-log.json` (mensaje de modo, vista previa, borrador).
+Capturas v2: Next `evidencias/v2/30/ORG-02-1-next-1440-filled.jpg`; v1.8 conectado `evidencias/v2/30/ORG-04-1-v18c-1440.jpg` (bloque «COMISIÓN FIJADA AL PUBLICAR · — %» y casilla de comisión).
+
+---
+## ORG-04 · Ofertas y cobertura: lista, tarjeta y detalle — v1.8 `S-EMP-03, S-MOD-EMP-02, D-EMP-03, D-EMP-03b, D-EMP-03e, D-REC-05, S-CON-05 (lista de empresa), S-CON-05d, C-EMP-22, C-EMP-29` ↔ Next `N-ORG-02, N-ORG-04`
+
+**Estado global:** PARCIAL. Next lista las necesidades en una tabla con cualificaciones y estado.
+- Su detalle añade la capacidad interna y la plantilla evaluada, que la v1.8 no tiene.
+- Falta todo lo que depende de asignaciones: % y barra de cobertura confirmada, baldosas por jornada y «Cubierta».
+- Falta el acceso a las candidaturas de cada oferta.
+- Desde W5-02 la lista va de la más nueva a la más antigua, 20 por página, con el total; antes iba por inicio
+  ascendente, con tope de 50 y sin paginar.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Entrada | Demo: lateral «Ofertas y cobertura» y dock «Ofertas» → `#manage`. Conectado: «Ofertas y publicación» (`jobs`) | Lateral «Necesidades» → `/app/organization/requirements` (es:63) | ≈ | P3 | — | Mantener |
+| 2 | Eyebrow | «OPERACIONES» (`Company2.jsx:158`) | Nombre de la organización (`requirements/page.tsx:55`) | ≠ | P3 | — | Mantener |
+| 3 | Título | Demo h1 «Necesidades y cobertura.». Conectado h2 «Ofertas de tu organización» (`Account.jsx:69`) | h1 «Necesidades de personal» (es:765) | ≈ | P3 | — | Mantener |
+| 4 | Descripción | «Las acciones mantienen la oferta seleccionada.»; no se cumple: `route.jobId` no filtra ni resalta (hallazgo D1 #10) | «Necesidades operativas, sus cualificaciones y su periodo. Horas en UTC.» (es:770) | ≠ | — | — | Mantener (la de Next es cierta) |
+| 5 | Botón «Nueva necesidad» | Primario con `Plus` → `create` (retoma el borrador nuevo) | Primario «Nueva necesidad», solo managers y administradores (`requirements/page.tsx:46-50`, es:758) | = | — | — | — |
+| 6 | Vacío | Demo: «Publica tu primera necesidad» / «Puedes empezar por un borrador.». Conectado: sin texto si hay ofertas de otras organizaciones (hallazgo C-§3 #13) | «Aún no hay necesidades», sin descripción, + botón (`requirements/page.tsx:63`) | ≈ | P3 | — | Mantener |
+| 7 | Forma | Una tarjeta (`Panel` o `article`) por oferta | Tabla en `md+` con `caption` sr-only «Necesidades de personal» y lista apilada en móvil (`RequirementsList.tsx:18-89`, es:771). xhigh, en ejecución: tabla a 1440 px; a 390 px la tabla está oculta y salen las 2 filas apiladas («Urgente · Vencida · … · 2 ×»), sin desbordamiento horizontal (`evidencias/xhigh/30/ORG-04-1-next-1440.jpg`, `evidencias/xhigh/30/ORG-04-7-next-390.jpg`) | ≠ | — | — | Mantener |
+| 8 | Orden y cantidad | Todas las ofertas propias en orden de datos, las nuevas primero (`Company2.jsx:140`); sin paginar | Las más nuevas primero (`order=created_desc`, desempate por id), 20 por página con `offset` y `total` exacto, hasta la necesidad 10 000; sin búsqueda (`src/app/app/organization/requirements/page.tsx:33-40`; `supabase/functions/work-requirements/index.ts:63-94`; `src/lib/validation/work-requirement.ts:105-122`). El panel de Operaciones y su foco siguen con `starts_asc` y 50 | ≈ (antes ≠) | — | — | Mantener (hecho en W5-02). Desplegar `work-requirements` antes que este frontend: la función de la release 1 responde 400 a `order`/`offset` (owner) |
+| 9 | Columnas | — | «Necesidad» · «Periodo (UTC)» · «Personas» · «Cualificaciones» · «Estado» (es:773-777) | + | — | — | Mantener |
+| 10 | Chip de urgencia | Demo: `Badge {j.urgency}` sin tono en esta pantalla (tono naranja o azul en «Oportunidades») | Planificada (info) · Urgente (warn) · AOG (danger) (`RequirementBadges.tsx:11`, es:399-401) | ≈ | — | — | Mantener |
+| 11 | Estados | Demo `effectiveStatus`: Borrador, Publicada, Pausada, Archivada, Finalizada (semilla), Vencida, Cubierta (`business.js:213-218`). Conectado: Publicada, Pausada, Cerrada (`Account.jsx:15`) | Chips Borrador (neutral) · Abierta (info) · **Pausada (warn)** · Cubierta (ok) · Cancelada · Cerrada · Vencida (warn) (`RequirementBadges.tsx:12-41`, es:403-411). Desde la UI se alcanzan Abierta, Pausada, Cerrada y Vencida, y «Cubierta» llega sola al confirmar la última plaza (M05/M08). Faltan Archivada, Borrador alcanzable y Finalizada. v2, en ejecución: «Pausada» y «Cubierta» en la lista (`evidencias/v2/30/ORG-04-11-next-1440-paused-list.jpg`, `evidencias/v2/30/ORG-04-14-next-1440-covered-list.jpg`). Conectado: «Publicada / Pausada / Cerrada» (`evidencias/v2/30/ORG-04-1-v18c-1440.jpg`) | ≈ | P3 | — (v2: default v1.8) (archivar, borradores R-D4) | Portar «Archivada» y «Borrador» (backlog v2-14) |
+| 12 | «Publicada» frente a «Abierta» | «Publicada»: visible en la red | «Abierta»: desde M07 es la que ven los profesionales en «Oportunidades» (ORG-03 #9) | ≈ | P3 | — (v2: D-12 ratificada) | Renombrar «Abierta» a «Publicada» como la v1.8 (default v1.8, S; backlog v2-26) |
+| 13 | «Vencida» | Todas las fechas pasadas y estado Publicada | `open` y `endsAt <= ahora`; solo se muestra, nunca se guarda (`src/domain/work-requirement.ts:56-57`) | = | — | — | — |
+| 14 | «Cubierta» derivada | Todas las fechas futuras cubiertas por asignaciones confirmadas | `covered` lo escribe `transition_application` al confirmar cuando confirmadas + finalizadas ≥ `headcount`, y vuelve a `open` si una cancelación deja plazas libres; nadie lo puede poner a mano (`supabase/migrations/20261022130300_applications.sql:269-310,869-880`). v2, en ejecución: «E2E diff v2 · A» (1 plaza) pasa a «Cubierta» al confirmar y desaparece de «Oportunidades» (`evidencias/v2/30/ORG-04-14-next-1440-covered-detail.jpg`, `evidencias/v2/30/ORG-04-14-next-1440-covered-list.jpg`). Demo: derivada de las fechas; conectado: no cambia de estado | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 15 | Título y línea secundaria | h2 título + «{base} · {cliente \|\| organización}» | Enlace con el título + ubicación (`RequirementsList.tsx:42-46`) | ≈ | — | — | Mantener |
+| 16 | Cliente en la tarjeta | Recruiter demo: «Madrid (MAD) · Operador cliente 1» (`evidencias/shots/demo/D-REC-05-ofertas-cobertura-1440.png`). Conectado: la tarjeta **no** muestra el cliente (runtime C-EMP-03) | — | − | P3 | — (v2: desbloqueado, alcance LATER) (recruiter) | Portar con ORG-08 (backlog v2-24) |
+| 17 | Periodo | Demo: una baldosa por fecha. Conectado: «{inicio} → {fin} · zona {zona} · {n} plazas» (sin plural: «1 plazas») | «DD MMM → DD MMM» + turno (`RequirementsList.tsx:48-51`; `src/i18n/format.ts`) | ≈ | — | — | Mantener |
+| 18 | Personas | Conectado «{n} plazas» | «N ×» (`RequirementsList.tsx:52-54`) | ≈ | — | — | Mantener |
+| 19 | Cualificaciones en la lista | No salen en la tarjeta, solo en «Ver condiciones» | Chips: obligatoria en navy y mono; deseable en blanco con «(deseable)»; `title` «{nombre} — requisito obligatorio» / «… — deseable (valorable)» (`RequirementBadges.tsx:43-67`, es:779-782) | + | — | — | Mantener |
+| 20 | Cobertura confirmada | «{percent}%» + «cobertura confirmada» + barra `width:{percent}%`; tras confirmar: «Cubierta · 100% cobertura confirmada» (`evidencias/shots/demo/D-EMP-03e-cobertura-confirmada-1440.png`) | No existe ni en la lista ni en el detalle: solo el chip «Cubierta» al llegar a todas las plazas y «Candidaturas ({n})» en el detalle | − | P2 (v2: antes P1; «Cubierta» y la lista de candidaturas ya dan el dato) | — (v2: D-06 ratificada) | Portar «{p}% cobertura confirmada» + barra en lista y detalle (backlog v2-08) |
+| 21 | Cobertura por jornada | Demo: baldosa por fecha `<b>{día}</b><small>{asignados} / {plazas}</small>`, clase `filled`. Conectado: `<details>` «Cobertura por jornada» → «{fecha} · {x}/{n} plazas confirmadas» (`Account.jsx:69`) | No existe | − | P2 (v2: antes P1) | — (v2: default v1.8) (C-9/D-08: depende de las jornadas) | Portar con las jornadas (backlog v2-09) |
+| 22 | Tarifa y modo en la tarjeta | Conectado: «{modo} · {rate×100}%» y «{tarifa} €/h · {h} horas base · {estado}» (con punto: «0.5 horas base») | No existe | − | P3 | — (tarifa y horas: alcance LATER) · SCOPE OUT (modo y %) | Portar tarifa y horas base; no el % (backlog v2-12) |
+| 23 | «Ver condiciones» | Modal con el título de la oferta + `JobDetails` (`Company2.jsx:177`) | El título enlaza a la página de detalle (`N-ORG-04`) | ≈ | — | — | Mantener |
+| 24 | «Buscar candidatos» | → `candidates` con la oferta preseleccionada | Desde el detalle, «Ver profesionales externos elegibles» → `/matches` (`CapacityOverview.tsx:65-70`) | ≈ | P3 | — | Mantener |
+| 25 | «Gestionar candidaturas» | → `applications` filtrado: «Oferta seleccionada: {título}» + «Ver todas» + «Volver a ofertas» (`evidencias/shots/demo/D-EMP-05k-candidaturas-por-oferta-1440.png`) | En el detalle, botón «Candidaturas ({count})» → `/app/organization/requirements/{id}/applications`: eyebrow «Candidaturas», h1 = título, «{ubicación} · {periodo}», chip de estado y «Volver a la necesidad» (`[id]/page.tsx:79-83`; `[id]/applications/page.tsx:74-89`; es:1314-1319). No hay botón en la fila de la lista ni «Ver todas» (no existe una pantalla global). v2, en ejecución (`evidencias/v2/30/HIRE-01-1-next-1440.jpg`) | ≈ (v2: antes −) | P2 | — (v2: D-06 ratificada) | Añadir la pantalla global «Candidaturas» de la organización y el acceso desde la fila (backlog v2-05) |
+| 26 | Cabecera del detalle | Modal: título de la oferta | Eyebrow «Necesidad de personal», h1 = título (es:785; `[id]/page.tsx:55`) | ≈ | — | — | Mantener |
+| 27 | Datos del detalle | `JobDetails` (MKT-04) | Chips de urgencia y estado + `dl` «Ubicación · Inicio · Fin · Turno · Personas» con «DD MMM YYYY, HH:MM UTC» + chips de cualificaciones (`RequirementFacts.tsx:21-48`, es:790-794) | ≈ | P2 | — (v2: default v1.8; ver MKT-04) | Mantener |
+| 28 | Capacidad y plantilla en el detalle | — | `CapacityOverview` + h2 «Plantilla interna ({count})» con una `MatchCard` por miembro; vacío: «Aún no hay técnicos en tu organización» / «Todo el personal necesario es déficit a cubrir externamente.» (`[id]/page.tsx:94-122`, es:786-788) | + | — | — | Mantener |
+| 29 | Detalle de una cerrada | Conectado: la oferta cerrada sigue en la lista, sin botones | «Esta necesidad está cerrada. Ya no se puede reabrir.» y, si tuvo candidaturas, «Candidaturas ({n})»; no se evalúa la capacidad (`[id]/page.tsx:59-67`, es:801). v2, en ejecución: A cerrada tras finalizar (`evidencias/v2/30/ORG-04-29-next-1440-closed-with-applications.jpg`). Conectado: J9 «Cerrada» sin botones (`evidencias/v2/30/ORG-04-1-v18c-1440.jpg`) | ≈ | — | — | Mantener |
+| 30 | Selección que llega desde el resumen | Demo: `setActiveTab('manage', j.id)`, que no se usa (hallazgo D1 #10) | Cada fila enlaza a su detalle | + | — | — | Mantener |
+| 31 (nueva) | Paginador de la lista | Las ofertas no se paginan (fila 8). El directorio sí: «Anterior» · «{p} / {P} · 20 perfiles por página» · «Siguiente» (MKT-01 #24) | `nav` «Páginas de necesidades» con «{total, plural, …} · página {p} de {n}» y «Anterior»/«Siguiente» (`RequirementsPager.tsx`; es:766-769). **Corregido (X-04 `7eb8059`)**: un `?page=` fuera de rango redirige a la última página (`requirements/page.tsx:42-45`) y la función trata el 416 `PGRST103` como página vacía con `total` (`supabase/functions/work-requirements/index.ts:81-87`). v2, en ejecución: `?page=99` → «4 necesidades · página 1 de 1» (`evidencias/v2/30/ORG-04-31-next-1440-page99.jpg`) | + | — | — | Mantener (hecho X-04 `7eb8059`; la función necesita despliegue del owner) |
+| 32 (nueva) | Necesidad de otra organización | Cada organización gestiona solo sus ofertas; el detalle es un modal sobre la propia lista (`Company2.jsx:140,177`) | El detalle y el matching de una necesidad de otra organización dan 404, también a un administrador de plataforma, al que la RLS deja leer todas (`[id]/page.tsx:43-44`; `matches/page.tsx:67-68`; política `work_requirements_select`, `supabase/migrations/20261009120000_foundation_v0.sql:383-384`). xhigh: (a) la necesidad del brief `9f50725f-…` **no existe** en la BD local actual (404 también para `manager.mro`, de Demo MRO; la API responde `NOT_FOUND`); se ha probado con la de Demo MRO `9e280aa3-…`. (b) Con `platform.admin`, `GET work-requirements?id=9e280aa3-…` devuelve la necesidad (`ok:true`), y la página pinta «No encontrado» en el detalle y en `/matches`: el 404 lo pone la guarda, no la RLS. (c) La copia congelada y el árbol vivo son idénticos; el HEAD `5c2d1a2` no tiene ninguna de las dos guardas (son parte del diff sin commit de D-13), pero en HEAD el administrador tampoco tiene membresía (las 6 líneas de `seed.sql` también están sin commit), así que no llega a `/app/organization`. (d) En `/matches`, `matching-evaluate` se llama en paralelo antes de la guarda y la propia función lo rechaza por rol (`matches/page.tsx:52-55`; `requireOrganizationRole`). (e) En `next dev` la respuesta es HTTP 200 con la página «No encontrado» (`evidencias/xhigh/30/ORG-04-32-next-1440-admin-404.jpg`) | + | — | — | Mantener (D-13; guardas commiteadas en `d3b876f`, X-22) |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-03-ofertas-cobertura-1440.png`, `evidencias/shots/demo/D-EMP-03-ofertas-cobertura-390.png`,
+`evidencias/shots/demo/D-EMP-03b-ver-condiciones-1440.png`, `evidencias/shots/demo/D-EMP-03e-cobertura-confirmada-1440.png`,
+`evidencias/shots/demo/D-REC-05-ofertas-cobertura-1440.png`, `evidencias/shots/connected/C-EMP-22-jobs-list-1440.png`,
+`evidencias/shots/connected/C-EMP-22-jobs-390.png`, `evidencias/shots/connected/C-EMP-29-jobs-states-1440.png`,
+`evidencias/shots/connected/C-REC-09-jobs-list-1440.png`. Next (lote 11, EN):
+`docs/audit/evidence/v18-compare/next-after/org-requirements-{1440,390}.jpg`; V0
+`docs/audit/evidence/local-05-requirements-list.jpg`, `docs/audit/evidence/local-06-requirement-capacity.jpg`.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/ORG-04-1-next-1440.jpg`, `evidencias/xhigh/30/ORG-04-28-next-{1440,768,390}.jpg`, `evidencias/xhigh/30/ORG-04-31-next-1440-page2.jpg`, `evidencias/xhigh/30/ORG-04-31-next-1440-page99.jpg`, `evidencias/xhigh/30/ORG-04-26-next-1440.jpg` (la necesidad del brief no existe), `evidencias/xhigh/30/ORG-04-32-next-1440-admin-404.jpg`; v1.8 `evidencias/xhigh/30/ORG-04-1-v18-1440.jpg`, `evidencias/xhigh/30/ORG-04-20-v18-1440-covered.jpg`.
+Capturas v2: Next `evidencias/v2/30/ORG-04-11-next-1440-paused-list.jpg`, `evidencias/v2/30/ORG-04-14-next-1440-covered-list.jpg`, `evidencias/v2/30/ORG-04-14-next-1440-covered-detail.jpg`, `evidencias/v2/30/ORG-04-29-next-1440-closed-with-applications.jpg`, `evidencias/v2/30/ORG-04-31-next-1440-page99.jpg`; v1.8 `evidencias/v2/30/ORG-04-1-v18-1440.jpg` (demo), `evidencias/v2/30/ORG-04-1-v18c-1440.jpg` (conectado: J1…J9 con «Cobertura por jornada» abierta, «Pausada» con «Reanudar», «Cerrada» sin botones).
+
+---
+
+## ORG-05 · Ciclo de vida de la oferta: pausar, cerrar, archivar, editar, duplicar — v1.8 `S-EMP-03 (acciones), D-EMP-03d, S-CON-05 (job.status), B §4.6.3, C-EMP-29` ↔ Next `N-ORG-04 (RequirementStatusActions, /edit)`
+
+**Estado global:** PARCIAL. v2 (M05, `9868253`, `038329f`): Next pausa y reanuda, edita mientras no haya candidaturas
+y cierra (terminal, con confirmación); `covered` llega solo con las confirmaciones.
+- Cierre con compromisos activos: la BD lo rechaza (T-12), pero la UI enseña un texto equivocado (fila 5, defecto nuevo).
+- Faltan archivar, duplicar y los borradores: con SCOPE-2 son default v1.8 (R-D4, archivar/duplicar).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Estados guardados | Demo: Borrador → Publicada ⇄ Pausada; cualquiera → Archivada; Finalizada solo en la semilla. Conectado: `published` ⇄ `paused` → `closed` (terminal) (`app.mjs:86-88`) | Enum `draft/open/paused/covered/cancelled/closed`; la UI hace `open ⇄ paused` y `→ closed`; `covered` ⇄ `open` solo por confirmaciones; `cancelled` es un valor heredado al que nada llega (T-14) (`src/domain/work-requirement.ts:8-16,64-72`; migraciones `20261022130000`, `130100`, `130300:269-310`) | ≈ | P3 (v2: antes P1) | — (v2: default v1.8) (archivar y borradores) | Portar «Archivada» y el borrador (backlog v2-14) |
+| 2 | Alta | Demo: «Publicada» o «Borrador». Conectado: `published` | Siempre `open` (RPC `create_work_requirement_idempotent`) | ≈ | — | — (v2: default v1.8) (R-D4) | Mantener |
+| 3 | Pausar y reanudar | Demo: «Pausar» / «Reabrir», según el `status` guardado: se ofrece aunque la oferta esté Vencida o Cubierta (hallazgo D1 #10); «Reabrir» vuelve a validar. Conectado: «Pausar» / «Reanudar» → `job.status` | «Pausar» (secundario) y «Reanudar» (primario), un clic, sin confirmación (`RequirementStatusActions.tsx:67-76`; es:804-805) → `PATCH work-requirements`; avisos «Necesidad pausada: ya no se publica ni se evalúa.» / «Necesidad reanudada: vuelve a publicarse.» (es:806-807). Pausada: nota «Esta necesidad está pausada: no se publica como oportunidad ni se evalúan candidatos. Reanúdala para volver a publicarla.» (es:808), sin capacidad ni matching («Necesidad pausada», es:884-886) y fuera de «Oportunidades». «Pausar» no se ofrece en una «Vencida». v2, en ejecución: pausar, ver lista y matching, reanudar (`evidencias/v2/30/ORG-05-3-next-1440-paused.jpg`, `evidencias/v2/30/ORG-05-3-next-1440-resumed.jpg`, `evidencias/v2/30/MKT-01-1-next-1440-paused-matches.jpg`); API: B pausada → `opportunities?id=` 404 para `delta`. Conectado: «Pausar» / «Reanudar» (`evidencias/v2/30/ORG-04-1-v18c-1440.jpg`) | ≈ (v2: antes −) | — | — (v2: M05 ratificada) | Mantener (hecho `9868253`) |
+| 4 | Cerrar | Conectado: «Cerrar oferta», **sin confirmación**; «La oferta cerrada no se reabre.»; «Estado no válido.» (`Account.jsx:69`; `app.mjs:88`) | «Cerrar necesidad» → grupo «Cerrar es definitivo: una necesidad cerrada no se puede reabrir. Se conserva en tu lista y en el historial.» con «Sí, cerrarla» (danger) y «Mantenerla abierta» (foco) (`RequirementStatusActions.tsx:48-64,77-81`, es:796-801). v2, en ejecución: cierre de A tras finalizar (`evidencias/v2/30/ORG-05-4-next-1440-after-finish.jpg`, `evidencias/v2/30/ORG-04-29-next-1440-closed-with-applications.jpg`) | + | — | — | Mantener |
+| 5 | Cerrar con asignaciones activas | «Resuelve antes las asignaciones activas.» si hay candidaturas `accepted` o `confirmed` (`app.mjs:88`) | La BD lo rechaza con `CFA11` si hay alguna `accepted` o `confirmed` (`20261022130300_applications.sql:302-307`, T-12) y la función responde 409 `ACTIVE_COMMITMENTS`. **Defecto nuevo: la UI enseña «Ya has declarado esta cualificación. Edita la existente.»**: `changeRequirementStatusAction` descarta `reason` (`src/features/requirements/actions.ts:116-122`) y `RequirementStatusActions` usa `actionErrorCopy` (`RequirementStatusActions.tsx:39-43`), que traduce cualquier `CONFLICT` con `api.action.conflict` (`src/components/ui/Notice.tsx:114-115`; es:226). El texto correcto existe: «Resuelve antes las asignaciones activas (aceptadas o confirmadas).» (es:1373). v2, en ejecución: A cubierta con una confirmada → «Sí, cerrarla» → mensaje de cualificación (`evidencias/v2/30/ORG-05-5-next-1440-close-refused.jpg`); API de B con una aceptada → 409 `ACTIVE_COMMITMENTS` | ≠ (v2: antes −) | P2 | — | Corregir: propagar `reason` y usar `applicationErrorCopy` (backlog v2-01) |
+| 6 | Quién cierra | El dueño de la oferta | admin o manager; la BD rechaza reabrir (`55000`) y audita `requirement.status_changed` (BR-1.9) | + | — | — | Mantener |
+| 7 | Cerrada congelada | Conectado: sin acciones | No se puede cambiar ningún campo ni cualificación (`20261020120100`); capacidad y matching responden 409 | = | — | — | — |
+| 8 | Archivar | «Archivar» si no está archivada, sin confirmación y sin forma de desarchivar; toast «Oferta actualizada» (`evidencias/shots/demo/D-EMP-03d-archivar-1440.png`) | No existe. «Cerrada» es lo más parecido | ≈ | P3 | — (v2: default v1.8) (archivar/duplicar) | Portar «Archivar» sin desarchivar, como la v1.8, o confirmar que «Cerrar» lo sustituye (backlog v2-14) |
+| 9 | Editar | «Editar», desactivado con candidaturas activas → constructor con «Editar necesidad.»; error «Esta oferta tiene candidaturas. Duplica la oferta para cambiar condiciones; la propuesta individual se puede revisar antes de confirmar.»; `revision+1` si el cambio es material (`AppState.jsx:170-193`). Conectado: no hay edición | «Editar necesidad» en el detalle **solo si nunca ha recibido una candidatura** (retiradas incluidas) y no está cerrada → `/edit` con el formulario relleno y «Guardar cambios» (`[id]/page.tsx:73-78`; `edit/page.tsx:59-71`); la BD lo garantiza también por PostgREST (`CFA12`, `20261022130300_applications.sql:329-365,444-560`). v2, en ejecución: editada sin candidaturas; con candidaturas el botón desaparece y `/edit` dice «Esta necesidad ya recibió candidaturas: no se puede editar.» (`evidencias/v2/30/ORG-05-9-next-1440-edit.jpg`, `evidencias/v2/30/ORG-05-9-next-1440-has-applications.jpg`, `evidencias/v2/30/ORG-05-9-next-1440-edit-locked.jpg`). La demo vuelve a permitir editar si todas están Rechazadas, Retiradas o Canceladas | ≈ (v2: antes −) | P3 | — (v2: M05 ratificada, más estricta que la v1.8) | Mantener (decisión M05; UI `038329f`) |
+| 10 | Nota con candidaturas activas | «Con candidaturas activas, duplica para cambiar la oferta. Puedes revisar la propuesta antes de confirmar.» | En el detalle no se explica por qué falta «Editar»; solo `/edit` dice «Esta necesidad ya recibió candidaturas: no se puede editar.» (es:841) | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Añadir la nota en el detalle cuando hay candidaturas (con «Duplicar», backlog v2-14) |
+| 11 | Duplicar | «Duplicar» → borrador «Copia · {título}» empezando dentro de 45 días, como bloque continuo con el mismo nº de días. Fallos: hereda `pricingSnapshot` (comisión de la original) y pisa el borrador nuevo sin avisar (hallazgos D1 #1, #13) | No existe | − | P2 | — (v2: default v1.8) (archivar/duplicar, R-D4) | Portar «Duplicar» sin heredar condiciones congeladas (backlog v2-14) |
+| 12 | Completar un borrador | «Completar y publicar» → constructor con «Guardar y publicar · {x %}» | No existe | − | P3 | — (v2: default v1.8) (R-D4) | Portar con los borradores (backlog v2-14) |
+| 13 | Versión de la oferta | `revision` sube con cada cambio material; el Pack muestra «Oferta versión {n}» | La necesidad no lleva versión visible; las versiones son de la propuesta («Propuesta · versión {n}», R-08) y la edición se cierra con la primera candidatura, así que una propuesta nunca ve dos versiones de la oferta | ≈ (v2: antes −) | P3 | — (v2: M05 ratificada) | Mantener |
+| 14 | Acciones sobre una «Vencida» | Demo: se sigue ofreciendo «Pausar» (fallo) | «Editar necesidad» (si no tuvo candidaturas), «Candidaturas (n)» y «Cerrar necesidad»; sin «Pausar» (`RequirementStatusActions.tsx:67`). v2, en ejecución sobre `9e280aa3-…` (vencida) (`evidencias/v2/30/ORG-05-14-next-1440-expired.jpg`). Conectado: J1 terminada sigue con «Pausar», «Cerrar oferta» y «Distribuir aviso» (`evidencias/v2/30/ORG-04-1-v18c-1440.jpg`) | ≈ | — | — | Mantener |
+| 15 | Resultado | Demo: toast «Oferta actualizada». Conectado: «Cambios guardados.» | Pausar/reanudar: avisos `ok` (es:806-807); cerrar: la página se pinta como cerrada; si falla, `Notice` con `actionErrorCopy` (con el defecto de la fila 5) | ≈ | — | — | Mantener |
+| 16 (nueva v2) | Candidaturas en curso de una necesidad pausada | Conectado: pausar no congela nada: se puede proponer; confirmar exige `published` y que no haya empezado (`server/app.mjs:115-120`); la oferta pausada se oculta al técnico. Demo: igual («Reabrir») | Pausada: la organización solo ve las acciones que no exigen una necesidad abierta (sin «Preseleccionar», «Enviar propuesta» ni «Confirmar asignación», `ApplicationActions.tsx:55-59`) y el servidor responde `CFA01`; el técnico ve «La necesidad está pausada: no admite propuestas ni confirmaciones.» (`applications/page.tsx:23-27,99-131`; es:1321). v2, en ejecución con B pausada: la aceptada de `hotel` solo muestra «Cancelar candidatura aceptada» (`evidencias/v2/30/ORG-05-16-next-1440-paused-org.jpg`, `evidencias/v2/30/ORG-05-16-next-1440-paused-tech.jpg`) | + | — | — | Mantener (más estricto que la v1.8) |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-03-ofertas-cobertura-1440.png`, `evidencias/shots/demo/D-EMP-03d-archivar-1440.png`,
+`evidencias/shots/connected/C-EMP-29-jobs-states-1440.png`, `evidencias/shots/connected/C-TEC-38-jobs-after-close-1440.png`. Next: sin
+captura del cierre (smoke 12b, `10-master-matrix.md:299`).
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/ORG-05-4-next-1440-confirm.jpg`; v1.8 `evidencias/xhigh/30/ORG-05-1-v18-1440-lifecycle.jpg` (pausar, reabrir, archivar, borrador, «Completar y publicar»).
+Capturas v2: Next `evidencias/v2/30/ORG-05-1-next-1440-open.jpg`, `evidencias/v2/30/ORG-05-3-next-1440-paused.jpg`, `evidencias/v2/30/ORG-05-3-next-1440-resumed.jpg`, `evidencias/v2/30/ORG-05-5-next-1440-close-refused.jpg` (defecto), `evidencias/v2/30/ORG-05-9-next-1440-edit.jpg`, `evidencias/v2/30/ORG-05-9-next-1440-edit-locked.jpg`, `evidencias/v2/30/ORG-05-14-next-1440-expired.jpg`, `evidencias/v2/30/ORG-05-16-next-1440-paused-org.jpg`; v1.8 conectado `evidencias/v2/30/ORG-04-1-v18c-1440.jpg`.
+
+---
+
+## ORG-06 · Distribución Urgente/AOG (outreach) — v1.8 `S-EMP-03a, D-EMP-03c, S-CON-05 (job.outreach), S-CON-11, C-EMP-22, C-TEC-29` ↔ Next — (ausente)
+
+**Estado global:** AUSENTE EN NEXT (v2: portable, alcance LATER). En la demo es una simulación; en el conectado crea avisos internos con reglas de
+consentimiento, silencio y movilización.
+- Next solo tiene la parte de disponibilidad («Solo AOG», BR-4.8).
+- v2: el outreach Urgente/AOG es LATER y el opt-in, NEXT: ambos portables (SCOPE-2). El email y el push siguen OUT.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Bloque en la tarjeta | Si la urgencia no es «Planificado»: icono `Zap`, h3 «Distribución {urgencia}» (`Company2.jsx:168-176`) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (outreach Urgente/AOG; opt-in = NEXT); sin email ni push (OUT) | Portar el bloque en el detalle de la necesidad Urgente/AOG (backlog v2-17) |
+| 2 | Plazo de respuesta | «Respuesta hasta {fecha es-ES}» o «Ventana simulada: AOG 30 minutos; Urgente 2 horas.» | — | ✗ | — | DEMO-ONLY | No portar (simulación) |
+| 3 | Activar (demo) | «Activar distribución simulada», desactivado si no está Publicada → toast «Activación simulada guardada»; error «La oferta no admite activaciones.» | — | ✗ | — | DEMO-ONLY | No portar |
+| 4 | Lista de destinatarios (demo) | Una fila por cada técnico de la demo: «Técnico {code} · {motivo \|\| estado}». Incluye perfiles **privados o que bloquean al empleador** como «Privacidad», lo que contradice USER_FLOWS y BUSINESS_RULES n.º 7 (hallazgo D1 #3) | — | ✗ | — | — | No portar: es una fuga de privacidad |
+| 5 | Motivos de exclusión | «Privacidad» · «Sin consentimiento» · «Horas de silencio» · «Movilización» · «Requisitos» · «Fechas o plazas» (`business.js:336-354`; la segunda comprobación de movilización es inalcanzable) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (outreach Urgente/AOG; opt-in = NEXT); sin email ni push (OUT) | Portar los motivos de exclusión, sin la fila de privados (fila 4) |
+| 6 | Respuesta simulada | Select `aria-label` «Respuesta simulada {code}»: Avisado · Interesado · No disponible → «Respuesta de demo guardada» | — | ✗ | — | DEMO-ONLY | No portar |
+| 7 | Pie | «Si vence el plazo, revisa requisitos y activa otra ronda o contacto manual autorizado. No se envían mensajes reales.» | — | ✗ | — | DEMO-ONLY | No portar |
+| 8 | Botón del conectado | «Distribuir aviso Urgente / AOG», solo en `published` → `job.outreach` (`Account.jsx:69`) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (outreach Urgente/AOG; opt-in = NEXT); sin email ni push (OUT) | Portar «Distribuir aviso Urgente / AOG» (backlog v2-17) |
+| 9 | Audiencia del conectado | Perfil visible, sin restricciones, sin bloqueo de la empresa, fuera de horas de silencio (`quietNow`); jornadas futuras cubiertas por su disponibilidad, con plazas y sin solape; modo Urgente con `urgentOptIn` o AOG con `aogOptIn`; `mobilizationHours` declarado y respetado; elegible; sin aviso previo (`app.mjs:89-105`) | Next guarda solo ventanas `aog_only`, que cuentan únicamente para necesidades con urgencia `aog` (`src/domain/availability.ts:76-116`, BR-4.8). No hay opt-in, silencio ni movilización | − | P2 | — (v2: desbloqueado, alcance LATER) (outreach Urgente/AOG; opt-in = NEXT); sin email ni push (OUT) | Portar la audiencia: opt-in Urgente/AOG, silencio y movilización del pasaporte (área 20) (backlog v2-17) |
+| 10 | Resultado | «{n} avisos internos creados. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.» (sin plural: «1 avisos») | — | − | P3 | — (v2: desbloqueado, alcance LATER) (outreach Urgente/AOG; opt-in = NEXT); sin email ni push (OUT) | Portar con plural ICU (backlog v2-17) |
+| 11 | Aviso al técnico | Título «{modo}: {título}», descripción «{base} · {categoría} · consulta las condiciones y decide si deseas presentar candidatura.» (`app.mjs:89-105`) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (outreach Urgente/AOG; opt-in = NEXT); sin email ni push (OUT) | Portar con los avisos internos (HIRE-07, backlog v2-18) |
+| 12 | Modo deducido del inicio | `mode = urgency(primera jornada, hoy)`; en Estándar no avisa | Urgencia declarada | ✗ | — | C-8/D-05 | Usar la urgencia declarada |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-03c-distribucion-aog-1440.png`, `evidencias/shots/connected/C-EMP-22-jobs-list-1440.png`,
+`evidencias/shots/connected/C-TEC-29-notifications-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/ORG-06-1-v18-1440.jpg` (distribución Urgente activada, destinatarios con «Privacidad»).
+Capturas v2: v1.8 conectado `evidencias/v2/30/ORG-04-1-v18c-1440.jpg` («Distribuir aviso Urgente / AOG» en cada publicada), `evidencias/v2/30/HIRE-07-1-v18c-1440.jpg` (3 avisos «{modo}: {título}» de técnico 1). Next: no aplica.
+
+---
+
+## ORG-07 · Organización: datos, verificación, actividad y plantilla — v1.8 `S-EMP-07, S-MOD-EMP-06, S-MOD-EMP-07, D-EMP-07, S-CON-04, C-EMP-02, C-EMP-09` ↔ Next `N-AUTH-03 (alta), N-ACC-01, N-ORG-06`
+
+**Estado global:** PARCIAL.
+- Next crea la organización en el alta (nombre, tipo y país) y solo enseña el nombre en Configuración. No hay pantalla
+  para editarla ni KYB.
+- A cambio tiene lo que la v1.8 no tiene: membresías con roles y una plantilla interna con el estado de las
+  cualificaciones.
+- Selector de demo, alta local, autoverificación y restablecer: `✗`.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Pantalla | Demo «Organización» (`#settings`): eyebrow «ORGANIZACIÓN», h1 «Tu empresa.» / «Recruiter y clientes.», «Actividad y avisos separados por organización.» (`Company2.jsx:199`). Conectado: h2 «Organización · {Pendiente\|Revisión registrada}» (`Account.jsx:64`) | No hay página. Configuración muestra «Organización» y «Rol» en solo lectura (`src/app/app/settings/page.tsx:21-33`) | − | P2 | — (v2: default v1.8) (OD-5/C-14) | Portar la pantalla «Organización» con sus campos (backlog v2-19) |
+| 2 | Nombre | Demo «Nombre», required. Conectado «Razón social», required, ≤ 200 | «Nombre de la organización», 2-160, solo en el alta (es:137; `src/lib/validation/auth.ts:25-48`) | ≈ | P2 | — (v2: default v1.8) (OD-5/C-14) | Portar la pantalla «Organización» con sus campos (backlog v2-19) |
+| 3 | Correo de operaciones | Demo: email required | No existe | − | P3 | — (v2: default v1.8) (OD-5/C-14) | Portar la pantalla «Organización» con sus campos (backlog v2-19) |
+| 4 | Datos fiscales | Conectado: «Identificación fiscal» (≤ 80) y «Domicilio fiscal» (≤ 400), required | No existen | − | P2 | — (v2: default v1.8) (OD-5/C-14) | Portar la pantalla «Organización» con sus campos (backlog v2-19) |
+| 5 | País | Conectado: select de 27 países UE con nombre (`Intl.DisplayNames`), por defecto ES | «País (código ISO)», text `^[A-Z]{2}$`, pista «p. ej. ES» → «Usa un código de país de 2 letras, p. ej. ES» (es:255) | ≈ | P3 | — (v2: default v1.8) (OD-6/D-04) | Select de países UE como la v1.8 (backlog v2-19) |
+| 6 | Tipo de organización | Lo da la invitación (`company` o `recruiter`) | Select: MRO · Aerolínea · Operador · Agencia de personal · Otra, por defecto MRO (es:155-159; `RegisterForm.tsx:96-108`) | + | — | — | Mantener |
+| 7 | Verificación | Demo: toggle «Verificada (simulación)»: la empresa se verifica a sí misma (`Company2.jsx:199`). Conectado: «La revisión se registra desde administración. La empresa no puede verificarse a sí misma.»; cada guardado vuelve a `pending`; sin revisión no se puede confirmar: «La organización requiere revisión administrativa.» (`app.mjs:83,120-129`) | No hay KYB; `organizations` no tiene campo de verificación (next-static §5.5) | − | P1 | — (v2: default v1.8) (OD-5/C-14); la revisión la registra el administrador de plataforma (área 10) | Portar «Pendiente / Revisión registrada» sin autoverificación (backlog v2-19) |
+| 8 | Guardar | Demo: «Guardar organización» → «Organización guardada»; error «Organización no autorizada.». Conectado: «Cambios guardados.» | La RLS deja actualizar al admin, pero no hay UI | − | P2 | — (v2: default v1.8) (OD-5/C-14) | Portar la pantalla «Organización» con sus campos (backlog v2-19) |
+| 9 | Organización activa | Demo: select «Organización de demostración» (13 empresas o 5 recruiters) | Membresía primaria; Configuración ya usa la misma que el shell, `primaryMembership` (`src/app/app/settings/page.tsx:21-22`; W1-09 cierra NX-03). «Ver como» no cambia de organización (ORG-01 #31) | ✗ | — | DEMO-ONLY | No portar |
+| 10 | Alta de otra organización | Demo: «Alta de otra organización» → modal «Alta de organización local» con «Nombre de organización» y «Correo» → «Organización creada»; no valida nombres solo con espacios (hallazgo D1 #14) | Una organización por alta | ✗ | — | DEMO-ONLY | No portar (V1.8 tampoco tiene varias organizaciones por cuenta, V18-46) |
+| 11 | Modelo comercial | Panel fijo: «Profesional» «Gratis» · «Estándar» «2,3 %» «Sobre personal base» · «Urgente» «4 %» · «AOG» «10 %» · «Plan avanzado» «Por definir» | — | − | P3 | SCOPE OUT (comisiones y planes) | No portar |
+| 12 | Actividad | «Actividad de esta organización»: últimos 15 eventos «{texto} · {fecha}»; vacío «Aún no hay actividad propia.» | `audit_events` legible por el admin de la organización, pero sin UI (next-static §5.5) | − | P3 | — (v2: default v1.8) (AUDIT-VIEW) | Portar «Actividad de esta organización» (últimos 15 eventos, sin datos personales) (backlog v2-19) |
+| 13 | Restablecer | «Restablecer ejemplo V1.6» → modal «Se sustituirá el estado de esta V1.6. Exporta un respaldo desde «Datos y alcance» si quieres conservarlo. La V1.1 original se conserva.» → «Ejemplo nuevo preparado» | — | ✗ | — | DEMO-ONLY | No portar |
+| 14 | Varios usuarios | Conectado: una cuenta = una organización (`owner = user.id`, `app.mjs:82-84`) | Membresías con rol Miembro, Manager o Administrador (es:457-461; `src/server/session.ts:99-115`) | + | — | — | Mantener |
+| 15 | Invitar miembros | — | No hay. «Añadir miembros (invitaciones con consentimiento) llegará después.» (es:890) | + | — | OD-4/D-09 (NEXT; la v1.8 no tiene invitaciones de miembros) | Esperar |
+| 16 | Plantilla interna | — | `/app/organization/workforce`: «Plantilla interna»; por miembro, nombre, «{rol} · {base}» y chips «{código} · {verificación} · {caducidad}», o «Sin cualificaciones registradas.» / «Usuario de la organización (no técnico).»; los `member` ven «La plantilla es visible para managers y administradores» (`WorkforceList.tsx:25-58`, es:889-897) | + | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-07-organizacion-1440.png`, `evidencias/shots/demo/D-EMP-07b-alta-organizacion-1440.png`,
+`evidencias/shots/demo/D-EMP-07c-restablecer-1440.png`, `evidencias/shots/connected/C-EMP-02-org-empty-1440.png`,
+`evidencias/shots/connected/C-EMP-09-org-saved-1440.png`, `evidencias/shots/connected/C-REC-04-org-saved-1440.png`. Next: sin captura de
+plantilla ni de Configuración con organización (lote 11 sin `workforce`).
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/ORG-07-16-next-1440.jpg`, `evidencias/xhigh/30/ORG-07-1-next-1440-settings.jpg`; v1.8 `evidencias/xhigh/30/ORG-07-1-v18-1440.jpg`.
+Capturas v2: v1.8 conectado `evidencias/v2/30/ORG-07-1-v18c-1440.jpg` (empresa), `evidencias/v2/30/ORG-08-3-v18c-1440.jpg` (recruiter).
+
+---
+
+## ORG-08 · Recruiter: cartera de clientes y publicación por cliente — v1.8 `S-EMP-07a, D-REC-01…06, S-CON-05a (cliente), C-REC-04/05/09/13` ↔ Next — (solo `staffing_agency` en el alta y el marcador `/app/recruiter`)
+
+**Estado global:** AUSENTE EN NEXT (v2: portable, alcance LATER; el modelo provisional de D-12 hace de default).
+- La agencia es una organización normal con clientes representados, verificables y revocables.
+- Nada está implementado. Las únicas piezas son el tipo «Agencia de personal» del alta y la vista «Recruiter» del
+  selector del administrador de plataforma (D-13, `d3b876f`): un marcador «Próximamente» sin lógica (fila 11).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Rol recruiter | Demo: «Probar como» → Recruiter (organización «AeroTalent Partners»). Conectado: el rol lo da la invitación (`app.mjs:42`) | Tipo de organización «Agencia de personal» (es:158); no cambia nada más. Un administrador de plataforma puede abrir la vista «Recruiter», que es solo un marcador (fila 11) | ≈ | P2 | — (v2: desbloqueado, alcance LATER) (recruiter con clientes); modelo D-12 provisional como default | Portar (backlog v2-24) |
+| 2 | Textos propios | Lateral «RECRUITER»; «ESPACIO RECRUITER»; «RED RECRUITER»; «NECESIDAD PARA CLIENTE»; h1 «Recruiter y clientes.» | Solo en el marcador del administrador: botón «Recruiter» del selector, eyebrow «Recruiter» y h1 «Espacio recruiter» (es:78,889-890). «RED RECRUITER», «NECESIDAD PARA CLIENTE» y «Recruiter y clientes.» no existen | ≠ (antes −) | P3 | — (v2: desbloqueado, alcance LATER) (recruiter con clientes); modelo D-12 provisional como default | Portar (backlog v2-24) |
+| 3 | Cartera de clientes | Panel «Cartera de clientes»: «**{nombre}** · {correo \|\| 'Sin correo'}»; formulario «Nuevo cliente» (required) + «Correo del cliente» → «Añadir cliente» → «Cliente guardado»; error «Indica un cliente válido en el espacio recruiter.» (`Company2.jsx:211`; `AppState.jsx:483-493`) | — (diseño: `represented_clients` con estado `pending/active/revoked` y evidencia, `RECRUITER_MODEL.md:14`) | − | P2 | — (v2: desbloqueado, alcance LATER) (recruiter con clientes); modelo D-12 provisional como default | Portar (backlog v2-24) |
+| 4 | Nota de la cartera | «El recruiter recibe los expedientes y coordina en nombre del cliente identificado. Presentar al cliente exporta la vista autorizada del Candidate Pack; no envía archivos externamente.» | — | − | P3 | — (v2: desbloqueado, alcance LATER) (recruiter con clientes); modelo D-12 provisional como default | Portar (backlog v2-24) |
+| 5 | Cliente obligatorio al publicar | Demo: «Selecciona un cliente.». Conectado: «Indica el cliente representado.» | — (diseño: `work_requirements.on_behalf_of_client_id` contra una representación activa) | − | P2 | — (v2: desbloqueado, alcance LATER) (recruiter con clientes); modelo D-12 provisional como default | Portar (backlog v2-24) |
+| 6 | Cliente en la oferta | «Publicada por {company} para el cliente {client}» (`Marketplace.jsx:36-44`); el conectado no lo muestra en la tarjeta v2, conectado en ejecución: el título dice «(cliente)» y la tarjeta no nombra a «Cliente QA Airline» (`evidencias/v2/30/ORG-08-6-v18c-1440.jpg`) | — | − | P3 | — (v2: desbloqueado, alcance LATER) (recruiter con clientes); modelo D-12 provisional como default | Portar (backlog v2-24) |
+| 7 | Destinatario del expediente | Pack: «Alcance y destinatario: {org} para {cliente}. …»; botón «Preparar presentación para cliente» (descarga `CrewFlex-Candidate-Pack.json`) (`evidencias/shots/demo/D-REC-04b-expediente-recruiter-1440.png`) | — (el texto de consentimiento debe nombrar agencia **y** cliente, `RECRUITER_MODEL.md:25-27`) | − | P2 | D-07 P3 + D-10 para contacto, identidad y archivos del expediente; el resto, alcance LATER | Portar el destinatario «{org} para {cliente}» en el consentimiento; la exportación, cuando D-07 P3 se resuelva (backlog v2-24) |
+| 8 | Vista previa del candidato | «Destinatario: {company}{ para {client}}.» | — | − | P3 | — (v2: desbloqueado, alcance LATER) (recruiter con clientes); modelo D-12 provisional como default | Portar (backlog v2-24) |
+| 9 | Ofertas demo sin `clientId` | Las ofertas generadas para recruiters llevan `client` pero no `clientId`; al editarlas hay que volver a elegir el cliente (hallazgo D1 #15) | — | ✗ | — | DEMO-ONLY | No portar |
+| 10 | Botón del Pack según organización | «Preparar presentación para cliente» depende de `organization.type`, no del rol: un técnico puede verlo (hallazgo D1 #6) | — | ✗ | — | — | Al portar, decidir por rol y representación |
+| 11 (nueva) | Vista «Recruiter» del selector de rol | Demo: «Probar como» → Recruiter (`select` «Rol de demostración», `src/LegacyApp.jsx:84`) abre el espacio completo de «AeroTalent Partners»: Resumen «ESPACIO RECRUITER», constructor con cliente, ofertas, candidaturas y cartera (`evidencias/shots/demo/D-REC-01-resumen-1440.png`) | Solo administradores de plataforma: «Ver como» → «Recruiter» abre `/app/recruiter`: eyebrow «Recruiter», h1 «Espacio recruiter», «Próximamente» / «El espacio para agencias que representan a clientes llegará en una fase posterior. Su modelo todavía está pendiente de decisión.»; cualquier otra cuenta recibe 404 (`src/app/app/recruiter/page.tsx:13-27`; `src/components/layout/views.ts:8-13,35-48`; es:958-963). xhigh, en ejecución: con `platform.admin` sale el marcador y el lateral se queda sin sección de organización; `manager.mro` y `alpha` reciben «No encontrado» (`evidencias/xhigh/30/ORG-08-11-next-1440-admin-recruiter.jpg`; v1.8 `evidencias/xhigh/30/ORG-08-1-v18-1440-home.jpg`) | ≠ | P3 | — (v2: desbloqueado, alcance LATER) | Sustituir el marcador por el espacio recruiter (backlog v2-24) |
+
+Capturas: v1.8 `evidencias/shots/demo/D-REC-01-resumen-1440.png`, `evidencias/shots/demo/D-REC-02-nueva-necesidad-1440.png`,
+`evidencias/shots/demo/D-REC-03-organizacion-1440.png`, `evidencias/shots/demo/D-REC-04b-expediente-recruiter-1440.png`,
+`evidencias/shots/connected/C-REC-05-job-J4-1440.png`, `evidencias/shots/connected/C-REC-17-org-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/ORG-08-11-next-1440-admin-recruiter.jpg`; v1.8 `evidencias/xhigh/30/ORG-08-1-v18-1440-home.jpg`, `evidencias/xhigh/30/ORG-08-3-v18-1440-settings.jpg`.
+Capturas v2: v1.8 demo `evidencias/v2/30/ORG-08-1-v18-1440.jpg`; conectado `evidencias/v2/30/ORG-08-1-v18c-1440.jpg` (Resumen «2 · 2 · 1 · 40,00 €»), `evidencias/v2/30/ORG-08-6-v18c-1440.jpg` (ofertas con «Cliente representado»), `evidencias/v2/30/ORG-08-7-v18c-1440.jpg` (candidaturas), `evidencias/v2/30/ORG-08-3-v18c-1440.jpg`.
+
+---
+## MKT-01 · Buscar candidatos: universo, filtros, orden, vista y páginas — v1.8 `S-EMP-04, S-EMP-04a, S-EMP-04b, S-EMP-04c, D-EMP-04, D-REC-06, S-CON-07, C-EMP-05, C-EMP-24…27, C-REC-12` ↔ Next `N-ORG-05`
+
+**Estado global:** PARCIAL. Next porta el esqueleto del directorio de la v1.8 (VERIFIED_PARITY_LOCAL M06): búsqueda,
+«Solo elegibles», orden, 20 por página y comparar hasta 3.
+- Lo hace **por necesidad**, sobre un pool de hasta 100 profesionales que ya cumplen alguna cualificación.
+- No hay directorio libre, ni los filtros de categoría, aeronave, inglés, tarifa y fechas, ni la vista ampliada.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Entrada | Demo: lateral «Buscar candidatos», dock «Candidatos», hero «Explorar candidatos», tarjeta «Red profesional», botón «Buscar candidatos» de cada oferta. Conectado: «Directorio» (`candidates`), dock «Candidatos» v2, conectado en ejecución: «Solo perfiles visibles para tu organización…» · «23 perfiles · página 1 de 2» (`evidencias/v2/30/MKT-01-1-v18c-1440.jpg`) | Solo desde una necesidad: «Ver profesionales externos elegibles» → `/app/organization/requirements/{id}/matches`; no hay entrada en el lateral (`AppShell.tsx:23-57`) | ≠ | P1 | — (v2: default v1.8): directorio libre con la proyección seudónima del pool (S-7; revisión de seguridad) | Portar «Buscar candidatos» en el lateral de la organización sin necesidad fijada (backlog v2-22) |
+| 2 | Eyebrow | Demo: «RED PROFESIONAL»; recruiter «RED RECRUITER». Conectado: «DIRECTORIO CON CONSENTIMIENTO» | «Red externa · vista previa del matching» (es:845) | ≈ | P3 | — | Mantener |
+| 3 | h1 | Demo: «Encuentra a tu próximo técnico.». Conectado: «Tu red profesional.» | Título de la necesidad (`matches/page.tsx:79-86`) | ≠ | P3 | — | Mantener |
+| 4 | Descripción | Demo: «Compara cualificaciones, tarifa y cobertura. La identidad respeta las preferencias de cada profesional.». Conectado: «Solo perfiles visibles para tu organización. Los descansos y el calendario privado no se muestran.» | «{ubicación} · {periodo}. Los requisitos obligatorios son filtros: ninguna puntuación compensa uno ausente.» (es:846) | ≠ | P3 | — | Mantener |
+| 5 | Volver | — | «Volver a la necesidad» (es:847) | + | — | — | Mantener |
+| 6 | Oferta evaluada | Demo: select «Evaluar para la oferta» con «Sin oferta seleccionada» + **todas** las ofertas propias, incluidos borradores, archivadas y vencidas, en las que «Simular…» queda desactivado sin explicación (hallazgo D1 #9). Por defecto, la de `route.jobId` o la primera publicada. Conectado: sin selector; la vista ampliada evalúa todas las ofertas publicadas propias | Una necesidad fija por URL; no hay modo «sin oferta» | ≈ | P3 | — (v2: default v1.8) (modo sin oferta) | Mantener |
+| 7 | Universo | Demo: `allCandidates.filter(canSeeCandidate)`: visibles `anonymous`/`open`, o `verified` con organización verificada; nunca `private` ni quien bloquea al empleador; runtime 99. Conectado: perfiles `visible` que no bloquean (`directoryProfile`, `app.mjs:50-58`) | Pool externo: `anonymous`/`open`, no miembros, con ≥ 1 cualificación requerida activa; **como máximo 100 evaluados**, primero los que cumplen todos los obligatorios (`get_requirement_candidate_pool`, next-static §5.8) | ≠ | P1 | — (v2: default v1.8) (R-D3: paginar en vez de tope 100) | Paginar el pool en SQL (backlog v2-22) |
+| 8 | Aviso de cobertura del pool | — | 3 variantes: «Se ha evaluado a todos los profesionales de la red…» / «{prefiltered} profesionales tienen… se han evaluado {evaluated}…» / «Resultado parcial: … se evalúan como máximo {cap}…» (`PoolCoverageNote.tsx`, es:852-854) | + | — | — | Mantener |
+| 9 | Resumen | Demo: «**{n}** resultados · página {p} de {P}». Conectado: «{n} perfiles · página {p} de {P}» (sin plural) | «**{eligible}** elegibles de {evaluated} evaluados. Los profesionales anónimos se muestran con una referencia válida solo para esta necesidad.» (es:850) y, en el paginador, «{total, plural, …} · página {p} de {n}» (es:878) | ≈ | — | — | Mantener |
+| 10 | Buscar | Demo: «Buscar candidato», placeholder «Nombre visible, código, base…», sobre `'{nombre visible} {categorías} {aeronaves} {base}'`; no encuentra por código a los perfiles `open` (hallazgo D1 #9). Conectado: «Buscar código, aeronave o base» sobre `'{code} {categoría} {aeronaves} {base}'` | «Buscar», placeholder «Referencia, nombre o base», ≤ 80; sin distinguir acentos ni mayúsculas, sobre id, nombre visible y base (`src/features/matching/list.ts:26,35-39,48-55`, es:857-858) | ≈ | P3 | — | Mantener (el pool ya está filtrado por cualificación) |
+| 11 | «Más filtros» | `<details><summary>Más filtros</summary>` con 7 controles y la ayuda «Para comparar una tarifa diaria por hora hace falta la duración de jornada de la oferta. El filtro de fechas requiere publicar todos los días del intervalo; no muestra el calendario privado.» (`CandidateDirectory.jsx:20`; `evidencias/shots/demo/D-EMP-04b-mas-filtros-1440.png`) | No existe | − | P2 | — (v2: default v1.8) (filas 12-17) | Portar «Más filtros» (backlog v2-23) |
+| 12 | Filtro Categoría | Demo: «Todas» + las 12 categorías. Conectado: «Todas» + categorías presentes en los perfiles visibles | No existe; el pool ya exige las cualificaciones obligatorias | − | P3 | — (v2: default v1.8) (C-10) | Portar con el catálogo ampliado (backlog v2-23) |
+| 13 | Filtro Aeronave | Demo: «Todas» + las 12 aeronaves | No existe | − | P3 | — (v2: default v1.8) (C-10) | Portar con el catálogo ampliado (backlog v2-23) |
+| 14 | Filtro Base habitual | Demo: «Todas» + bases únicas ordenadas: Barcelona (BCN) · Frankfurt (FRA) · Lisboa (LIS) · Madrid (MAD) · París (CDG) | Lo cubre la búsqueda por base | ≈ | P3 | — | Mantener |
+| 15 | Filtro Inglés mínimo | Demo: «Cualquiera» + A1, A2, B1, B2, C1, C2 (sin inglés declarado → fuera) | No existe: Next no modela el inglés | − | P2 | — (v2: default v1.8) (C-10/D-03) | Portar el inglés en el pasaporte (área 20) y el filtro (backlog v2-23) |
+| 16 | Filtro Tarifa | Demo: «Máximo EUR/h», texto decimal (acepta coma) → «Introduce un presupuesto positivo válido.»; sin oferta excluye todas las tarifas por día (hallazgo D1 #9). Conectado: «Tarifa máxima EUR/h», número min 1 | No existe | − | P2 | — (v2: desbloqueado, alcance LATER) (tarifas; sin cobro) | Portar con la tarifa del pasaporte (backlog v2-23) |
+| 17 | Filtro de fechas | Demo: «Disponibilidad desde» / «Disponibilidad hasta» → «Completa ambas fechas con un intervalo válido de hasta un año.»; un error vacía la lista y además muestra el vacío (hallazgo D1 #9) | La disponibilidad se evalúa contra el periodo de la necesidad (% cubierto, BR-4) | ≈ | P3 | — | Mantener |
+| 18 | Solo elegibles | Demo: toggle «Solo elegibles con cobertura», **activo por defecto**; sin él, 99 resultados | Casilla «Solo elegibles», **desactivada por defecto** (`src/features/matching/list.ts:27`, es:864). Sigue igual en SNAP2 | ≠ | P3 | — (v2: default v1.8) (activo) | Activarla por defecto como la v1.8 (backlog v2-25) |
+| 19 | Limpiar | Demo: «Limpiar filtros»: vacía búsqueda y filtros y deja «Solo elegibles» activo; no toca la oferta, el orden, la comparación ni la vista | «Limpiar» → URL base: borra también el orden y la comparación (`MatchList.tsx:69-71`, es:866) | ≈ | P3 | — | Mantener |
+| 20 | Aplicar | Demo y conectado: filtran en vivo y vuelven a la página 1 | Formulario GET con «Aplicar»; funciona sin JavaScript (`MatchList.tsx:26-75`, es:865) | ≈ | — | — | Mantener |
+| 21 | Ordenar | Demo: «Ordenar candidatos»: «Cobertura y relevancia» (por defecto) · «Tarifa por hora» · «Experiencia declarada». Conectado: sin orden | «Ordenar por»: «Relevancia (elegibles primero)» · «Experiencia (mayor primero)» (es:859-862) | ≈ | P3 | — (v2: desbloqueado, alcance LATER) (orden por tarifa) | Mantener |
+| 22 | Relevancia | Primero `eligible && canCover`, luego afinidad 75/25 de mayor a menor (`business.js:174`) | Elegibles primero → `softScore` de mayor a menor → id (`src/domain/matching.ts:195-200`). xhigh, en ejecución (`9e280aa3-…/matches`): 3 elegibles (100, 100, 0; empate por id CF-C8A1… < CF-CCA3…) y después 7 no elegibles por id ascendente (`evidencias/xhigh/30/next-match-log.json`) | ≈ | — | T-03 | Mantener (la 75/25 está rechazada) |
+| 23 | Vista Compacta/Ampliada | Demo: botones «Compacta» / «Ampliada» con `aria-pressed`, guardados en `localStorage['crewflex-directory-view']`. Conectado: casilla «Mostrar perfil ampliado», no se guarda | No existe (CO-35, omitido a propósito) | − | P3 | — | Portar (copiarlo todo; CO-35 estaba diferido) (backlog v2-23) |
+| 24 | Paginación | Demo: «Anterior» (desactivado en la 1) · «{p} / {P} · 20 perfiles por página» · «Siguiente». Conectado: «Anterior» · «{p}/{P}» · «Siguiente» | 20 por página; los enlaces «Anterior» / «Siguiente» solo aparecen cuando aplican; `nav` «Páginas de resultados» (`list.ts:6`; `MatchList.tsx:276-313`, es:877-880) | ≈ | — | — | Mantener |
+| 25 | Vacíos | Demo: «No hay perfiles para estos filtros» / «Amplía la búsqueda o revisa las fechas y los requisitos.». Conectado: «Aún no hay perfiles para esta búsqueda» / «Los profesionales deben activar su visibilidad para aparecer aquí.» | Pool vacío: «No hay profesionales emparejables para estas cualificaciones» / «Solo se evalúan los profesionales que han elegido ser emparejables y poseen al menos una de las cualificaciones requeridas.» (es:848-849). Filtro sin resultados: «Ningún profesional cumple estos filtros» / «Limpia la búsqueda o incluye a los no elegibles para ver todo el grupo evaluado.» (es:881-882) | ≈ | — | — | Mantener |
+| 26 | Permisos | Demo: cualquier rol, incluido el técnico por hash. Conectado: company y recruiter | Solo managers y administradores; si no, aviso (`matches/page.tsx:44-51`) | + | — | — | Mantener |
+| 27 | Bloqueo del empleador | Demo `blockEmployer`, conectado `profile.blocked`: el perfil no aparece a esa organización | No existe (CO-42) | − | P1 | — (v2: default v1.8) (bloqueo de empleador: preferencia de privacidad del profesional, no D-07 P3) | Portar el bloqueo en el pasaporte y aplicarlo al pool, a «Oportunidades» y a la candidatura (backlog v2-16) |
+| 28 | Visibilidad «solo organizaciones verificadas» | Demo: `visibility==='verified'` solo con `org.verified` | No existe: la V0 tiene `private/anonymous/open` (C-7) | − | P2 | — (v2: default v1.8) (OD-5/C-14) | Portar con la revisión de organizaciones (backlog v2-19) |
+| 29 (nueva v2) | Matching de una necesidad pausada o cerrada | Demo: el selector «Evaluar para la oferta» lista borradores, archivadas y vencidas, y «Simular…» queda desactivado sin explicación (fila 6). Conectado: la vista ampliada evalúa solo las publicadas | `/matches` de una pausada o cerrada: «Necesidad pausada» / «Necesidad cerrada» + «Solo se evalúan candidatos para necesidades publicadas. Reanuda la necesidad para volver a verlos.» y «Volver a la necesidad» (`matches/page.tsx:91-97`; es:884-886). v2, en ejecución (`evidencias/v2/30/MKT-01-1-next-1440-paused-matches.jpg`) | + | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-04-buscar-candidatos-1440.png`, `evidencias/shots/demo/D-EMP-04-buscar-candidatos-390.png`,
+`evidencias/shots/demo/D-EMP-04b-mas-filtros-1440.png`, `evidencias/shots/demo/D-EMP-04c-candidatos-ampliada-1440.png`,
+`evidencias/shots/demo/D-REC-06-buscar-candidatos-1440.png`, `evidencias/shots/connected/C-EMP-05-directory-empty-1440.png`,
+`evidencias/shots/connected/C-EMP-24-directory-compact-1440.png`, `evidencias/shots/connected/C-EMP-25-directory-expanded-1440.png`,
+`evidencias/shots/connected/C-EMP-24-directory-390.png`, `evidencias/shots/connected/C-EMP-27-directory-empty-1440.png`. Next (lote 11, EN):
+`docs/audit/evidence/v18-compare/next-after/org-matches-{360,390,768,1024,1440}.jpg`; V0
+`docs/audit/evidence/local-07-matching-results.jpg`.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/MKT-02-7-next-1440.jpg` (matching), `evidencias/xhigh/30/MKT-01-26-next-1440-member.jpg`; v1.8 `evidencias/xhigh/30/MKT-01-1-v18-1440.jpg`, `evidencias/xhigh/30/MKT-01-11-v18-1440.jpg` («Más filtros»).
+Capturas v2: Next `evidencias/v2/30/MKT-01-1-next-1440-paused-matches.jpg`; v1.8 conectado `evidencias/v2/30/MKT-01-1-v18c-1440.jpg` (directorio: categorías presentes, «Tarifa máxima EUR/h», «Mostrar perfil ampliado», `T-<8 hex>`).
+
+---
+
+## MKT-02 · Tarjeta de candidato, perfil, comparación e identidad — v1.8 `S-EMP-04b/c, S-MOD-EMP-03, S-MOD-EMP-04, S-SUB-MKT-05, S-CON-07a, D-EMP-04d/f/g, C-EMP-26` ↔ Next `N-ORG-05 (MatchCard, CompareTable)`
+
+**Estado global:** PARCIAL. La tarjeta de Next explica mejor la elegibilidad:
+- veredicto, bloqueos y una línea por cualificación;
+- seudónimo por necesidad.
+
+Le faltan:
+- tarifa, inglés, países, medallas y foto;
+- el modal «Perfil profesional»;
+- las comprobaciones que dependen de C-10 (experiencia, permiso de trabajo, movilización, herramientas y presupuesto).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Identidad | Demo: `ProfileIdentity` anónimo con avatar «CF», `aria-label` «Identidad protegida» y «Técnico {code}» (código estable CF-001…), o nombre y foto si es `open`. Conectado: código «T-{8 primeros del id}», que expone el id del usuario (`connected.mjs:33`) | «Profesional anónimo {ref}» con `ref = 'CF-' + 10 hex de sha256(necesidad:perfil)`, distinto en cada necesidad, o el nombre visible si es `open` (es:914; migración `20261015130300:144`) | ≈ | — | T-04 | Mantener: el `T-<uuid>` es `✗` (CX-60) |
+| 2 | Avatar y foto | Iniciales, o foto local `crewflex-avatar-v1-{id}`; «CF» si está protegido | No hay avatar | − | P3 | — (iniciales: default v1.8) · foto: D-10 (archivo del profesional) | Portar el avatar de iniciales; la foto, con el wallet (backlog v2-23) |
+| 3 | Medallas | `MedalStrip`: «{n} AÑOS», categoría, aeronave, especialidad, «+N» (`aria-label` «Ver N insignias adicionales»); detalle `role=status` «{etiqueta} · {estado}» + «Resumen del perfil; no concede autorización de firma ni acredita formación por participar en retos.» | No existe (CO-44) | − | P3 | — (v2: default v1.8) (OD-3 solo bloquea producción) | Portar `MedalStrip` con su aviso (backlog v2-23) |
+| 4 | Base | Demo: `<small>{location}</small>`. Conectado: «{base}» o «Base sin declarar» | «{base}» o «Base no compartida» (es:915; `MatchCard.tsx:59-63`) | ≈ | — | — | Mantener |
+| 5 | Experiencia | Demo, vista ampliada: «Experiencia: {años} años · Inglés {nivel}». Conectado, ampliada: «{n} años de experiencia declarada · {aeronaves}» (sin plural: «1 años») | «{n} año(s) de experiencia» con plural ICU (es:916) | ≈ | P3 | — (v2: default v1.8) (C-10: inglés) | Mantener |
+| 6 | Tarifa | Demo: «{€} / h» o «{€} / día» + «Equivalente en jornada de {h} h» / «Tarifa mínima declarada». Conectado: «{€} / h» o «Sin declarar» | No existe | − | P2 | — (v2: desbloqueado, alcance LATER) (tarifas) | Portar la tarifa del pasaporte en la tarjeta (backlog v2-23) |
+| 7 | Cobertura de la oferta | Demo: «{compatibles}/{días} jornadas · {cobertura viable \| cobertura insuficiente \| requisitos pendientes}», o «Selecciona una oferta para evaluar cobertura». Conectado, ampliada: «**Cobertura en tus ofertas**» → «{título} · {Cobertura compatible \| Sin cobertura suficiente} · {n} jornadas compatibles» (`connected.mjs:39-44`) | Línea «Disponibilidad»: «Cubre toda la necesidad» / «No disponible» / «Cubre el {n}% del periodo»; bloqueo «Disponible solo el {n}% del periodo de la necesidad» (es:931-942). La etiqueta «Disponibilidad» va en una columna que se ajusta a su ancho y ya no tapa el detalle (subgrid, `MatchCard.tsx:106-123`; W1-02). xhigh, medido con `getBoundingClientRect` en las 14 tarjetas (4 de plantilla en el detalle y 10 externas en `/matches` de `9e280aa3-…`): columna de etiqueta de 96 px y 12 px de separación (solape −12 px en todas las filas) a 1440, 768 y 390 px; detalle de 366 / 174 / 180 px; «Cubre el 48.78% del periodo» pasa a 2 líneas a 768 y 390 px sin solaparse; sin desbordamiento horizontal de la página ni de la tarjeta. Los decimales salen con punto (fila 20) (`evidencias/xhigh/30/MKT-02-7-next-1440.jpg`, `…-768.jpg`, `…-390.jpg`; `evidencias/xhigh/30/next-match-log.json`). v1.8 en ejecución: «6/7 jornadas · cobertura viable» (`evidencias/xhigh/30/MKT-01-1-v18-1440.jpg`) | ≈ | P2 | — (v2: default v1.8) (C-9/D-08: por jornadas) | Mantener (% del periodo) |
+| 8 | Verificación | Demo: «{view.verification}» («Autodeclarado», «Autodeclarado · ficticio», «Verificado · demo»). Conectado: «Revisión registrada» / «Autodeclarado» (perfil entero) | Por cualificación: «Verificada · válida hasta el {fecha}», «Verificada», «Autodeclarada · verificación pendiente», «No la posee», «No verificada ({estado})», «Caducada el {fecha}», «Caduca durante la necesidad ({fecha})» (es:923-929) | + | — | — | Mantener |
+| 9 | Países de trabajo | Conectado: «ES · PT · FR» | No existe | − | P3 | — (v2: default v1.8) (OD-6/D-04) | Portar con los países del pasaporte (backlog v2-23) |
+| 10 | Veredicto | Demo: `Badge` «Elegible» / «Requisitos pendientes» (solo en el modal de candidatura); en la vista ampliada, `<details>` «Requisitos cumplidos y pendientes» con ✓/⚠ | Chip «Elegible» / «No elegible»; caja «Bloqueos»; lista ✓/✗ por código con prefijo sr-only «Cumple: » / «No cumple: » (`MatchCard.tsx:48-123`, es:912-920) | + | — | — | Mantener |
+| 11 | Requisitos comprobados | Obligatorios (`business.js:140-150`): «Categoría {c}», «Habilitación: falta definir aeronave», «Aeronave: {a / b}», «Motor: {…}», «{curso} vigente hasta {AAAA-MM-DD}», «Experiencia mínima: {n} años», «Permiso de trabajo: {país}», «Movilización máxima: {h} h» (solo Urgente/AOG), «Herramientas propias», «Capacidad: {s}», «Tarifa mínima dentro del presupuesto». Deseables: «Tarifa dentro del presupuesto», «Base habitual o movilidad aceptada», «Inglés técnico» y cada capacidad deseable | Bloqueos solo por cualificación y disponibilidad: «Falta {code}», «{code} no verificada ({estado})», «{code} caducó el {fecha}», «{code} caduca durante la necesidad ({fecha})», «No disponible en las fechas de la necesidad», «Disponible solo el {percent}% del periodo de la necesidad» (es:937-942; BR-3) | ≠ | P1 | — (v2: default v1.8) (C-10/D-02/D-03, OD-6; tarifa LATER) | Portar cada comprobación que falta como entrada del motor (backlog v2-11) |
+| 12 | Puntuación | «{score}% afinidad» = 75 % obligatorios + 25 % deseables, también con no elegibles (`business.js:174`) | «Puntuación deseable»: `softScore`, 0 si no es elegible y 100 si no hay deseables (BR-5) | ✗ | — | T-03 | Mantener la de Next |
+| 13 | «Abrir perfil» | Modal «Perfil profesional» con:<br>- `ProfileIdentity` completo; «{base \|\| 'Base por completar'} · {años} años de experiencia declarada»; `MedalStrip all`;<br>- h3 «Experiencia y condiciones»: «{años} años · Inglés {nivel} · {€} / {hora\|día}», «Aeronaves: …», «Capacidades: …»;<br>- h3 «Cursos»: «{nombre} · {estado} · {caducidad}»;<br>- h3 «Evaluación para {oferta}» con la lista de requisitos y la cobertura;<br>- botón «Simular candidatura»;<br>- nota «Identidad según visibilidad. Contacto y archivos se comparten desde la candidatura con los consentimientos correspondientes.» (`evidencias/shots/demo/D-EMP-04d-abrir-perfil-1440.png`) | No hay modal: la tarjeta ya enseña la lista (CO-37 PARTIAL) | − | P2 | — (v2: default v1.8) (identidad según visibilidad; contacto y archivos: D-07 P3) | Portar el modal «Perfil profesional» (backlog v2-23) |
+| 14 | «Simular candidatura» | Demo: el directorio crea una candidatura en nombre de un técnico ficticio; con el perfil de demo enseña nombre real, logbook y nombres de fichero (hallazgo D1 #8) | — | ✗ | — | DEMO-ONLY | No portar |
+| 15 | Comparar | Demo: toggle «Comparar» por tarjeta, desactivado con 3; barra «{n}/3 candidatos seleccionados» + «Comparar selección» + «Vaciar selección»; modal «Comparación de candidatos» con identidad, tarifa, cobertura, «{años} · Inglés» y requisitos. Conectado: casilla «Comparar» (máx. 3) + panel «Comparación · {n}/3» + «Vaciar comparación» con las tarjetas ampliadas | Casilla «Comparar» (`aria-label` «Comparar {ref}», desactivada con 3) + «Comparar seleccionados (máx. 3)» → tabla «Comparando {n} profesional(es)» + «Quitar comparación» + «Solo se comparan los 3 primeros profesionales seleccionados.». Filas: Resultado · Base · Experiencia · una por código (✓/✗/—) · Disponibilidad (✓/✗ + %) · Puntuación deseable (`MatchList.tsx:81-273`, es:867-876) | ≈ | — | — (v2: desbloqueado, alcance LATER) (tarifa) | Mantener |
+| 16 | Contador antes de comparar | «{n}/3 candidatos seleccionados» al marcar | Solo sale tras enviar (formulario GET) | − | P3 | — | Mantener (exigiría JavaScript en cliente) |
+| 17 | La selección se conserva | Estado local: se pierde al cambiar de pestaña | En la URL (`compare`, hasta 9 ids), entre páginas y filtros (`list.ts:30-31,75-83`) | + | — | — | Mantener |
+| 18 | Datos ocultos en el directorio | Demo `publicCandidate`: sin email ni teléfono, restricciones como «Restricciones declaradas; revisar expediente autorizado», sin documentos. Conectado `directoryProfile`: sin nombre, restricciones, disponibilidad ni documentos | El pool devuelve id seudónimo, nombre si es `open`, base, años y explicación; no hay documentos, restricciones ni contacto (`src/types/api.ts:38-47`) | ≈ | — | — | Mantener (Next oculta más) |
+| 19 | Nota de privacidad | Conectado, ampliada: «Identidad protegida. Contacto y archivos solo desde una candidatura y con sus consentimientos.» | La referencia del seudónimo va en el resumen (es:850) | ≈ | P3 | — (la frase) · el contacto sigue en D-07 P3 | Añadir la frase (backlog v2-23) |
+| 20 (nueva xhigh) | Formato de los porcentajes | Porcentajes enteros (`coverage(j).percent`, «{compatibles}/{días} jornadas», «0% cobertura individual») y las comisiones con formato español: «2,3 %» (`percentLabel`, `Pricing.jsx:7-13`; `evidencias/xhigh/30/ORG-02-1-v18-1440.jpg`) | Corregido (X-05 `f740447`): `{percent, number}` en ICU y `formatPercent` en «Cobertura interna» (es:934, es:942; `CapacityOverview.tsx:60`; `src/i18n/format.ts`). v2, en ejecución sobre `9e280aa3-…`: «Cubre el 48,78% del periodo», «Disponible solo el 48,78%», «41,46%» (`evidencias/v2/30/MKT-02-20-next-1440.jpg`). Siguen saliendo dos decimales; la v1.8 redondea a entero | ≈ (v2: antes ≠) | — | — | Mantener (hecho X-05); opcional redondear a entero como la v1.8 |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-04c-candidatos-ampliada-1440.png`, `evidencias/shots/demo/D-EMP-04d-abrir-perfil-1440.png`,
+`evidencias/shots/demo/D-EMP-04f-comparar-seleccion-1440.png`, `evidencias/shots/demo/D-EMP-04g-comparar-1440.png`,
+`evidencias/shots/connected/C-EMP-25-directory-expanded-1440.png`, `evidencias/shots/connected/C-EMP-26-directory-compare-1440.png`. Next
+(lote 11, EN): `docs/audit/evidence/v18-compare/next-after/org-matches-1440.jpg`.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): `evidencias/xhigh/30/MKT-02-7-next-{1440,768,390}.jpg`, `evidencias/xhigh/30/MKT-02-15-next-1440-compare.jpg`, `evidencias/xhigh/30/next-match-log.json` (medidas); v1.8 `evidencias/xhigh/30/MKT-02-13-v18-1440.jpg` («Abrir perfil»), `evidencias/xhigh/30/MKT-02-15-v18-1440.jpg` (comparación).
+Capturas v2: Next `evidencias/v2/30/MKT-02-20-next-1440.jpg` (porcentajes con coma).
+
+---
+
+## MKT-03 · Oportunidades del técnico y «Ofertas en la red» (lista) — v1.8 `S-TEC-04, S-EMP-06, D-TEC-04, D-TEC-04b, D-TEC-04g, D-EMP-06, S-CON-05 (rama técnico), S-CON-01a (oportunidades), C-TEC-04/20/31/38` ↔ Next `/app/professional/opportunities` (M07)
+
+**Estado global:** PARCIAL (v2: antes AUSENTE). M07 (`db05af1`, D-12 ratificada): todo profesional ve las necesidades
+`open` y no terminadas de la red, con su propia elegibilidad explicada, búsqueda, pastillas y 20 por página.
+- Igual que la v1.8: cabecera, pastillas, veredicto de la tarjeta y vacío.
+- Faltan tarifa y tipo de cobertura en la tarjeta (LATER/C-9), el bloqueo de empleador, los puntos del calendario y la
+  vista «Ofertas en la red.» de la empresa.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Entrada del técnico | Demo: lateral «Oportunidades», dock «Ofertas», «Ver todas» / «Ver oferta» desde Inicio (`LegacyApp.jsx:24,69`). Conectado: «Oportunidades» (`jobs`), dock «Ofertas» | Lateral profesional «Oportunidades» → `/app/professional/opportunities`, en el orden de la v1.8 (… Disponibilidad, Oportunidades, Mis candidaturas) (`AppShell.tsx:28-37`; es:81); «Ver todas» y enlaces a cada oportunidad desde Mi espacio (`ProfessionalActivity.tsx:51-81`); sin dock (C-12). v2, en ejecución con `echo`, `delta`, `alpha` y `platform.admin` (`evidencias/v2/30/MKT-03-1-next-1440.jpg`, `evidencias/v2/30/MKT-03-1-next-1440-platform-admin.jpg`) | ≈ (v2: antes −) | — | — (v2: D-12 ratificada) | Mantener (hecho M07 `db05af1`) |
+| 2 | «Ofertas en la red» de la empresa | Demo: todas las ofertas publicadas de la red, incluidas las propias y la **comisión** de las ajenas (`Marketplace.jsx:43`, hallazgo D1 #16); 48 ofertas en runtime | Una cuenta de organización recibe «Las oportunidades son para profesionales» / «Esta cuenta no tiene pasaporte profesional.» (`opportunities/page.tsx:43-49`; es:1266-1267; la función responde 403). Un profesional que además es miembro (`manager.mro`, `alpha`) ve la red **con** las de su organización. v2, en ejecución con `admin.mro` (`evidencias/v2/30/MKT-03-1-next-1440-org-account.jpg`) | − | P3 | — (v2: D-12 ratificada) · la comisión de terceros es SCOPE OUT (`✗`) | Portar «Ofertas en la red.» para cuentas de organización, sin comisión (backlog v2-20) |
+| 3 | Cabecera | Eyebrow «OPORTUNIDADES»; h1 «Trabajo que encaja contigo.» (técnico) / «Ofertas en la red.» (empresa); «Elegibilidad técnica y disponibilidad se evalúan por separado. Un porcentaje no sustituye un requisito obligatorio.». Conectado: h2 «Oportunidades disponibles» | Eyebrow «Oportunidades», h1 «Trabajo que encaja contigo.», «Elegibilidad técnica y disponibilidad se evalúan por separado. Un porcentaje no sustituye un requisito obligatorio.» (es:1245-1247; `opportunities/page.tsx:40-42`). v2, en ejecución (`evidencias/v2/30/MKT-03-1-next-1440.jpg`); demo (`evidencias/v2/30/MKT-03-1-v18-1440.jpg`) | = (v2: antes −) | — | — (v2: D-12 ratificada) | Mantener |
+| 4 | Qué ofertas salen | Demo: `effectiveStatus === 'Publicada'`; oculta las del empleador si el técnico lo bloquea (`Marketplace.jsx:86`). Conectado: todas las `published`, **incluidas las cubiertas y las de organizaciones bloqueadas**; la candidatura falla después con «Esta organización está bloqueada.» (runtime C-TEC-04) | `list_opportunities`: `open` y `ends_at > ahora`, por inicio ascendente; fuera borradores, pausadas, cubiertas, cerradas, canceladas y terminadas; incluye las ya empezadas no terminadas (bloqueo «ya ha empezado») y las de la propia organización; tope de 200 con nota «Se han considerado las {cap} necesidades publicadas que empiezan antes.» (`supabase/migrations/20261022130200_opportunities.sql:71-120`; `supabase/functions/opportunities/index.ts:24-64`; es:1265). Sin filtro de empleador bloqueado (no existe, MKT-01 #27). v2, en ejecución: A desaparece al pausarla y al quedar cubierta. Conectado: lista también J1 terminada y J4 cubierta 1/1 con «Preparar candidatura» (`evidencias/v2/30/MKT-03-1-v18c-1440.jpg`) | ≈ (v2: antes −) | P3 | — (v2: D-12 ratificada) · bloqueo de empleador: — (v2: default v1.8) | Filtrar las organizaciones bloqueadas cuando exista el bloqueo (backlog v2-16) |
+| 5 | Oferta preseleccionada | Con `route.jobId`, botón «Ver todas las oportunidades» y lista de una sola oferta (`evidencias/shots/demo/D-TEC-04g-ver-oferta-desde-inicio-1440.png`) | No hay lista preseleccionada: cada tarjeta enlaza a su página `/app/professional/opportunities/{id}` con «Volver a oportunidades» (es:1277); Mi espacio enlaza al detalle | ≈ (v2: antes −) | — | — | Mantener (página de detalle) |
+| 6 | Buscar | «Buscar oportunidad», placeholder «Aeronave, base o empresa…», pero solo busca en título, base y empresa (hallazgo D1 #16) | «Buscar oportunidad», placeholder «Aeronave, base o empresa…», `maxLength` 80, formulario GET con «Buscar» (`opportunities/page.tsx:77-98`; es:1248-1250); busca en título, ubicación y nombre de la organización (`20261022130200_opportunities.sql:113-116`): **misma limitación que la v1.8**, la aeronave solo se encuentra si está en el título. v2, en ejecución: «hangar» encuentra A (`evidencias/v2/30/MKT-03-6-next-1440-search.jpg`) | ≈ (v2: antes −) | P3 | — | Buscar también en las cualificaciones (el texto promete «Aeronave») (backlog v2-26) |
+| 7 | Filtros | Pastillas «Todas» · «Compatibles» (solo técnico) · «Planificado» · «Urgente» · «AOG»; runtime 48 · 9 · 16 · 16 · 16 | Pastillas-enlace «Todas» · «Compatibles» · «Planificado» · «Urgente» · «AOG» con `aria-current` (`opportunities/page.tsx:20-26,99-110`; es:1252-1258); «Compatibles» = elegible ahora; urgencia declarada (C-8). Sin recuentos, como la v1.8. La pastilla dice «Planificado» y el chip de la tarjeta «Planificada» (es:399). v2, en ejecución (`evidencias/v2/30/MKT-03-7-next-1440-compatibles.jpg`) | ≈ (v2: antes −) | P3 | — | Unificar «Planificado»/«Planificada» (backlog v2-26) |
+| 8 | Tarjeta | `article.job-card` (`aog-card` si AOG):<br>- `Badge` de urgencia, naranja en AOG y azul en Urgente;<br>- «{score}% afinidad» (`✗` T-03);<br>- h2 título; «{empresa} · {base}»;<br>- «{€/día} / día · {€} / h»;<br>- badges de categoría, aeronaves y «{n} días · {n} persona(s)»;<br>- «{día} – {día} · {Cobertura parcial \| Bloque completo}» | `OpportunityCard`: chip de urgencia (Planificada info · Urgente warn · AOG danger); chip «Candidatura: {estado}» si ya se presentó; h2 enlace; «{organización} · {ubicación}»; «{periodo} · {count, plural, …persona…}»; chips de cualificaciones; caja del veredicto (`src/features/opportunities/components/OpportunityCard.tsx:21-63`). Faltan «€/día · €/h», «{n} días» y «Cobertura parcial \| Bloque completo»; sin «% afinidad» (`✗` T-03). v2, en ejecución (`evidencias/v2/30/MKT-03-1-next-1440.jpg`, `evidencias/v2/30/MKT-03-1-next-390.jpg`) | ≈ (v2: antes −) | P2 | — (tarifa: alcance LATER; cobertura: C-9 default v1.8) | Añadir tarifa y tipo de cobertura cuando existan (backlog v2-12, v2-09) |
+| 9 | Elegibilidad en la tarjeta | Caja `good`/`warn`: «Cumples requisitos y disponibilidad» / «Fechas insuficientes para esta cobertura» / «{n} requisitos obligatorios pendientes» (sin plural: «1 requisitos») | «Cumples requisitos y disponibilidad» (ok) · «{count, plural, one {# requisito obligatorio pendiente} other {# requisitos obligatorios pendientes}}» (danger) · «Fechas insuficientes para esta cobertura» (warn) (`src/features/opportunities/view.ts:10-16`; `OpportunityCard.tsx:54-60`; es:1269-1271). v2, en ejecución: «1 requisito obligatorio pendiente», «2 requisitos obligatorios pendientes» | ≈ (v2: antes −) | — | — (v2: D-12 ratificada) | Mantener (con plural ICU) |
+| 10 | Acciones | «Ver detalle» (ojo) → modal; «Preparar candidatura» →, desactivado si no es elegible, no cubre o ya se presentó → «Ya presentada» | La tarjeta no tiene botones: el título lleva al detalle, que contiene «Presentar candidatura»; una vez presentada, chip «Candidatura: {estado}» (es:1273) en vez de «Ya presentada». v2, en ejecución (`evidencias/v2/30/MKT-03-10-next-1440-applied-chips.jpg`) | ≈ (v2: antes −) | P3 | — | Valorar «Ver detalle» y «Preparar candidatura» en la tarjeta (default v1.8) (backlog v2-26) |
+| 11 | Vacío | Demo: «Sin ofertas para este filtro» / «Prueba otra búsqueda o revisa tu perfil y fechas.». Conectado: «No hay ofertas todavía.» | «Sin ofertas para este filtro» / «Prueba otra búsqueda o revisa tu perfil y fechas.» (es:1259-1260) | = (v2: antes −) | — | — | Mantener |
+| 12 | Tarjeta del conectado | h3 título · «{AOG\|Urgente\|Estándar} · {10\|4\|2.3}%» · «{org} · {base} · {país} · {categoría} · {aeronave}» · descripción · «{inicio} UTC → {fin} UTC · zona {IANA} · {n} plazas» · «{tarifa} €/h · {h} horas base · Publicada» · «Cobertura por jornada» (`Account.jsx:69`) | La tarjeta y el detalle de Next no tienen descripción, zona, tarifa, horas base ni «Cobertura por jornada» (fila 8; MKT-04) | ≈ (v2: antes −) | P2 | — (descripción, zona, tarifa, jornadas: default v1.8 / LATER) · SCOPE OUT (el %) | Portar con ORG-02 (backlog v2-09, v2-12) |
+| 13 | Oportunidades en Mi espacio | Conectado S-CON-01a: «Oportunidades para ti» (5) + «Ver oferta»; calendario con punto rojo si hay compatibles; clic en un día → «Oportunidades · {fecha}». Demo: además, días de descanso privado donde sería elegible (TD-91) | Mi espacio, `ProfessionalActivity`: KPIs «Oportunidades compatibles» · «Candidaturas en curso» · «Propuestas por aceptar» · «Asignaciones confirmadas»; paneles «Oportunidades para ti» (3 compatibles) + «Ver todas» y «Mis candidaturas» (3) + «Ver seguimiento»; vacíos «Todavía no hay oportunidades compatibles.» / «Tu próxima candidatura empieza aquí.» (`src/features/applications/components/ProfessionalActivity.tsx:21-116`; es:572-585). El calendario sigue sin puntos ni día seleccionable. v2, en ejecución con `foxtrot` (`evidencias/v2/30/MKT-03-13-next-1440-home.jpg`). Conectado: «4 oportunidades compatibles · 3 asignaciones confirmadas», 4 + 5 elementos (`evidencias/v2/30/MKT-03-13-v18c-1440.jpg`) | ≈ (v2: antes −) | P2 | — (v2: D-12, D-06 ratificadas) | Añadir los puntos del calendario y «Oportunidades · {fecha}» (backlog v2-07) |
+| 14 | Jornadas recomendadas | `recommendedShifts`: jornadas libres, elegibles y con plaza, agrupadas en bloques ≥ `minShifts` (`connectedModel.js:11-16`) | — | − | P2 | — (v2: default v1.8) (C-9/D-08) | Portar con las jornadas (backlog v2-09) |
+| 15 (nueva v2) | Paginador de oportunidades | No pagina: la demo lista las 48 ofertas; el conectado, todas las publicadas | 20 por página: «{total, plural, one {# oportunidad} other {# oportunidades}} · página {p} de {n}» (`role=status`) y «Anterior»/«Siguiente» (`opportunities/page.tsx:133-169`; es:1261-1264); `?page=` solo se acota a 500 (`page.tsx:57-58`). v2, en ejecución: «4 oportunidades · página 1 de 1»; **`?page=99` enseña «Sin ofertas para este filtro»** aunque hay oportunidades (la página no redirige a la última, a diferencia de X-04 en la lista de necesidades) (`evidencias/v2/30/MKT-03-15-next-1440-page99.jpg`) | + | P3 | — | Redirigir a la última página como X-04 (backlog v2-26) |
+| 16 (nueva v2) | Necesidades de la propia organización | No aplica: en la v1.8 un técnico no pertenece a ninguna organización | Un profesional miembro ve las necesidades de su organización como oportunidades y **puede presentarse**: v2, en ejecución, `alpha` (miembro de Demo MRO) ve B «Cumples requisitos y disponibilidad» y la API acepta su candidatura (201), que la organización ve con el nombre «Technician Alpha» (regla de miembro interno del pool); retirada después (`evidencias/v2/30/MKT-03-4-next-1440-alpha-own-org.jpg`) | + | P3 | — | Revisar con el owner si un miembro debe presentarse a su propia organización (ya cuenta como «Elegible interno») (backlog v2-27) |
+
+Capturas: v1.8 `evidencias/shots/demo/D-TEC-04-oportunidades-1440.png`, `evidencias/shots/demo/D-TEC-04-oportunidades-390.png`,
+`evidencias/shots/demo/D-TEC-04b-oportunidades-sin-resultados-1440.png`, `evidencias/shots/demo/D-TEC-04g-ver-oferta-desde-inicio-1440.png`,
+`evidencias/shots/demo/D-EMP-06-ofertas-red-1440.png`, `evidencias/shots/connected/C-TEC-04-jobs-empty-1440.png`,
+`evidencias/shots/connected/C-TEC-20-jobs-list-1440.png`, `evidencias/shots/connected/C-TEC-31-jobs-active-1440.png`,
+`evidencias/shots/connected/C-TEC-31-jobs-390.png`, `evidencias/shots/connected/C-TEC-38-jobs-after-close-1440.png`; tabla completa de las
+48 ofertas en `raw/demo/D-TEC-04-ofertas-tabla.txt`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/MKT-03-1-v18-1440.jpg` (técnico), `evidencias/xhigh/30/MKT-03-2-v18-1440.jpg` (empresa, 48 ofertas).
+Capturas v2: Next `evidencias/v2/30/MKT-03-1-next-1440.jpg`, `evidencias/v2/30/MKT-03-1-next-390.jpg`, `evidencias/v2/30/MKT-03-7-next-1440-compatibles.jpg`, `evidencias/v2/30/MKT-03-6-next-1440-search.jpg`, `evidencias/v2/30/MKT-03-10-next-1440-applied-chips.jpg`, `evidencias/v2/30/MKT-03-13-next-1440-home.jpg`, `evidencias/v2/30/MKT-03-1-next-1440-org-account.jpg`, `evidencias/v2/30/MKT-03-4-next-1440-alpha-own-org.jpg`; v1.8 demo `evidencias/v2/30/MKT-03-1-v18-1440.jpg`, `evidencias/v2/30/MKT-03-13-v18-1440.jpg`; conectado `evidencias/v2/30/MKT-03-1-v18c-1440.jpg`, `evidencias/v2/30/MKT-03-13-v18c-1440.jpg`, `evidencias/v2/30/MKT-03-4-t2-v18c-1440.jpg`.
+
+---
+
+## MKT-04 · Detalle de oferta (`JobDetails`, logística, especificación) — v1.8 `S-SUB-MKT-01, S-SUB-MKT-02, S-MOD-MKT-01, S-MOD-EMP-01/02, D-TEC-04c, D-TEC-04d` ↔ Next `N-ORG-04` + `/app/professional/opportunities/[id]` (M07)
+
+**Estado global:** PARCIAL. La ficha de Next da ubicación, periodo, turno, personas y cualificaciones, a la organización
+y, desde M07, al profesional, con su elegibilidad explicada (fila 9).
+- Faltan descripción, condiciones, logística, comisión, motores, cliente y la especificación de experiencia,
+  presupuesto y movilización.
+- v2: con SCOPE-2 todo lo que falta es default v1.8 o alcance LATER, salvo la comisión (OUT).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Datos de cabecera | `MapPin` «{base} · {país}» · `CalendarDays` «{día} – {día}» · `Users` «{n} persona(s) / fecha» (`Marketplace.jsx:36-44`) | «Ubicación · Inicio · Fin · Turno · Personas»; fecha y hora «DD MMM YYYY, HH:MM UTC» (`RequirementFacts.tsx:6-45`); igual en la vista del profesional, sin chip de estado (`opportunities/[id]/page.tsx:50-52`) | ≈ | P3 | — (v2: default v1.8) (OD-6: país) | Mantener |
+| 2 | Descripción | Párrafo `{description}` | No existe | − | P2 | — (v2: default v1.8) (Q-02 → condiciones, LATER) | Portar (backlog v2-12) |
+| 3 | Rejilla de condiciones | «Tarifa» → «{€} / h · {€} / día» · «Turno y duración» → «{turno} · {h} h» · «Contrato» → «{contrato} · {moneda}» · «Dietas / horas extra» → «{€} / día · {€} / h extra» · «Cobertura» → «{Parcial permitida \| Bloque completo} · mín. {n} días{ consecutivos}» · «Incorporación» → `{arrival}` | Solo el turno | − | P2 | — (v2: desbloqueado, alcance LATER) (tarifas, condiciones) · C-9 default v1.8 | Portar (backlog v2-12) |
+| 4 | Logística | «Vuelos: incluido \| no incluido» · «Alojamiento: …» · «Transporte local: …» · «Comidas: …» · «Herramientas propias requeridas» / «Herramientas de empresa» (`Marketplace.jsx:11-35`) | No existe | − | P2 | — (v2: desbloqueado, alcance LATER) (logística) | Portar (backlog v2-12) |
+| 5 | Comisión | `FeeSummary` si el usuario no es técnico | — | − | P3 | SCOPE (OUT) | No portar |
+| 6 | Motores | «Motores requeridos: {a / b}» | — | − | P3 | — (v2: default v1.8) (C-10/D-03) | Esperar |
+| 7 | Cliente | «Publicada por {company} para el cliente {client}» | Solo «Publicada por {organization}» en la cabecera del profesional (es:1283); sin cliente | − | P3 | — (v2: desbloqueado, alcance LATER) (recruiter) | Esperar |
+| 8 | Especificación técnica | h3 «Especificación técnica de la oferta»: «Categoría: {c} · Aeronaves: {… \|\| 'No exigidas'} · Habilitación: {obligatoria \| no exigida}» · «Cursos: {… \|\| 'No exigidos'} · Experiencia mínima: {n} años» · «Capacidades obligatorias: {… \|\| 'Ninguna'}; deseables: {… \|\| 'Ninguna'}» · «Presupuesto: {requisito obligatorio \| preferencia negociable} · Movilización máxima: {h} h» | Chips de cualificaciones, obligatorias y deseables, con `title` (`RequirementBadges.tsx:43-67`) | ≈ | P2 | — (v2: default v1.8) (C-10, OD-7) | Mantener los chips; el resto, con C-10 |
+| 9 | Requisitos del técnico | Solo técnico: «Requisitos obligatorios» y «Afinidad adicional» (✓/⚠) + «{n} de {m} fechas compatibles · {p}% cobertura individual» (`evidencias/shots/demo/D-TEC-04c-detalle-oferta-1440.png`, `evidencias/shots/demo/D-TEC-04d-detalle-oferta-no-elegible-1440.png`) | Página `/app/professional/opportunities/{id}`: eyebrow «Oportunidad», h1, «Publicada por {organization}», «Volver a oportunidades»; panel «Tu elegibilidad» con «Cumples los requisitos obligatorios y la disponibilidad.» / «Todavía no eres elegible para esta necesidad.», una línea ✓/✗ por cualificación (obligatorias y deseables, con verificación y caducidad) y «Disponibilidad», y «Calculada con tu pasaporte y tu disponibilidad. Publicar una necesidad no te hace elegible.» (`opportunities/[id]/page.tsx:41-70`; `MatchExplanation`; es:1276-1283). No separa «Requisitos obligatorios» de «Afinidad adicional» ni dice «{n} de {m} fechas compatibles». v2, en ejecución (`evidencias/v2/30/MKT-04-9-next-1440.jpg`) | ≈ (v2: antes −) | P3 | — (v2: D-12 ratificada) | Separar obligatorias y deseables como la v1.8 (backlog v2-26) |
+| 10 | Contenedor | Modal con el título de la oferta y «Cerrar ventana» (Escape cierra) | Página propia, para la organización y para el profesional | ≈ | — | — | Mantener |
+| 11 (nueva v2) | Detalle de una necesidad no publicada | Demo: modal desde la lista. Conectado: la pausada desaparece de la lista del técnico | 404 «No encontrado», con la misma respuesta para pausada, cerrada, cubierta, terminada, borrador ajeno o inexistente (`opportunities/[id]/page.tsx:33-38`; `supabase/functions/opportunities/index.ts:43`). v2, API: B pausada y A cubierta → 404 para `delta` | + | — | — | Mantener (no filtra el estado) |
+
+Capturas: v1.8 `evidencias/shots/demo/D-TEC-04c-detalle-oferta-1440.png`, `evidencias/shots/demo/D-TEC-04d-detalle-oferta-no-elegible-1440.png`,
+`evidencias/shots/demo/D-EMP-03b-ver-condiciones-1440.png`, `evidencias/shots/demo/D-EMP-02b-previsualizar-requisitos-1440.png`. Next: V0
+`docs/audit/evidence/local-06-requirement-capacity.jpg`.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/MKT-04-9-v18-1440.jpg` (detalle del técnico con requisitos), `evidencias/xhigh/30/v18-c-log.json`.
+Capturas v2: Next `evidencias/v2/30/MKT-04-9-next-1440.jpg`.
+
+---
+
+## MKT-05 · Presentar candidatura (Candidate Pack de salida) — v1.8 `S-MOD-MKT-02a, S-MOD-MKT-02b, D-TEC-04e, D-TEC-04f, D-EMP-04e, S-CON-05c, C-TEC-21/26/27` ↔ Next `ApplyPanel` (M08)
+
+**Estado global:** PARCIAL (v2: antes AUSENTE). M08 (`db05af1`): el panel «Candidatura» enumera lo que se comparte, pide
+un consentimiento explícito para esa organización y esa necesidad, y el servidor vuelve a comprobarlo todo (T-08, Q5).
+- Diferencias deliberadas: un periodo por candidatura (Q6) y no volver tras un rechazo (Q5, T-09).
+- Siguen bloqueados el consentimiento de contacto y los documentos (D-07 P3 + D-10).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Contenedor y título | Demo: modal «Preparar Candidate Pack». Conectado: formulario dentro de la tarjeta, que se abre con «Preparar candidatura» y reinicia consentimientos, documentos y jornadas (`Account.jsx:69`) | Panel «Candidatura» en la página de la oportunidad, no un modal (`opportunities/[id]/page.tsx:60-67`; `src/features/opportunities/components/ApplyPanel.tsx:81-169`; es:1282) | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Mantener; valorar el título «Preparar Candidate Pack» |
+| 2 | Cabecera | Badge «Elegible» / «Requisitos pendientes»; h3 oferta; «{nombre \| 'Técnico {code}'} · {score}% afinidad»; «{€} / día» | Sin cabecera propia: título y organización en la cabecera de la página y el veredicto en «Tu elegibilidad» (MKT-04 #9); sin tarifa | ≈ (v2: antes −) | P3 | — (tarifa: alcance LATER) | Mantener |
+| 3 | Fechas o jornadas | Demo: h3 «Fechas que ofreces cubrir»; «{Mínimo {n} días{ consecutivos}. \| Se requieren todas las fechas.} Las candidaturas todavía no reservan el calendario.»; un botón por fecha con «Seleccionado» / «Disponible» / «No disponible»; parte de `suggestedDays`. Conectado: «Admite cobertura parcial: mínimo {n} jornadas[ en bloques consecutivos].» o «Requiere todas las jornadas.» + una casilla por jornada «{inicio} → {fin} · {h} h», desactivadas si la oferta no admite parcial | No se eligen jornadas: la candidatura cubre todo el periodo (D-06 Q6). Falta la frase «Las candidaturas todavía no reservan el calendario.» | ≠ (v2: antes −) | P2 | Conflicto D-06 Q6 (ratificada) ↔ SCOPE-2 (cobertura parcial) → owner | Esperar al owner (backlog v2-30); añadir la frase (S) |
+| 4 | Documentos | Demo: h3 «Documentos que compartes», un toggle por documento con pista «{estado} · {fichero \| 'ejemplo sin archivo'}»; marcados por defecto los no caducados. Conectado: casilla «{nombre} · {revisión}», sin marcar | Sin selección de documentos: «Nunca tu contacto ni tus documentos: siguen protegidos.» (es:1290); `PACK_ACTIVATION.documents = false` (`src/domain/candidate-pack.ts:14`) | − | P1 | D-07 P3 + D-10 (sigue bloqueado) | Esperar |
+| 5 | Qué se comparte | Demo: «Se compartirán cualificaciones, experiencia destacada del logbook, fechas y los documentos seleccionados. Tu empresa actual no se incluye. Los originales y nombres de archivos quedan protegidos hasta aceptar con consentimiento de contacto.». Conectado: «Compartirás categoría, aeronaves, permisos de trabajo y restricciones con esta organización.», incompleto: el pack lleva también habilitaciones, años, cursos, capacidades, revisión y documentos (hallazgo C-§3 #19) | «Qué verá {organization}»: «Tus cualificaciones relevantes para esta necesidad, con su verificación y caducidad.» · «Tu disponibilidad durante el periodo de la necesidad.» · «Tu base y tus años de experiencia; tu nombre solo si tu visibilidad es «Abierta» (si no, una referencia anónima).» · «Nunca tu contacto ni tus documentos: siguen protegidos.» (`ApplyPanel.tsx:141-149`; es:1286-1290). Enumera lo que se comparte de verdad (corrige el hallazgo C-§3 #19). v2, en ejecución (`evidencias/v2/30/MKT-05-6-next-1440-consent.jpg`) | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 6 | Consentimiento del expediente | Demo: «Autorizo compartir este expediente con la organización de la oferta» (obligatorio para enviar). Conectado: «Autorizo compartir este expediente para esta oferta.» (required) → «Autoriza compartir este expediente.» | Casilla «Autorizo compartir con {organization} estos datos para esta necesidad.»; «Presentar candidatura» desactivado sin ella; el servidor exige `shareConsent: true` → 400 `v.application.consent` (`ApplyPanel.tsx:150-160`; `src/lib/validation/applications.ts:33-36`; `20261022130300_applications.sql:607-609`). No es revocable. v2, en ejecución y API sin consentimiento → 400 | ≈ (v2: antes −) | — | — (v2: D-06 ratificada; la revocación, D-07) | Mantener |
+| 7 | Consentimiento de contacto | Demo: «Autorizo desbloquear identidad, contacto y archivos seleccionados si acepto la propuesta» (opcional). Conectado: «Compartir mi email después de aceptar una propuesta.». Ninguno se puede revocar | No existe: el contacto nunca se comparte (`PACK_ACTIVATION.contact = false`, `contactVisible`, `src/domain/candidate-pack.ts:14-33`; M09 preparado y apagado) | − | P1 | D-07 P3 + D-10 (sigue bloqueado) | Esperar |
+| 8 | Experiencia del logbook | Demo: h3 «Experiencia que compartes», toggles por entrada `cvRelevant` («{aeronave} · {descripción}»), todas marcadas | No hay logbook | − | P3 | — (v2: desbloqueado, alcance LATER) (logbook, área 40) | Esperar |
+| 9 | Vista previa para la organización | «Técnico {code} · {categorías} · {n} fechas»; «{n} documentos protegidos; {los originales se desbloquearán si aceptas \| originales y contacto seguirán protegidos}.»; «Destinatario: {empresa}{ para {cliente}}.» | La lista «Qué verá {organization}» (fila 5) dice las categorías de datos, no los valores; sin «{n} fechas» ni «Destinatario» | ≈ (v2: antes −) | P3 | — (destinatario recruiter: alcance LATER) | Mantener |
+| 10 | Errores de fechas | Demo `validateDays`: «Falta algún requisito obligatorio.» · «Selecciona al menos una fecha.» · «No se admiten fechas pasadas o inválidas.» · «Hay fechas fuera de la oferta o no disponibles.» · «Esta oferta requiere cubrir todas las fechas.» · «Se requieren al menos {n} días.» · «Cada bloque seleccionado debe tener al menos {n} días consecutivos.» · «La cobertura de alguna fecha ya está completa.» (`business.js:183-195`) | Sin fechas que elegir (Q6). Antes de enviar, un bloqueo explicado: «Esta necesidad ya no admite candidaturas.» · «El periodo de esta necesidad ya ha empezado: no admite candidaturas.» · «Ya tienes una candidatura en curso ({status}).» · «Tu candidatura anterior terminó ({status}): no puedes volver a presentarte a esta necesidad.» · «Todavía no cumples los requisitos obligatorios o la disponibilidad: revisa tu elegibilidad.» (`applyBlocker`, `src/domain/applications.ts:110-123`; es:1296-1302) | ≈ (v2: antes −) | P3 | — (días: D-06 Q6) | Mantener |
+| 11 | Errores del servidor | «Selecciona jornadas válidas de esta oferta.» · «Esta oferta requiere todas las jornadas.» · «No se alcanza el mínimo de jornadas.» · «Cada bloque consecutivo debe alcanzar el mínimo de jornadas.» · «Oferta o jornadas no disponibles.» · «Esta organización está bloqueada.» · motivos de `eligible` unidos por espacio · «Ya existe una candidatura activa.» · «Selección documental no válida.» (`app.mjs:107-111`) | 409 con `reason` estable (`CFA01`…`CFA12` → `APPLICATION_CONFLICTS`, `src/domain/applications.ts:81-94`) y su texto «applications.conflict.*» (es:1362-1375) vía `applicationErrorCopy` (`src/features/applications/error-copy.ts`). API v2: `ALREADY_APPLIED` (echo, A), `REAPPLY_NOT_ALLOWED` (echo, B), 400 sin consentimiento. Faltan «Esta organización está bloqueada.» y «Selección documental no válida.» (no hay bloqueo ni documentos) | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 12 | Envío | Pie «{n} fechas · {m} documentos»; botón con `Send` «Enviar candidatura» (desactivado sin consentimiento o con error) → toast «Candidatura enviada y guardada»; la tarjeta pasa a «Ya presentada». Conectado: «Presentar candidatura» → «Cambios guardados.» | «Presentar candidatura» / «Enviando…» (`aria-busy`) → «Candidatura enviada. La organización la verá en su lista.»; al recargar, «Ya tienes una candidatura en curso (recibida).» + «Ver mis candidaturas» (`ApplyPanel.tsx:100-137,160-166`; es:1292-1295). v2, en ejecución con `echo` (es) y `delta` (en) (`evidencias/v2/30/MKT-05-12-next-1440-sent.jpg`, `evidencias/v2/30/MKT-05-13-next-1440-already.jpg`) | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener (el botón, como el conectado) |
+| 13 | Volver a presentar | Demo y conectado: «Ya existe una candidatura activa.»; vale de nuevo tras Rechazada, Retirada o Cancelada (runtime: «Tras retirar/cancelar se puede volver a presentar.»). Demo: el botón pasa a «Ya presentada» mientras haya una candidatura que no sea Rechazada, Retirada o Cancelada, y se desactiva también si no es elegible o no cubre (`Marketplace.jsx:88-90`) | Q5 ratificada + T-09: solo tras `withdrawn`; tras `rejected`, `cancelled` o `finished`, no (`applyBlocker`, `src/domain/applications.ts:110-123`; `CFA10`). v2, en ejecución: `echo` retira B y vuelve a presentarse (201); rechazada, la API da 409 `REAPPLY_NOT_ALLOWED` y la página dice «Tu candidatura anterior terminó (rechazada): no puedes volver a presentarte a esta necesidad.» (`evidencias/v2/30/MKT-05-13-next-1440-after-withdraw.jpg`, `evidencias/v2/30/MKT-05-13-next-1440-reapply-refused.jpg`) | ≠ | P3 | — (D-06 Q5 ratificada + T-09: diferencia deliberada) | Mantener (decisión del owner) |
+| 14 | Expediente copiado en la candidatura | Conectado: `pack` con todos los datos dentro de la fila `application`, que se conserva tras retirar (`app.mjs:110`) | Diseño: elementos congelados por candidatura y acceso solo por funciones auditadas (`CANDIDATE_PACK.md:21-37`) | ✗ | — | — | No copiar (M09) |
+| 15 | Simulación desde la empresa | «Simular candidatura del candidato» / «Simular candidatura para esta oferta» + «Acción de prueba: representa el consentimiento y la respuesta de un candidato ficticio. No se contacta con personas reales.» → «Crear candidatura de demo» | — | ✗ | — | DEMO-ONLY | No portar |
+| 16 (nueva v2) | Reintentos del envío | Ninguno: un doble clic puede chocar con «Ya existe una candidatura activa.» | `Idempotency-Key` por contenido (`useIdempotencyKey`, `ApplyPanel.tsx:98,129`); la misma clave repite la respuesta (200) | + | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-TEC-04e-preparar-candidatura-1440.png`, `evidencias/shots/demo/D-TEC-04e-preparar-candidatura-390.png`,
+`evidencias/shots/demo/D-TEC-04f-candidate-pack-listo-1440.png`, `evidencias/shots/demo/D-EMP-04e-simular-candidatura-1440.png`,
+`evidencias/shots/connected/C-TEC-21-apply-J1-form-1440.png`, `evidencias/shots/connected/C-TEC-26-apply-J2-partial-1440.png`,
+`evidencias/shots/connected/C-TEC-27-apply-J3-form-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/MKT-05-1-v18-1440.jpg` («Preparar Candidate Pack»), `evidencias/xhigh/30/MKT-05-15-v18-1440.jpg` (simulación desde la empresa).
+Capturas v2: Next `evidencias/v2/30/MKT-05-6-next-1440-consent.jpg`, `evidencias/v2/30/MKT-05-12-next-1440-sent.jpg`, `evidencias/v2/30/MKT-05-12-next-1440-sent-en.jpg`, `evidencias/v2/30/MKT-05-13-next-1440-already.jpg`, `evidencias/v2/30/MKT-05-13-next-1440-after-withdraw.jpg`, `evidencias/v2/30/MKT-05-13-next-1440-reapply-refused.jpg`; v1.8 conectado `evidencias/v2/30/MKT-03-1-v18c-1440.jpg` («Preparar candidatura» en cada tarjeta).
+
+---
+## HIRE-01 · Pantalla de candidaturas: lista, filtros, tarjeta e historial — v1.8 `S-EMP-05, S-TEC-05, D-EMP-05, D-EMP-05k, D-TEC-05, D-TEC-05f, D-REC-04, S-CON-06, S-CON-06c, C-EMP-14…19, C-TEC-05/30/35/36` ↔ Next `/app/professional/applications`, `/requirements/[id]/applications` (M08)
+
+**Estado global:** PARCIAL (v2: antes AUSENTE). M08: «Mis candidaturas» del profesional (pastillas por estado) y las
+candidaturas de cada necesidad para la organización, con elegibilidad en vivo, propuesta, motivo, historial y acciones.
+- Falta la pantalla global de candidaturas de la organización (con pestañas y filtro por oferta).
+- `docs/qa/ROLLOUT_PLAN_RELEASE2.md:18` sigue diciendo «pure transition table only … used by nothing»: el doc va por
+  detrás del código (hallazgo 15). Nada de M07/M08 está desplegado.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Entrada | Demo: «Candidaturas» (empresa) o «Mis candidaturas» (técnico), dock «Candidaturas», «Gestionar candidaturas» desde la oferta. Conectado: «Candidaturas» (`applications`), «Seguimiento» y «Ver todas» desde Inicio, avisos de tipo `application` v2, conectado en ejecución: «Candidaturas» de la empresa con 9 candidaturas de J1, J2, J3 y J6 (`evidencias/v2/30/HIRE-01-1-v18c-1440.jpg`); demo (`evidencias/v2/30/HIRE-01-1-v18-1440.jpg`) | Profesional: lateral «Mis candidaturas» → `/app/professional/applications` (`AppShell.tsx:35`; es:82) y «Ver seguimiento» desde Mi espacio. Organización: **sin entrada en el lateral ni pantalla global**; solo «Candidaturas ({count})» en el detalle de cada necesidad → `/requirements/{id}/applications` (`[id]/page.tsx:79-83`; es:1319). v2, en ejecución (`evidencias/v2/30/HIRE-01-1-next-1440.jpg`, `evidencias/v2/30/HIRE-01-1-next-1440-tech.jpg`) | ≈ (v2: antes −) | P2 | — (v2: D-06 ratificada) | Añadir «Candidaturas» al lateral de la organización con todas sus candidaturas (backlog v2-05) |
+| 2 | Cabecera | Demo: eyebrow «PIPELINE» / «MI ACTIVIDAD»; h1 «De candidatura a cobertura.» / «Tus candidaturas.»; «La empresa revisa condiciones; el técnico acepta; la empresa confirma.» (`Workflow.jsx:56`). Conectado: h2 «Candidaturas y compromisos» + «La confirmación comprueba nuevamente perfil, disponibilidad, documentos, plazas y conflictos en el servidor.» (`Account.jsx:71`) | Profesional: eyebrow «Mi actividad», h1 «Tus candidaturas.», «La empresa revisa condiciones; el técnico acepta; la empresa confirma.» (es:1306-1308) = demo. Organización: eyebrow «Candidaturas», h1 = título de la necesidad, «{ubicación} · {periodo}», chip de estado y «Preselecciona, propón y confirma. Al confirmar, el servidor vuelve a comprobar cualificaciones, disponibilidad, plazas y solapes.» (`[id]/applications/page.tsx:74-89`; es:1314-1315) | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Mantener; la pantalla global (fila 1) puede llevar «De candidatura a cobertura.» |
+| 3 | Filtro por oferta | Con `route.jobId`: «Oferta seleccionada: {título}» + «Ver todas» + «Volver a ofertas», que también ve el técnico y le lleva a `#manage` (hallazgo D1 #5) | La página de la organización está siempre filtrada por una necesidad, con «Volver a la necesidad»; no hay «Ver todas». El profesional no filtra por oferta | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Con la pantalla global, el filtro por oferta y «Ver todas» (backlog v2-05) |
+| 4 | Pestañas de estado | «Todas ({n})» + los 9 estados sin contador (`Workflow.jsx:53-56`) | Profesional: pastillas «Todas ({count})» + solo los estados presentes, sin contador, `?status=` (`applications/page.tsx:61-95`; es:1312-1313). Organización: ninguna. v2, en ejecución (`evidencias/v2/30/HIRE-01-1-next-1440-tech.jpg`) | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Las 9 pestañas también en la pantalla global de la organización (backlog v2-05) |
+| 5 | Vacío | Demo: «Sin candidaturas en este estado» / «Selecciona otra oferta o prepara una candidatura.». Conectado: «No tienes candidaturas todavía.» | Profesional: «Tu próxima candidatura empieza aquí» / «Busca una oportunidad que encaje contigo y preséntate.» + «Ver oportunidades» (es:1309-1311). Organización: «Sin candidaturas todavía» / «Cuando un profesional se presente a esta necesidad aparecerá aquí.» (es:1316-1317) | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 6 | Tarjeta (demo) | `Badge {estado}`; h2 oferta; «{empresa \| nombre del candidato} · {n} fechas»; «{score}% afinidad inicial» (`✗` T-03); fechas; `Terms` si hay propuesta; línea de tiempo «{estado}<small>{fecha es-ES}{ · motivo}</small>» (`Workflow.jsx:57-74`) | Tarjeta: chip de estado; (organización) chip «Elegible»/«No elegible»; h2 = candidato (organización) o título enlazado (profesional); «{organización} · {ubicación} · {periodo}» o «{base} · {n} años de experiencia»; `MatchExplanation` (organización); bloque de la propuesta; «Motivo: {…}»; «Historial»; acciones (`[id]/applications/page.tsx:96-139`; `applications/page.tsx:97-150`; `ApplicationDetails.tsx`). Sin «{n} fechas» (Q6), sin afinidad (`✗` T-03) ni «Ver expediente». v2, en ejecución (`evidencias/v2/30/HIRE-01-1-next-1440-mixed.jpg`) | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Mantener |
+| 7 | Tarjeta (conectado) | h3 `{jobTitle}`; `<b>{estado}</b>`; jornadas «{inicio} → {fin} · {h} h»; «{categorías} · {aeronaves} · {revisión}»; restricciones en rojo; documentos «{nombre} · {caducidad} · {revisión}»; «Motivo: {…}» (`Account.jsx:71`) | La organización ve, por cada cualificación requerida, «Cumple/No cumple» con verificación y caducidad, y la disponibilidad, **evaluadas ahora** (no una copia); ni restricciones (no se modelan) ni documentos (`get_requirement_applications`, `supabase/migrations/20261022130300_applications.sql:918-1000`). v2, en ejecución (`evidencias/v2/30/HIRE-01-9-next-1440-history.jpg`). Conectado: «B1.1 / B2 · A320, A321, B737 NG · Revisión registrada», restricciones en rojo y documentos «{nombre} · {caducidad} · {revisión}» (`evidencias/v2/30/HIRE-01-1-v18c-1440.jpg`) | ≈ (v2: antes −) | P2 | documentos: D-07 P3 + D-10 · restricciones: C-10 default v1.8 | Añadir restricciones con C-10 (backlog v2-11); documentos bloqueados |
+| 8 | Identidad del candidato en la lista | Demo `publicCandidate`: nombre real si es `open` o está desbloqueado; si no, «Técnico {code}». Conectado: **sin** nombre ni código; solo datos del pack (runtime C-EMP-14…19) | «Profesional anónimo {ref}» con el seudónimo `CF-…` de esa necesidad (como el pool, T-04), o el nombre si la visibilidad es «Abierta» o es miembro interno (`[id]/applications/page.tsx:97-98`). v2, en ejecución: `delta`/`foxtrot` anónimos → «Profesional anónimo CF-4C0B471BD2» / «CF-DF25862D3A», `hotel` privado → «CF-485543DF21», `echo` abierto → «Technician Echo» (`evidencias/v2/30/HIRE-01-1-next-1440.jpg`, `evidencias/v2/30/HIRE-01-8-next-1440-B.jpg`) | ≈ (v2: antes −) | — | — (la identidad real con el contacto: D-07 P3) | Mantener |
+| 9 | Historial | Demo: línea de tiempo en la tarjeta. Conectado: `<details>` «Historial» → «{fecha local} · {estado}» con `toLocaleString()` sin locale, así que no siempre sale en español (hallazgo C-§3 #15) | `<details>` «Historial» → «{estado} · {fecha UTC es-ES} · {profesional\|organización}» + « · v{n}» en los pasos con propuesta (`ApplicationDetails.tsx:47-63`; es:1325-1330); corrige el `toLocaleString()` sin locale de la v1.8. v2, en ejecución (`evidencias/v2/30/HIRE-01-9-next-1440-history.jpg`) | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 10 | Etiquetas de estado | Recibida · Preseleccionada · Propuesta · Aceptada · Confirmada · Finalizada · Rechazada · Retirada · Cancelada (`business.js:20`; `Account.jsx:15`) | `domain.applicationStatus`: Recibida · Preseleccionada · Propuesta · Aceptada · Confirmada · Finalizada · Rechazada · Retirada · Cancelada (es:469-479) | = (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 11 | Recruiter | Mismas acciones; el Pack da «Preparar presentación para cliente» (`evidencias/shots/demo/D-REC-04-candidaturas-1440.png`) | — | − | P3 | — (v2: desbloqueado, alcance LATER) (recruiter) | Ver ORG-08 (backlog v2-24) |
+| 12 (nueva v2) | Nota del estado de la necesidad en la tarjeta del profesional | No hay: el técnico no sabe si la oferta está pausada o cerrada | «La necesidad está pausada: no admite propuestas ni confirmaciones.» · «La necesidad está cerrada.» · «La necesidad está cubierta.»; el título solo enlaza si la necesidad está abierta (`applications/page.tsx:23-27,99-131`; es:1321-1323). v2, en ejecución: `echo` ve «La necesidad está cubierta.» en A y `hotel` la de pausada en B (`evidencias/v2/30/HIRE-01-1-next-1440-tech.jpg`, `evidencias/v2/30/ORG-05-16-next-1440-paused-tech.jpg`) | + | — | — | Mantener |
+| 13 (nueva v2) | Miembro sin rol de gestión | Solo el dueño de la oferta | Un `member` ve «El análisis de capacidad está disponible para managers y administradores» / «Pide el rol de manager a un administrador de la organización.» (`[id]/applications/page.tsx:47-54`; es:754-755): el título habla de capacidad en la pantalla de candidaturas. v2, en ejecución con `alpha` (`evidencias/v2/30/HIRE-01-1-next-1440-member.jpg`) | + | P3 | — | Usar un texto propio de candidaturas (backlog v2-26) |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-05-candidaturas-1440.png`, `evidencias/shots/demo/D-EMP-05k-candidaturas-por-oferta-1440.png`,
+`evidencias/shots/demo/D-TEC-05-candidaturas-1440.png`, `evidencias/shots/demo/D-TEC-05f-candidaturas-alex-vega-1440.png`,
+`evidencias/shots/demo/D-REC-04-candidaturas-1440.png`, `evidencias/shots/connected/C-EMP-18-applications-list-1440.png`,
+`evidencias/shots/connected/C-EMP-18-applications-390.png`, `evidencias/shots/connected/C-TEC-30-applications-1440.png`,
+`evidencias/shots/connected/C-TEC-35-applications-mixed-1440.png`, `evidencias/shots/connected/C-TEC-36-app-details-1440.png`. Next: no
+aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/HIRE-01-1-v18-1440.jpg`, `evidencias/xhigh/30/HIRE-01-6-v18-1440-received.jpg`, `evidencias/xhigh/30/HIRE-01-1-v18-1440-tech.jpg`.
+Capturas v2: Next `evidencias/v2/30/HIRE-01-1-next-1440.jpg`, `evidencias/v2/30/HIRE-01-1-next-1440-mixed.jpg`, `evidencias/v2/30/HIRE-01-9-next-1440-history.jpg`, `evidencias/v2/30/HIRE-01-8-next-1440-B.jpg`, `evidencias/v2/30/HIRE-01-1-next-390-org.jpg`, `evidencias/v2/30/HIRE-01-1-next-1440-tech.jpg`, `evidencias/v2/30/HIRE-01-1-next-390-tech.jpg`, `evidencias/v2/30/HIRE-01-1-next-1440-member.jpg`; v1.8 demo `evidencias/v2/30/HIRE-01-1-v18-1440.jpg`, `evidencias/v2/30/HIRE-01-1-v18-1440-tech.jpg`; conectado `evidencias/v2/30/HIRE-01-1-v18c-1440.jpg`, `evidencias/v2/30/HIRE-01-1-tec-v18c-1440.jpg`, `evidencias/v2/30/HIRE-01-7-t2-v18c-1440.jpg`.
+
+---
+
+## HIRE-02 · Estados y transiciones de candidatura — v1.8 `B §4.6.1 (demo), B §4.6.2 (conectado), S-CON-06 (moves), C §3` ↔ Next `src/domain/applications.ts` + `transition_application` (M08)
+
+**Estado global:** IGUAL en lo ratificado (v2: antes PARCIAL, solo contrato). Los 9 estados y las 16 transiciones
+(D-06 Q2-Q7, R-08) están en el dominio, en SQL (`app_private.application_transitions`) y en la UI, con confirmación,
+motivo por acción, idempotencia y control optimista.
+- Diferencias deliberadas con la v1.8: sin `accepted → rejected` (Q7, como el conectado) y sin volver tras un rechazo
+  (Q5/T-09).
+
+Citas de la tabla (v2: las líneas de Next son de SNAP2 `038329f`):
+- columna v1.8: demo en `src/business.js:243-272` y `src/context/AppState.jsx:226-298`; conectado en
+  `server/app.mjs:115-117` y botones en `src/beta/Account.jsx:71`;
+- columna Next: líneas de `src/domain/applications.ts`.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | 9 estados | Demo: `STATES`: el valor es la etiqueta en español. Conectado: Códigos en inglés + etiquetas (`Account.jsx:15`) | `APPLICATION_STATUSES` (`src/domain/applications.ts:7-18`) + enum `application_status` (`supabase/migrations/20261022130300_applications.sql:26-30`) | = | — | — | — |
+| 2 | Terminales | Demo: Sin salidas desde Finalizada, Rechazada, Retirada y Cancelada. Conectado: Igual | `TERMINAL_APPLICATION_STATUSES` (`src/domain/applications.ts:51-56`) | = | — | — | — |
+| 3 | ∅ → received (técnico) | Demo: `apply()` → Recibida. Conectado: `application.create` → `received` | `apply_to_requirement` (`supabase/migrations/20261022130300_applications.sql:582-688`) vía `POST /applications` (`supabase/functions/applications/index.ts:141`); UI «Presentar candidatura» (MKT-05). v2, en ejecución | = (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 4 | received → shortlisted (org) | Demo: «Preseleccionar». Conectado: «Preseleccionar» | Fila de `APPLICATION_TRANSITIONS` (`:32`), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | — |
+| 5 | received → rejected (org) | Demo: «Rechazar», sin motivo ni confirmación. Conectado: «Rechazar» con motivo obligatorio; si falta: «Motivo: dato no válido.» | Fila con `reason: true` (`src/domain/applications.ts:33`): «Rechazar» abre «Motivo (obligatorio)» + «Lo verá la otra parte. Máximo 1000 caracteres.» (es:1353-1354). v2, en ejecución (`evidencias/v2/30/HIRE-02-5-next-1440-reject-reason.jpg`) | ≈ | — | — | Mantener (como el conectado) |
+| 6 | received → withdrawn (técnico) | Demo: «Retirar», sin confirmación. Conectado: «Retirar» | Fila de `APPLICATION_TRANSITIONS` (`:34`; confirmación con «Se retirará tu candidatura. Podrás volver a presentarte mientras la necesidad siga abierta.» (es:1358; `evidencias/v2/30/HIRE-02-6-next-1440-withdraw-hint.jpg`)), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | — |
+| 7 | shortlisted → proposed (org) | Demo: «Revisar y enviar propuesta» → modal de condiciones editable. Conectado: «Enviar propuesta», con las condiciones publicadas y sin modal | Fila de `APPLICATION_TRANSITIONS` (`:35`; «Enviar propuesta» con confirmación «Se enviará una copia fija de las condiciones publicadas; el profesional tendrá que aceptarla.» (es:1359; `evidencias/v2/30/HIRE-03-2-next-1440-propose-confirm.jpg`)), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | Ver HIRE-03 |
+| 8 | shortlisted → rejected (org) · shortlisted → withdrawn (técnico) | Demo: Sí · Sí. Conectado: Sí, con motivo · Sí | Fila de `APPLICATION_TRANSITIONS` (`:36-37`), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | — |
+| 9 | proposed → accepted (técnico) | Demo: «Aceptar estas condiciones» (+ «Simular aceptación del técnico», `✗`). Conectado: Casilla «Acepto las condiciones económicas mostradas.» + «Aceptar propuesta» | Fila de `APPLICATION_TRANSITIONS` (`:38`; casilla «Acepto exactamente estas condiciones (versión {version}).» + «Aceptar propuesta» (es:1344,1355; `evidencias/v2/30/HIRE-03-4-next-1440-accept-en.jpg`)), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | — |
+| 10 | proposed → rejected (org) · proposed → withdrawn (técnico) | Demo: Sí · Sí. Conectado: Sí · Sí | Fila de `APPLICATION_TRANSITIONS` (`:39-40`), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | — |
+| 11 | accepted → proposed (org): nueva versión | Demo: «Revisar propuesta (requiere aceptar de nuevo)»: `revision+1` y `acceptedTerms=null`. Conectado: **No existe** | Fila «R-08: a new proposal version» (`src/domain/applications.ts:41`); UI «Nueva versión de la propuesta» (es:1343). v2, en ejecución: v2 creada y aceptada; aceptar con el id de la v1 → 409 `PROPOSAL_STALE` | ≈ | — | — (R-08 decidido) | Mantener |
+| 12 | accepted → confirmed (org) | Demo: «Confirmar asignación». Conectado: «Confirmar asignación» | Fila de `APPLICATION_TRANSITIONS` (`:42`; «Confirmar asignación» (es:1345)), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | Ver HIRE-04 |
+| 13 | accepted → withdrawn (técnico) | Demo: Sí. Conectado: Sí | Fila de `APPLICATION_TRANSITIONS` (`:43`), usada por la UI (`availableTransitions`) y espejada en `app_private.application_transitions` (`supabase/migrations/20261022130300_applications.sql:131-157`) | = | — | — | — |
+| 14 | accepted → rejected (org) | Demo: **Sí** («Rechazar» en Aceptada; xhigh, visto en ejecución junto a «Revisar propuesta (requiere aceptar de nuevo)» y «Confirmar asignación», `evidencias/xhigh/30/v18-b-log.json`). Conectado: No | No existe (Q7 ratificada: nunca `accepted → rejected`; se cancela con motivo) (`src/domain/applications.ts:44-45`). v2, API: 409 | ≈ (v2: antes ≠) | — | — (D-06 Q7 ratificada: como el conectado) | Mantener |
+| 15 | accepted → cancelled (org, con motivo) | Demo: No: Cancelada solo desde Confirmada. Conectado: Sí («Cancelar», motivo obligatorio) | Fila (`src/domain/applications.ts:45`); UI «Cancelar candidatura aceptada» con motivo (es:1349). v2, en ejecución con `foxtrot` en A (`evidencias/v2/30/HIRE-02-15-next-1440-cancel-accepted.jpg`) | = (v2: antes ≈) | — | — (D-06 Q2 ratificada) | Mantener |
+| 16 | confirmed → finished (org) | Demo: «Finalizar trabajo», desactivado hasta pasado el último día; error «Solo se puede finalizar después de la última jornada.». Conectado: «Finalizar»; error «Las jornadas asignadas aún no han terminado.» | Fila (`src/domain/applications.ts:46`); «Finalizar» desactivado con `title` «Disponible después de la última jornada.» hasta el fin del periodo y después con confirmación; servidor `CFA08` «Solo se puede finalizar después de la última jornada.» (`src/features/applications/components/ApplicationActions.tsx:165-176`; `canFinish`, `src/domain/applications.ts:126-127`; es:1346,1357,1370). v2, en ejecución: desactivado a las 14:58 y finalizada a las 14:59 UTC (`evidencias/v2/30/HIRE-04-9-next-1440-finish-disabled.jpg`, `evidencias/v2/30/HIRE-04-9-next-1440-finish-confirm.jpg`) | = (v2: antes ≈) | — | — (D-06 Q4 ratificada) | Mantener |
+| 17 | confirmed → cancelled (org) | Demo: Sí: modal con motivo. Conectado: Sí, con motivo | Fila (`src/domain/applications.ts:47`); «Cancelar asignación» con motivo (es:1350) | = (v2: antes ≈) | — | — (D-06 Q3 ratificada) | Mantener |
+| 18 | confirmed → cancelled (técnico) | Demo: **Sí** («Cancelar asignación» lo ven las dos partes). Conectado: **No** | Fila (`src/domain/applications.ts:48`); el profesional ve «Cancelar asignación» con motivo. v2, en ejecución con `foxtrot` en B (`evidencias/v2/30/HIRE-04-11-next-1440-tech-cancel.jpg`) | = (v2: antes ≈) | — | — (D-06 Q3 ratificada, como la demo) | Mantener |
+| 19 | Actor equivocado o transición inválida | Demo: «No tienes permiso para esta acción.» / «Cambio de estado no permitido.». Conectado: 403 «Esta acción corresponde a la otra parte.» / «Transición no válida.» | La UI solo pinta las transiciones del lado del usuario; el servidor responde 403 a la otra parte y 409 a una transición no válida (`supabase/migrations/20261022130300_applications.sql:770-782`). Textos: `CONFLICT` con razón → «applications.conflict.*»; sin razón → «La candidatura cambió mientras tanto. Recarga para ver su estado actual.»; `FORBIDDEN` → texto genérico (`error-copy.ts`; es:1376). v2, API: el técnico que confirma → 403 | ≈ | P3 | — | Mantener; valorar «Esta acción corresponde a la otra parte.» para el 403 |
+| 20 | Motivo | Demo: Solo en Cancelada: modal «Motivo obligatorio», `maxLength=1000`. Conectado: Un único campo «Motivo para rechazos o cancelaciones» **compartido por todas las tarjetas** (hallazgo C-§3 #14) | Un motivo por acción, en el grupo de confirmación de esa tarjeta, 1-1000, visible a las dos partes «Motivo: {…}» y fuera de la auditoría (T-10) (`src/features/applications/components/ApplicationActions.tsx:108-127`; `ApplicationDetails.tsx:46`). Corrige el campo compartido del conectado | ≈ | — | — | Mantener |
+| 21 | Confirmación de acciones destructivas | Demo: Rechazar y Retirar sin confirmación. Conectado: Ninguna acción pide confirmación | Todas las transiciones salvo «Preseleccionar» abren un grupo de confirmación con foco en la opción segura, motivo si hace falta y casilla para aceptar (`src/features/applications/components/ApplicationActions.tsx:99-161`). v2, en ejecución (`evidencias/v2/30/HIRE-03-2-next-1440-propose-confirm.jpg`, `evidencias/v2/30/HIRE-02-5-next-1440-reject-reason.jpg`) | + (v2: antes −) | — | — | Mantener |
+| 22 | Transacción, auditoría e idempotencia | Demo: `commit()` con evento en `audit`. Conectado: `BEGIN IMMEDIATE`; auditoría `application.transition` sin detalle | Implementado: una función SQL por escritura (`transition_application`, `supabase/migrations/20261022130300_applications.sql:689-916`), `Idempotency-Key`, `expectedUpdatedAt` (CF412), bloqueo de la necesidad y auditoría `application.<to>` en la misma transacción; carreras probadas (`scripts/local/db-race-check.sh`, suites V/W de `tests/db/rls.test.ts`) | + | — | — | Mantener el diseño |
+| 23 | Simulación | Demo: `options.simulate`: la empresa actúa como técnico. Conectado: — | — | ✗ | — | DEMO-ONLY | No portar (CO-53) |
+| 24 | Resultado visible | Demo: Toast «Candidatura: {estado}». Conectado: «Cambios guardados.» genérico (hallazgo C-§3 #2) | «Hecho: {status}.» en la tarjeta (es:1360). v2, en ejecución («Hecho: Preseleccionada.», «Hecho: Rechazada.», «Hecho: Confirmada.») | ≈ (v2: antes −) | — | — | Mantener |
+| 25 | Volver a presentar | Demo: Vale tras Rechazada, Retirada o Cancelada. Conectado: Vale tras retirar o cancelar (runtime) | Q5 ratificada + T-09: solo tras `withdrawn` (duplica MKT-05 #13, verificada allí) | ≠ | P3 | — (D-06 Q5 ratificada + T-09) | Mantener (ver MKT-05 #13) |
+| 26 | Tests | Demo: —. Conectado: — | `src/domain/applications.test.ts`, `src/lib/validation/applications.test.ts`, `src/features/applications/view.test.ts`, suites V/W (T1–T13) de `tests/db/rls.test.ts` y el E2E `tests/e2e/hiring.test.ts` | + | — | — | Mantener |
+| 27 (nueva v2) | Acciones según el estado de la necesidad | Conectado: proponer se puede con la oferta pausada; confirmar exige `published` y que ninguna jornada haya empezado (`server/app.mjs:115-120`) | Preseleccionar, proponer y confirmar exigen necesidad abierta: la UI las oculta (`src/features/applications/components/ApplicationActions.tsx:55-59`) y el servidor responde `CFA01`/`CFA02` (`supabase/migrations/20261022130300_applications.sql:800-840`). Ver ORG-05 #16 | + | — | — | Mantener |
+| 28 (nueva v2) | Versión cargada (control optimista) | Ninguno: la última escritura gana | Cada transición manda `expectedUpdatedAt`; si la otra parte se movió antes, 409 y «La candidatura cambió mientras tanto. Recarga para ver su estado actual.» (`src/lib/validation/applications.ts:53`; es:1376) | + | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-05c-preseleccionar-1440.png`, `evidencias/shots/demo/D-EMP-05e-propuesta-enviada-1440.png`,
+`evidencias/shots/demo/D-EMP-05f-aceptada-1440.png`, `evidencias/shots/demo/D-EMP-05i-confirmada-1440.png`,
+`evidencias/shots/demo/D-TEC-05e-retirar-1440.png`, `evidencias/shots/connected/C-EMP-14-app-received-1440.png`,
+`evidencias/shots/connected/C-EMP-15-app-proposed-1440.png`, `evidencias/shots/connected/C-EMP-16-app-accepted-1440.png`,
+`evidencias/shots/connected/C-EMP-17-app-confirmed-1440.png`, `evidencias/shots/connected/C-EMP-28-J2-cancelled-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/v18-b-log.json` y `evidencias/xhigh/30/v18-c-log.json` (acciones por estado y avisos «Candidatura: {estado}»).
+Capturas v2: Next `evidencias/v2/30/HIRE-02-5-next-1440-reject-reason.jpg`, `evidencias/v2/30/HIRE-02-6-next-1440-withdraw-hint.jpg`, `evidencias/v2/30/HIRE-02-15-next-1440-cancel-accepted.jpg`, `evidencias/v2/30/HIRE-04-9-next-1440-finish-disabled.jpg`; v1.8 conectado `evidencias/v2/30/HIRE-01-1-v18c-1440.jpg` (botones por estado), `evidencias/v2/30/HIRE-01-1-tec-v18c-1440.jpg`.
+
+---
+
+## HIRE-03 · Propuesta, condiciones y aceptación — v1.8 `S-MOD-EMP-05, S-SUB-MKT-03, S-CON-06a, D-EMP-05d, D-EMP-05e, D-TEC-05h, D-TEC-05i, C-EMP-15, C-TEC-22, C-TEC-23, C-TEC-37` ↔ Next `application_proposals` + `ApplicationDetails` (M08, R-08)
+
+**Estado global:** PARCIAL (v2: antes AUSENTE). La propuesta es la «foto» inmutable de las condiciones.
+- En la demo es editable (tarifa, horas, dietas, extra y turno).
+- En el conectado copia las condiciones publicadas.
+- En Next (M08) existe: versión n inmutable con ubicación, periodo, turno, personas y cualificaciones, aceptación
+  explícita de esa versión y nueva versión tras aceptar (R-08); sin tarifas, que llegan con las condiciones (LATER).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Modal de la propuesta (demo) | «Condiciones de la propuesta»: «{fechas}. El técnico aceptará exactamente esta versión.».<br>- Campos (`step 0.01 min 0`): «Tarifa EUR/h», «Horas de jornada» (máx. 24), «Dietas EUR/día», «Horas extra EUR/h»; texto «Turno propuesto».<br>- Vista `Terms`; botón «Guardar y enviar propuesta local».<br>- Error «Revisa las condiciones propuestas.», con el banner de fallo de guardado, que es un error (hallazgo B #1) (`Workflow.jsx:75-85`). | No se editan condiciones: «Enviar propuesta» abre una confirmación y congela las condiciones publicadas (T-11) | ≠ (v2: antes −) | P2 | — (v2: desbloqueado, alcance LATER) (condiciones y tarifas); T-11 es un default técnico | Portar los campos de la propuesta cuando la necesidad tenga condiciones (backlog v2-12) |
+| 2 | Propuesta del conectado | Sin modal: `proposal = {…totals(oferta, jornadas), hours, hourlyRate, feePolicy, createdAt, jobSnapshot:{title, organization, description, category, aircraft, base, country, zone, shifts}, notice}` (`app.mjs:118`) | `application_proposals`: versión n inmutable con la copia de ubicación, inicio, fin, turno, personas y cualificaciones y `createdAt` (`supabase/migrations/20261022130300_applications.sql:60-79,218-233`; T-11). Faltan descripción, categoría, aeronave, país, zona y jornadas (C-9/LATER); sin dinero | ≈ (v2: antes −) | P3 | — (v2: desbloqueado, alcance LATER) (condiciones) · SCOPE OUT (dinero) | Ampliar la copia con los campos que se porten (backlog v2-12) |
+| 3 | Versiones | Demo: «Oferta versión {n}; propuesta versión {m \| —}. Una propuesta revisada requiere otra aceptación.». Conectado: sin versiones | «Propuesta · versión {version}» / «Condiciones aceptadas · versión {version}» (es:1333-1334) y « · v{n}» en el historial. La clave «Una propuesta nueva necesita otra aceptación; la aceptada se conserva en el historial.» (es:1338) no la usa nadie | ≈ | — | — | Mantener |
+| 4 | Aceptación explícita | Conectado: casilla «Acepto las condiciones económicas mostradas.»; sin ella, «Acepta las condiciones de esta propuesta.»; el servidor copia `proposal` en `acceptedTerms` y no hace caso de importes enviados por el cliente (`app.mjs:119`) | Casilla «Acepto exactamente estas condiciones (versión {version}).»; el botón no se activa sin ella; el servidor exige `acceptTerms: true` y el id de la versión actual (`src/lib/validation/applications.ts:49-76`). v2, API: sin casilla → 400 `v.application.acceptTerms`; con la v1 tras una v2 → 409 `PROPOSAL_STALE` | ≈ | — | — | Mantener el diseño |
+| 5 | Condiciones en la tarjeta (demo, `Terms`) | «Tarifa acordada» «{€}/h · {h} h» · «Dietas / extra» «{€} / día · {€} / h» · «Turno / contrato» «{turno} · {contrato}» · «Logística» «Vuelos: sí\|no · Hotel: sí\|no · Transporte: sí\|no · Comidas: sí\|no» · `FeeSummary` si no es técnico (`Workflow.jsx:8-16`) | Bloque «{ubicación} · {periodo} · {turno}» + chips (`ApplicationDetails.tsx:22-44`); sin tarifa, dietas, contrato ni logística | ≈ (v2: antes −) | P2 | — (v2: desbloqueado, alcance LATER) (condiciones) · SCOPE OUT (`FeeSummary`) | Portar `Terms` sin comisión (backlog v2-12) |
+| 6 | Condiciones en la tarjeta (conectado) | `<details>` «Condiciones de la propuesta» o «Condiciones aceptadas y guardadas»: aviso «CrewFlex intermedia; el contrato de trabajo o prestación se acuerda directamente entre las partes.» + descripción copiada + «Propuesta: {fecha local}{ · Aceptada: {fecha}}» | Bloque siempre visible (no `<details>`): «Propuesta · versión {n}» + «· Pendiente de aceptación» o «Condiciones aceptadas · versión {n}», «Enviada el {fecha}», condiciones y «CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.» (`ApplicationDetails.tsx:22-44`; es:1332-1337). Sin descripción ni «Aceptada: {fecha}» (está en el historial). v2, en ejecución (`evidencias/v2/30/HIRE-01-9-next-1440-history.jpg`) | ≈ (v2: antes −) | P3 | — | Mantener |
+| 7 | Importes | Conectado: «{h} h × {tarifa} €/h = {base} para el técnico. Comisión a la empresa: {comisión} ({%}).» | — | − | P3 | — (importe base: alcance LATER) · SCOPE OUT (comisión) | Portar «{h} h × {tarifa} €/h = {base} para el técnico»; no la comisión (backlog v2-12) |
+| 8 | Aviso no contractual | Ver fila 6 y el panel de ORG-01 #27 | En cada propuesta (es:1337), no en el Resumen (ORG-01 #27) | ≈ | — | — | Mantener |
+| 9 | Vista previa de la comisión | Demo: la vista previa de la propuesta usa el `pricingSnapshot` de la oferta entera y no cambia al editar (hallazgo D1 #2) | — | ✗ | — | — | No portar |
+| 10 | Aviso de demo | «Cambia a Técnico → Mis candidaturas para revisar y aceptar.» | — | ✗ | — | DEMO-ONLY | No portar |
+| 11 | «Simular aceptación del técnico» | La empresa simula la aceptación de un candidato ficticio | — | ✗ | — | DEMO-ONLY | No portar (CO-53) |
+| 12 (nueva v2) | Versión antigua | Conectado: sin versiones. Demo: «Revisar propuesta» borra `acceptedTerms` | Aceptar una versión que ya no es la actual → 409 `PROPOSAL_STALE` «La propuesta ha cambiado: revisa la versión nueva antes de aceptar.» (`supabase/migrations/20261022130300_applications.sql:822-826`; es:1369). v2, API con `hotel` en B | + | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-05d-propuesta-1440.png`, `evidencias/shots/demo/D-EMP-05e-propuesta-enviada-1440.png`,
+`evidencias/shots/demo/D-TEC-05h-propuesta-recibida-1440.png`, `evidencias/shots/demo/D-TEC-05i-aceptar-condiciones-1440.png`,
+`evidencias/shots/connected/C-EMP-15-app-proposed-1440.png`, `evidencias/shots/connected/C-TEC-22-app-proposed-1440.png`,
+`evidencias/shots/connected/C-TEC-23-app-accepted-1440.png`, `evidencias/shots/connected/C-TEC-37-J4-proposed-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/HIRE-03-1-v18-1440.jpg` (modal de propuesta), `evidencias/xhigh/30/HIRE-03-5-v18-1440-proposed.jpg`.
+Capturas v2: Next `evidencias/v2/30/HIRE-03-2-next-1440-propose-confirm.jpg`, `evidencias/v2/30/HIRE-03-4-next-1440-accept-en.jpg`, `evidencias/v2/30/HIRE-01-1-next-1440-tech-en-proposed.jpg`; v1.8 conectado `evidencias/v2/30/HIRE-01-1-tec-v18c-1440.jpg` («Condiciones de la propuesta», casilla «Acepto las condiciones económicas mostradas.»).
+
+---
+
+## HIRE-04 · Confirmación, asignación, finalización y cancelación — v1.8 `S-EMP-05 (Confirmar/Finalizar), S-MOD-MKT-06, D-EMP-05h/i/j, D-FLOW-01, D-TEC-03e, C-EMP-17, C-EMP-19, C-EMP-28, C-TEC-34` ↔ Next `transition_application` + `ApplicationActions` (M08)
+
+**Estado global:** PARCIAL (v2: antes AUSENTE). Confirmar es el paso que crea un compromiso real; en Next ya existe,
+con nueva comprobación en el servidor, «Cubierta», «Asignada» en el calendario, finalizar tras el periodo y cancelar
+con motivo por las dos partes.
+- La v1.8 conectada vuelve a comprobarlo todo en el servidor y reserva las jornadas.
+- Next comprueba cualificaciones `verified` y vigentes, disponibilidad, plazas y solapes, con `FOR UPDATE`.
+- Le faltan la organización revisada (OD-5, default v1.8), las restricciones (C-10) y los documentos revisados (D-07 P3
+  + D-10), y el bloqueo del calendario tras confirmar (T-13 frente a la v1.8).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Confirmar | «Confirmar asignación» (empresa, desde Aceptada) | «Confirmar asignación» (es:1345) con «El servidor vuelve a comprobar cualificaciones, disponibilidad, plazas y solapes antes de confirmar.» (es:1356). v2, en ejecución (`evidencias/v2/30/HIRE-04-1-next-1440-confirm-hint.jpg`, `evidencias/v2/30/HIRE-04-1-next-1440-confirmed.jpg`) | = (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 2 | Comprobaciones de la demo | Vuelve a pasar `validateDays`; «La oferta no admite confirmaciones.» · «La propuesta contiene fechas pasadas.» · «El técnico ya tiene una asignación en esas fechas.» · «La cobertura de alguna fecha ya está completa.» | `transition_application` al confirmar (`supabase/migrations/20261022130300_applications.sql:827-862`): necesidad abierta y sin empezar (`CFA01`/`CFA02` ≈ «La oferta no admite confirmaciones.» / «…fechas pasadas.»), sin asignación confirmada solapada (`CFA05` «El profesional ya tiene una asignación confirmada que se solapa.»), plazas (`CFA06` «Ya están confirmadas todas las plazas.») (es:1363-1368). En ejecución solo el camino feliz; los rechazos, en código y tests (V/W) | ≈ (v2: antes −) | — | — (v2: D-06 ratificada) | Mantener |
+| 3 | Comprobaciones del conectado | Primero: «La oferta o jornadas ya no admiten confirmación.» y «La organización requiere revisión administrativa.».<br>Después se acumulan:<br>- motivos de `eligible`;<br>- «La organización está bloqueada.»;<br>- «Perfil o restricciones pendientes de revisión.»;<br>- «Falta licencia revisada y vigente hasta el fin del trabajo.»;<br>- «Vincula y comparte el documento revisado de esta habilitación.»;<br>- «Evidencia del curso pendiente: {c}.»;<br>- «No quedan plazas en alguna jornada.»;<br>- «Existe una asignación solapada.» (`app.mjs:120-129`) | Cubre: abierta y sin empezar, cualificaciones obligatorias activas, `verified` y vigentes (`CFA03`), disponibilidad 100 % (`CFA04`), plazas y solapes. No cubre: organización revisada, empleador bloqueado, perfil o restricciones revisados, licencia y cursos con documento revisado | ≈ (v2: antes −) | P2 | documentos: D-07 P3 + D-10 · organización: OD-5 default v1.8 · restricciones: C-10 default v1.8 | Añadir las de OD-5 y C-10 (backlog v2-11, v2-19) |
+| 4 | Organización revisada antes de confirmar | Obligatoria en el conectado (CX-55) | No está en el contrato | − | P2 | — (v2: default v1.8) (OD-5/C-14) | Portar con la revisión de organizaciones (backlog v2-19) |
+| 5 | Licencia y cursos con documento revisado y limpio | Obligatorios si la oferta exige licencia o cursos; en el runtime bloqueó J3 | Diseño: «D-07 document conditions if the requirement needs them»; la verificación de cualificaciones (OD-3) cubre otra parte | − | P2 | D-07 P3 + D-10 (sigue bloqueado); OD-3 solo en producción | Esperar |
+| 6 | Reserva en el calendario | Demo: marca los días como `assigned` y guarda `previousAvailability`. Conectado: `calendarState` → «Asignado»; editar ese día → «No puedes modificar una fecha con asignación confirmada.»; `profile.save` → «Conserva la disponibilidad de tus asignaciones confirmadas.» (`evidencias/shots/demo/D-TEC-03e-disponibilidad-asignado-1440.png`, `evidencias/shots/connected/C-TEC-34-calendar-assigned-1440.png`) | «● Asignada» en los días con una asignación confirmada (`aria-label` «…, asignación confirmada»), solo visual: no bloquea editar la disponibilidad (T-13) (`src/features/availability/calendar.ts:155-167`; `AvailabilityManager.tsx:398-407`; es:743-744). v2, en ejecución: `foxtrot` confirmada en B → 28 y 29 oct «Asignada» (`evidencias/v2/30/HIRE-04-6-next-1440-assigned.jpg`). Conectado: «Asignado» y edición bloqueada (`evidencias/v2/30/HIRE-04-6-v18c-1440.jpg`) | ≈ (v2: antes −) | P2 | — (T-13, default técnico contrario a la v1.8 y a DEFAULTS) | Bloquear la edición de un día asignado como la v1.8 o que el owner ratifique T-13 (backlog v2-06) |
+| 7 | Necesidad cubierta | Demo: «Cubierta» derivada. Conectado: sin cambio de estado, solo cobertura x/n | Implementado: `requirement → covered` al llegar a las plazas y vuelta a `open` al cancelar (`supabase/migrations/20261022130300_applications.sql:869-880`); verificado en ejecución (ORG-04 #14) | ≈ | — | — | Mantener |
+| 8 | Efecto en la cobertura y en Inicio | «Cubierta · 100% cobertura confirmada · 1 / 1»; Resumen «Jornadas cubiertas 7»; Inicio del técnico «1 asignaciones confirmadas» (sin plural) (D-FLOW-01 paso 5) | Necesidad «Cubierta»; Resumen «Asignaciones confirmadas {n}» (ORG-01 #11); Mi espacio «Asignaciones confirmadas» y chip «Confirmada»; sin «{p}% cobertura confirmada · x / n» (ORG-04 #20). v2, en ejecución (`evidencias/v2/30/ORG-01-10-next-1440-counters.jpg`, `evidencias/v2/30/MKT-03-13-next-1440-home.jpg`) | ≈ (v2: antes −) | P3 | — (v2: D-06 ratificada) | Ver ORG-04 #20 (backlog v2-08) |
+| 9 | Finalizar | Demo: «Finalizar trabajo», desactivado con `title` «Disponible después de la última jornada». Conectado: «Finalizar»; error «Las jornadas asignadas aún no han terminado.» | Ver HIRE-02 #16: «Finalizar» desactivado con «Disponible después de la última jornada.» y, tras el fin, confirmación y `finished`. v2, en ejecución (`evidencias/v2/30/HIRE-04-9-next-1440-finish-enabled.jpg`) | = (v2: antes −) | — | — (D-06 Q4 ratificada) | Mantener |
+| 10 | Efectos de finalizar | Conectado: crea un borrador de factura y pasa la comisión a `draft` | Sin dinero (`APPLICATIONS_STATE_MACHINE.md:75`) | − | P3 | SCOPE (OUT) | No portar (HIRE-08) |
+| 11 | Cancelar asignación (demo) | Modal «Cancelar asignación»: «Se liberarán plazas y se restaurará la disponibilidad anterior del técnico. El historial conservará el motivo.»; «Motivo obligatorio» (textarea, `maxLength=1000`); «Confirmar cancelación» desactivado sin motivo; error «Indica el motivo de cancelación.» (`Workflow.jsx:85-89`) | «Cancelar asignación» → grupo con «Motivo (obligatorio)» y «Lo verá la otra parte…»; el botón no se activa sin motivo (`src/features/applications/components/ApplicationActions.tsx:99-161`). Falta la explicación «Se liberarán plazas y se restaurará la disponibilidad anterior del técnico. El historial conservará el motivo.». v2, en ejecución (`evidencias/v2/30/HIRE-04-11-next-1440-tech-cancel.jpg`) | ≈ (v2: antes −) | P3 | — (D-06 Q3 ratificada) | Añadir la explicación como pista de la cancelación (backlog v2-26) |
+| 12 | Cancelar (conectado) | «Cancelar» + motivo compartido; anula la comisión (`void`) | Motivo por tarjeta; libera la plaza; `covered → open` si quedan plazas libres (`supabase/migrations/20261022130300_applications.sql:873-879`). v2, en ejecución: `foxtrot` cancela B; B sigue «Abierta» (`evidencias/v2/30/HIRE-04-12-next-1440-tech-cancelled.jpg`) | ≈ (v2: antes −) | — | — (D-06 Q2/Q3 ratificadas) · comisión anulada: SCOPE OUT | Mantener |
+| 13 | Devolver la disponibilidad | Demo: restaura `previousAvailability` (u `off`). Conectado: libera la plaza | Nada se reserva: «Asignada» solo existe mientras la candidatura está `confirmed` (`assignmentDays` sobre las confirmadas) | ≈ | — | — | Mantener |
+| 14 | Carrera por la última plaza | Conectado: transacción `BEGIN IMMEDIATE` | Implementado: la necesidad se bloquea con `FOR UPDATE` en la transacción de confirmar; carrera de la última plaza probada (`scripts/local/db-race-check.sh`; suite W) | + | — | — | Mantener |
+| 15 | Error de validación como fallo de guardado | Demo: cualquier error de negocio enciende el banner «La última operación no pudo guardarse y no se ha aplicado. Conserva un respaldo desde Datos y alcance e inténtalo de nuevo.» (hallazgo B #1) | — | ✗ | — | — | No portar |
+| 16 (nueva v2) | Cerrar tras finalizar | Conectado: «Cerrar oferta» se puede cuando no hay aceptadas ni confirmadas | Con la candidatura `finished`, «Cerrar necesidad» funciona; las rechazadas, retiradas y canceladas no se tocan (T-12). v2, en ejecución: A finalizada y cerrada; el KPI «Asignaciones confirmadas» baja a 0 (`evidencias/v2/30/ORG-04-29-next-1440-closed-with-applications.jpg`, `evidencias/v2/30/ORG-01-10-next-1440-counters-end.jpg`) | = | — | — | Mantener |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-05h-confirmar-1440.png`, `evidencias/shots/demo/D-EMP-05i-confirmada-1440.png`,
+`evidencias/shots/demo/D-EMP-05j-cancelar-asignacion-1440.png`, `evidencias/shots/demo/D-EMP-03e-cobertura-confirmada-1440.png`,
+`evidencias/shots/demo/D-TEC-03e-disponibilidad-asignado-1440.png`, `evidencias/shots/connected/C-EMP-17-app-confirmed-1440.png`,
+`evidencias/shots/connected/C-EMP-19-J2-confirmed-1440.png`, `evidencias/shots/connected/C-EMP-28-J2-cancelled-1440.png`,
+`evidencias/shots/connected/C-TEC-34-calendar-assigned-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/HIRE-04-1-v18-1440-confirmed.jpg`, `evidencias/xhigh/30/HIRE-04-11-v18-1440-cancel.jpg`, `evidencias/xhigh/30/ORG-04-20-v18-1440-covered.jpg`.
+Capturas v2: Next `evidencias/v2/30/HIRE-04-1-next-1440-confirm-hint.jpg`, `evidencias/v2/30/HIRE-04-1-next-1440-confirmed.jpg`, `evidencias/v2/30/HIRE-04-6-next-1440-assigned.jpg`, `evidencias/v2/30/HIRE-04-9-next-1440-finish-disabled.jpg`, `evidencias/v2/30/HIRE-04-9-next-1440-finish-enabled.jpg`, `evidencias/v2/30/HIRE-04-9-next-1440-finish-confirm.jpg`, `evidencias/v2/30/HIRE-04-11-next-1440-tech-cancel.jpg`, `evidencias/v2/30/HIRE-04-12-next-1440-tech-cancelled.jpg`; v1.8 conectado `evidencias/v2/30/HIRE-04-6-v18c-1440.jpg` («Asignado»), `evidencias/v2/30/HIRE-01-1-v18c-1440.jpg` («Finalizar» / «Cancelar» en las confirmadas).
+
+---
+
+## HIRE-05 · Candidate Pack: contenido, ocultación, consentimiento y exportación — v1.8 `S-MOD-MKT-03, S-MOD-MKT-04, D-EMP-05b, D-EMP-05g, D-TEC-05b, D-REC-04b, S-CON-06 (pack), app.mjs:110` ↔ Next — (la tarjeta de candidatura; M09 preparado y apagado)
+
+**Estado global:** PARCIAL (v2: antes AUSENTE). La tarjeta de candidatura de la organización hace de expediente
+(seudónimo, base, años, cualificaciones requeridas y disponibilidad); M09 (`a1e1223`) deja las reglas de contacto y
+documentos preparadas y apagadas (`PACK_ACTIVATION`).
+- Dos permisos independientes y revocables: identidad+contacto y documentos.
+- Acceso por funciones `SECURITY DEFINER` auditadas y URLs firmadas de 60 s.
+- Identidad real, contacto y documentos siguen bloqueados por D-07 P3 + D-10; el resto del Pack es default v1.8.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Cabecera | «CREWFLEX» + `Badge` «Expediente compartido»; h2 nombre; «{oferta} · {base}»; «{categorías} · {años} años · Inglés {nivel}»; «Mínimo declarado: {€} / {hora\|día}» (`Workflow.jsx:17-33`) | No hay vista «Candidate Pack»: la tarjeta de candidatura de la organización hace de expediente (seudónimo, base, años y la explicación por cualificación; HIRE-01 #6-8) | − | P1 | identidad: D-07 P3 · resto: — (v2: default v1.8) | Portar la vista del expediente sin identidad, contacto ni documentos (backlog v2-15) |
+| 2 | Fechas propuestas | «Fechas propuestas» + fechas, sin ordenar en el runtime («11 dic · 9 dic · 10 dic») | El periodo de la propuesta (Q6: uno solo), ya en orden | ≈ (v2: antes −) | P3 | — | Mantener |
+| 3 | Condiciones | h3 «Condiciones aceptadas» / «Propuesta pendiente de aceptación» / «Condiciones al presentar» + `Terms`; «Oferta versión {n}; propuesta versión {m \| —}. …» | El bloque de la propuesta de la tarjeta (HIRE-03 #6) | ≈ (v2: antes −) | P3 | — | Mantener |
+| 4 | Cualificaciones | «Aeronaves: …»; «Motores: {… \|\| 'No declarados'}»; por habilitación «{aeronave} · {categoría} · {caducidad \|\| 'Sin fecha aplicable'} · {restricciones \|\| 'Sin restricciones declaradas'} · {documento ? 'Evidencia vinculada' : 'Evidencia pendiente'}». Conectado: `pack` = categorías, habilitaciones sin `documentId`, años, cursos, capacidades, aeronaves, países, restricciones, revisión y documentos (`app.mjs:110`) | Por cada cualificación requerida, «Cumple/No cumple» con verificación y caducidad; sin aeronaves, motores, restricciones ni evidencia vinculada | ≈ (v2: antes −) | P2 | — (v2: default v1.8) (C-10) | Ampliar con C-10 (backlog v2-11, v2-15) |
+| 5 | Cursos y capacidades | «Cursos»: «{nombre} · {caducidad} · {estado}» (Sin caducidad / Fecha inválida / Caducado / Caduca pronto / Vigente); «Capacidades» | Solo los cursos que la necesidad exige (como cualificaciones `TRAINING`); no las capacidades | ≈ (v2: antes −) | P3 | — (v2: default v1.8) (C-10) | Portar (backlog v2-15) |
+| 6 | Documentos | Por fila «{título}» + «{bloque} · {caducidad \|\| 'Sin caducidad'} · {verificación}», y además:<br>- protegido: `Badge` «Identidad protegida» y título «Documento protegido»;<br>- con archivo: `FileButton` «Descargar archivo» / «Archivo no disponible», y «Vista previa» → modal con `<object>` («Usa Descargar para abrir este PDF.») o `<img>` + «Descargar documento»;<br>- de demo: `Badge` «Ejemplo sin archivo» | — | − | P1 | D-07 P3 + D-10 (sigue bloqueado; M09 apagado) | Esperar |
+| 7 | Aviso de protección | «Los originales, nombres de archivos y metadatos identificativos permanecen protegidos. Se desbloquean al aceptar con consentimiento de contacto.» | El profesional lee «Nunca tu contacto ni tus documentos: siguen protegidos.» al presentarse (es:1290); la organización no tiene aviso | − | P2 | — (el texto) · el desbloqueo: D-07 P3 | Añadir el aviso en la tarjeta de la organización (backlog v2-15) |
+| 8 | Descarga por la empresa | Conectado: `GET /api/documents/:id/download` si `consentPack && consentContact`, estado aceptada, confirmada o finalizada, y `scan==='clean'`; **no exige** `review` (endpoint 9 de la tabla B §5.4) | No existe. Preparado y apagado: `documentAccessible` y `PACK_ACTIVATION.documents = false` (`src/domain/candidate-pack.ts:14,44-60`) | − | P1 | D-07 P3 + D-10 (sigue bloqueado) | Esperar |
+| 9 | Experiencia compartida | «Experiencia compartida»: «**{aeronave} · {categoría}**» + descripción (logbook) | No hay logbook | − | P3 | — (v2: desbloqueado, alcance LATER) (logbook) | Esperar |
+| 10 | Contacto | Demo: «{email} · {teléfono}» o «Protegido; no autorizado o pendiente de aceptación.». Conectado: «Contacto autorizado: {email}» con `consentContact` en aceptada, confirmada o finalizada v2, conectado en ejecución: «Contacto autorizado: qa.tecnico1@example.test» en J1, J2 y J4 confirmadas (`evidencias/v2/30/HIRE-01-1-v18c-1440.jpg`) | No existe. Preparado y apagado: `contactVisible` y `PACK_ACTIVATION.contact = false` (`src/domain/candidate-pack.ts:14-33`) | − | P1 | D-07 P3 + D-10 (sigue bloqueado) | Esperar |
+| 11 | Cuándo se desbloquea la identidad | `identityUnlocked = contactConsent && estado ∈ {Aceptada, Confirmada, Finalizada}` (`business.js:222`) | `PACK_UNLOCK_STATUSES = ["accepted", "confirmed"]` (`src/domain/candidate-pack.ts:18`): sigue sin `finished` | ≠ | P3 | D-07 P3 (no activado) | Decidirlo al ratificar P1 |
+| 12 | Revocación | No se puede revocar | Diseño: `revoked_at`; las llamadas posteriores fallan (`CANDIDATE_PACK.md:36-37`) | + | — | D-07 P3 | Mantener el diseño |
+| 13 | Alcance y destinatario | «{empresa} {para {cliente}}. {scope \|\| 'Compartido en la candidatura original.'}»; `scope` = «Perfil técnico; archivos identificativos tras aceptación y consentimiento de contacto» (`business.js:314`) | El consentimiento nombra a la organización («Autorizo compartir con {organization}…», es:1291) y vale para una necesidad; sin cliente | ≈ (v2: antes −) | P3 | — (cliente: alcance LATER) | Añadir el cliente con ORG-08 (backlog v2-24) |
+| 14 | Copia fechada | «Copia del perfil: {fecha}. Los cambios del wallet no alteran esta versión.» (el archivo, en cambio, es el mismo blob, D1 §10) | **Sin copia**: la organización ve los datos del profesional evaluados en el momento (`get_requirement_applications`); `candidate_pack_items` del diseño no existe | ≠ (v2: antes ≈) | P3 | — (v2: default v1.8) (copia fechada) · diseño M09 | Congelar el expediente al presentar («Copia del perfil: {fecha}») (backlog v2-15) |
+| 15 | Exportar e imprimir | «Exportar expediente autorizado» (o «Preparar presentación para cliente») → `CrewFlex-Candidate-Pack.json`; «Imprimir / guardar PDF» → `window.print()` con CSS de impresión (`v11.css:10`) | — | − | P3 | SCOPE (OUT: «Candidate Pack PDF», `V1_SCOPE.md:66`), D-07 | No portar |
+| 16 | Ocultación incoherente | Con un perfil `open`, la lista enseña el nombre real y el Pack «Técnico CF-xxx»; el Pack enseña las restricciones que el directorio oculta (hallazgo D1 #7). xhigh, reproducido en ejecución: candidaturas «Noa Prado · 7 fechas», Pack «Técnico CF-197», y el modal de simulación también «Técnico CF-197 · 100% afinidad» (`evidencias/xhigh/30/HIRE-05-1-v18-1440-pack-received.jpg`, `evidencias/xhigh/30/HIRE-01-6-v18-1440-received.jpg`) | — | ✗ | — | — | Hecho en Next: una sola regla en el pool y en las candidaturas (T-04) |
+| 17 | Pack guardado en la candidatura | Conectado: el `pack` va en la fila y se conserva tras retirar | — | ✗ | — | — | No copiar (M09) |
+| 18 | Modales anidados | Un Escape cierra a la vez el Pack y la vista previa (hallazgo D1 #12) | — | ✗ | — | — | Al portar, un Escape por diálogo |
+
+Capturas: v1.8 `evidencias/shots/demo/D-EMP-05b-expediente-empresa-1440.png`, `evidencias/shots/demo/D-EMP-05g-expediente-desbloqueado-1440.png`,
+`evidencias/shots/demo/D-TEC-05b-expediente-1440.png`, `evidencias/shots/demo/D-REC-04b-expediente-recruiter-1440.png`,
+`evidencias/shots/connected/C-TEC-36-app-details-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/HIRE-05-1-v18-1440-pack-received.jpg`, `evidencias/xhigh/30/HIRE-05-10-v18-1440-pack-accepted.jpg`.
+Capturas v2: Next `evidencias/v2/30/HIRE-01-9-next-1440-history.jpg` (la tarjeta hace de expediente); v1.8 conectado `evidencias/v2/30/HIRE-01-1-v18c-1440.jpg` (datos del pack y «Contacto autorizado»).
+
+---
+
+## HIRE-06 · Conversación de candidatura y no leídos — v1.8 `S-MOD-MKT-05, D-TEC-05c, D-TEC-05d, D-TEC-05g, S-CON-06b, C-EMP-31, C-REC-08` ↔ Next — (ausente; chat OUT)
+
+**Estado global:** NO PORTAR (SCOPE OUT: «chat», `V1_SCOPE.md:65`; CX-35/36 SCOPE OUT). Se deja el inventario por si el
+owner cambia el alcance.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Acceso | Demo: botón «Conversación ({n})» → modal. Conectado: `<details>` «Conversación ({n}){ · {k} sin leer}» | — | − | P2 | SCOPE (OUT) | No portar |
+| 2 | Cabecera | Título «Conversación de candidatura»; «{oferta \|\| 'Conversación vinculada a la candidatura'}» + estado; «Chat de demostración entre participantes. Sin envío externo ni indicadores de lectura simulados.». Conectado: «Solo los participantes de esta candidatura tienen acceso. Se muestran los últimos 100 mensajes.» | — | − | P3 | SCOPE | No portar |
+| 3 | Buscar | «Buscar en esta conversación», placeholder «Texto o participante…»; sin resultados «No hay mensajes con esta búsqueda.» | — | − | P3 | SCOPE | No portar |
+| 4 | Lista | `role="log"` «Mensajes de la candidatura» `aria-live="polite"`; cabecera con identidad (anónima para la empresa) u organización; `<time>` corto es-ES. Conectado: «{Técnico\|Empresa\|Recruiter} · {fecha local}» + texto con saltos | — | − | P3 | SCOPE | No portar |
+| 5 | Vacío | «Todavía no hay mensajes. Puedes iniciar la conversación.» | — | − | P3 | SCOPE | No portar |
+| 6 | Mensajes rápidos | «¿Puedes confirmar las fechas?» · «¿Podrías aclarar las condiciones de la oferta?» · «Gracias por la información.» | — | − | P3 | SCOPE | No portar |
+| 7 | Formulario | Demo: «Mensaje» (textarea, 4 filas, `maxLength=2000`, required), contador «{n}/2000 caracteres», «Enviar mensaje de demo» / «Guardando…» → «Mensaje guardado». Errores: «El mensaje no se ha guardado. Tu texto se conserva.», «No se pudo guardar el mensaje. Inténtalo de nuevo.», «Conversación no autorizada.», «Escribe entre 1 y 2000 caracteres.». Conectado: «Mensaje a la otra parte» (`maxLength=4000`, required) + «Enviar mensaje»; 60 mensajes cada 15 min → «Demasiados intentos. Espera 15 minutos.»; «Mensaje: dato no válido.» | — | − | P2 | SCOPE | No portar |
+| 8 | No leídos | Conectado: `unread` por participante; al abrir, `application.read`, que recarga y tapa el contenido (hallazgo C-§3 #2); «· {n} sin leer» en el Inicio del técnico | — | − | P3 | SCOPE | No portar |
+| 9 | Remitente guardado | Demo: «Técnico» o nombre de la organización. Conectado: `senderRole` | — | − | P3 | SCOPE | No portar |
+
+Capturas: v1.8 `evidencias/shots/demo/D-TEC-05c-conversacion-1440.png`, `evidencias/shots/demo/D-TEC-05d-conversacion-mensaje-1440.png`,
+`evidencias/shots/demo/D-TEC-05g-conversacion-con-mensajes-1440.png`, `evidencias/shots/connected/C-EMP-31-conversation-1440.png`,
+`evidencias/shots/connected/C-REC-08-conversation-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/HIRE-06-1-v18-1440.jpg`.
+Capturas v2: v1.8 conectado `evidencias/v2/30/HIRE-01-1-v18c-1440.jpg`, `evidencias/v2/30/ORG-08-7-v18c-1440.jpg` («Conversación ({n})» con mensajes). Sigue SCOPE OUT.
+
+---
+
+## HIRE-07 · Avisos internos (notificaciones de contratación) — v1.8 `S-CON-11, C-TEC-08, C-TEC-29, C-EMP-07, C-EMP-23, C-REC-14` (y la campana de la demo, `S-COM-04`) ↔ Next — (ausente)
+
+**Estado global:** AUSENTE EN NEXT (v2: portable, «avisos in-app» es LATER en SCOPE-2). El contrato D-06 dice «An
+in-app notification centre is a separate, later decision» (`APPLICATIONS_STATE_MACHINE.md:76-77`). Email, SMS y push
+siguen OUT.
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Pantalla | Conectado: h2 «Avisos internos» + «Configura Urgente/AOG, movilización y silencio desde tu perfil. No se envían correos ni notificaciones push en esta beta.», que también ve la empresa, aunque no tiene perfil (runtime C-EMP-07) v2, conectado en ejecución: técnico 1 ve 3 «{modo}: {título}» y «Actualización de candidatura · … · shortlisted/proposed/confirmed» con «Ver oportunidades»; la empresa, «… · accepted/withdrawn» y «· Nuevo» (`evidencias/v2/30/HIRE-07-1-v18c-1440.jpg`, `evidencias/v2/30/HIRE-07-1-emp-v18c-1440.jpg`) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar «Avisos internos» con texto por rol (backlog v2-18) |
+| 2 | Aviso por transición | Título «Actualización de candidatura», descripción «{oferta} · {estado}» con el **código en inglés** («… · shortlisted») (`app.mjs:135`) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar con la etiqueta traducida (backlog v2-18) |
+| 3 | Aviso de distribución | «{modo}: {título}» (ORG-06) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (outreach) | Ver ORG-06 (backlog v2-17) |
+| 4 | No leído | «{título} · Nuevo» | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar «· Nuevo» (backlog v2-18) |
+| 5 | Acción | «Ver oportunidades» en **todos** los avisos, también en los de candidatura, que llevan a Candidaturas → `notification.read` sin esperar + navegación | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar con el texto según el destino (backlog v2-18) |
+| 6 | Vacío | «No tienes avisos.» | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar (backlog v2-18) |
+| 7 | Avisos que no existen | No se avisa a la empresa al recibir una candidatura ni un mensaje: solo el contador `unread` (hallazgo B #7) | — | ✗ | — | — | Al portar, avisar de la candidatura nueva |
+| 8 | Demo | `commit` con destinatarios → `notifications` con `readBy`; campana «Ver notificaciones» → pantalla «ACTIVIDAD · Notificaciones.» («Actividad dentro de esta demo. Los mensajes externos siguen simulados.» + «Marcar todas como leídas»). No se llega por URL: `#notifications` no está en la lista de pestañas del `hashchange` y abre Inicio (`src/LegacyApp.jsx:45,87`; `evidencias/xhigh/30/HIRE-07-8-v18-1440-bell.jpg`). Fuera de este alcance: diff del shell | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar la campana y «Marcar todas como leídas» (backlog v2-18) |
+
+Capturas: v1.8 `evidencias/shots/connected/C-TEC-08-notifications-empty-1440.png`, `evidencias/shots/connected/C-TEC-29-notifications-1440.png`,
+`evidencias/shots/connected/C-EMP-23-notifications-1440.png`, `evidencias/shots/connected/C-REC-14-notifications-1440.png`,
+`evidencias/shots/demo/D-EMP-08-notificaciones-1440.png`. Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/HIRE-07-8-v18-1440-bell.jpg`, `evidencias/xhigh/30/HIRE-07-8-v18-1440.jpg` (`#notifications` abre Inicio).
+Capturas v2: v1.8 conectado `evidencias/v2/30/HIRE-07-1-v18c-1440.jpg`, `evidencias/v2/30/HIRE-07-1-emp-v18c-1440.jpg`. Next: no aplica.
+
+---
+
+## HIRE-08 · Comisiones, ledger, borradores de factura y planes — v1.8 `S-CON-08, C-EMP-06, C-EMP-21, C-REC-13, S-SUB-MKT-04, S-EMP-07 (Modelo comercial), S-CON-13a (libro), S-COM-03 (planes)` ↔ Next — (ausente)
+
+**Estado global:** NO PORTAR. `V1_SCOPE.md:65` deja fuera pagos, facturación y comisiones (OUT), y OD-7 sigue abierta.
+- El contrato D-06 lo repite: «No money: no commission, fee or invoice (OD-7, OUT). The prototype's fee fields are not
+  ported.» (`APPLICATIONS_STATE_MACHINE.md:75`).
+- Y el modelo recruiter: «No commercial terms (fees, commissions) are modelled» (`RECRUITER_MODEL.md:36`).
+
+| # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
+|---|---|---|---|---|---|---|---|
+| 1 | Porcentajes | Demo `PLATFORM_RATES`: Planificado 2.3 · Urgente 4 · AOG 10 (`business.js:21-25`). Conectado: 0,023 · 0,04 · 0,10 según los días hasta el inicio (`rules.mjs:7`) | — | − | P3 | SCOPE (OUT), OD-7 | No portar |
+| 2 | Base de cálculo | Demo: `tarifa × horas × días × personas`; `fee = round(base × %)/100`; dietas aparte; `total` a céntimos. Conectado: `Σ horas × tarifa` en céntimos; `commission = round(base × rate)`; dietas, logística y extras excluidas (`rules.mjs:26`) | — | − | P3 | SCOPE, OD-7 | No portar |
+| 3 | Congelado al publicar | Demo: `pricingSnapshot`. Conectado: `fee = {days, mode, rate, publishedAt, policy:'publication-v1', basis:'Horas base acordadas × tarifa. Excluye dietas, logística y extras.'}` | — (CX-56 SCOPE LATER · OD-7) | − | P3 | SCOPE, OD-7 | No portar |
+| 4 | «Duplicar» hereda la comisión | La copia AOG reprogramada a +45 días se publica al 10 % (hallazgo D1 #1) | — | ✗ | — | — | No portar |
+| 5 | Ciclo de la comisión | Conectado: `recognized` al confirmar → «Reconocida, pendiente de finalización»; `draft` al finalizar → «Trabajo finalizado; borrador preparado»; `void` al cancelar → «Anulada por cancelación» (`app.mjs:130-133`) | — | − | P3 | SCOPE, OD-7 | No portar |
+| 6 | Pantalla «Comisiones» | h2 «Comisiones a tu organización» + «La comisión se reconoce al confirmar y pasa a borrador al finalizar una asignación. CrewFlex factura su comisión; la remuneración del técnico se acuerda directamente entre las partes.»; filas «{título}» · «{€} · {%} · {estado}» (`Account.jsx:55`) | — | − | P3 | SCOPE | No portar |
+| 7 | Borradores de factura | «Comisión CrewFlex · {título}» · «{€} · {%} · Borrador» + «Borrador: pendiente de datos fiscales del emisor, IVA aplicable y numeración. No es factura emitida.»; vacío «No hay borradores.», que sale aunque haya comisiones (hallazgo C-§3 #13) | — | − | P3 | SCOPE | No portar |
+| 8 | KPIs de comisión | Inicio de la organización: «Comisión reconocida». Admin: «Comisión reconocida», «Libro de comisiones» y la nota «Reconocida al confirmar; borrador al finalizar; anulada si se cancela. No representa factura fiscal emitida ni pago cobrado.» | — | − | P3 | SCOPE | No portar (el admin, en su diff) |
+| 9 | Migración al arrancar | Crea comisiones para confirmadas o finalizadas antiguas (`commission.migrated`, `app.mjs:200`) | — | ✗ | — | — | No aplica |
+| 10 | «Modelo comercial» | Panel de la demo: «Profesional» «Gratis» · «Estándar» «2,3 %» «Sobre personal base» · «Urgente» «4 %» · «AOG» «10 %» · «Plan avanzado» «Por definir» | — | − | P3 | SCOPE, OD-7 | No portar |
+| 11 | Planes | Demo admin `PLANS`: Esencial 50 €/mes (2 anuncios) · Equipo 200 €/mes (2) · Red 400 €/mes (30) (`adminModel.js:3`). Conectado: «Los planes y cobros todavía no están activados en las cuentas conectadas. No se atribuyen suscripciones ficticias.» | — | − | P3 | SCOPE, OD-7 | No portar |
+| 12 | Comisión mostrada y aceptada al publicar | ORG-03 #10-12 | — | − | P3 | SCOPE, OD-7 | No portar |
+
+Capturas: v1.8 `evidencias/shots/connected/C-EMP-06-commissions-empty-1440.png`, `evidencias/shots/connected/C-EMP-21-commissions-recognized-1440.png`,
+`evidencias/shots/connected/C-REC-13-commissions-1440.png`, `evidencias/shots/demo/D-EMP-07-organizacion-1440.png` (modelo comercial),
+`evidencias/shots/connected/C-ADMIN-05-dashboard-data-1440.png` (libro). Next: no aplica.
+Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/ORG-07-1-v18-1440.jpg` («Modelo comercial»), `evidencias/xhigh/30/ORG-02-1-v18-1440.jpg` (`FeeSummary`).
+Capturas v2: v1.8 conectado `evidencias/v2/30/HIRE-08-6-v18c-1440.jpg` («Comisiones a tu organización»), `evidencias/v2/30/ORG-01-1-v18c-1440.jpg` («29,88 € Comisión reconocida»). Sigue SCOPE OUT.
+
+---
+## Hallazgos del lado Next (encontrados al verificar)
+
+Los hallazgos 1-3 son de `51c835a` (las líneas citadas son de entonces); 1-4 y 7-9 están resueltos en SNAP2 (`038329f`).
+Los 11-16 son nuevos de la v2.
+
+1. **RESUELTO (`80f14a4` W1-07, `ad03283` W5-02). La lista de necesidades esconde las nuevas a partir de 50.**
+   - `work-requirements` ordena por `starts_at` **ascendente**, con `limit` 50 por defecto y sin paginar
+     (`supabase/functions/work-requirements/index.ts:36-37`; `src/lib/validation/work-requirement.ts:77`).
+   - `/app/organization/requirements` y el panel de Operaciones piden esa página tal cual
+     (`requirements/page.tsx:23`; `organization/page.tsx:48`).
+   - Con historial, el panel «Necesidades» (5 primeras) enseña cerradas o vencidas antiguas, y las necesidades que
+     empiezan más tarde dejan de verse. Ver ORG-01 #21 y ORG-04 #8.
+   - Hoy: la lista pide `created_desc` de 20 en 20 con `total`, y el panel pone primero las vigentes. La función
+     nueva solo está en local: el owner debe desplegarla antes que el frontend.
+2. **RESUELTO (`4b2ecb1` W5-01). Next admite necesidades que empiezan en el pasado.**
+   - Ni zod (`src/lib/validation/work-requirement.ts:44-71`), ni la RPC, ni la BD lo comprueban.
+   - La v1.8 lo rechaza en los dos modos (ORG-02 #22).
+   - Hoy: zod rechaza un inicio de hace más de 15 minutos (`work-requirement.ts:25,53-55`) en el formulario y en la
+     acción; la Edge Function lo aplicará cuando se despliegue. La RPC y la BD siguen sin comprobarlo.
+3. **RESUELTO (`d82450e` W2-04). «Cobertura» significa dos cosas.**
+   - En Next es la capacidad interna: elegibles / necesarios (es:907).
+   - En la v1.8 (y en el contrato D-06) es la cobertura **confirmada** por asignaciones.
+   - Cuando llegue D-06 los dos KPIs chocarán (ORG-01 #16).
+   - Hoy el KPI se llama «Cobertura interna» (es:907).
+4. **RESUELTO (M08, `db05af1`). `src/domain/applications.ts` no tenía ningún consumidor** (0 imports en `src/` y `supabase/`). Coincide con lo
+   declarado (BR-13) y con el plan de la release 2 (grupo F, `docs/qa/ROLLOUT_PLAN_RELEASE2.md:18`).
+   - Hoy lo importan la UI (`ApplicationActions`, `ProfessionalActivity`, páginas), las funciones y la tabla espejo
+     `app_private.application_transitions` (10 consumidores en `src/`); el doc de la release 2 no se ha actualizado (hallazgo 15).
+5. **Sigue (v2). El Candidate Pack desbloquea la identidad en menos estados que la v1.8** (`PACK_UNLOCK_STATUSES`, `src/domain/candidate-pack.ts:18`, apagado).
+   - Next: `accepted` y `confirmed`. v1.8: también Finalizada.
+   - Es una diferencia de producto que conviene resolver al ratificar P1 (HIRE-05 #11).
+6. **Sigue (v2). «Solo elegibles» arranca desactivado; en la v1.8, activo** (MKT-01 #18; backlog v2-25). La M06 lo da por paritario
+   (VERIFIED_PARITY_LOCAL) sin anotar el valor por defecto. Sigue igual el 22/10 (`src/features/matching/list.ts:27`).
+7. **RESUELTO (X-04 `7eb8059`; v2 en ejecución: `?page=99` → «4 necesidades · página 1 de 1»). Una página fuera de rango en la lista de necesidades da «Error
+   del servidor»** (P3, ORG-04 #31).
+   - `?page=` solo se acota a 501 (`src/features/requirements/pagination.ts:3-9`); con 30 necesidades, `?page=99`
+     pide `offset` 1960.
+   - Lo que decía el refresco de la mañana (la página pinta la tabla vacía y el paginador dice «30 necesidades ·
+     página 2 de 2») **no es lo que pasa**: PostgREST responde 416 `PGRST103` («An offset of 20 was requested, but
+     there are only 2 rows.») cuando el `offset` supera el total con `count: exact`
+     (`supabase/functions/work-requirements/index.ts:34-48`), `fromDatabaseError` no conoce el código y lo convierte en
+     500 `INTERNAL_ERROR` (`supabase/functions/_shared/errors.ts:58-87`), y la página enseña `ApiErrorState` «Error del
+     servidor» con referencia (`src/app/app/organization/requirements/page.tsx:55-56`).
+   - Verificado en ejecución con `manager.mro` (2 necesidades): `?page=2` y `?page=99` → «Error del servidor»;
+     `?page=abc` y `?page=0` → página 1. Y directamente contra la API local (solo lectura): PostgREST 416 y
+     `work-requirements` 500 (`evidencias/xhigh/30/ORG-04-31-next-1440-page2.jpg`, `…-page99.jpg`).
+   - Las ramas de `RequirementsPager` que acotan `page` (`RequirementsPager.tsx:24,28-29`) nunca llegan a ejecutarse
+     con una página fuera de rango. La lista de matching sí acota (`src/features/matching/list.ts:67-68`).
+8. **RESUELTO (X-06 `46f40e8`). «Necesidades abiertas» mostraba «50+» aunque la API ya da el total exacto** (P3, ORG-01 #8).
+   - `openRequirementsValue` devuelve «50+» cuando la petición filtrada vuelve llena
+     (`src/features/requirements/dashboard.ts:25-27`; `organization/page.tsx:86-91`).
+   - Desde W5-02, `work-requirements` responde `total` con `count: exact` también para esa petición
+     (`supabase/functions/work-requirements/index.ts:36,52`); bastaría con usarlo.
+   - xhigh: confirmado en el código y contra la API local (la petición filtrada devuelve
+     `{"requirements":[],"total":0}`). El «50+» no se ha podido ver en ejecución: hacen falta 50 necesidades abiertas y
+     crear necesidades está prohibido en esta revisión.
+9. **RESUELTO (X-05 `f740447`; v2 en ejecución: «48,78%»). Los porcentajes con decimales salían con punto en español** (P3, MKT-02 #20).
+   - «Cubre el 48.78% del periodo» y «Disponible solo el 48.78% del periodo de la necesidad» en las tarjetas de
+     matching, y «✗ 48.78%» en la comparación: el número llega sin formatear a un argumento simple de ICU
+     (`src/features/matching/components/MatchCard.tsx:25-32`; es:934, es:942; `MatchList.tsx:250-251`).
+   - «Cobertura interna» comparte el patrón (`CapacityOverview.tsx:60`, 2 decimales en `capacity.ts:55`).
+   - Visto en ejecución a 1440, 768 y 390 px (`evidencias/xhigh/30/MKT-02-7-next-1440.txt:287,315`).
+10. **Observación (xhigh). La necesidad del brief `9f50725f-954b-4e9c-b686-2e950933b6e1` no existe en la BD local**
+    (404 también para `manager.mro`; la API responde `NOT_FOUND`). La BD tiene 4 necesidades de la semilla, creadas el
+    20/10 a las 14:25; la única de Demo MRO con elegibles, `9e280aa3-…`, está «Vencida» desde el 22/10 06:00 UTC. Las
+    pruebas de matching y del 404 entre organizaciones se han hecho con ella. No es un defecto de Next.
+
+11. **Nuevo (v2). Cerrar una necesidad con compromisos activos enseña un texto de cualificaciones** (P2, ORG-05 #5).
+    - La BD rechaza bien el cierre (`CFA11`, `supabase/migrations/20261022130300_applications.sql:302-307`) y la función
+      responde 409 `ACTIVE_COMMITMENTS`.
+    - `changeRequirementStatusAction` descarta `reason` (`src/features/requirements/actions.ts:116-122`) y
+      `RequirementStatusActions` usa `actionErrorCopy` (`src/features/requirements/components/RequirementStatusActions.tsx:39-43`),
+      que traduce todo `CONFLICT` como `api.action.conflict` = «Ya has declarado esta cualificación. Edita la existente.»
+      (`src/components/ui/Notice.tsx:114-115`; es:226).
+    - Reproducción: A con una confirmada → «Cerrar necesidad» → «Sí, cerrarla» (`evidencias/v2/30/ORG-05-5-next-1440-close-refused.jpg`).
+      El texto bueno ya existe: «Resuelve antes las asignaciones activas (aceptadas o confirmadas).» (es:1373). Backlog v2-01.
+12. **Nuevo (v2). Q6 ratificada choca con SCOPE-2** (ORG-02 #25, ORG-03 #20, MKT-05 #3).
+    - SCOPE-2 desbloquea la «cobertura parcial» (LATER) y DEFAULTS pide el comportamiento v1.8; D-06 Q6, ratificada el
+      mismo día, dice «one application = the requirement's one period».
+    - Las jornadas sueltas de la necesidad se pueden portar sin tocar Q6 (v2-09); elegir parte de ellas en la candidatura,
+      no. Lo decide el owner (v2-30).
+13. **Nuevo (v2). T-13 contradice DEFAULTS** (HIRE-04 #6): el default técnico deja editar un día con asignación
+    confirmada; la v1.8 lo bloquea («No puedes modificar una fecha con asignación confirmada.»). Backlog v2-06.
+14. **Nuevo (v2), observación. Un miembro puede presentarse a una necesidad de su propia organización** (MKT-03 #16).
+    `alpha` ve B como oportunidad y la API acepta su candidatura (201); la organización lo ve con su nombre, como
+    miembro interno. Ya cuenta en «Elegibles internos». Backlog v2-27.
+15. **Nuevo (v2). La documentación va por detrás del código** (P3).
+    - `docs/qa/ROLLOUT_PLAN_RELEASE2.md:18`: «F · Hiring circuit (M07–M09) — pure transition table only … used by nothing».
+    - `memory-bank/01-current-state.md:80`: «Candidate Pack, applications, assignments, opportunities … NOT STARTED».
+    - `docs/product/V1_SCOPE.md` (NOW) no lista pausar/editar (M05) ni oportunidades y candidaturas (M07/M08).
+    - `applications.proposal.newVersion` (es:1338) no lo usa ningún componente. Backlog v2-02.
+16. **Nuevo (v2). Una página fuera de rango en «Oportunidades» enseña el vacío** (P3, MKT-03 #15).
+    - `?page=` solo se acota a 500 (`src/app/app/professional/opportunities/page.tsx:57-58`); con 4 oportunidades,
+      `?page=99` pinta «Sin ofertas para este filtro» en vez de redirigir a la última página como hace la lista de
+      necesidades desde X-04 (`evidencias/v2/30/MKT-03-15-next-1440-page99.jpg`). Backlog v2-26.
+
+---
+
+## Backlog derivado
+
+**v2 (22/10/2026, SCOPE-2 «copiarlo todo»).** Plan de implementación del área 30. Alcance: NOW + NEXT + LATER de
+`docs/product/V1_SCOPE.md`; las decisiones abiertas se implementan con el comportamiento v1.8 como default técnico
+documentado y reversible (un `T-xx` nuevo en `08-product-decisions.md` por cada una, como pide DEFAULTS). Siguen fuera:
+SCOPE OUT, D-07 P3 + D-10, OD-3 en producción y lo `✗`. Todo en local; migraciones y Edge Functions las despliega el
+owner (`AGENTS.md`, «STOP»). Los ids `v2-NN` son etiquetas estables (las citan las filas); la lista va por severidad.
+Formato: título · filas · ficheros · aceptación · tamaño · BD/Edge · default v1.8.
+
+### HECHO (comprobado en SNAP2 `038329f`)
+
+- H-1 Panel de Operaciones con vigentes primero (ORG-01 #21) — `80f14a4` (W1-07).
+- H-2 KPI «Necesidades abiertas» y descripción (ORG-01 #5, #8) — `07eb07a` (W2-03).
+- H-3 Rechazar inicio pasado (ORG-02 #22, ORG-03 #17) — `4b2ecb1` (W5-01); `work-requirements` sin desplegar.
+- H-4 Paginar y ordenar la lista (ORG-04 #8) — `ad03283` (W5-02); sin desplegar.
+- H-5 «Cobertura interna» (ORG-01 #16) — `d82450e` (W2-04).
+- H-7 Página fuera de rango → última página (ORG-04 #31) — `7eb8059` (X-04); v2 en ejecución.
+- H-8 «Necesidades abiertas» con el total exacto (ORG-01 #8) — `46f40e8` (X-06).
+- H-9 Porcentajes con el formato del idioma (MKT-02 #20) — `f740447` (X-05); v2 en ejecución «48,78%».
+- H-10 M05 pausar y reanudar (ORG-05 #3) — `9868253`; v2 en ejecución.
+- H-11 M05 editar sin candidaturas (ORG-05 #9, ORG-02 #40) — `56aa1a7`, `164f2cb`, UI `038329f`; v2 en ejecución.
+- H-12 M07 Oportunidades (MKT-03, MKT-04 #9) — `56aa1a7`, `164f2cb`, `00dd8ea`, `db05af1`, `c49440f`; v2 en ejecución.
+- H-13 M08 Candidaturas y circuito (MKT-05, HIRE-01…04) — mismos commits + `5c22e29`, `dfb1041`; v2 en ejecución.
+- H-14 M09 reglas del Pack, preparadas y apagadas (HIRE-05) — `a1e1223`.
+
+(La tarea 6 del xhigh, descripción libre, deja de estar BLOQUEADA por Q-02: pasa a v2-12.)
+
+### PENDIENTE — P1
+
+1. **v2-11 · Entradas del matching de la v1.8** (ORG-02 #11-14, #16, #19; MKT-02 #11; HIRE-01 #7; HIRE-04 #3; HIRE-05 #4).
+   - Ficheros: migración nueva (catálogo: las 12 categorías, 12 aeronaves, motores y 9 capacidades de la v1.8;
+     `work_requirements.min_years`; grupos «cualquiera de» para aeronaves y motores; restricciones por habilitación en
+     `technician_qualifications`), `src/domain/matching.ts` + tests, `get_requirement_candidate_pool` y
+     `own_candidate_profile` (paridad SQL↔TS, agente `domain-matching-engineer`), `src/lib/validation/work-requirement.ts`,
+     `RequirementForm.tsx`, `MatchCard.tsx`, `docs/product/BUSINESS_RULES.md` BR-2…BR-5, `messages/{es,en}.json`.
+   - Aceptación: una necesidad «A320 Family o B737 NG» acepta a quien tenga una de las dos; «Experiencia mínima 5» deja
+     fuera a quien declara 4 con «No alcanza la experiencia mínima.»; una habilitación con restricción no es elegible; el
+     pool SQL y el motor TS dan el mismo veredicto en la suite de paridad; los 3 tests de cada regla en verde.
+   - Tamaño L · BD sí · Edge sí (`matching-evaluate`, `capacity-evaluate`, `opportunities`, `applications`) · default v1.8
+     `src/business.js:140-150`, `server/rules.mjs:27` (C-10/D-02/D-03).
+2. **v2-09 · Jornadas de la necesidad, zona IANA y horas base** (ORG-02 #10, #24, #27; ORG-04 #21; MKT-02 #7; MKT-03 #8, #12, #14).
+   - Ficheros: migración `work_requirement_shifts` (inicio, fin, horas base; máx. 366; sin solapes; una por fecha local),
+     `timezone` en `work_requirements`, RPC de crear/editar, `src/domain/{work-requirement,availability,matching}.ts`,
+     `RequirementForm.tsx` (editor «Jornadas y cobertura parcial» sin la parte parcial), `RequirementFacts.tsx`,
+     `OpportunityCard.tsx`, copia de la propuesta (`proposal_json`), «Cobertura por jornada» en el detalle.
+   - Aceptación: crear 10, 11 y 12 nov 08-16 UTC (Europe/Madrid) muestra 3 jornadas y «24 horas base en 3 jornadas»; un
+     solape da «Las jornadas no pueden solaparse.»; la elegibilidad exige disponibilidad en cada jornada (no en los
+     huecos); la candidatura sigue cubriendo todas (Q6); «Cobertura por jornada» dice «{fecha} · x/n plazas confirmadas».
+   - Tamaño L · BD sí · Edge sí · default v1.8 conectado `ShiftEditor` (`src/beta/Account.jsx:68`), C-9/D-08.
+3. **v2-12 · Condiciones de la necesidad, sin dinero real** (ORG-02 #28, #29, #32-37; ORG-03 #3, #21; ORG-04 #22;
+   MKT-04 #2-4; HIRE-03 #1, #2, #5, #7).
+   - Ficheros: migración (tarifa €/h, hora extra, dietas, contrato, presupuesto obligatorio, incorporación, movilización,
+     vuelos/alojamiento/transporte/comidas/herramientas, `description` ≤ 4000; congeladas con el trigger de cerrada y por
+     `CFA12`), validación, `RequirementForm.tsx`, `RequirementFacts.tsx` (rejilla y logística de `JobDetails`),
+     `proposal_json` (T-11 ampliado), `ApplicationDetails.tsx` (`Terms`), `OpportunityCard.tsx` («€/día · €/h»).
+   - Aceptación: los valores por defecto de la v1.8 (50 €/h, 60 €/h extra, 30 €/día, Contractor, logística ✔✔✔☐☐,
+     movilización 48 h y 12 h en AOG) se guardan, se ven en el detalle y en la oportunidad y se copian en la propuesta;
+     una propuesta aceptada no cambia si la necesidad cambia; ningún texto ni campo de comisión (OUT); la descripción
+     vacía no pinta nada y 4001 caracteres dan error de campo.
+   - Tamaño L · BD sí · Edge sí · default v1.8 demo `Company2.jsx:114-125`, `Marketplace.jsx:11-44` (SCOPE LATER; OD-7
+     sin cobro; Q-02).
+4. **v2-10 · País del trabajo** (ORG-02 #9; ORG-03 #18; MKT-04 #1; ORG-07 #5).
+   - Ficheros: migración `work_requirements.country` (27 UE), validación, `RequirementForm.tsx`, `RequirementFacts.tsx`,
+     `OpportunityCard.tsx`; select de países también en el alta de la organización.
+   - Aceptación: por defecto ES; un país fuera de la UE da «Selecciona un país de la Unión Europea.»; la tarjeta y el
+     detalle dicen «{base} · {país}».
+   - Tamaño M · BD sí · Edge sí · default v1.8 `server/rules.mjs:1` (OD-6/D-04).
+5. **v2-22 · Directorio libre «Buscar candidatos»** (MKT-01 #1, #6, #7; ORG-01 #7, #9).
+   - Ficheros: RPC DEFINER nueva con la proyección del pool (seudónimo por organización, no por necesidad; sin privados
+     ni bloqueos), Edge Function (`matching-evaluate` con modo sin necesidad o una nueva), `src/app/app/organization/candidates/page.tsx`,
+     `AppShell.tsx`, `MatchList`/`MatchCard` reutilizados, «Red visible» en el Resumen; revisión `security-reviewer` (S-7).
+   - Aceptación: un manager ve los perfiles visibles paginados de 20 en 20 sin elegir necesidad («{n} perfiles · página p
+     de P»); con «Evaluar para la oferta» ve la elegibilidad; un `private` nunca sale; el recuento no permite enumerar
+     identidades; tests RLS del nuevo RPC.
+   - Tamaño L · BD sí · Edge sí · default v1.8 `CandidateDirectory.jsx`, `ConnectedDirectory.jsx` (D-07 directorio, R-D3).
+6. **v2-16 · Bloqueo de empleador** (MKT-01 #27; MKT-03 #4).
+   - Ficheros: migración (organizaciones bloqueadas por el profesional), pasaporte (área 20), pool SQL,
+     `list_opportunities`, `apply_to_requirement` (`CFA` nuevo «Esta organización está bloqueada.»), confirmación.
+   - Aceptación: si `delta` bloquea Demo MRO, no aparece en su pool ni en sus candidaturas nuevas, y las necesidades de
+     Demo MRO desaparecen de sus «Oportunidades»; tests RLS y de la función.
+   - Tamaño M · BD sí · Edge sí · default v1.8 `profile.blocked` (`server/app.mjs:50-58,107`).
+7. **v2-19 · Organización: pantalla, datos fiscales, revisión y actividad** (ORG-07 #1-5, #7, #8, #12; MKT-01 #28; HIRE-04 #4).
+   - Ficheros: migración (razón social, identificación y domicilio fiscal, `review_status` que vuelve a pendiente al
+     guardar), `src/app/app/organization/settings/page.tsx`, revisión desde administración (área 10), comprobación al
+     confirmar, «Actividad de esta organización» (15 eventos de `audit_events`, sin datos personales).
+   - Aceptación: guardar cambia a «Pendiente»; solo un administrador de plataforma registra «Revisión registrada»;
+     confirmar con la organización pendiente da «La organización requiere revisión administrativa.» (activable por flag
+     local para no romper el seed); la empresa no puede verificarse a sí misma.
+   - Tamaño L · BD sí · Edge sí · default v1.8 conectado `Account.jsx:64`, `server/app.mjs:83,120-129` (OD-5/C-14, AUDIT-VIEW).
+8. **v2-15 · Vista «Candidate Pack» sin identidad, contacto ni documentos, con copia fechada** (HIRE-05 #1, #4, #5, #7, #14).
+   - Ficheros: `candidate_pack_items` congelados al presentar (diseño M09: cualificaciones, años, base, periodo),
+     RPC de lectura para la organización, panel «Ver expediente» en `[id]/applications/page.tsx`, aviso de protección.
+   - Aceptación: la organización ve «Copia del perfil: {fecha}. Los cambios del wallet no alteran esta versión.» y los datos
+     del momento de la candidatura aunque el profesional edite su pasaporte; nunca nombre real, contacto ni archivos
+     (`PACK_ACTIVATION` sigue en `false`); tests RLS.
+   - Tamaño M · BD sí · Edge sí · default v1.8 `Workflow.jsx:17-33` sin los campos de D-07 P3.
+
+### PENDIENTE — P2
+
+9. **v2-01 · Mensaje correcto al cerrar con compromisos** (ORG-05 #5; hallazgo 11). Defecto.
+   - Ficheros: `src/features/requirements/actions.ts:109-126` (devolver `reason`), `RequirementStatusActions.tsx:36-43`
+     (usar `applicationErrorCopy`), `src/components/ui/Notice.tsx:114-115` y es:226 (`api.action.conflict` genérico; la
+     cualificación duplicada con su propia clave), test de `error-copy`.
+   - Aceptación: cerrar A con una confirmada dice «Resuelve antes las asignaciones activas (aceptadas o confirmadas).»;
+     ningún `CONFLICT` fuera de cualificaciones dice «Ya has declarado esta cualificación…»; ui-smoke del cierre en verde.
+   - Tamaño S · BD no · Edge no · —.
+10. **v2-05 · Pantalla global «Candidaturas» de la organización** (HIRE-01 #1, #3, #4; ORG-04 #25).
+    - Ficheros: `src/app/app/organization/applications/page.tsx`, `AppShell.tsx` (`organizationNav`), RPC
+      `get_organization_applications` (o `get_requirement_applications` por organización), `supabase/functions/applications/index.ts`
+      (GET `?organizationId=`), botón «Gestionar candidaturas» en cada fila de la lista, `messages/{es,en}.json`.
+    - Aceptación: «Todas ({n})» + las 9 pestañas; «Oferta seleccionada: {título}» + «Ver todas» + «Volver a ofertas» con
+      `?requirementId=`; las acciones de cada tarjeta iguales a las de la página por necesidad; un `member` ve el aviso.
+    - Tamaño M · BD sí · Edge sí · default v1.8 demo `Workflow.jsx:53-74`.
+11. **v2-06 · Proteger los días asignados en el calendario** (HIRE-04 #6; hallazgo 13). Necesita que el owner sustituya T-13.
+    - Ficheros: `professional-availability` (rechazo si el cambio deja sin cubrir una confirmada), trigger o RPC de
+      disponibilidad, `AvailabilityManager.tsx`, `messages/*`.
+    - Aceptación: editar un día «Asignada» da «No puedes modificar una fecha con asignación confirmada.»; tras cancelar o
+      finalizar se puede; test de carrera con una confirmación simultánea.
+    - Tamaño M · BD sí · Edge sí · default v1.8 `connected.mjs:22`, `server/app.mjs:67`.
+12. **v2-07 · Puntos del calendario y «Oportunidades · {fecha}» en Mi espacio** (MKT-03 #13).
+    - Ficheros: `src/app/app/professional/page.tsx`, `ProfessionalActivity.tsx`, componente del mes, `listOpportunities`.
+    - Aceptación: un día con una oportunidad compatible lleva punto rojo y su nota «El punto rojo indica ofertas
+      compatibles…»; al pulsarlo, el panel pasa a «Oportunidades · {fecha}»; 5 elementos por panel como la v1.8.
+    - Tamaño M · BD no · Edge no · default v1.8 `ConnectedHome.jsx:15`, `TechnicianHome.jsx:15`.
+13. **v2-08 · % de cobertura confirmada por necesidad** (ORG-01 #23; ORG-04 #20; HIRE-04 #8).
+    - Ficheros: `work-requirements` (plazas confirmadas + finalizadas por necesidad), `RequirementsList.tsx`,
+      `organization/page.tsx`, `[id]/page.tsx`, `messages/*`.
+    - Aceptación: B con 1 de 2 confirmadas dice «50% cubierto» en el Resumen y «50% cobertura confirmada» + barra en la
+      lista y el detalle; A cubierta, «Cubierta · 100% cobertura confirmada».
+    - Tamaño M · BD opcional (vista) · Edge sí · default v1.8 `business.js:121-132`, `Company2.jsx:162-164`.
+14. **v2-13 · «Revisar antes de publicar», vista previa y recuento en vivo** (ORG-03 #1, #4, #5).
+    - Ficheros: `RequirementForm.tsx` (lateral), RPC de recuento de candidatos viables para un borrador, `JobDetails` de Next.
+    - Aceptación: el lateral dice «{n} candidatos con requisitos y bloques viables» con plural ICU y cambia al editar;
+      «Previsualizar requisitos» abre la ficha; sin bandas de urgencia por fecha (`✗` C-8).
+    - Tamaño M · BD sí · Edge sí · default v1.8 `Company2.jsx:112-125`.
+15. **v2-14 · Borradores, autoguardado, archivar y duplicar** (ORG-03 #6, #7; ORG-04 #11; ORG-05 #1, #2, #8, #10-12).
+    - Ficheros: migración (estado `archived`; `draft` creable con solo el título), transiciones en dominio y trigger,
+      `RequirementForm.tsx` («Guardar borrador», autoguardado local), `RequirementStatusActions.tsx` («Archivar»,
+      «Duplicar», «Completar y publicar»), nota «Con candidaturas activas, duplica para cambiar la oferta…».
+    - Aceptación: un borrador no sale en «Oportunidades» ni en el matching; «Duplicar» crea «Copia · {título}» a +45 días
+      sin condiciones congeladas; «Archivar» no se deshace; tests de transiciones (dominio = SQL).
+    - Tamaño L · BD sí · Edge sí · default v1.8 `AppState.jsx:148-193`, `Company2.jsx:164-168` (R-D4, archivar/duplicar).
+16. **v2-18 · Avisos internos en la app** (HIRE-07 #1-6, #8; ORG-06 #11).
+    - Ficheros: migración `notifications` (RLS por destinatario), escritura en `transition_application` y `apply_to_requirement`
+      para la otra parte, Edge Function de lectura y «marcar leído», campana en `AppShell.tsx`, página `/app/notifications`.
+    - Aceptación: cada transición crea «Actualización de candidatura · {oferta} · {estado traducido}» para la otra parte,
+      también la candidatura nueva para la organización; «· Nuevo» hasta leerlo; «Marcar todas como leídas»; nada por
+      email ni push.
+    - Tamaño L · BD sí · Edge sí · default v1.8 conectado `server/app.mjs:135`, `Account.jsx:54`.
+17. **v2-17 · Distribución Urgente/AOG** (ORG-06 #1, #5, #8-11; ORG-02 #29). Depende de v2-18 y del pasaporte (área 20).
+    - Ficheros: RPC `requirement_outreach` (audiencia: visibles, sin restricciones ni bloqueo, opt-in Urgente/AOG, fuera
+      de horas de silencio, movilización, elegibles y con plaza, sin aviso previo), botón en el detalle, `messages/*`.
+    - Aceptación: en una necesidad AOG abierta, «Distribuir aviso Urgente / AOG» crea un aviso «AOG: {título}» por
+      destinatario y dice «{count, plural, one {# aviso interno creado} other {# avisos internos creados}}…»; ningún
+      `private` recibe nada (corrige ORG-06 #4); en una Planificada el botón no sale.
+    - Tamaño L · BD sí · Edge sí · default v1.8 `server/app.mjs:89-105` con la urgencia declarada (C-8).
+18. **v2-23 · Extras del directorio y de la tarjeta** (MKT-01 #11-16, #23; MKT-02 #2, #3, #6, #9, #13, #19).
+    - Ficheros: `MatchList.tsx` («Más filtros»), `MatchCard.tsx` (avatar de iniciales, `MedalStrip`, tarifa, países),
+      modal «Perfil profesional», vista Compacta/Ampliada guardada; datos del pasaporte (área 20).
+    - Aceptación: los 7 filtros de la v1.8 con sus errores; «Compacta/Ampliada» con `aria-pressed` y recordada; el modal
+      sin contacto ni archivos.
+    - Tamaño L · BD sí (inglés, tarifa, países en el pasaporte) · Edge sí · default v1.8 `CandidateDirectory.jsx:20`, `Badges.jsx`.
+19. **v2-24 · Espacio recruiter con clientes** (ORG-08; ORG-01 #29; ORG-02 #20; ORG-04 #16; MKT-04 #7; HIRE-01 #11; HIRE-05 #13).
+    - Ficheros: migración `represented_clients` (pendiente, activa, revocada) y `work_requirements.on_behalf_of_client_id`,
+      `src/app/app/recruiter/page.tsx` (sustituye el marcador), constructor con cliente obligatorio, textos «ESPACIO
+      RECRUITER», «RED RECRUITER», «NECESIDAD PARA CLIENTE», «Publicada por {org} para el cliente {cliente}».
+    - Aceptación: un recruiter no publica sin cliente activo («Selecciona un cliente.»); la oportunidad y el
+      consentimiento nombran agencia y cliente; la nota del recruiter no la ve la empresa (corrige ORG-03 #13).
+    - Tamaño L · BD sí · Edge sí · default `docs/product/RECRUITER_MODEL.md` (D-12 provisional) + v1.8 `Company2.jsx:211`.
+
+### PENDIENTE — P3
+
+20. **v2-20 · «Ofertas en la red.» para cuentas de organización** (MKT-03 #2). `list_opportunities` sin elegibilidad para
+    organizaciones, página `/app/organization/network`. Aceptación: lista de necesidades abiertas de la red sin comisión
+    de terceros (`✗`). Tamaño M · BD sí · Edge sí · default v1.8 `Marketplace.jsx:43` sin la comisión.
+21. **v2-21 · Paneles del Resumen** (ORG-01 #25-27). «Cómo cerrar una cobertura», accesos rápidos y la nota «Las
+    propuestas, la aceptación del técnico y la confirmación…», sin «Ver comisiones». Ficheros `organization/page.tsx`,
+    `messages/*`. Aceptación: los textos de la v1.8 en es y en, enlaces que existen. Tamaño S · BD no · Edge no · `Dashboard.jsx:44-59`.
+22. **v2-25 · «Solo elegibles» activo por defecto** (MKT-01 #18; hallazgo 6). `src/features/matching/list.ts:27` y su test.
+    Aceptación: `/matches` sin parámetros enseña solo elegibles; «Limpiar» lo deja activo. Tamaño S · BD no · Edge no ·
+    `CandidateDirectory.jsx` («activo por defecto»).
+23. **v2-26 · Ajustes pequeños de paridad** (MKT-03 #6, #7, #10, #15; MKT-04 #9; HIRE-01 #13; HIRE-04 #11; ORG-04 #12).
+    `?page=` fuera de rango en «Oportunidades» → última página (hallazgo 16); buscar también en las cualificaciones (`list_opportunities`, BD); unificar «Planificado»/«Planificada»; botones
+    «Ver detalle» y «Preparar candidatura» en la tarjeta; separar obligatorias y deseables en «Tu elegibilidad»; texto
+    propio del miembro en candidaturas; pista de la cancelación («Se liberarán plazas…»); valorar «Publicada» por
+    «Abierta». Aceptación: cada texto como la v1.8 en es y en. Tamaño S (la búsqueda, BD sí) · Edge sí solo por la búsqueda.
+24. **v2-27 · Miembros que se presentan a su propia organización** (MKT-03 #16; hallazgo 14). Decisión del owner; si no se
+    admite, `apply_to_requirement` lo rechaza con un `CFA` nuevo y la oportunidad dice por qué. Tamaño S · BD sí · Edge sí.
+25. **v2-02 · Docs al día** (hallazgo 15): `docs/qa/ROLLOUT_PLAN_RELEASE2.md:18`, `memory-bank/01-current-state.md:80`,
+    `docs/product/V1_SCOPE.md` (NOW), clave sin uso es:1338. Aceptación: `pnpm check` (lint de docs) en verde y los tres
+    docs dicen lo que hace SNAP2. Tamaño S · BD no · Edge no.
+26. **v2-04 · Experiencia del logbook en la candidatura y el Pack** (MKT-05 #8; HIRE-05 #9). Depende del logbook del
+    área 40. Aceptación: el profesional elige entradas «cvRelevant» al presentarse y la organización las ve en la copia
+    del expediente. Tamaño M · BD sí · Edge sí · default v1.8 `Marketplace.jsx` («Experiencia que compartes»).
+
+### BLOQUEADO
+
+- **v2-03 · Despliegue** de las migraciones `20261022130000`…`130300` y de `work-requirements`, `opportunities` y
+  `applications` (y de W5-01, W5-02, X-04): escritura remota, solo con autorización del owner (`AGENTS.md`, «STOP»).
+- **v2-28 · Contacto e identidad real del Pack** (MKT-05 #7; HIRE-05 #10, #11; ORG-08 #7): D-07 P3 + D-10.
+- **v2-29 · Documentos en la candidatura y descarga por la empresa** (MKT-05 #4; HIRE-05 #6, #8; HIRE-04 #5; HIRE-01 #7):
+  D-07 P3 + D-10 (escáner aprobado).
+- **v2-30 · Cobertura parcial por días en la candidatura** (ORG-02 #25; ORG-03 #20; MKT-05 #3): conflicto D-06 Q6
+  (ratificada) ↔ SCOPE-2 (hallazgo 12); lo decide el owner.
+- **v2-31 · SCOPE OUT**: comisiones, facturas y planes (HIRE-08; ORG-01 #12; ORG-03 #8, #10-12; ORG-04 #22 %; ORG-07 #11;
+  MKT-04 #5; HIRE-03 #7 comisión; HIRE-04 #10), chat (HIRE-06), PDF y exportación del Pack (HIRE-05 #15).
+
+Los `✗` siguen siendo instrucciones para cuando se porte cada pieza: no copiar la simulación, la autoverificación, el
+`T-<uuid>`, la urgencia deducida, el pack guardado en la fila, la fuga de privados de la distribución ni el campo de
+motivo compartido.

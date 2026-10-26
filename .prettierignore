@@ -7,3 +7,5 @@ next-env.d.ts
 supabase/functions/deno.lock
 tmp/
 .claude/worktrees/
+# Imported v1.8 inventory (F3): kept verbatim so a row edit stays a one-line diff and recount.py parses it
+docs/integration/crewflex-v13/18-v18-inventory/
