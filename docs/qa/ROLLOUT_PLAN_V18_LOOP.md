@@ -21,10 +21,15 @@
   `package.json`, `pnpm-lock.yaml`, `supabase/functions/deno.json`, `deno.lock` (`fdf085b`, `dc1b421`); no migration, no
   function source; `51c835a` is an ancestor (fast-forward). Independent review of the dependency commits: APPROVE.
 - Step H1 (owner): `git push origin 352182c:main` (fast-forward of `51c835a`; `15eb913` alone if the owner wants the
-  hotfix without the dependency patches). Step H2: open https://crew-flex.vercel.app/ and read the «Iniciar sesión»
-  button. Rollback: Vercel «Promote» of the current production deployment (GitHub deployment `7203981813` = `51c835a`,
-  2026-10-20 15:32:56 UTC); then, to realign `main`, `git revert -m 1 352182c` and `git revert 15eb913`, pushed with
-  their own approval.
+  hotfix without the dependency patches). Preconditions: `origin/main` still `51c835a` (`git ls-remote`), the gate of
+  `352182c` above. Step H2 (checks): GitHub commit status `Vercel: success` for `352182c`; https://crew-flex.vercel.app/
+  shows a readable «Iniciar sesión»; `/login` renders; no new CSP report in DevTools.
+- Rollback of H1, from the real parents of `352182c` (first `15eb913` = X-01, second `dc1b421` = dependencies),
+  rehearsed 2026-10-26 in a throw-away worktree: `git revert -m 1 352182c` → tree identical to `15eb913` (dependencies
+  out, X-01 kept); then `git revert 15eb913` → tree identical to `51c835a`. Each push needs its own approval. Immediate
+  alternative without a push: Vercel «Promote» of GitHub deployment `7203981813` (= `51c835a`, 2026-10-20 15:32:56 UTC);
+  Vercel then stops auto-promoting new `main` builds until a deployment is promoted again — check it after. Re-applying
+  the dependencies later needs a revert of the revert (git will not merge `dc1b421` twice).
 - If release 2 is pushed first, cherry-pick `ef4d9b7` (same fix on the branch) instead.
 
 ## 0b. Production Auth settings — independent of any release, before any real sign-up
@@ -63,6 +68,33 @@ account whose address is a team member's → the link opens `https://crew-flex.v
 `/reset-password`; (3) a sign-up with a team-member address → the link confirms and lands on `crew-flex.vercel.app`;
 (4) a 10-character password is refused. (2)–(4) create mail or users in production: one approval each, cleanup by
 `scripts/e2e/cleanup-synthetic.sh` rules.
+
+Compatibility with the deployed frontend, rehearsed locally 2026-10-26: the `352182c` build (`next start -p 3001`)
+against local GoTrue with minimum 12 and an allow-list admitting `localhost:3001/**` (`supabase/config.toml`): a
+10-character password → «Choose a stronger password.» (`weak_password` mapped); 16 characters → «Check your inbox»; the
+confirmation link carries `redirect_to` = `site_url` and `/verify` answers 303 to `site_url?code=…`, the account is
+confirmed and the landing answers 200 with `?code`; recovery carries `redirect_to` =
+`http://localhost:3001/auth/confirm?next=/reset-password` and ends on `/reset-password` with the form. Production
+equivalent: links on `https://crew-flex.vercel.app`. Not covered by the rehearsal: the exact `/auth/confirm**` glob
+(local uses `/**`; both match the query) and `password_hibp_enabled` (no local equivalent). Domains other than
+`crew-flex.vercel.app` (Vercel deployment URLs) are not in the list on purpose: their links fall back to `site_url`.
+
+## 0c. Management token — replace the current one with a Crew_Flex-only read token
+
+Today (2026-10-26): a scoped token `sbp_fc…` reaching Crew_Flex and one other project of the owner, no organization;
+write permissions unknown (not probed). Kept in an owner-local file outside the repository, never in Git, docs or the
+memory bank. Procedure (owner, dashboard «Account → Access Tokens»):
+
+1. Preconditions: the current token still answers (`GET /v1/projects/sbjkzrkmcekokkqiuvvh` → 200); no remote step in
+   progress.
+2. Generate a **scoped** token: project Crew_Flex only; permissions **Read** — Project Settings, Advisors, Migrations,
+   Edge Functions, Auth Config, Data API Config (Database Read only if typed reads are wanted); expiry 30 days or less.
+3. The owner writes it into the same owner-local file (editor, not chat). Checks (read-only): `GET /v1/projects` lists
+   only Crew_Flex; `database/migrations`, `functions`, `config/auth`, `postgrest`, `advisors/security` answer 200.
+4. Confirm no other tool or session still uses the old token, then revoke it in the dashboard. Rollback before step 4: keep using the old one; after it: generate
+   another read token (step 2).
+5. Writes (§0b, functions deploy, secrets) use a separate token created for that window — the matching **Read-write**
+   permissions only, expiry 1–7 days — revoked when the step is done.
 
 ## 1. What the branch adds (state at `8fa806a`, 2026-10-23; rows 37–38 added 2026-10-26)
 

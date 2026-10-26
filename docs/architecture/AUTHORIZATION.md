@@ -237,6 +237,30 @@ before the call. `total` counts the visible rows of the search. At most 60 searc
 (CFD01, T-157); a page is at most 20 rows. The salt, the throttle table and the helpers (`directory_visible`,
 `directory_ref`, `directory_throttle`) have no grant for any API role. Proof: `tests/db/directory.test.ts`.
 
+## SECURITY DEFINER functions executable by `authenticated` (Security Advisor, read 2026-10-26)
+
+Production's advisor (`authenticated_security_definer_function_executable`) lists 11 functions. The three trigger-only
+ones (`handle_new_user`, `audit_requirement_created`, `audit_qualification_verified`) lose EXECUTE in LOCAL
+`20261026100000` (F1b). The other eight **keep it on purpose** (F1c, read from the local schema at 58 migrations; none is
+executable by `anon`; `service_role` keeps the platform default and is never used by the app, S-8):
+
+| Function                                                     | Why `authenticated` needs it                                                                                                                 | Check in the body                                                                                                                           | What a direct RPC call can learn                                                                         |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `has_org_role(org, roles)`                                   | Inside 9 RLS policies (evaluated as the caller); the 23 DEFINER functions that call it run as owner and do not depend on the grant           | `profile_id = auth.uid()`                                                                                                                   | Whether **the caller** holds a role in an organization                                                   |
+| `is_org_member(org)`                                         | Inside 5 RLS policies; `list_represented_clients`                                                                                            | Wraps `has_org_role` with every role                                                                                                        | Whether the caller is a member                                                                           |
+| `is_platform_admin()`                                        | Inside 16 RLS policies (11 DEFINER callers run as owner); Edge Functions `invitations`, `documents-maintenance` (role read from the DB, S-3) | `id = auth.uid()` and `platform_role`                                                                                                       | Whether the caller is a platform admin                                                                   |
+| `can_view_member(profile)`                                   | Inside 5 RLS policies (an organization's admins/managers see their members' profile)                                                         | Caller is `admin`/`manager` of an organization where the profile is a member                                                                | For an admin/manager: whether a known profile id is in their own organization (they list members anyway) |
+| `get_requirement_candidate_pool(requirement)`                | Edge Functions via `_shared/requirements.ts`; `get_requirement_candidate_passports`                                                          | Requirement's organization: caller `admin`/`manager`, else `42501 not authorized` — the same answer for an unknown id (no existence oracle) | The pool of the caller's own requirement (S-7 minimisation)                                              |
+| `get_requirement_external_pool_summary(requirement)`         | Edge Functions via `_shared/requirements.ts`                                                                                                 | Same guard, same single `42501`                                                                                                             | Three counts for the caller's own requirement                                                            |
+| `own_qualification_reviews()`                                | Edge Functions `professional-qualifications`, `account` (export)                                                                             | `technician_profile_id = auth.uid()`                                                                                                        | The caller's own review notes                                                                            |
+| `review_qualification(id, decision, expected_updated_at, …)` | Edge Function `qualification-reviews` (OD-3)                                                                                                 | Flag `qualification_review` (`0A000`) → `is_platform_admin()` (`42501`) → no self-review → state/version checks; audited                    | Whether the OD-3 flag is on (the flag is checked first — accepted LOW, the flag is not secret)           |
+
+Revoking any of them breaks RLS or the Edge Functions that call them with the caller's JWT. Proof:
+`tests/db/rls.test.ts` «F1c» (grants pinned; the helpers answer only about the caller; the pool and the summary give the
+same `42501` for an unknown requirement and another organization's), suites B, C and N. Production runs the release-1
+bodies (foundation, `20261015130300`, `20261015130400`); the only one the branch re-creates is
+`get_requirement_candidate_pool`, with the same guard.
+
 ## Edge Function checklist
 
 Every protected handler, in order:

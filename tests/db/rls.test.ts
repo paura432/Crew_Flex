@@ -796,6 +796,78 @@ describe("trigger-only SECURITY DEFINER functions (F1b, migration 20261026100000
   });
 });
 
+describe("F1c: the other eight advisor DEFINER functions stay callable and answer only for the caller", () => {
+  // Kept on purpose (AUTHORIZATION.md «SECURITY DEFINER functions executable by authenticated»): four RLS
+  // helpers evaluated inside policies as the caller, four RPCs the Edge Functions call with the caller's JWT.
+  const KEPT = [
+    "public.can_view_member(uuid)",
+    "public.get_requirement_candidate_pool(uuid)",
+    "public.get_requirement_external_pool_summary(uuid)",
+    "public.has_org_role(uuid, public.organization_role[])",
+    "public.is_org_member(uuid)",
+    "public.is_platform_admin()",
+    "public.own_qualification_reviews()",
+    "public.review_qualification(uuid, public.verification_status, timestamptz, text, uuid)",
+  ];
+  const ask = (userId: string, sql: string, params: unknown[] = []) =>
+    asUser(db, userId, async (tx) => (await tx.query<{ v: boolean }>(sql, params)).rows[0]?.v);
+
+  it("grants pinned: authenticated may execute, anon may not", async () => {
+    for (const fn of KEPT) {
+      const { rows } = await db.query<{ anon: boolean; auth: boolean }>(
+        `select has_function_privilege('anon', $1, 'execute') as anon,
+                has_function_privilege('authenticated', $1, 'execute') as auth`,
+        [fn],
+      );
+      expect(rows[0], fn).toEqual({ anon: false, auth: true });
+    }
+    await asUser(db, null, async (tx) => {
+      expect(await queryError(tx, "select public.is_platform_admin()")).toMatch(
+        /permission denied for function/,
+      );
+    });
+  });
+
+  it("has_org_role / is_org_member describe the caller's own membership, never someone else's", async () => {
+    const admin = "select public.has_org_role($1, array['admin']::public.organization_role[]) as v";
+    expect(await ask(SEED.adminMro, admin, [mroId])).toBe(true);
+    expect(await ask(SEED.adminOther, admin, [mroId])).toBe(false);
+    expect(await ask(SEED.alpha, admin, [mroId])).toBe(false);
+    const member = "select public.is_org_member($1) as v";
+    expect(await ask(SEED.alpha, member, [mroId])).toBe(true);
+    expect(await ask(SEED.adminOther, member, [mroId])).toBe(false);
+  });
+
+  it("is_platform_admin is true for the platform admin only", async () => {
+    const sql = "select public.is_platform_admin() as v";
+    expect(await ask(SEED.platformAdmin, sql)).toBe(true);
+    expect(await ask(SEED.adminMro, sql)).toBe(false);
+  });
+
+  it("can_view_member: an admin or manager of the member's own organization, nobody else", async () => {
+    const sql = "select public.can_view_member($1) as v";
+    expect(await ask(SEED.adminMro, sql, [SEED.alpha])).toBe(true);
+    expect(await ask(SEED.managerMro, sql, [SEED.alpha])).toBe(true);
+    expect(await ask(SEED.bravo, sql, [SEED.alpha])).toBe(false); // plain colleague
+    expect(await ask(SEED.adminOther, sql, [SEED.alpha])).toBe(false); // other organization
+  });
+
+  it("pool and summary: an unknown requirement and another organization's give the same 42501 (no existence oracle)", async () => {
+    await asUser(db, SEED.adminOther, async (tx) => {
+      for (const fn of [
+        "get_requirement_candidate_pool",
+        "get_requirement_external_pool_summary",
+      ]) {
+        for (const id of [madRequirementId, randomUUID()]) {
+          expect(await queryError(tx, `select * from public.${fn}($1)`, [id]), fn).toMatch(
+            /^not authorized$/,
+          );
+        }
+      }
+    });
+  });
+});
+
 describe("I. integrity backstops in the database (phase 0.8)", () => {
   async function auditActions(tx: Transaction, entityId: string) {
     await tx.exec("reset role");
