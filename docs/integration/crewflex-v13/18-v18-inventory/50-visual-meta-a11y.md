@@ -854,18 +854,18 @@ Capturas: `evidencias/shots/demo/D-TEC-01-inicio-1440.png`, `evidencias/shots/de
 
 ## SHOT-02 · Disponibilidad — v1.8 `S-TEC-03` (`D-TEC-03`) ↔ Next `N-PRO-04`
 
-**Estado global:** PARCIAL. La estructura es la misma (formulario de ciclo, previsualizar, mes pintable) y el visual está muy cerca. Next añade métricas y no tiene el estado azul «Trabajo».
+**Estado global:** IGUAL salvo matices (F3: antes PARCIAL). La estructura es la misma (formulario de ciclo, previsualizar, mes pintable) y el visual está muy cerca. Next añade las métricas, no tiene el estado azul «Trabajo» (es «Bloqueado») y, desde T-141, lleva el mismo dock fijo bajo `lg`.
 
 | # | Elemento | v1.8 (`D-TEC-03-disponibilidad-1440.png`, `-390.png`) | Next (`next-after/tech-availability-1440.jpg`, `-390.jpg`, lote 11, EN) | Diff | Sev. | Bloqueo | Acción |
 |---|---|---|---|---|---|---|---|
-| 1 | Cabecera | «TU CALENDARIO» / «Tu tiempo, a tu manera.» / descripción | lote 11: «MY TIME» / «Chosen availability». Código actual (`c188801`, W2-09): «Mi tiempo» / **«Tu tiempo, a tu manera.»** (igual que v1.8) / descripción con UTC (es:628-630) | ≈ | P3 | — | ver el diff de disponibilidad |
+| 1 | Cabecera | «TU CALENDARIO» / «Tu tiempo, a tu manera.» / descripción | F3 (P03): «Tu calendario» (mayúsculas por CSS) / **«Tu tiempo, a tu manera.»** / descripción propia con UTC (TEC-04 #5) (`docs/audit/evidence/parity/P03/P03-availability-after-1440.jpg`; lote 11 decía «MY TIME» / «Chosen availability») | ≈ | — (F3: antes P3) | — | Hecho (P03-01): kicker y h1 iguales a la demo; smoke `PKG P03 1b` |
 | 2 | Métricas | no hay | 4 métricas (disponibles, bloqueados, solo AOG, ventanas; 2×2 a 390) | + | — | — | — |
-| 3 | CTA de previsualizar | botón naranja a **todo el ancho** «Previsualizar patrón en octubre de 2026» | botón naranja ajustado al contenido «Previsualizar ciclo en el mes» (código actual y captura xhigh; lote 11: «Preview the cycle in this month») | ≈ | P3 | — | mantener |
-| 4 | Selector de estado | chips «Disponible» (seleccionado con contorno navy), «Descanso», «Solo AOG» y «Trabajo» de colores | «Available», «Blocked», «AOG only» y «Rest (clear)»; el seleccionado con anillo | ≈ | P3 | — | — |
-| 5 | Celdas | 7 columnas de unos 143×70 a 1440 con número + etiqueta; a 390 las etiquetas **se pisan** | `min-h-20` con número + etiqueta a `sm+`; por debajo de `sm`, solo el número | + | — | — | — |
-| 6 | 390 | el dock queda superpuesto a media página en la captura full-page (es fijo) | sin elementos fijos | ≠ | — | — (v2: default v1.8, C-12) | — |
+| 3 | CTA de previsualizar | botón naranja a **todo el ancho** «Previsualizar patrón en octubre de 2026» | botón naranja ajustado al contenido «Previsualizar ciclo en el mes» (re-verificado F3: `P03-availability-after-1440.jpg`) | ≈ | P3 | — | mantener |
+| 4 | Selector de estado | chips «Disponible» (seleccionado con contorno navy), «Descanso», «Solo AOG» y «Trabajo» de colores | «Disponible», «Bloqueado», «Solo AOG» y «Descanso (limpiar)» (es, `PKG P03 1b`); el seleccionado con anillo | ≈ | P3 | — | — |
+| 5 | Celdas | 7 columnas de unos 143×70 a 1440 con número + etiqueta; a 390 las etiquetas **se pisan** | `min-h-20` con número + etiqueta a `sm+`; por debajo de `sm`, solo el número y el punto de «Asignada» (`P03-availability-after-390.jpg`) | + | — | — | — |
+| 6 | 390 | el dock queda superpuesto a media página en la captura full-page (es fijo) | F3: el mismo dock fijo de v1.8 bajo `lg` («Accesos rápidos»: Inicio · Ofertas · Calendario · Candidaturas · Herramientas, con «Calendario» actual; T-141, `src/components/layout/MobileDock.tsx`), que en la captura full-page también queda a media página (`P03-availability-after-390.jpg`); `position: fixed` pegado al borde inferior a 390 y 360, sin scroll horizontal (`PKG P03 7`) | = (F3: antes ≠) | — | — (v2: default v1.8, C-12) | Hecho (T-141, SH-05; verificado aquí en P03-20) |
 
-Capturas: `evidencias/shots/demo/D-TEC-03-disponibilidad-1440.png`, `D-TEC-03-disponibilidad-390.png`; Next `v18-compare/next-after/tech-availability-1440.jpg`, `tech-availability-390.jpg` (lote 11). xhigh: `evidencias/xhigh/50/SHOT-02-next-1440.jpg`, `SHOT-02-next-390.jpg`, `SHOT-02-v18-390.jpg`. v2: `evidencias/v2/50/VIS-02-11-next-1440.jpg`, `VIS-02-11-next-390.jpg`.
+Capturas: `evidencias/shots/demo/D-TEC-03-disponibilidad-1440.png`, `D-TEC-03-disponibilidad-390.png`; Next `v18-compare/next-after/tech-availability-1440.jpg`, `tech-availability-390.jpg` (lote 11). xhigh: `evidencias/xhigh/50/SHOT-02-next-1440.jpg`, `SHOT-02-next-390.jpg`, `SHOT-02-v18-390.jpg`. v2: `evidencias/v2/50/VIS-02-11-next-1440.jpg`, `VIS-02-11-next-390.jpg`. F3: `docs/audit/evidence/parity/P03/P03-availability-after-{1440,1024,768,390,360}.jpg`, `-1440-en.jpg`, `P03-availability-preview-after-1440.jpg`.
 
 ---
 
