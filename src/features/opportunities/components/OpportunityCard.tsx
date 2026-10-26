@@ -8,7 +8,7 @@ import {
   UrgencyChip,
 } from "@/features/requirements/components/RequirementBadges";
 import { APPLICATION_TONE } from "@/features/applications/view";
-import { dayRate, periodDays, totalBaseHours } from "@/domain/work-requirement";
+import { dayRate, requirementDays, totalBaseHours } from "@/domain/work-requirement";
 import type { Locale } from "@/i18n/config";
 import { formatCountry, formatEuro, formatNumber, formatPeriod } from "@/i18n/format";
 import type { Opportunity, OpportunityRequirement } from "@/types/api";
@@ -70,11 +70,10 @@ async function JobCard({
             : t("rate", { daily: formatEuro(locale, daily), hourly: formatEuro(locale, rate) })}
         </p>
       )}
-      {/* v1.8 «{n} días · {n} personas» + «{día} – {día} · Bloque completo» (P04, T-164): the UTC days of the
-          period (BR-10); the coverage is always the whole block while D-08 · Q6 holds. */}
+      {/* v1.8 «{n} días · {n} personas» + «{día} – {día} · Bloque completo» (P04, T-164): the published shifts,
+          or the UTC days of the period (BR-10); the coverage is always the whole block while D-06 Q6 holds. */}
       <p className="mt-1 text-sm tabular-nums">
-        {formatPeriod(locale, r.startsAt, r.endsAt)} ·{" "}
-        {t("days", { count: periodDays(r.startsAt, r.endsAt) })} ·{" "}
+        {formatPeriod(locale, r.startsAt, r.endsAt)} · {t("days", { count: requirementDays(r) })} ·{" "}
         {t("people", { count: r.headcount })} · {t("fullBlock")}
       </p>
       {r.shifts?.length ? (

@@ -10,6 +10,7 @@ import {
   localDate,
   periodDays,
   requiredShiftDays,
+  requirementDays,
   REQUIREMENT_STATUSES,
   shiftEnvelope,
   shiftIssues,
@@ -139,6 +140,12 @@ describe("v1.8 summary figures", () => {
     expect(requiredShiftDays({ ...NOV_PERIOD, headcount: 2, shifts: null })).toBe(6);
     expect(periodDays("2026-11-10T08:00:00.000Z", "2026-11-11T00:00:00.000Z")).toBe(1);
     expect(periodDays("2026-11-10T22:00:00.000Z", "2026-11-11T06:00:00.000Z")).toBe(2);
+    // «{n} días» on the card and «{n} jornadas» at home: the shifts when published, else the period (T-164).
+    expect(requirementDays(NOV_PERIOD)).toBe(3);
+    expect(requirementDays({ ...NOV_PERIOD, shifts: null })).toBe(3);
+    expect(
+      requirementDays({ ...NOV_PERIOD, endsAt: "2026-11-20T16:00:00.000Z", shifts: NOV }),
+    ).toBe(3);
   });
 
   it("day rate and the base amount are informative and need their inputs", () => {

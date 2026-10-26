@@ -1,8 +1,6 @@
 // Presentation decisions for applications (M08), kept out of JSX. Pure; server- and client-safe.
 import type { Tone } from "@/components/ui/StatusChip";
 import type { ApplicationStatus, ApplicationTransition } from "@/domain/applications";
-import { periodDays } from "@/domain/work-requirement";
-import type { OpportunityRequirement } from "@/types/api";
 
 export const APPLICATION_TONE: Record<ApplicationStatus, Tone> = {
   received: "info",
@@ -41,11 +39,3 @@ export function transitionLabelKey(t: Pick<ApplicationTransition, "from" | "to">
   if (t.to === "received") throw new Error("no transition into received");
   return t.to;
 }
-
-/**
- * v1.8 «{empresa} · {n} jornadas» on a home application row: the need's published shifts, or the UTC days
- * of its continuous period (D-06 Q6: one application = the whole period).
- */
-export const applicationDays = (
-  r: Pick<OpportunityRequirement, "startsAt" | "endsAt" | "shifts">,
-) => r.shifts?.length || periodDays(r.startsAt, r.endsAt);

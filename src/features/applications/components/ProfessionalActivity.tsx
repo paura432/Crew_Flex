@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { TERMINAL_APPLICATION_STATUSES } from "@/domain/applications";
+import { requirementDays } from "@/domain/work-requirement";
 import { assignmentDays, type CalendarWindow } from "@/features/availability/calendar";
 import { listOpportunities } from "@/features/opportunities/api";
 import { HomeOpportunities } from "@/features/opportunities/components/HomeOpportunities";
@@ -11,7 +12,7 @@ import { HomeSection } from "@/features/professional/components/HomeSection";
 import type { Locale } from "@/i18n/config";
 import { formatMonth, formatPeriod } from "@/i18n/format";
 import { listMyApplications } from "../api";
-import { APPLICATION_TONE, applicationDays } from "../view";
+import { APPLICATION_TONE } from "../view";
 
 /** Opportunities read for the calendar dots and the feed (the function's page maximum). */
 const DOTS = 50;
@@ -140,7 +141,7 @@ export async function ProfessionalActivity({
                   <span className="block font-semibold break-words">{a.requirement.title}</span>
                   <span className="block text-muted tabular-nums">
                     {a.requirement.organizationName} ·{" "}
-                    {t("days", { count: applicationDays(a.requirement) })}
+                    {t("days", { count: requirementDays(a.requirement) })}
                   </span>
                 </span>
                 <span className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">

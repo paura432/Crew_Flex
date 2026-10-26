@@ -317,14 +317,19 @@ export function periodDays(startsAt: string, endsAt: string): number {
 }
 
 /**
- * v1.8 «{n} jornadas requeridas» (days × people): with shifts, shifts × headcount; a continuous period counts its
- * UTC days.
+ * v1.8 «{n} días» / «{n} jornadas» (`job.days.length`): the published shifts, or the UTC days of the continuous
+ * period (D-06 Q6: one application = the whole period).
  */
+export const requirementDays = (
+  r: Pick<WorkRequirement, "startsAt" | "endsAt"> & { shifts?: readonly unknown[] | null },
+) => r.shifts?.length || periodDays(r.startsAt, r.endsAt);
+
+/** v1.8 «{n} jornadas requeridas» (days × people): `requirementDays` × headcount. */
 export const requiredShiftDays = (
   r: Pick<WorkRequirement, "startsAt" | "endsAt" | "headcount"> & {
     shifts?: readonly RequirementShift[] | null;
   },
-) => (r.shifts?.length ? r.shifts.length : periodDays(r.startsAt, r.endsAt)) * r.headcount;
+) => requirementDays(r) * r.headcount;
 
 /** v1.8 «{tarifa × horas} / jornada de {h} h»: the day rate, when both are stated. */
 export const dayRate = (conditions: RequirementConditions | null | undefined) =>
