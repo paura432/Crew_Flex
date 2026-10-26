@@ -14,8 +14,12 @@
   (`src/app/page.tsx`, `src/components/ui/Button.tsx`, `src/features/preferences/components/LocaleSwitcher.tsx`), no
   backend change, compatible with the release-1 backend. Verified locally: typecheck, lint, 418 tests, `next build`,
   `next start` with computed colours at 1440/390 es/en.
-- Step H1 (owner): `git push origin 15eb913:main` (fast-forward of `51c835a`). Step H2: open https://crew-flex.vercel.app/
-  and read the «Iniciar sesión» button. Rollback: Vercel «Promote» of the previous deployment.
+- **Candidate with the dependency patches (2026-10-26):** local branch `hotfix/x01-deps` = `352182c` = `15eb913` +
+  `fix/next-16.4.3` (`dc1b421`, §6). Gate on `352182c`: `pnpm check` 0 (Vitest 418 passed / 32 skipped, Deno 74),
+  `pnpm build` 0 with no advisory nudge, `git diff --check` clean, `next start` landing 200 with «Sign in» → `/login`.
+- Step H1 (owner): `git push origin 352182c:main` (fast-forward of `51c835a`; `15eb913` alone if the owner wants the
+  hotfix without the dependency patches). Step H2: open https://crew-flex.vercel.app/ and read the «Iniciar sesión»
+  button. Rollback: Vercel «Promote» of the previous deployment.
 - If release 2 is pushed first, cherry-pick `ef4d9b7` (same fix on the branch) instead.
 
 ## 1. What the branch adds (state at `8fa806a`, 2026-10-23)
@@ -113,8 +117,10 @@ stops once with its security-advisory nudge; the retry passes — see §6) · lo
 
 ## 6. Open before any step (owner)
 
-- **Next.js 16.4.0** carries two published advisories (GHSA-2464-fhr4-w9xw critical, GHSA-p3m5-59mp-jv5r high); production runs
-  the same version. Upgrade decision pending (`next upgrade --agent=security` locally, verified with the full gate, then its own
-  patch). Not a reason to skip the hotfix of §0.
+- **Next.js 16.4.0** in production carries two published advisories (GHSA-2464-fhr4-w9xw critical, GHSA-p3m5-59mp-jv5r
+  high), and zod 4.6.5 a third (GHSA-mrhx-c7xc-m3w5 high). Patched locally 2026-10-26 on `fix/next-16.4.3` (`dc1b421`:
+  Next/eslint-config-next 16.4.3, zod 4.6.7 in the app and in `supabase/functions/deno.json`; `pnpm audit`: no known
+  vulnerabilities; independent review APPROVE), merged into this branch and into the §0 hotfix candidate. The Edge
+  Functions' zod reaches production only with step 2.
 - Sign-offs on defaults listed in `memory-bank/06-active-context.md` «Risks» 4 (T-111, T-128, T-86, T-113, free text in
   `description`/`arrival`), OD-3 activation, D-07 P3, Q6 vs SCOPE-2.
