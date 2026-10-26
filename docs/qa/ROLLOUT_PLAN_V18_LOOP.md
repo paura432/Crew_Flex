@@ -17,16 +17,58 @@
 - **Candidate with the dependency patches (2026-10-26):** local branch `hotfix/x01-deps` = `352182c` = `15eb913` +
   `fix/next-16.4.3` (`dc1b421`, §6). Gate on `352182c`: `pnpm check` 0 (Vitest 418 passed / 32 skipped, Deno 74),
   `pnpm build` 0 with no advisory nudge, `git diff --check` clean, `next start` landing 200 with «Sign in» → `/login`.
+- Scope check of `352182c` (2026-10-26): `git diff 51c835a 352182c` = 7 files — the 3 X-01 sources (`15eb913`) and
+  `package.json`, `pnpm-lock.yaml`, `supabase/functions/deno.json`, `deno.lock` (`fdf085b`, `dc1b421`); no migration, no
+  function source; `51c835a` is an ancestor (fast-forward). Independent review of the dependency commits: APPROVE.
 - Step H1 (owner): `git push origin 352182c:main` (fast-forward of `51c835a`; `15eb913` alone if the owner wants the
   hotfix without the dependency patches). Step H2: open https://crew-flex.vercel.app/ and read the «Iniciar sesión»
-  button. Rollback: Vercel «Promote» of the previous deployment.
+  button. Rollback: Vercel «Promote» of the current production deployment (GitHub deployment `7203981813` = `51c835a`,
+  2026-10-20 15:32:56 UTC); then, to realign `main`, `git revert -m 1 352182c` and `git revert 15eb913`, pushed with
+  their own approval.
 - If release 2 is pushed first, cherry-pick `ef4d9b7` (same fix on the branch) instead.
 
-## 1. What the branch adds (state at `8fa806a`, 2026-10-23)
+## 0b. Production Auth settings — independent of any release, before any real sign-up
+
+Read 2026-10-26 (Management API `GET config/auth`, non-secret fields): `site_url` = `http://localhost:3000`,
+`uri_allow_list` empty, `password_min_length` 6, `password_hibp_enabled` false; `mailer_autoconfirm` false; the
+confirmation and recovery templates use `{{ .ConfirmationURL }}`; built-in SMTP (no custom host, `rate_limit_email_sent`
+2). Effect today, read from the code: the production frontend (`51c835a`) signs up without `emailRedirectTo`, so the
+confirmation link falls back to `site_url` = localhost; recovery asks `${origin}/auth/confirm?next=/reset-password`
+(`src/features/auth/actions.ts:157`), which an empty allow-list rejects → also localhost. **Neither link works.**
+
+| Setting                 | Before (2026-10-26)     | Proposed                                                                              | Why                                                                                                                                                                                               |
+| ----------------------- | ----------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `site_url`              | `http://localhost:3000` | `https://crew-flex.vercel.app`                                                        | Fallback of every e-mail link; today's sign-up uses it                                                                                                                                            |
+| `uri_allow_list`        | (empty)                 | `https://crew-flex.vercel.app/auth/confirm**,https://crew-flex.vercel.app/register**` | Recovery and (branch) sign-up land on `/auth/confirm?next=…` (`actions.ts:135,174` on the branch); invitations on `/register?invite=` (`supabase/functions/invitations/index.ts:40`); same origin |
+| `password_min_length`   | 6                       | 12                                                                                    | Q-01; the branch asks 12 (`PASSWORD_MIN`). Today's frontend asks 10: a 10–11 character password gets «Elige una contraseña más segura.» until the branch ships                                    |
+| `password_hibp_enabled` | false                   | true                                                                                  | Advisor WARN `auth_leaked_password_protection`; a paid-plan feature — if the API refuses it, leave false and record                                                                               |
+
+Not in this step (owner decisions): custom SMTP — the built-in sender only reaches the organization's team addresses,
+2 e-mails per hour, so real users get no confirmation or recovery mail until it exists (OD-8); the branch's
+`supabase/templates/confirmation.html` (§3 step 3).
+
+Command (one owner approval; scoped token with **Auth Config read-write** on this project only):
+
+```bash
+set -a; . <owner token file>; set +a   # SUPABASE_ACCESS_TOKEN=sbp_fc… — outside the repo, never printed
+curl -sS -X PATCH https://api.supabase.com/v1/projects/sbjkzrkmcekokkqiuvvh/config/auth \
+  -H @<(printf 'Authorization: Bearer %s\n' "$SUPABASE_ACCESS_TOKEN") -H 'Content-Type: application/json' \
+  -d '{"site_url":"https://crew-flex.vercel.app","uri_allow_list":"https://crew-flex.vercel.app/auth/confirm**,https://crew-flex.vercel.app/register**","password_min_length":12,"password_hibp_enabled":true}'
+```
+
+Rollback: the same PATCH with the «Before» column —
+`{"site_url":"http://localhost:3000","uri_allow_list":"","password_min_length":6,"password_hibp_enabled":false}`.
+Checks after: (1) `GET config/auth` shows the four values (read-only); (2) «¿Olvidaste tu contraseña?» for an existing
+account whose address is a team member's → the link opens `https://crew-flex.vercel.app/auth/confirm?…` and ends on
+`/reset-password`; (3) a sign-up with a team-member address → the link confirms and lands on `crew-flex.vercel.app`;
+(4) a 10-character password is refused. (2)–(4) create mail or users in production: one approval each, cleanup by
+`scripts/e2e/cleanup-synthetic.sh` rules.
+
+## 1. What the branch adds (state at `8fa806a`, 2026-10-23; rows 37–38 added 2026-10-26)
 
 Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M08/M09 (`15-autonomous-migration-backlog.md`
 §6.3 has each package's commits, gates and technical defaults T-01…T-148; `08-product-decisions.md` the defaults;
-`BUSINESS_RULES.md` BR-1…BR-29). **36 migrations** not applied anywhere but the local Docker DB, in file order:
+`BUSINESS_RULES.md` BR-1…BR-29). **38 migrations** not applied anywhere but the local Docker DB, in file order:
 
 | #   | File (apply in this order — `db push` applies pending files in file order) | Package                                      |
 | --- | -------------------------------------------------------------------------- | -------------------------------------------- |
@@ -66,11 +108,13 @@ Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M0
 | 34  | `20261024500000_represented_clients`                                       | recruiter                                    |
 | 35  | `20261024500100_requirement_client`                                        | ?                                            |
 | 36  | `20261024600000_visible_network_count`                                     | shell-visual                                 |
+| 37  | `20261024700000_candidate_directory`                                       | directory (search-only)                      |
+| 38  | `20261026100000_revoke_trigger_function_execute`                           | F1b security (REVOKE only)                   |
 
 **Edge Functions** (22 directories): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
 **changed since release 1** — `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-profile`, `professional-qualifications`, `professional-availability`, `user-preferences` (every one of them parses the new schema/statuses and
 accepts new parameters; the deployed versions answer 500/400 on them); **release-2 functions still undeployed** —
-`professional-documents`, `documents-maintenance`, `qualification-reviews` (wallet + OD-3 review, both behind flags). The directory package (pending integration) will add
+`professional-documents`, `documents-maintenance`, `qualification-reviews` (wallet + OD-3 review, both behind flags). The directory package (merged `47b467e`) added
 `20261024700000` and `candidate-directory`.
 
 ## 2. Preconditions (owner decisions, before any step)
