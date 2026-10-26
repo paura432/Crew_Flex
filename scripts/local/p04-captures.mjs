@@ -94,45 +94,8 @@ const body = (t, startsAt, endsAt, extra = {}) => ({
 });
 const post = (b) =>
   asSeedUser(ADMIN, "work-requirements", { method: "POST", headers: key(), body: b });
-const need = await post(
-  body(title, `${day(n)}T06:00:00.000Z`, `${day(n + 1)}T18:00:00.000Z`, {
-    description: "Revisión programada de línea en hangar; se valora experiencia previa en A320.",
-    conditions: {
-      hourlyRate: 50,
-      shiftHours: 8,
-      perDiem: 30,
-      overtimeRate: 60,
-      contractType: "contractor",
-      arrival: "Antes del inicio del turno",
-      maxMobilizationHours: 48,
-      budgetMandatory: false,
-      flights: true,
-      accommodation: true,
-      localTransport: true,
-      meals: false,
-      ownTools: false,
-    },
-  }),
-);
-const rest = await post(
-  body(restTitle, `${day(restN)}T06:00:00.000Z`, `${day(restN + 1)}T18:00:00.000Z`),
-);
-const id = need.data?.requirement?.id;
-const restId = rest.data?.requirement?.id;
-const window = await asSeedUser(DELTA, "professional-availability", {
-  method: "POST",
-  headers: key(),
-  body: {
-    startsAt: `${day(n)}T00:00:00.000Z`,
-    endsAt: `${day(n + 2)}T00:00:00.000Z`,
-    status: "available",
-  },
-});
-ok(
-  "fixture: a published need with terms (delta's window covers it) and a rest-day need, ≥ 35 days ahead",
-  Boolean(id && restId && window.data?.window),
-  JSON.stringify([need.error, rest.error, window.error].filter(Boolean)),
-);
+// Filled inside the `try` so a failed fixture is still restored by the `finally`.
+let id, restId, window;
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME });
 const ctx = await browser.newContext({ locale: "es-ES", viewport: { width: 1440, height: 900 } });
@@ -164,6 +127,45 @@ const shot = (name, fullPage = true) =>
   page.screenshot({ path: `${EVID}/${name}.jpg`, type: "jpeg", quality: 70, fullPage });
 
 try {
+  const need = await post(
+    body(title, `${day(n)}T06:00:00.000Z`, `${day(n + 1)}T18:00:00.000Z`, {
+      description: "Revisión programada de línea en hangar; se valora experiencia previa en A320.",
+      conditions: {
+        hourlyRate: 50,
+        shiftHours: 8,
+        perDiem: 30,
+        overtimeRate: 60,
+        contractType: "contractor",
+        arrival: "Antes del inicio del turno",
+        maxMobilizationHours: 48,
+        budgetMandatory: false,
+        flights: true,
+        accommodation: true,
+        localTransport: true,
+        meals: false,
+        ownTools: false,
+      },
+    }),
+  );
+  const rest = await post(
+    body(restTitle, `${day(restN)}T06:00:00.000Z`, `${day(restN + 1)}T18:00:00.000Z`),
+  );
+  id = need.data?.requirement?.id;
+  restId = rest.data?.requirement?.id;
+  window = await asSeedUser(DELTA, "professional-availability", {
+    method: "POST",
+    headers: key(),
+    body: {
+      startsAt: `${day(n)}T00:00:00.000Z`,
+      endsAt: `${day(n + 2)}T00:00:00.000Z`,
+      status: "available",
+    },
+  });
+  ok(
+    "fixture: a published need with terms (delta's window covers it) and a rest-day need, ≥ 35 days ahead",
+    Boolean(id && restId && window.data?.window),
+    JSON.stringify([need.error, rest.error, window.error].filter(Boolean)),
+  );
   await page.goto(`${BASE}/login`);
   await page.fill("#email", DELTA);
   await page.fill("#password", PW);
@@ -236,7 +238,7 @@ try {
   await browser.close();
   // Restore: delta back to English, the window deleted, both needs closed and archived.
   await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } });
-  const deleted = window.data?.window
+  const deleted = window?.data?.window
     ? (
         await asSeedUser(DELTA, "professional-availability", {
           method: "DELETE",

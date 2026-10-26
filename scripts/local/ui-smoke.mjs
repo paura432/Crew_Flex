@@ -3072,7 +3072,14 @@ await logout();
         !/You meet the requirements|Prepare application|ommission/.test(p4NetCardText) &&
         p4NetworkOwn.includes("No requirements for this filter") &&
         p4OrgResponse?.status() === 404,
-      `${p4NetCardText.slice(0, 160)} · own: ${p4NetworkOwn.slice(0, 80)} · ${p4OrgResponse?.status()}`,
+      JSON.stringify({
+        header: p4Network.includes("Offers in the network."),
+        cards: await p4NetCard.count(),
+        detail: p4NetDetail,
+        card: p4NetCardText.slice(0, 400),
+        own: p4NetworkOwn.slice(0, 400),
+        status: p4OrgResponse?.status(),
+      }),
     );
   } finally {
     // Seed state back whatever happened: delta in English (later English-asserting blocks), the application
