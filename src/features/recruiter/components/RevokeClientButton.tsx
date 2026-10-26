@@ -8,9 +8,18 @@ import { revokeClientAction } from "../actions";
 
 /**
  * «Revocar» with an explicit second step (final, T-130): the agency's requirements for this client stop being shown
- * and stop moving forward (BR-27.5). The server re-checks the role.
+ * and stop moving forward (BR-27.5). The server re-checks the role. The panel keeps this component mounted once the
+ * client is revoked (`revocable` false: no button) so the confirmation survives the list refresh the action triggers.
  */
-export function RevokeClientButton({ id, name }: { id: string; name: string }) {
+export function RevokeClientButton({
+  id,
+  name,
+  revocable = true,
+}: {
+  id: string;
+  name: string;
+  revocable?: boolean;
+}) {
   const t = useTranslations("recruiter.clients");
   const tRoot = useTranslations();
   const [confirming, setConfirming] = useState(false);
@@ -50,7 +59,7 @@ export function RevokeClientButton({ id, name }: { id: string; name: string }) {
             </Button>
           </div>
         </div>
-      ) : (
+      ) : revocable ? (
         <Button
           size="sm"
           variant="ghost"
@@ -59,7 +68,7 @@ export function RevokeClientButton({ id, name }: { id: string; name: string }) {
         >
           {t("revoke")}
         </Button>
-      )}
+      ) : null}
       <Notice
         notice={notice}
         referenceLabel={tRoot("common.reference", { id: notice?.requestId ?? "" })}

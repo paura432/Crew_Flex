@@ -56,8 +56,12 @@ export async function RepresentedClientsPanel({
                       <StatusChip tone={CLIENT_STATUS_TONE[client.status]}>
                         {t(`status.${client.status}`)}
                       </StatusChip>
-                      {canManage && canRevoke(client.status) && (
-                        <RevokeClientButton id={client.id} name={client.name} />
+                      {canManage && (
+                        <RevokeClientButton
+                          id={client.id}
+                          name={client.name}
+                          revocable={canRevoke(client.status)}
+                        />
                       )}
                     </div>
                   </li>

@@ -3190,13 +3190,17 @@ await page.getByRole("button", { name: "Revoke for good" }).click();
 await page.waitForSelector(`[role=status]:has-text('Representation of ${rcClient} revoked.')`, {
   timeout: 15000,
 });
+// The confirmation survives the list refresh and the revoked row offers no second «Revoke».
+const rcRevokeLeft = await page
+  .getByRole("button", { name: `Revoke the representation of ${rcClient}` })
+  .count();
 await page.goto(`${BASE}/app/organization/requirements/${rcId}`);
 await page.waitForLoadState("networkidle");
 const rcRevokedNote = /is no longer active/.test(await page.locator("main").innerText());
 const rcHidden = await asSeedUser("delta@crewflex.test", "opportunities", { query: { id: rcId } });
 ok(
   "PKG recruiter 8 revoked: the agency is told why, the requirement leaves the professionals' opportunities",
-  rcRevokedNote && rcHidden.error?.code === "NOT_FOUND",
+  rcRevokedNote && rcHidden.error?.code === "NOT_FOUND" && rcRevokeLeft === 0,
   JSON.stringify(rcHidden.error ?? {}),
 );
 await logout();
