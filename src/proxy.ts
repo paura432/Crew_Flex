@@ -14,12 +14,17 @@ import type { OrganizationRole, OrganizationType } from "@/types/database";
  * Next.js reads the nonce from either header and applies it to its own inline scripts.
  */
 const CSP_HEADER = "Content-Security-Policy-Report-Only";
+// React's streaming SSR wraps an SVG segment that resolves late in `<svg aria-hidden="true" style="display:none">`
+// (react-dom-server `startSegmentSVG`; MathML alike). Only that exact attribute value is allowed:
+// sha256("display:none"). Every other style attribute stays blocked.
+const REACT_HIDDEN_SEGMENT_STYLE = "'sha256-aqNNdDLnnrDOnTNdkJpYlAxKVJtLt9CtFLklmInuUAE='";
 function contentSecurityPolicy(nonce: string) {
   const dev = process.env.NODE_ENV === "development"; // React dev tooling needs eval
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'nonce-${nonce}'`,
+    `style-src-attr 'unsafe-hashes' ${REACT_HIDDEN_SEGMENT_STYLE}`,
     // The wallet viewer (N-21, T-103) fetches the owner's file with its 60-second signed URL
     // (connect-src: the Supabase origin) and shows it as a blob: images need nothing new, the PDF
     // frame needs `blob:` in frame-src. The Storage origin itself is never framed or embedded.

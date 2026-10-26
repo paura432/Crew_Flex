@@ -202,9 +202,13 @@ ok("0 seed precondition: Golf's B1.1 is pending", await ensureGolfPending(), "")
 const loginResponse = await page.goto(`${BASE}/login`);
 const cspHeader = loginResponse?.headers()["content-security-policy-report-only"] ?? "";
 ok(
-  "0 CSP report-only header with a nonce and strict-dynamic (T18)",
+  "0 CSP report-only header with a nonce and strict-dynamic (T18); style attributes only React's display:none",
   /script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/.test(cspHeader) &&
-    /frame-ancestors 'none'/.test(cspHeader),
+    /frame-ancestors 'none'/.test(cspHeader) &&
+    /style-src-attr 'unsafe-hashes' 'sha256-aqNNdDLnnrDOnTNdkJpYlAxKVJtLt9CtFLklmInuUAE='(;|$)/.test(
+      cspHeader,
+    ) &&
+    !/unsafe-inline/.test(cspHeader),
   cspHeader.slice(0, 80),
 );
 // 0b (X-01) landing: «Sign in» was white on white (variant bg-white beat bg-transparent), and the
