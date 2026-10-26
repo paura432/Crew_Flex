@@ -109,4 +109,9 @@ T-162/T-163) · 2 NEEDS_DECISION (P02-25 OD-3 en PROD, P02-26 D-10). Inventario:
 42 huecos (≠/−) a 8, de los que 5 están retenidos por OD-3 o D-10 y 2 no se portan con motivo (TEC-02 #43, SHOT-03 #5); las
 filas de P01 (TEC-01, SHOT-01) re-verificadas contra `4d78d6d` (P01-19 pasa a verificado con `PKG P02 6`). Recuento
 `recount.py 20-technician.md 50-visual-meta-a11y.md`: 618 filas, = 174 · ≈ 207 · ≠ 58 · − 66 · + 85 · ✗ 28, paridad
-381 / 505 = 75,4 % (antes 323 / 502 = 64,3 %).
+381 / 505 = 75,4 % (antes 323 / 502 = 64,3 %). Gate final en `3220560` (`gate.sh … full`, reset en orden de fichero, 59 migraciones, flags,
+`functions serve` nuevo): `pnpm check` 0 (Vitest 1171 / 38 omitidos, Deno 195), build 0, `git diff --check` 0, E2E 48/48, race 0,
+cleanup 0, ui-smoke 285/285 sobre `next start` del propio build (cwd + BUILD_ID comprobados). Dos gates previos dieron 283/285 y
+284/285: el `<summary>` nuevo medía 20 px en pantalla táctil (corregido, `b350904`) y «PKG recruiter 8» veía un segundo «Revocar»
+entre la acción y el refresco de la lista con la máquina a carga 12 (reproducido 3/3 en aislamiento sobre el build del gate; corregido
+en el componente, `3220560`, fuera del paquete).
