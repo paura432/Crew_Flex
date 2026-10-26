@@ -718,6 +718,84 @@ describe("audit", () => {
   });
 });
 
+describe("trigger-only SECURITY DEFINER functions (F1b, migration 20261026100000)", () => {
+  const TRIGGER_FUNCTIONS = [
+    "public.handle_new_user()",
+    "public.audit_requirement_created()",
+    "public.audit_qualification_verified()",
+  ];
+
+  it("no API role holds EXECUTE (Security Advisor finding closed)", async () => {
+    for (const fn of TRIGGER_FUNCTIONS) {
+      const { rows } = await db.query<{ anon: boolean; auth: boolean }>(
+        `select has_function_privilege('anon', $1, 'execute') as anon,
+                has_function_privilege('authenticated', $1, 'execute') as auth`,
+        [fn],
+      );
+      expect(rows[0], fn).toEqual({ anon: false, auth: false });
+    }
+  });
+
+  it("a direct call is refused for authenticated and anon", async () => {
+    for (const userId of [SEED.alpha, null]) {
+      await asUser(db, userId, async (tx) => {
+        for (const fn of TRIGGER_FUNCTIONS) {
+          expect(await queryError(tx, `select ${fn}`), fn).toMatch(
+            /permission denied for function/,
+          );
+        }
+      });
+    }
+  });
+
+  it("sign-up still creates the profile when auth.users is written by a role without EXECUTE", async () => {
+    // Stand-in for GoTrue's supabase_auth_admin: may insert users, holds no EXECUTE on the trigger function.
+    await db.exec(`create role auth_admin_stand_in nologin;
+      grant usage on schema auth to auth_admin_stand_in;
+      grant insert on auth.users to auth_admin_stand_in;`);
+    const { rows: grant } = await db.query<{ can: boolean }>(
+      "select has_function_privilege('auth_admin_stand_in', 'public.handle_new_user()', 'execute') as can",
+    );
+    expect(grant[0]?.can).toBe(false);
+    const id = randomUUID();
+    await db.transaction(async (tx) => {
+      await tx.exec("set local role auth_admin_stand_in");
+      await tx.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         values ($1, 'f1b@crewflex.test', '{"account_type":"professional","display_name":"F1b"}')`,
+        [id],
+      );
+    });
+    const { rows } = await db.query<{ account_type: string; technician: boolean }>(
+      `select p.account_type, exists (select 1 from public.technician_profiles t where t.profile_id = p.id) as technician
+       from public.profiles p where p.id = $1`,
+      [id],
+    );
+    expect(rows).toEqual([{ account_type: "professional", technician: true }]);
+  });
+
+  it("an organization admin's new requirement is still audited (trigger fires under authenticated)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const types = await tx.query<{ id: string }>(
+        "select id from public.qualification_types where code = 'B1.1'",
+      );
+      const created = await tx.query<{ id: string }>(
+        `select public.create_work_requirement($1, 'F1b audit check', 'MAD', now(), now() + interval '2 days',
+           'day', 1, 'planned', $2::jsonb) as id`,
+        [
+          mroId,
+          JSON.stringify([{ qualification_type_id: types.rows[0]?.id, requirement_level: "hard" }]),
+        ],
+      );
+      const { rows } = await tx.query<{ action: string; actor_profile_id: string }>(
+        "select action, actor_profile_id from public.audit_events where entity_id = $1",
+        [created.rows[0]?.id],
+      );
+      expect(rows).toEqual([{ action: "requirement.created", actor_profile_id: SEED.adminMro }]);
+    });
+  });
+});
+
 describe("I. integrity backstops in the database (phase 0.8)", () => {
   async function auditActions(tx: Transaction, entityId: string) {
     await tx.exec("reset role");
