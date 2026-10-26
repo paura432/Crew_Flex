@@ -2075,6 +2075,146 @@ ok(
 );
 await logout();
 
+// PKG P02 (passport parity, F3 — TEC-02 #5/#6/#9/#13, TEC-08 #9/#10/#12-13, SHOT-03 #1/#2; T-162): the v1.8
+// header («Empezar perfil vacío» + «{%} completado · {n} evidencias»), the «Pasaporte visual» with its photo
+// controls, medals, the folded 60-day review list and the learning achievements below; «Empezar desde cero»
+// prepares an empty draft of the SAME version that saves nothing until «Guardar pasaporte» (the name is
+// required, as v1.8); Escape and focus; the Spanish literals; and the refusal: an organization account has
+// no passport (page and API). Nothing is written: the empty draft is never saved.
+{
+  await login("delta@crewflex.test");
+  await page.goto(`${BASE}/app/professional/profile`);
+  await page.waitForLoadState("networkidle");
+  const p2Header = page.locator("main header").first();
+  const p2Trigger = p2Header.getByRole("button", { name: "Start an empty profile" });
+  const p2Visual = page.getByRole("region", { name: "Professional badges" });
+  await p2Visual.locator("details > summary").click();
+  const p2VisualText = (await p2Visual.innerText()).replace(/\s+/g, " ");
+  ok(
+    "PKG P02 1 header «Start an empty profile» + «{%} complete · {n} evidence»; visual passport: «Add photo», 4 medals, the folded 60-day list opens («Nothing declared expires…»), footnote; «Learning achievements» below",
+    (await p2Trigger.count()) === 1 &&
+      /\d+% complete · \d+ pieces? of evidence/.test(await p2Header.innerText()) &&
+      /Add photo/.test(p2VisualText) &&
+      (await p2Visual
+        .getByRole("group", { name: "Profile badges" })
+        .getByRole("button")
+        .count()) === 4 &&
+      /Documents and courses to review Nothing declared expires within the next 60 days/.test(
+        p2VisualText,
+      ) &&
+      /grant no signing authority/.test(p2VisualText) &&
+      (await page.getByRole("heading", { name: "Learning achievements" }).count()) === 1,
+    p2VisualText.slice(0, 200),
+  );
+  // «Start from scratch»: Escape closes it with focus back; «Prepare draft» empties every field in place.
+  await p2Trigger.click();
+  const p2Dialog = page.getByRole("dialog", { name: "Start from scratch" });
+  const p2DialogText = await p2Dialog.innerText();
+  await page.keyboard.press("Escape");
+  const p2Closed =
+    !(await p2Dialog.isVisible()) &&
+    (await p2Trigger.evaluate((el) => document.activeElement === el));
+  await p2Trigger.click();
+  await p2Dialog.getByRole("button", { name: "Prepare draft" }).click();
+  await page.waitForSelector("[role=status]:has-text('Empty draft prepared')", { timeout: 15000 });
+  const p2Draft = await page.evaluate(() => ({
+    name: document.querySelector("#displayName").value,
+    phone: document.querySelector("#phone").value,
+    years: document.querySelector("#yearsExperience").value,
+    rate: document.querySelector("#minRate").value,
+    primary: document.querySelector("#primaryCategory").value,
+    ticked: document.querySelectorAll(
+      "fieldset#categories input:checked, fieldset#aircraft input:checked, fieldset#engines input:checked, fieldset#skills input:checked, fieldset#workPermits input:checked",
+    ).length,
+    ratings: document.querySelectorAll("[id^='rating-'][id$='-aircraft']").length,
+    visibility: document.querySelector("[role=radio][aria-checked=true]")?.textContent ?? "",
+  }));
+  ok(
+    "PKG P02 2 «Start from scratch»: the v1.8 text; Escape closes it (focus back); «Prepare draft» empties name, phone, years, rate, main category, every list and the ratings, visibility back to Private; a status says nothing is saved yet",
+    /An empty draft will be prepared\. Your published profile is kept/.test(p2DialogText) &&
+      p2Closed &&
+      p2Draft.name === "" &&
+      p2Draft.phone === "" &&
+      p2Draft.years === "" &&
+      p2Draft.rate === "" &&
+      p2Draft.primary === "" &&
+      p2Draft.ticked === 0 &&
+      p2Draft.ratings === 0 &&
+      /^Private/.test(p2Draft.visibility),
+    JSON.stringify(p2Draft),
+  );
+  // Saving the empty draft fails on the name (v1.8 «Escribe tu nombre profesional.»): nothing is sent.
+  const p2Before = (await asSeedUser("delta@crewflex.test", "professional-profile")).data.profile;
+  await page.getByRole("button", { name: "Save passport" }).click();
+  await page.waitForSelector("#displayName-error", { timeout: 15000 });
+  const p2Error = await page.locator("#displayName-error").innerText();
+  const p2After = (await asSeedUser("delta@crewflex.test", "professional-profile")).data.profile;
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG P02 3 «Save passport» on the empty draft: «Professional name is required», nothing sent (same name and version); a reload shows the saved passport again",
+    /Professional name is required/.test(p2Error) &&
+      p2After.displayName === "Technician Delta" &&
+      p2After.updatedAt === p2Before.updatedAt &&
+      (await page.inputValue("#displayName")) === "Technician Delta" &&
+      (await page.inputValue("#primaryCategory")) === "B1.1",
+    `${p2Error} · ${p2After.displayName}`,
+  );
+  // The Spanish literals of v1.8 (textContent: the kicker is upper-cased by CSS).
+  await page.goto(`${BASE}/app/settings`);
+  await page.waitForLoadState("networkidle");
+  await page.locator("[role=radio][lang=es]").first().click();
+  await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+  await page.goto(`${BASE}/app/professional/profile`);
+  await page.waitForLoadState("networkidle");
+  await expectSpanish("PKG P02 4 passport in Spanish");
+  const p2Es = await page.locator("main").evaluate((el) => el.textContent.replace(/\s+/g, " "));
+  ok(
+    "PKG P02 5 v1.8 literals: «Empezar perfil vacío», «{%} completado · {n} evidencias», «Pasaporte visual», «Documentos y cursos próximos a revisar», «Logros de aprendizaje», «Guardar pasaporte»",
+    [
+      "Empezar perfil vacío",
+      "Pasaporte visual",
+      "Documentos y cursos próximos a revisar",
+      "Logros de aprendizaje",
+      "Guardar pasaporte",
+    ].every((s) => p2Es.includes(s)) && /\d+% completado · \d+ evidencias?/.test(p2Es),
+    p2Es.slice(0, 160),
+  );
+  await shot("P02-passport-es");
+  // «Mi espacio» after the shared 60-day list (UpcomingReviews) and the red-dot note (P01-19, unverified in P01).
+  await page.goto(`${BASE}/app/professional`);
+  await page.waitForLoadState("networkidle");
+  const p2Home = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  ok(
+    "PKG P02 6 «Mi espacio» (es): the red-dot note of v1.8 with the connected prefix (P01-19) and the 60-day panel still there after the refactor",
+    /Calendario en UTC\. El punto rojo señala oportunidades en días compatibles o descansos que podrías publicar\. No cambia tu disponibilidad\./.test(
+      p2Home,
+    ) &&
+      /Documentos y cursos próximos a revisar Nada de lo declarado caduca en los próximos 60 días\./.test(
+        p2Home,
+      ),
+    p2Home.slice(0, 120),
+  );
+  await page.goto(`${BASE}/app/settings`);
+  await page.waitForLoadState("networkidle");
+  await page.locator("[role=radio][lang=en]").first().click();
+  await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+  await logout();
+  // Negative: an organization account has no passport — the page says so and the API refuses (403).
+  const p2Forbidden = await asSeedUser("admin.mro@crewflex.test", "professional-profile");
+  await login("admin.mro@crewflex.test");
+  await page.goto(`${BASE}/app/professional/profile`);
+  await page.waitForLoadState("networkidle");
+  ok(
+    "PKG P02 7 an organization account: «No professional profile» on the passport page; GET professional-profile answers FORBIDDEN",
+    /No professional profile/.test(await page.locator("main").innerText()) &&
+      p2Forbidden.ok === false &&
+      p2Forbidden.error?.code === "FORBIDDEN",
+    p2Forbidden.error?.code ?? JSON.stringify(p2Forbidden).slice(0, 80),
+  );
+  await logout();
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through

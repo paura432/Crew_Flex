@@ -6,16 +6,22 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { EU_COUNTRIES, type EuCountry } from "@/domain/passport";
-import { countOwnDocuments } from "@/features/documents/api";
+import { countOwnDocuments, listOwnDocumentExpiries } from "@/features/documents/api";
 import {
   getOwnProfessionalOverview,
   getProfessionalProfile,
   type ProfessionalOverview,
 } from "@/features/professional/api";
 import { completenessOf } from "@/features/professional/completeness";
+import {
+  EmptyDraftButton,
+  PassportDraftProvider,
+} from "@/features/professional/components/PassportDraft";
 import { PassportVisual } from "@/features/professional/components/PassportVisual";
 import { ProfileForm } from "@/features/professional/components/ProfileForm";
 import { medalInputOf } from "@/features/professional/medals";
+import { upcomingReviews } from "@/features/professional/reviews";
+import { LearningAchievements } from "@/features/tools/components/LearningAchievements";
 import { isDocumentWalletEnabled } from "@/server/feature-flags";
 import { requireSessionActor } from "@/server/session";
 
@@ -47,27 +53,21 @@ async function ownOverview(actorId: string): Promise<ProfessionalOverview | null
 }
 
 /**
- * N-25, v1.8 «{%} completado · {n} evidencias»: the BR-11 percentage (same as the overview) and the
- * own wallet documents. Without the wallet only the percentage; if the data cannot be read, no badge.
+ * The own wallet, only while it is on: the document count (v1.8 «evidencias», BR-11 «Documento
+ * aportado») and the dated documents of the 60-day review list. A failed read leaves each out (`null`).
  */
-async function completionBadge(
-  overview: ProfessionalOverview | null,
-  displayName: string,
-): Promise<string | null> {
+async function ownWallet(): Promise<{
+  enabled: boolean;
+  count: number | null;
+  expiries: Awaited<ReturnType<typeof listOwnDocumentExpiries>>;
+}> {
   try {
-    if (!overview) return null;
-    const [walletEnabled, t] = await Promise.all([
-      isDocumentWalletEnabled(),
-      getTranslations("passport"),
-    ]);
-    const documents = walletEnabled ? await countOwnDocuments() : null;
-    const { percent } = completenessOf(displayName, overview, documents, new Date());
-    return documents === null
-      ? t("badgeNoWallet", { percent })
-      : t("badge", { percent, count: documents });
+    if (!(await isDocumentWalletEnabled())) return { enabled: false, count: null, expiries: null };
+    const [count, expiries] = await Promise.all([countOwnDocuments(), listOwnDocumentExpiries()]);
+    return { enabled: true, count, expiries };
   } catch (error) {
     unstable_rethrow(error);
-    return null;
+    return { enabled: false, count: null, expiries: null };
   }
 }
 
@@ -82,17 +82,51 @@ export default async function ProfessionalProfilePage() {
       <StateMessage title={t("noProfileTitle")} description={t("passport.noProfileDescription")} />
     );
   }
-  const [result, overview] = await Promise.all([getProfessionalProfile(), ownOverview(actor.id)]);
-  const badge = await completionBadge(overview, actor.profile.display_name);
+  const [result, overview, wallet, tPassport] = await Promise.all([
+    getProfessionalProfile(),
+    ownOverview(actor.id),
+    ownWallet(),
+    getTranslations("passport"),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
+  // N-25, v1.8 «{%} completado · {n} evidencias»: the BR-11 percentage (same as the overview) and the
+  // own wallet documents. Without the wallet (or its count) only the percentage; no overview, no badge.
+  const badge = overview
+    ? (() => {
+        const { percent } = completenessOf(
+          actor.profile.display_name,
+          overview,
+          wallet.count,
+          new Date(),
+        );
+        return wallet.count === null
+          ? tPassport("badgeNoWallet", { percent })
+          : tPassport("badge", { percent, count: wallet.count });
+      })()
+    : null;
 
   return (
-    <>
+    <PassportDraftProvider>
       <PageHeader
         eyebrow={t("passport.eyebrow")}
         title={t("passport.title")}
         description={t("passport.description")}
-        actions={badge ? <StatusChip tone="info">{badge}</StatusChip> : undefined}
+        actions={
+          <>
+            {result.ok && (
+              <EmptyDraftButton
+                labels={{
+                  trigger: t("passport.emptyDraft.trigger"),
+                  title: t("passport.emptyDraft.title"),
+                  text: t("passport.emptyDraft.text"),
+                  confirm: t("passport.emptyDraft.confirm"),
+                  cancel: (await getTranslations("common"))("cancel"),
+                }}
+              />
+            )}
+            {badge && <StatusChip tone="info">{badge}</StatusChip>}
+          </>
+        }
       />
       {overview && (
         <PassportVisual
@@ -100,6 +134,8 @@ export default async function ProfessionalProfilePage() {
           name={actor.profile.display_name}
           medals={medalInputOf(overview, today)}
           today={today}
+          reviews={upcomingReviews(overview.qualifications, wallet.expiries, today)}
+          reviewsFailed={wallet.enabled && wallet.expiries === null}
         />
       )}
       {result.ok ? (
@@ -111,6 +147,10 @@ export default async function ProfessionalProfilePage() {
       ) : (
         <ApiErrorState error={result.error} requestId={result.requestId} />
       )}
-    </>
+      {/* v1.8 `Badges` (learning view): the achievements of this browser under the visual passport. */}
+      <div className="mt-6">
+        <LearningAchievements userId={actor.id} />
+      </div>
+    </PassportDraftProvider>
   );
 }

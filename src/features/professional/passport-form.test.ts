@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { updateProfessionalProfileInput } from "@/lib/validation/professional";
-import { passportFromForm, withPrimary } from "./passport-form";
+import { emptyPassport, passportFromForm, withPrimary } from "./passport-form";
 
 function form(entries: [string, string][]) {
   const data = new FormData();
@@ -74,6 +74,76 @@ describe("passportFromForm", () => {
     const payload = passportFromForm(form([["minRate", " "]]), state, "x");
     expect(payload.ownTools).toBe(false);
     expect(payload.minRate).toBeNull();
+  });
+});
+
+describe("emptyPassport (v1.8 «Empezar perfil vacío», T-162)", () => {
+  it("empties every declaration and private value, keeps the enums, the blocks and the version", () => {
+    const saved = {
+      displayName: "Technician Delta",
+      baseLocation: "Barcelona (BCN)",
+      mobility: "international" as const,
+      yearsExperience: 12,
+      currentStatus: "contractor" as const,
+      visibility: "anonymous" as const,
+      primaryCategory: "B1.1" as const,
+      categories: ["B1.1" as const, "B2" as const],
+      aircraft: ["A320 Family" as const],
+      engines: ["LEAP-1A" as const],
+      skills: ["ndt" as const],
+      englishLevel: "C1" as const,
+      ownTools: true,
+      baseCountry: "ES" as const,
+      workPermits: ["ES" as const],
+      generalRestrictions: "No run-ups",
+      typeRatings: [
+        {
+          aircraft: "A320 Family" as const,
+          category: "B1.1" as const,
+          expiresAt: null,
+          restrictions: null,
+        },
+      ],
+      phone: "+34 600 000 001",
+      currentEmployerId: "00000000-0000-4000-8000-000000000001",
+      minRate: 45,
+      rateUnit: "hour" as const,
+      blockedOrganizationIds: ["00000000-0000-4000-8000-000000000002"],
+      updatedAt: "2026-10-26T10:00:00.000Z",
+    };
+    const draft = emptyPassport(saved);
+    expect(draft).toEqual({
+      ...saved,
+      displayName: "",
+      baseLocation: null,
+      yearsExperience: null,
+      visibility: "private",
+      primaryCategory: null,
+      categories: [],
+      aircraft: [],
+      engines: [],
+      skills: [],
+      englishLevel: null,
+      ownTools: false,
+      baseCountry: null,
+      workPermits: [],
+      generalRestrictions: null,
+      typeRatings: [],
+      phone: null,
+      currentEmployerId: null,
+      minRate: null,
+    });
+    // The version is what the next save checks (I-3): the empty draft still replaces THIS passport.
+    expect(draft.updatedAt).toBe(saved.updatedAt);
+    expect(saved.categories).toEqual(["B1.1", "B2"]); // the saved passport object is untouched
+    // Saving the empty draft as it is fails on the name, as v1.8 («Escribe tu nombre profesional.»).
+    const { updatedAt, ...payload } = draft;
+    const parsed = updateProfessionalProfileInput.safeParse({
+      ...payload,
+      expectedUpdatedAt: updatedAt,
+    });
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues.map((i) => i.path.join("."))).toEqual(["displayName"]);
   });
 });
 

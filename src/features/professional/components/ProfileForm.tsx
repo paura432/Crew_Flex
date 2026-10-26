@@ -38,7 +38,8 @@ import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { updateProfessionalProfileInput } from "@/lib/validation/professional";
 import type { OrganizationOption, ProfessionalPassport } from "@/types/api";
 import { updateProfileAction } from "../actions";
-import { passportFromForm, withPrimary, type RatingDraft } from "../passport-form";
+import { emptyPassport, passportFromForm, withPrimary, type RatingDraft } from "../passport-form";
+import { usePassportDraft } from "./PassportDraft";
 
 const checkboxLabel =
   "flex min-h-10 items-center gap-2 text-sm pointer-coarse:min-h-11 has-disabled:opacity-70";
@@ -75,21 +76,39 @@ function CheckboxGroup({
   );
 }
 
-/**
- * "Mi pasaporte": the v1.8 passport in one form and one save (full replacement, I-3), in the order of
- * the v1.8 steps — identity, qualifications, experience and courses, rate and work permits, visibility
- * and blocks. Phone, employer, rate and blocks are private (owner only); the rest is matchable data.
- */
-export function ProfileForm({
-  profile,
-  organizations,
-  countryNames,
-}: {
+interface ProfileFormProps {
   profile: ProfessionalPassport & { updatedAt: string };
   organizations: OrganizationOption[];
   /** EU country names in the active locale, computed on the server (no hydration drift). */
   countryNames: Record<EuCountry, string>;
-}) {
+}
+
+/**
+ * "Mi pasaporte": the v1.8 passport in one form and one save (full replacement, I-3), in the order of
+ * the v1.8 steps — identity, qualifications, experience and courses, rate and work permits, visibility
+ * and blocks. Phone, employer, rate and blocks are private (owner only); the rest is matchable data.
+ * «Empezar perfil vacío» (header, T-162) remounts the fields on an empty draft of the SAME version:
+ * nothing is saved until «Guardar pasaporte».
+ */
+export function ProfileForm(props: ProfileFormProps) {
+  const t = useTranslations("professional.passport");
+  const { generation } = usePassportDraft();
+  return (
+    <PassportFields
+      key={generation}
+      {...props}
+      profile={generation === 0 ? props.profile : emptyPassport(props.profile)}
+      initialNotice={generation === 0 ? null : { tone: "ok", text: t("emptyDraft.prepared") }}
+    />
+  );
+}
+
+function PassportFields({
+  profile,
+  organizations,
+  countryNames,
+  initialNotice,
+}: ProfileFormProps & { initialNotice: NoticeState | null }) {
   const t = useTranslations("professional.passport");
   const tCategory = useTranslations("passport.categories");
   const tSkill = useTranslations("passport.skills");
@@ -117,7 +136,7 @@ export function ProfileForm({
     })),
   );
   const [rawErrors, setErrors] = useState<FieldErrors>({});
-  const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [notice, setNotice] = useState<NoticeState | null>(initialNotice);
   const [pending, startTransition] = useTransition();
   const errors = resolveFieldErrors(tRoot, rawErrors);
   const licenceCategories = LICENCE_CATEGORIES.filter((c) => categories.includes(c));
@@ -655,7 +674,7 @@ export function ProfileForm({
       {errors.form && <p className="text-sm font-medium text-danger">{errors.form}</p>}
       <div className="flex flex-wrap gap-3">
         <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-          {pending ? tRoot("common.saving") : tRoot("common.saveChanges")}
+          {pending ? tRoot("common.saving") : t("save")}
         </Button>
       </div>
     </form>

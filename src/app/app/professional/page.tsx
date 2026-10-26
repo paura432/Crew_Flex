@@ -6,13 +6,13 @@ import { Metric } from "@/components/ui/Metric";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
-import { EXPIRY_TONE, StatusChip } from "@/components/ui/StatusChip";
-import { documentExpiryState, isDueForReview, REVIEW_WINDOW_DAYS } from "@/domain/documents";
 import { parseMonth } from "@/features/availability/calendar";
 import { countOwnDocuments, listOwnDocumentExpiries } from "@/features/documents/api";
 import { medalInputOf } from "@/features/professional/medals";
 import { ProfessionalHero } from "@/features/professional/components/ProfessionalHero";
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
+import { UpcomingReviews } from "@/features/professional/components/UpcomingReviews";
+import { upcomingReviews } from "@/features/professional/reviews";
 import {
   activityCounts,
   loadActivity,
@@ -21,7 +21,7 @@ import {
 import { LearningAchievements } from "@/features/tools/components/LearningAchievements";
 import { completenessOf } from "@/features/professional/completeness";
 import { loadProfessionalContext } from "@/features/professional/load";
-import { formatDate, formatPercent } from "@/i18n/format";
+import { formatPercent } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
 import { isDocumentWalletEnabled } from "@/server/feature-flags";
 
@@ -57,24 +57,7 @@ export default async function ProfessionalOverviewPage({
     loadActivity(),
   ]);
   const documentsFailed = documents === null;
-  const toReview = [
-    ...overview.qualifications
-      .filter((q) => q.status === "active" && q.expires_at !== null)
-      .map((q) => ({
-        key: `q-${q.id}`,
-        title: `${q.qualification_types.code} · ${q.qualification_types.name}`,
-        expiresAt: q.expires_at as string,
-        href: "/app/professional/qualifications",
-      })),
-    ...(documents ?? []).map((d) => ({
-      key: `d-${d.id}`,
-      title: d.title,
-      expiresAt: d.expiresAt,
-      href: "/app/professional/documents",
-    })),
-  ]
-    .filter((item) => isDueForReview(item.expiresAt, today))
-    .sort((a, b) => a.expiresAt.localeCompare(b.expiresAt));
+  const toReview = upcomingReviews(overview.qualifications, documents, today);
   const active = overview.qualifications.filter((q) => q.status === "active");
   const verified = active.filter((q) => q.verification_status === "verified").length;
   const awaiting = active.filter((q) => q.verification_status === "pending").length;
@@ -187,47 +170,7 @@ export default async function ProfessionalOverviewPage({
           </Panel>
         )}
         <Panel title={t("overview.reviewTitle")}>
-          {documentsFailed && (
-            <p className="mb-3 text-sm text-danger" role="alert">
-              {t("overview.reviewError")}
-            </p>
-          )}
-          {toReview.length === 0 ? (
-            <p className="text-sm text-muted">
-              {t("overview.reviewNone", { days: REVIEW_WINDOW_DAYS })}
-            </p>
-          ) : (
-            <ul className="divide-y divide-line text-sm">
-              {toReview.map((item) => {
-                const expired = documentExpiryState(item.expiresAt, today) === "expired";
-                return (
-                  <li
-                    key={item.key}
-                    className="flex flex-wrap items-center justify-between gap-3 py-2"
-                  >
-                    <span>
-                      <span className="font-semibold">{item.title}</span> ·{" "}
-                      <span className="tabular-nums">{formatDate(locale, item.expiresAt)}</span>
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <StatusChip tone={EXPIRY_TONE[expired ? "expired" : "soon"]}>
-                        {expired
-                          ? t("overview.reviewExpired")
-                          : t("overview.reviewSoon", { days: REVIEW_WINDOW_DAYS })}
-                      </StatusChip>
-                      <ButtonLink
-                        href={item.href}
-                        aria-label={`${t("overview.reviewOpen")} · ${item.title}`}
-                      >
-                        {t("overview.reviewOpen")}
-                      </ButtonLink>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <p className="mt-3 text-xs text-muted">{t("overview.reviewHint")}</p>
+          <UpcomingReviews items={toReview} failed={documentsFailed} today={today} />
         </Panel>
         {/* V1.8 Badges «Logros de aprendizaje» (L-3): read from this browser, after hydration. */}
         <LearningAchievements userId={actor.id} />

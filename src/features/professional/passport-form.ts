@@ -3,6 +3,7 @@
 // browser, the server action and the Edge Function.
 import type { Aircraft, LicenceCategory, ProfessionalCategory } from "@/domain/passport";
 import type { ProfileVisibility } from "@/domain/professional";
+import type { ProfessionalPassport } from "@/types/api";
 
 /** A rating row while it is being edited (`key` only keeps React rows stable). */
 export interface RatingDraft {
@@ -73,4 +74,35 @@ export function withPrimary(
   primary: ProfessionalCategory,
 ): ProfessionalCategory[] {
   return categories.includes(primary) ? [...categories] : [...categories, primary];
+}
+
+/**
+ * v1.8 «Empezar perfil vacío» → «Preparar borrador» (`Professional2.jsx`, T-162): the form starts again
+ * from an empty draft; the saved passport is untouched until «Guardar pasaporte». Every declaration,
+ * text and optional value is emptied and the visibility goes back to private (v1.8); the enums without
+ * an empty option (mobility, status, rate unit), the blocked organizations (a privacy choice, as the
+ * v1.8 `blockEmployer`) and the version (`updatedAt`) are kept.
+ */
+export function emptyPassport<P extends ProfessionalPassport>(current: P): P {
+  return {
+    ...current,
+    displayName: "",
+    phone: null,
+    baseLocation: null,
+    baseCountry: null,
+    currentEmployerId: null,
+    primaryCategory: null,
+    categories: [],
+    aircraft: [],
+    typeRatings: [],
+    generalRestrictions: null,
+    yearsExperience: null,
+    englishLevel: null,
+    engines: [],
+    skills: [],
+    ownTools: false,
+    minRate: null,
+    workPermits: [],
+    visibility: "private",
+  };
 }

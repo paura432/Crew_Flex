@@ -747,7 +747,15 @@
       "permitsHint": "Países de la Unión Europea en los que puedes trabajar.",
       "blocks": "Organizaciones bloqueadas",
       "blocksHint": "Una organización bloqueada no te encuentra entre sus candidatos externos y no se le avisa; sus necesidades desaparecen de «Oportunidades» y no puedes presentarte a ellas, aunque las candidaturas que ya presentaste se mantienen.",
-      "blocksNone": "Todavía no hay organizaciones en la red."
+      "blocksNone": "Todavía no hay organizaciones en la red.",
+      "save": "Guardar pasaporte",
+      "emptyDraft": {
+        "trigger": "Empezar perfil vacío",
+        "title": "Empezar desde cero",
+        "text": "Se preparará un borrador vacío. El perfil publicado se conserva hasta que guardes el nuevo pasaporte.",
+        "confirm": "Preparar borrador",
+        "prepared": "Borrador vacío preparado. Tu pasaporte publicado no cambia hasta que pulses «Guardar pasaporte»."
+      }
     },
     "item": {
       "display_name": "Nombre profesional",

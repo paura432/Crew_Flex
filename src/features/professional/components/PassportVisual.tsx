@@ -1,28 +1,37 @@
 import { getTranslations } from "next-intl/server";
 import { badges, type BadgeInput } from "@/domain/badges";
 import { initials } from "../identity";
+import type { ReviewItem } from "../reviews";
 import { ProfessionalMedals } from "./ProfessionalMedals";
 import { AvatarPhotoControls, ProfileAvatar } from "./ProfileAvatar";
+import { UpcomingReviews } from "./UpcomingReviews";
 
 /**
- * v1.8 `Badges` «Pasaporte visual» on the passport page (N-15 row 9, N-23): the avatar with its photo
- * controls (this browser only), every medal and the v1.8 footnote; an empty passport says what to add.
+ * v1.8 `Badges` «Pasaporte visual» on the passport page (N-15 row 9, N-23, TD-44): the avatar with its
+ * photo controls (this browser only), every medal, the folded «Documentos y cursos próximos a revisar»
+ * and the v1.8 footnote; an empty passport says what to add.
  */
 export async function PassportVisual({
   userId,
   name,
   medals,
   today,
+  reviews,
+  reviewsFailed,
 }: {
   userId: string;
   name: string;
   medals: BadgeInput;
   /** `YYYY-MM-DD` (UTC). */
   today: string;
+  /** `upcomingReviews` of the own qualifications and (wallet on) documents. */
+  reviews: ReviewItem[];
+  reviewsFailed: boolean;
 }) {
-  const [t, tPhoto] = await Promise.all([
+  const [t, tPhoto, tOverview] = await Promise.all([
     getTranslations("badges.passport"),
     getTranslations("profileHero.photo"),
+    getTranslations("professional.overview"),
   ]);
   const empty = badges(medals, today).length === 0;
   return (
@@ -55,7 +64,16 @@ export async function PassportVisual({
       ) : (
         <ProfessionalMedals input={medals} today={today} all />
       )}
-      <p className="mt-2 text-xs text-muted">{t("footnote")}</p>
+      {/* v1.8 `details.tb-references`: folded by default, the same rows as «Mi espacio». */}
+      <details className="mt-3 rounded-lg border border-line px-4 py-3">
+        <summary className="cursor-pointer text-sm font-semibold">
+          {tOverview("reviewTitle")}
+        </summary>
+        <div className="mt-3">
+          <UpcomingReviews items={reviews} failed={reviewsFailed} today={today} />
+        </div>
+      </details>
+      <p className="mt-3 text-xs text-muted">{t("footnote")}</p>
     </section>
   );
 }

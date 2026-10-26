@@ -747,7 +747,15 @@
       "permitsHint": "European Union countries where you may work.",
       "blocks": "Blocked organizations",
       "blocksHint": "A blocked organization does not find you among its external candidates and is not told; its needs leave «Opportunities» and you cannot apply to them, although the applications you already sent stay.",
-      "blocksNone": "There are no organizations in the network yet."
+      "blocksNone": "There are no organizations in the network yet.",
+      "save": "Save passport",
+      "emptyDraft": {
+        "trigger": "Start an empty profile",
+        "title": "Start from scratch",
+        "text": "An empty draft will be prepared. Your published profile is kept until you save the new passport.",
+        "confirm": "Prepare draft",
+        "prepared": "Empty draft prepared. Your published passport does not change until you press “Save passport”."
+      }
     },
     "item": {
       "display_name": "Professional name",
