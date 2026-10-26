@@ -2611,6 +2611,532 @@ await logout();
   }
 }
 
+// PKG P04 (opportunities parity, F3 — MKT-03 #1/#2/#7/#8/#13, MKT-04 #1-#4/#9, MKT-05 #3/#5/#6/#8/#9/#12,
+// SHOT-10 #4/#7/#9; P01-22/P01-23; BR-14, BR-14.1, BR-15; T-164): v1.8 «Oportunidades» in Spanish — header,
+// search, pills, the card facts (rate, days, people, block, verdict, «Ver detalle» / «Preparar candidatura»),
+// the empty state, the dock «Ofertas» below `lg`; the detail with the terms, logistics, description, the own
+// eligibility and the Candidate Pack preview; applying with the consent and «Ya presentada» after; the «Mi
+// espacio» rows (tile tone, «{tarifa} / h», «Ver oferta» / «Revisar fechas»); «Ofertas en la red» for another
+// organization. Negatives: an organization or another professional cannot apply in delta's name (403 / 400
+// strict body), a blocked organization's needs are hidden (404 / 409), a draft or paused need is not offered
+// (list, `?id=`, apply), an organization account on the professional URL is a 404. Fixture through the local
+// API with dates derived from today (≥ 30 days ahead, on days free of delta's windows); everything is restored
+// at the end whatever happens.
+{
+  const DELTA = "delta@crewflex.test";
+  const MRO = "admin.mro@crewflex.test";
+  const p4Key = () => ({ "Idempotency-Key": crypto.randomUUID() });
+  const p4Day = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const p4Short = (d) =>
+    new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", timeZone: "UTC" })
+      .format(new Date(`${d}T00:00:00Z`))
+      .toUpperCase();
+  const p4Suffix = Date.now();
+  const p4Mine = async () =>
+    (await asSeedUser(DELTA, "professional-availability")).data?.windows ?? [];
+  // The first 3-day span from `from` days ahead with no delta window at all (a private rest, BR-14.1).
+  const p4Existing = await p4Mine();
+  const p4Free = (from) => {
+    for (let n = from; n < from + 180; n++) {
+      const s = Date.parse(`${p4Day(n)}T00:00:00.000Z`);
+      const e = s + 3 * 86_400_000;
+      if (!p4Existing.some((w) => Date.parse(w.startsAt) < e && Date.parse(w.endsAt) > s)) return n;
+    }
+    return from;
+  };
+  const p4N = p4Free(35);
+  const p4RestN = p4Free(p4N + 7);
+  const p4Start = p4Day(p4N);
+  const p4End = p4Day(p4N + 1);
+  const p4RestStart = p4Day(p4RestN);
+  const p4RestEnd = p4Day(p4RestN + 1);
+  const p4Body = (title, startsAt, endsAt, extra = {}) => ({
+    organizationId: mroOrg.id,
+    title,
+    location: "Madrid (MAD)",
+    startsAt,
+    endsAt,
+    shift: "day",
+    headcount: 2,
+    urgency: "planned",
+    country: "ES",
+    timeZone: "Europe/Madrid",
+    qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+    ...extra,
+  });
+  const p4Post = (body) =>
+    asSeedUser(MRO, "work-requirements", { method: "POST", headers: p4Key(), body });
+  const p4Title = `Local UI check · P04 oportunidad ${p4Suffix}`;
+  const p4RestTitle = `Local UI check · P04 descanso ${p4Suffix}`;
+  const p4DraftTitle = `Local UI check · P04 borrador ${p4Suffix}`;
+  const p4PausedTitle = `Local UI check · P04 pausada ${p4Suffix}`;
+  const p4Description =
+    "Revisión programada de línea en hangar; se valora experiencia previa en A320.";
+  const p4Need = await p4Post(
+    p4Body(p4Title, `${p4Start}T06:00:00.000Z`, `${p4End}T18:00:00.000Z`, {
+      description: p4Description,
+      conditions: {
+        hourlyRate: 50,
+        shiftHours: 8,
+        perDiem: 30,
+        overtimeRate: 60,
+        contractType: "contractor",
+        arrival: "Antes del inicio del turno",
+        maxMobilizationHours: 48,
+        budgetMandatory: false,
+        flights: true,
+        accommodation: true,
+        localTransport: true,
+        meals: false,
+        ownTools: false,
+      },
+    }),
+  );
+  const p4Id = p4Need.data?.requirement?.id;
+  const p4RestNeed = await p4Post(
+    p4Body(p4RestTitle, `${p4RestStart}T06:00:00.000Z`, `${p4RestEnd}T18:00:00.000Z`),
+  );
+  const p4RestId = p4RestNeed.data?.requirement?.id;
+  const p4Draft = await p4Post(
+    p4Body(p4DraftTitle, `${p4Start}T06:00:00.000Z`, `${p4End}T18:00:00.000Z`, { intent: "draft" }),
+  );
+  const p4DraftId = p4Draft.data?.requirement?.id;
+  const p4PausedNeed = await p4Post(
+    p4Body(p4PausedTitle, `${p4Start}T06:00:00.000Z`, `${p4End}T18:00:00.000Z`),
+  );
+  const p4PausedId = p4PausedNeed.data?.requirement?.id;
+  const p4Paused = p4PausedId
+    ? await asSeedUser(MRO, "work-requirements", {
+        method: "PATCH",
+        body: { id: p4PausedId, status: "paused" },
+      })
+    : { error: p4PausedNeed.error };
+  const p4Window = await asSeedUser(DELTA, "professional-availability", {
+    method: "POST",
+    headers: p4Key(),
+    body: {
+      startsAt: `${p4Start}T00:00:00.000Z`,
+      endsAt: `${p4Day(p4N + 2)}T00:00:00.000Z`,
+      status: "available",
+    },
+  });
+  ok(
+    "PKG P04 0 fixture (API): a published need with terms and logistics, a «rest day» need, a draft and a paused one (≥ 30 days ahead, days free of delta's windows); delta's window covers the first",
+    Boolean(p4Id && p4RestId && p4DraftId && p4PausedId && p4Window.data?.window) &&
+      p4Draft.data?.requirement?.status === "draft" &&
+      p4Paused.data?.requirement?.status === "paused",
+    JSON.stringify({
+      start: p4Start,
+      rest: p4RestStart,
+      errors: [
+        p4Need.error,
+        p4RestNeed.error,
+        p4Draft.error,
+        p4Paused.error,
+        p4Window.error,
+      ].filter(Boolean),
+    }),
+  );
+  const p4List = async (email, query) =>
+    ((await asSeedUser(email, "opportunities", { query })).data?.opportunities ?? []).map(
+      (o) => o.requirement?.id ?? o.id,
+    );
+  const p4Detail = (id) => asSeedUser(DELTA, "opportunities", { query: { id } });
+  const p4Apply = (email, body) =>
+    asSeedUser(email, "applications", { method: "POST", headers: p4Key(), body });
+  const p4Query = { q: String(p4Suffix), limit: "50" };
+  const p4Listed = await p4List(DELTA, p4Query);
+  const p4DraftDetail = await p4Detail(p4DraftId);
+  const p4PausedDetail = await p4Detail(p4PausedId);
+  const p4ApplyDraft = await p4Apply(DELTA, { requirementId: p4DraftId, shareConsent: true });
+  const p4ApplyPaused = await p4Apply(DELTA, { requirementId: p4PausedId, shareConsent: true });
+  ok(
+    "PKG P04 1 BR-14: the published and the rest-day needs are listed; the draft and the paused one are not (list, `?id=` → NOT_FOUND) and cannot be applied to (409 REQUIREMENT_NOT_OPEN)",
+    p4Listed.includes(p4Id) &&
+      p4Listed.includes(p4RestId) &&
+      !p4Listed.includes(p4DraftId) &&
+      !p4Listed.includes(p4PausedId) &&
+      p4DraftDetail.error?.code === "NOT_FOUND" &&
+      p4PausedDetail.error?.code === "NOT_FOUND" &&
+      p4ApplyDraft.error?.reason === "REQUIREMENT_NOT_OPEN" &&
+      p4ApplyPaused.error?.reason === "REQUIREMENT_NOT_OPEN",
+    JSON.stringify([
+      p4Listed.length,
+      p4DraftDetail.error?.code,
+      p4PausedDetail.error?.code,
+      p4ApplyDraft.error,
+      p4ApplyPaused.error,
+    ]),
+  );
+  // Identity from the JWT only (S-2): nobody applies in delta's name.
+  const p4OrgApply = await p4Apply(MRO, { requirementId: p4Id, shareConsent: true });
+  const p4Forged = await p4Apply("echo@crewflex.test", {
+    requirementId: p4Id,
+    shareConsent: true,
+    technicianProfileId: "00000000-0000-4000-8000-000000000021",
+  });
+  const p4OrgRead = await asSeedUser(MRO, "opportunities", { query: { id: p4Id } });
+  const p4Applications = async (email) =>
+    (await asSeedUser(email, "applications")).data?.applications ?? [];
+  const p4NoneYet = ![
+    ...(await p4Applications(DELTA)),
+    ...(await p4Applications("echo@crewflex.test")),
+  ].some((a) => a.requirementId === p4Id);
+  ok(
+    "PKG P04 2 identity from the JWT: an organization admin applying → FORBIDDEN; another professional sending `technicianProfileId` → VALIDATION_ERROR (strict body); no application exists for the need; an organization reading the professional view → FORBIDDEN",
+    p4OrgApply.error?.code === "FORBIDDEN" &&
+      p4Forged.error?.code === "VALIDATION_ERROR" &&
+      p4NoneYet &&
+      p4OrgRead.error?.code === "FORBIDDEN",
+    JSON.stringify([p4OrgApply.error?.code, p4Forged.error?.code, p4OrgRead.error?.code]),
+  );
+  // v2-16 (T-160) through the API: the block hides the organization's needs and refuses the application.
+  const p4Profile = async () => (await asSeedUser(DELTA, "professional-profile")).data?.profile;
+  const p4SetBlocks = async (ids) => {
+    const profile = await p4Profile();
+    const body = { ...profile, blockedOrganizationIds: ids, expectedUpdatedAt: profile?.updatedAt };
+    delete body.updatedAt;
+    return asSeedUser(DELTA, "professional-profile", { method: "PATCH", body });
+  };
+  const p4Blocked = await p4SetBlocks([mroOrg.id]);
+  const p4ListBlocked = await p4List(DELTA, p4Query);
+  const p4DetailBlocked = await p4Detail(p4Id);
+  const p4ApplyBlocked = await p4Apply(DELTA, { requirementId: p4Id, shareConsent: true });
+  const p4Unblocked = await p4SetBlocks([]);
+  const p4ListBack = await p4List(DELTA, p4Query);
+  ok(
+    "PKG P04 3 v2-16: while delta blocks Demo MRO Madrid its needs leave the list, `?id=` → NOT_FOUND and applying → 409 ORGANIZATION_BLOCKED; unblocked, both are back",
+    p4Blocked.ok === true &&
+      !p4ListBlocked.includes(p4Id) &&
+      !p4ListBlocked.includes(p4RestId) &&
+      p4DetailBlocked.error?.code === "NOT_FOUND" &&
+      p4ApplyBlocked.error?.reason === "ORGANIZATION_BLOCKED" &&
+      p4Unblocked.ok === true &&
+      p4ListBack.includes(p4Id) &&
+      p4ListBack.includes(p4RestId),
+    JSON.stringify([
+      p4Blocked.error?.code,
+      p4ListBlocked.length,
+      p4DetailBlocked.error?.code,
+      p4ApplyBlocked.error?.reason,
+      p4Unblocked.error?.code,
+    ]),
+  );
+  const p4Open = async (path) => {
+    await page.goto(`${BASE}${path}`);
+    await page.waitForLoadState("networkidle");
+    return (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  };
+  const p4ListUrl = (extra = "") =>
+    `/app/professional/opportunities?q=${encodeURIComponent(p4Title)}${extra}`;
+  const p4Pills = () => page.locator("main nav[aria-label='Filtrar oportunidades'] a");
+  const p4CurrentPill = () =>
+    page.locator("main nav[aria-label='Filtrar oportunidades'] a[aria-current]").textContent();
+  const p4Card = () => page.locator("main article", { hasText: p4Title }).first();
+  const p4MiniDay = (date) => page.locator(`main ol[aria-label] button[aria-label^='${date}:']`);
+  const p4Tile = (row) =>
+    row
+      .locator("span[aria-hidden]")
+      .first()
+      .evaluate((el) => ({
+        className: el.className,
+        shown: getComputedStyle(el).display !== "none",
+      }));
+  try {
+    await login(DELTA);
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    const p4ListText = await p4Open(p4ListUrl());
+    await expectSpanish("PKG P04 4 opportunities in Spanish");
+    const p4CardText = (await p4Card().innerText()).replace(/\s+/g, " ");
+    const p4Facts = `${p4Short(p4Start)} → ${p4Short(p4End)} · 2 días · 2 personas · Bloque completo`;
+    ok(
+      "PKG P04 4b v1.8 list: «Oportunidades» / «Trabajo que encaja contigo.» / the eligibility sentence, «Buscar oportunidad» («Aeronave, base o empresa…», «Buscar»), the five pills with «Todas» current, «1 oportunidad · página 1 de 1»; the card: «Planificado», «Demo MRO Madrid · Madrid (MAD) · España», «400 € / día · 50 € / h», «{día} → {día} · 2 días · 2 personas · Bloque completo», B1.1 / TR-A320, «Cumples requisitos y disponibilidad», «Ver detalle» + «Preparar candidatura»",
+      /^OPORTUNIDADES /i.test(p4ListText) &&
+        [
+          "Trabajo que encaja contigo.",
+          "Elegibilidad técnica y disponibilidad se evalúan por separado. Un porcentaje no sustituye un requisito obligatorio.",
+          "Buscar oportunidad",
+          "1 oportunidad · página 1 de 1",
+        ].every((s) => p4ListText.includes(s)) &&
+        (await page.locator("main input[name=q]").getAttribute("placeholder")) ===
+          "Aeronave, base o empresa…" &&
+        (await page.getByRole("button", { name: "Buscar" }).count()) === 1 &&
+        (await p4Pills().allTextContents()).join("|") ===
+          "Todas|Compatibles|Planificado|Urgente|AOG" &&
+        (await p4CurrentPill()) === "Todas" &&
+        p4CardText.startsWith("Planificado") &&
+        [
+          "Demo MRO Madrid · Madrid (MAD) · España",
+          "400 € / día · 50 € / h",
+          p4Facts,
+          "B1.1",
+          "TR-A320",
+          "Cumples requisitos y disponibilidad",
+        ].every((s) => p4CardText.includes(s)) &&
+        (await p4Card().getByRole("link", { name: "Ver detalle" }).count()) === 1 &&
+        (await p4Card().getByRole("link", { name: "Preparar candidatura" }).count()) === 1,
+      p4CardText.slice(0, 260),
+    );
+    const p4Eligible = await p4Open(p4ListUrl("&eligible=1"));
+    const p4Empty = await p4Open(p4ListUrl("&urgency=aog"));
+    ok(
+      "PKG P04 5 «Compatibles» keeps the need; «AOG» → «Sin ofertas para este filtro» / «Prueba otra búsqueda o revisa tu perfil y fechas.» with «AOG» current",
+      p4Eligible.includes(p4Title) &&
+        p4Empty.includes("Sin ofertas para este filtro") &&
+        p4Empty.includes("Prueba otra búsqueda o revisa tu perfil y fechas.") &&
+        (await p4CurrentPill()) === "AOG",
+      "",
+    );
+    // SHOT-10 #9 and MKT-03 #1: no horizontal overflow at the five widths; the v1.8 dock «Ofertas» below lg.
+    await p4Open(p4ListUrl());
+    await responsiveShots("P04-opportunities-es");
+    for (const width of [1024, 390, 360]) {
+      await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+      await page.waitForTimeout(300);
+      const p4Overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      );
+      const p4Dock = await page.evaluate(() => {
+        const nav = document.querySelector("nav[aria-label='Accesos rápidos']");
+        if (!nav) return null;
+        return {
+          position: getComputedStyle(nav).position,
+          atBottom: Math.round(nav.getBoundingClientRect().bottom) === window.innerHeight,
+          current: nav.querySelector("a[aria-current=page]")?.textContent?.trim() ?? "",
+        };
+      });
+      ok(
+        width < 1024
+          ? `PKG P04 5b @${width}: no horizontal overflow; the v1.8 dock is fixed at the bottom with «Ofertas» current`
+          : `PKG P04 5b @${width}: no horizontal overflow; the dock is hidden from lg`,
+        !p4Overflow &&
+          (width < 1024
+            ? p4Dock?.position === "fixed" && p4Dock.atBottom && p4Dock.current === "Ofertas"
+            : p4Dock === null ||
+              !(await page.locator("nav[aria-label='Accesos rápidos']").isVisible())),
+        JSON.stringify(p4Dock),
+      );
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    // «Preparar candidatura» lands on the detail's application panel (v2-26).
+    await p4Open(p4ListUrl());
+    await p4Card().getByRole("link", { name: "Preparar candidatura" }).click();
+    await page.waitForURL(
+      (u) => u.pathname === `/app/professional/opportunities/${p4Id}` && u.hash === "#apply",
+      { timeout: 30000 },
+    );
+    await page.waitForLoadState("networkidle");
+    const p4DetailText = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+    const p4Has = (re) => re.test(p4DetailText);
+    ok(
+      "PKG P04 6 detail (MKT-04): «Oportunidad», «Publicada por Demo MRO Madrid», «Volver a oportunidades», «Ubicación Madrid (MAD) · España», «Zona horaria Europe/Madrid», the description, «Tarifa 50 € / h · 400 € / día», «Turno y duración Día · 8 h», «Contrato Contractor · EUR», «Dietas / horas extra 30 € / día · 60 € / h extra», «Cobertura Bloque completo…», «Incorporación», «Movilización máxima 48 h», «Presupuesto preferencia negociable», the logistics, the informative notice",
+      [
+        /^OPORTUNIDAD /i,
+        new RegExp(`Publicada por Demo MRO Madrid`),
+        /Volver a oportunidades/,
+        /Ubicación\s*Madrid \(MAD\) · España/i,
+        /Zona horaria\s*Europe\/Madrid/i,
+        new RegExp(p4Description.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+        /Tarifa\s*50 € \/ h · 400 € \/ día/i,
+        /Turno y duración\s*Día · 8 h/i,
+        /Contrato\s*Contractor · EUR/i,
+        /Dietas \/ horas extra\s*30 € \/ día · 60 € \/ h extra/i,
+        /Cobertura\s*Bloque completo: una candidatura cubre todas las jornadas/i,
+        /Incorporación\s*Antes del inicio del turno/i,
+        /Movilización máxima\s*48 h/i,
+        /Presupuesto\s*preferencia negociable/i,
+        /Logística\s*Vuelos: incluido Alojamiento: incluido Transporte local: incluido Comidas: no incluidas Herramientas de empresa/i,
+        /Valores informativos de la organización: CrewFlex no gestiona cobros, comisiones ni pagos\./,
+      ].every(p4Has),
+      p4DetailText.slice(0, 300),
+    );
+    ok(
+      "PKG P04 6b own eligibility (MKT-04 #9, D-12): «Tu elegibilidad» + «Cumples los requisitos obligatorios y la disponibilidad.», ✓ B1.1 and TR-A320 verified, «Disponibilidad · Cubre toda la necesidad», the passport note",
+      p4Has(/Tu elegibilidad\s*Cumples los requisitos obligatorios y la disponibilidad\./i) &&
+        p4Has(/B1\.1\s*Cumple:\s*Verificada/) &&
+        p4Has(/TR-A320\s*Cumple:\s*Verificada/) &&
+        p4Has(/Disponibilidad\s*Cumple:\s*Cubre toda la necesidad/) &&
+        p4Has(
+          /Calculada con tu pasaporte y tu disponibilidad\. Publicar una necesidad no te hace elegible\./,
+        ),
+      "",
+    );
+    const p4Consent = page.getByRole("checkbox", {
+      name: "Autorizo compartir con Demo MRO Madrid estos datos para esta necesidad.",
+    });
+    const p4Submit = page.getByRole("button", { name: "Presentar candidatura" });
+    ok(
+      "PKG P04 7 «Candidatura» (MKT-05): «Qué verá Demo MRO Madrid» with its lines and «Las candidaturas no reservan el calendario…», the preview «Qué compartes con Demo MRO Madrid» (Vista previa, «Experiencia que compartes», «Mínimo declarado: 45,00 € / hora», originals protected, no real name), the consent unchecked and «Presentar candidatura» disabled",
+      [
+        "Qué verá Demo MRO Madrid",
+        "Tus cualificaciones relevantes para esta necesidad, con su verificación y caducidad.",
+        "Tu disponibilidad durante el periodo de la necesidad.",
+        "Nunca tu contacto ni tus documentos: siguen protegidos.",
+        "Las candidaturas no reservan el calendario: solo una asignación confirmada protege sus días.",
+        "Qué compartes con Demo MRO Madrid",
+        "Vista previa",
+        "Experiencia que compartes",
+        "Mínimo declarado: 45,00 € / hora",
+        "Los originales, nombres de archivos y metadatos identificativos permanecen protegidos.",
+        "El expediente no incluye nombre real, contacto, empresa actual, organizaciones bloqueadas ni documentos.",
+      ].every((s) => p4DetailText.includes(s)) &&
+        !p4DetailText.includes("Technician Delta") &&
+        !(await p4Consent.isChecked()) &&
+        (await p4Submit.isDisabled()),
+      "",
+    );
+    await p4Consent.check();
+    await p4Submit.click();
+    await page.waitForSelector(
+      "[role=status]:has-text('Candidatura enviada. La organización la verá en su lista.')",
+      { timeout: 20000 },
+    );
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p4AfterText = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+    const p4ToApplications = await page.getByRole("link", { name: "Ver mis candidaturas" }).count();
+    await p4Open(p4ListUrl());
+    const p4CardAfter = (await p4Card().innerText()).replace(/\s+/g, " ");
+    ok(
+      "PKG P04 8 applied with the consent: «Candidatura enviada…»; on reload «Ya tienes una candidatura en curso (recibida).» + «Ver mis candidaturas»; the card shows «Candidatura: Recibida» and «Ya presentada» disabled",
+      p4AfterText.includes("Ya tienes una candidatura en curso (recibida).") &&
+        p4ToApplications === 1 &&
+        p4CardAfter.includes("Candidatura: Recibida") &&
+        (await p4Card().getByRole("button", { name: "Ya presentada" }).isDisabled()),
+      p4CardAfter.slice(0, 200),
+    );
+    // P01-22 / P01-23: the «Mi espacio» rows with their data (the compatible need and the rest-day one).
+    await p4Open(`/app/professional?month=${p4Start.slice(0, 7)}`);
+    await p4MiniDay(p4Start).click();
+    const p4Row = page.locator("main li", { hasText: p4Title }).first();
+    const p4RowTile = await p4Tile(p4Row);
+    const p4RowText = (await p4Row.innerText()).replace(/\s+/g, " ");
+    const p4Offer = p4Row.getByRole("link", { name: `Ver oferta · ${p4Title}` });
+    ok(
+      "PKG P04 9 P01-22/P01-23 «Mi espacio»: the compatible row carries the calendar tile in the ok tone, «Demo MRO Madrid · Madrid (MAD) · B1.1, TR-A320», «Requisitos y disponibilidad compatibles», «50 € / h» and «Ver oferta» → its detail",
+      /bg-ok-bg/.test(p4RowTile.className) &&
+        p4RowTile.shown &&
+        p4RowText.includes("Demo MRO Madrid · Madrid (MAD) · B1.1, TR-A320") &&
+        p4RowText.includes("Requisitos y disponibilidad compatibles") &&
+        p4RowText.includes("50 € / h") &&
+        (await p4Offer.getAttribute("href")) === `/app/professional/opportunities/${p4Id}`,
+      `${p4RowTile.className} · ${p4RowText.slice(0, 160)}`,
+    );
+    await p4Open(`/app/professional?month=${p4RestStart.slice(0, 7)}`);
+    const p4RestLabel = (await p4MiniDay(p4RestStart).getAttribute("aria-label")) ?? "";
+    await p4MiniDay(p4RestStart).click();
+    const p4RestRow = page.locator("main li", { hasText: p4RestTitle }).first();
+    const p4RestTile = await p4Tile(p4RestRow);
+    const p4RestText = (await p4RestRow.innerText()).replace(/\s+/g, " ");
+    const p4Review = p4RestRow.getByRole("link", { name: `Revisar fechas · ${p4RestTitle}` });
+    ok(
+      "PKG P04 9b P01-22 the «posible en descanso» row (BR-14.1): red tile, «Posible en descanso: revisa y publica tus fechas», no rate, «Revisar fechas» → that month's calendar; the day's label ends «…, revisa la publicación de descanso»",
+      /bg-danger-bg/.test(p4RestTile.className) &&
+        p4RestTile.shown &&
+        p4RestText.includes("Posible en descanso: revisa y publica tus fechas") &&
+        !/ \/ h/.test(p4RestText) &&
+        (await p4Review.getAttribute("href")) ===
+          `/app/professional/availability?month=${p4RestStart.slice(0, 7)}` &&
+        /revisa la publicación de descanso$/.test(p4RestLabel),
+      `${p4RestTile.className} · ${p4RestLabel}`,
+    );
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=en]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+    await logout();
+    // MKT-03 #2 «Ofertas en la red» (v2-20, T-90): another organization, then the publisher, then the URL.
+    await login("admin.other@crewflex.test");
+    const p4Network = await p4Open(`/app/organization/network?q=${encodeURIComponent(p4Title)}`);
+    const p4NetCard = page.locator("main article", { hasText: p4Title }).first();
+    const p4NetCardText = (await p4NetCard.innerText().catch(() => "")).replace(/\s+/g, " ");
+    const p4NetDetail = await p4NetCard.getByRole("link", { name: "View details" }).count();
+    await logout();
+    await login(MRO);
+    const p4NetworkOwn = await p4Open(`/app/organization/network?q=${encodeURIComponent(p4Title)}`);
+    const p4OrgUrl = `${BASE}/app/professional/opportunities/${p4Id}`;
+    expectedErrorUrls.add(p4OrgUrl);
+    const p4OrgResponse = await page.goto(p4OrgUrl);
+    expectedErrorUrls.delete(p4OrgUrl);
+    await logout();
+    ok(
+      "PKG P04 10 «Ofertas en la red» (MKT-03 #2): another organization lists the need with the same facts and «View details», no eligibility, no «Prepare application», no commission; Demo MRO Madrid does not see its own (T-90); an organization account on the professional URL → HTTP 404",
+      p4Network.includes("Offers in the network.") &&
+        (await p4NetCard.count()) === 1 &&
+        /€400 \/ day · €50 \/ h/.test(p4NetCardText) &&
+        /2 days · 2 people · Full block/.test(p4NetCardText) &&
+        p4NetDetail === 1 &&
+        !/You meet the requirements|Prepare application|ommission/.test(p4NetCardText) &&
+        p4NetworkOwn.includes("No requirements for this filter") &&
+        p4OrgResponse?.status() === 404,
+      `${p4NetCardText.slice(0, 160)} · own: ${p4NetworkOwn.slice(0, 80)} · ${p4OrgResponse?.status()}`,
+    );
+  } finally {
+    // Seed state back whatever happened: delta in English (later English-asserting blocks), the application
+    // withdrawn, no block, the window deleted, the needs closed and archived, the draft archived.
+    try {
+      if ((await page.evaluate(() => location.pathname)).startsWith("/app")) await logout();
+    } catch {
+      /* the page may be mid-navigation; the API restore below does not need it */
+    }
+    await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } });
+    const p4App = (await p4Applications(DELTA)).find((a) => a.requirementId === p4Id);
+    const p4Withdrawn = p4App
+      ? await asSeedUser(DELTA, "applications", {
+          method: "PATCH",
+          headers: p4Key(),
+          body: { applicationId: p4App.id, to: "withdrawn", expectedUpdatedAt: p4App.updatedAt },
+        })
+      : { data: { transition: { status: "withdrawn" } } };
+    const p4BlocksLeft = (await p4Profile())?.blockedOrganizationIds ?? [];
+    const p4BlocksOk = p4BlocksLeft.length === 0 || (await p4SetBlocks([])).ok === true;
+    const p4Deleted = p4Window.data?.window
+      ? (
+          await asSeedUser(DELTA, "professional-availability", {
+            method: "DELETE",
+            query: { id: p4Window.data.window.id },
+          })
+        ).data?.deleted === true
+      : false;
+    const p4Archived = [];
+    for (const id of [p4Id, p4RestId, p4PausedId]) {
+      if (!id) continue;
+      const closed = await asSeedUser(MRO, "work-requirements", {
+        method: "PATCH",
+        body: { id, status: "closed" },
+      });
+      const archived = closed.ok
+        ? await asSeedUser(MRO, "work-requirements", {
+            method: "PATCH",
+            body: { id, archive: true },
+          })
+        : closed;
+      p4Archived.push(archived.ok === true);
+    }
+    if (p4DraftId)
+      p4Archived.push(
+        (
+          await asSeedUser(MRO, "work-requirements", {
+            method: "PATCH",
+            body: { id: p4DraftId, archive: true },
+          })
+        ).ok === true,
+      );
+    ok(
+      "PKG P04 11 restore: the application withdrawn, no block left, the window deleted, the three needs closed and archived, the draft archived, delta in English (seed state back)",
+      p4Withdrawn.data?.transition?.status === "withdrawn" &&
+        p4BlocksOk &&
+        p4Deleted &&
+        p4Archived.length === 4 &&
+        p4Archived.every(Boolean),
+      JSON.stringify([p4Withdrawn.error, p4BlocksLeft.length, p4Deleted, p4Archived]),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
