@@ -746,7 +746,7 @@
       "permits": "Declared work permits",
       "permitsHint": "European Union countries where you may work.",
       "blocks": "Blocked organizations",
-      "blocksHint": "A blocked organization does not find you among its external candidates and is not told. If you apply to one of its needs, it does see that application.",
+      "blocksHint": "A blocked organization does not find you among its external candidates and is not told; its needs leave «Opportunities» and you cannot apply to them, although the applications you already sent stay.",
       "blocksNone": "There are no organizations in the network yet."
     },
     "item": {
@@ -2105,6 +2105,7 @@
       "OWN_ORGANIZATION": "You cannot apply to a requirement of your own organization.",
       "PROFILE_REQUIREMENTS_UNMET": "The profile does not meet the requirement's profile requirements (work permit, category, aircraft, type rating, engines, experience or capabilities).",
       "RESTRICTIONS_DECLARED": "The professional declares general restrictions: the assignment cannot be confirmed.",
+      "ORGANIZATION_BLOCKED": "This organization is blocked.",
       "CLIENT_REQUIRED": "A staffing agency publishes only for a represented client: enter the client.",
       "CLIENT_NOT_ACTIVE": "The agency no longer represents this client: this requirement cannot move forward."
     },

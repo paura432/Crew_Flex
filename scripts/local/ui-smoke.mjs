@@ -2071,6 +2071,121 @@ ok(
 );
 await logout();
 
+// PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
+// the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
+// ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
+// the local API (setup only); Delta's passport is restored and the need closed at the end whatever happens.
+const pbTitle = `Local UI check · blocked employer ${Date.now()}`;
+const pbCreated = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+  method: "POST",
+  headers: { "Idempotency-Key": crypto.randomUUID() },
+  body: {
+    organizationId: mroOrg.id,
+    title: pbTitle,
+    location: "Madrid (MAD)",
+    startsAt: "2026-12-14T06:00:00.000Z",
+    endsAt: "2026-12-15T18:00:00.000Z",
+    shift: "day",
+    headcount: 1,
+    urgency: "planned",
+    qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+  },
+});
+const pbId = pbCreated.data?.requirement?.id;
+const pbSeedPassport = (await asSeedUser("delta@crewflex.test", "professional-profile")).data
+  .profile;
+const pbListed = async () => {
+  const list = await asSeedUser("delta@crewflex.test", "opportunities", { query: { q: pbTitle } });
+  const detail = await asSeedUser("delta@crewflex.test", "opportunities", { query: { id: pbId } });
+  return {
+    inList: (list.data?.opportunities ?? []).some((o) => o.requirement.id === pbId),
+    detail: detail.ok ? "ok" : (detail.error?.code ?? "?"),
+  };
+};
+const pbPage = async () => {
+  await page.goto(`${BASE}/app/professional/opportunities?q=${encodeURIComponent(pbTitle)}`);
+  await page.waitForLoadState("networkidle");
+  return await page.locator("main").innerText();
+};
+const pbSetBlock = async (blocked) => {
+  await page.goto(`${BASE}/app/professional/profile`);
+  await page.waitForLoadState("networkidle");
+  await passportBox("blockedOrganizationIds", "Demo MRO Madrid").setChecked(blocked);
+  await page.click("main form button[type=submit]");
+  await page.waitForSelector("[role=status]:has-text('Passport updated')", { timeout: 15000 });
+};
+try {
+  await login("delta@crewflex.test");
+  const pbBefore = await pbListed();
+  ok(
+    "PKG v2-16 1 before the block: Delta lists the Demo MRO Madrid need (page, API list and detail)",
+    Boolean(pbId) &&
+      new RegExp(pbTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(await pbPage()) &&
+      pbBefore.inList &&
+      pbBefore.detail === "ok",
+    JSON.stringify({ pbId, ...pbBefore }),
+  );
+  await pbSetBlock(true);
+  const pbBlocked = await pbListed();
+  const pbApply = await asSeedUser("delta@crewflex.test", "applications", {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+    body: { requirementId: pbId, shareConsent: true },
+  });
+  ok(
+    "PKG v2-16 2 blocked: the need left «Opportunities» (page, API list, detail 404); applying is 409 ORGANIZATION_BLOCKED",
+    !new RegExp(pbTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(await pbPage()) &&
+      !pbBlocked.inList &&
+      pbBlocked.detail === "NOT_FOUND" &&
+      pbApply.ok === false &&
+      pbApply.error?.code === "CONFLICT" &&
+      pbApply.error?.reason === "ORGANIZATION_BLOCKED",
+    JSON.stringify({ ...pbBlocked, apply: pbApply.error ?? "ok" }),
+  );
+  await pbSetBlock(false);
+  const pbAfter = await pbListed();
+  ok(
+    "PKG v2-16 3 unblocked: the need is back in «Opportunities» (page, API list and detail)",
+    new RegExp(pbTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(await pbPage()) &&
+      pbAfter.inList &&
+      pbAfter.detail === "ok",
+    JSON.stringify(pbAfter),
+  );
+} finally {
+  await logout();
+  // Seed state back whatever happened: Delta's passport (no block) and the need closed and archived.
+  const pbNow = (await asSeedUser("delta@crewflex.test", "professional-profile")).data?.profile;
+  const pbRestore = { ...pbSeedPassport, expectedUpdatedAt: pbNow?.updatedAt };
+  delete pbRestore.updatedAt;
+  const pbRestored = await asSeedUser("delta@crewflex.test", "professional-profile", {
+    method: "PATCH",
+    body: pbRestore,
+  });
+  const pbClosed = pbId
+    ? await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+        method: "PATCH",
+        body: { id: pbId, status: "closed" },
+      })
+    : { ok: false };
+  const pbArchived = pbClosed.ok
+    ? await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+        method: "PATCH",
+        body: { id: pbId, archive: true },
+      })
+    : { ok: false };
+  ok(
+    "PKG v2-16 4 seed state restored: Delta's passport without the block, the need closed and archived",
+    pbRestored.ok === true &&
+      (pbRestored.data?.profile?.blockedOrganizationIds ?? []).length === 0 &&
+      pbArchived.ok === true,
+    JSON.stringify({
+      passport: pbRestored.error?.code ?? "ok",
+      closed: pbClosed.error?.code ?? "ok",
+      archived: pbArchived.error?.code ?? "ok",
+    }),
+  );
+}
+
 // PKG notices (v2-18, migration 20261023800000): in-app notices for both sides. Setup through the
 // local API (need, Delta's window, the application, the shortlist); every read and mark is a click.
 const noticeTitle = `Local UI check · notices ${Date.now()}`;

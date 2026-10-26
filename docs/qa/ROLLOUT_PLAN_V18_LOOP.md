@@ -96,11 +96,11 @@ memory bank. Procedure (owner, dashboard «Account → Access Tokens»):
 5. Writes (§0b, functions deploy, secrets) use a separate token created for that window — the matching **Read-write**
    permissions only, expiry 1–7 days — revoked when the step is done.
 
-## 1. What the branch adds (state at `8fa806a`, 2026-10-23; rows 37–38 added 2026-10-26)
+## 1. What the branch adds (state at `8fa806a`, 2026-10-23; rows 37–39 added 2026-10-26)
 
 Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M08/M09 (`15-autonomous-migration-backlog.md`
 §6.3 has each package's commits, gates and technical defaults T-01…T-148; `08-product-decisions.md` the defaults;
-`BUSINESS_RULES.md` BR-1…BR-29). **38 migrations** not applied anywhere but the local Docker DB, in file order:
+`BUSINESS_RULES.md` BR-1…BR-29). **39 migrations** not applied anywhere but the local Docker DB, in file order:
 
 | #   | File (apply in this order — `db push` applies pending files in file order) | Package                                      |
 | --- | -------------------------------------------------------------------------- | -------------------------------------------- |
@@ -141,13 +141,17 @@ Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M0
 | 35  | `20261024500100_requirement_client`                                        | ?                                            |
 | 36  | `20261024600000_visible_network_count`                                     | shell-visual                                 |
 | 37  | `20261024700000_candidate_directory`                                       | directory (search-only)                      |
-| 38  | `20261026100000_revoke_trigger_function_execute`                           | F1b security (REVOKE only)                   |
+| 38  | `20261024800000_professional_block_opportunities`                          | professional-block (v2-16)                   |
+| 39  | `20261026100000_revoke_trigger_function_execute`                           | F1b security (REVOKE only)                   |
 
 **Edge Functions** (22 directories): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
 **changed since release 1** — `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-profile`, `professional-qualifications`, `professional-availability`, `user-preferences` (every one of them parses the new schema/statuses and
 accepts new parameters; the deployed versions answer 500/400 on them); **release-2 functions still undeployed** —
 `professional-documents`, `documents-maintenance`, `qualification-reviews` (wallet + OD-3 review, both behind flags). The directory package (merged `47b467e`) added
-`20261024700000` and `candidate-directory`.
+`20261024700000` and `candidate-directory`. The professional-block package (v2-16, `20261024800000`) changes no
+function code but the shared `APPLICATION_CONFLICTS` (CFA16): deploy `applications` **no later than** that migration
+(the new function on the old SQL never sees CFA16, harmless; an older `applications` on the new SQL answers 500 instead
+of 409 `ORGANIZATION_BLOCKED`); `opportunities` changes only a comment and needs no redeploy for it.
 
 ## 2. Preconditions (owner decisions, before any step)
 

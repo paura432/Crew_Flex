@@ -174,8 +174,9 @@ text) and the mobility (BR-5.6).
 
 Internal candidates are named. External candidates are shown with a per-requirement pseudonymous
 reference unless the professional chose `open` visibility. A professional who **blocked** the requirement's
-organization is not one of its external candidates (`20261023100300`, T-35, BR-18); the internal pool is
-membership and is not affected.
+organization is not one of its external candidates (`20261023100300`, T-35, BR-18) and, since v2-16 (T-160), does not
+see or apply to that organization's requirements either (BR-14, BR-15); the internal pool is membership and is not
+affected.
 
 ## BR-8 Visibility
 
@@ -276,7 +277,12 @@ eligible. The function considers at most 200 requirements per call and says so (
 caller's own organizations' requirements** (v2-27, T-90): a member — whatever their role — does not see them as
 opportunities. **«Ofertas en la red»** (v2-20, T-95): a member of any organization lists the same projection without
 any eligibility (no «Compatibles»), its own organization's requirements excluded; never a commission (`✗`).
-IMPLEMENTED (local).
+**Never a requirement of an organization the caller blocked** in the passport (BR-18, v2-16, T-160, LOCAL
+`20261024800000`; v1.8 `profile.blocked`): the list, the detail by id (404) and the professional-side rules
+(`get_requirement_profile_rules`) leave them out — the same predicate for professionals and for a member's network
+view — until the professional unblocks it; a requirement already applied to keeps its rules and its application
+(withdraw and accept keep working, the organization still reads it), but its detail page is a 404 like any other
+blocked need — the card stays in «Mis candidaturas». IMPLEMENTED (local).
 
 **BR-14.1 «Posible en descanso»** (N-17, v1.8 demo `homeModel.js:6-15`, T-17): an opportunity the professional could
 apply to but for availability — `applyBlocker` is `NOT_ELIGIBLE` and every blocker is `NOT_AVAILABLE` or
@@ -298,7 +304,11 @@ the explicit share consent of the form (required by the database too and recorde
 candidate-pool view (pseudonym unless internal or `open`; D-07 consents are not implemented). Once **confirmed**, the
 assignment's days are protected in the calendar and on the server (BR-4.9, T-15; T-13 superseded). A member (any role)
 of the requirement's organization is refused last, after every other reason (`OWN_ORGANIZATION`, `CFA13`; v2-27,
-T-90, LOCAL `20261024100000`). IMPLEMENTED (local).
+T-90, LOCAL `20261024100000`). A professional who **blocked** the requirement's organization (BR-18) is refused with
+`ORGANIZATION_BLOCKED` (`CFA16`, «Esta organización está bloqueada.») right after the requirement's state (`CFA01`,
+`CFA02`) and before the application history and the eligibility — the v1.8 order (v2-16, T-160, LOCAL
+`20261024800000`); an idempotent replay still returns its earlier result, and applications made before the block
+are untouched (withdraw, accept and the rest keep working). IMPLEMENTED (local).
 
 ## BR-16 Daily learning challenge (SCOPE-2, v1.8 default) — `src/domain/learning.ts`
 
@@ -360,17 +370,17 @@ else yet (v1.8 also refused to confirm an assignment for a pending organization 
 The v1.8 passport fields are the professional's **own declarations**, saved with the rest of the passport in one
 transaction (`save_professional_passport`, version check I-3) and CHECK-constrained to the domain catalogs:
 
-| Field                                 | Rule                                                                                                                                                                                                 |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Main category + categories            | Any of the 12 v1.8 categories (B1.1…B3, Cat A, Cat C, Mecánico, Sheet Metal, NDT, Helper); the main one is among them, required once any is declared, never `""` (T-30)                              |
-| Aircraft                              | Any of the 12 v1.8 aircraft (T-30)                                                                                                                                                                   |
-| Type ratings                          | Aircraft × licence category (the 8 licences, not the 4 trades), optional validity, restrictions ≤ 500; ≤ 40; each on a declared aircraft and category, once (T-31)                                   |
-| General restrictions                  | Free text ≤ 2000; blank = none (T-31)                                                                                                                                                                |
-| English, engines, capabilities, tools | A1–C2; the 7 v1.8 engines; the 9 v1.8 capabilities; «own tools» yes/no (T-32)                                                                                                                        |
-| Base country, work permits            | The 27 EU member states; the base itself stays free text (T-34)                                                                                                                                      |
-| Minimum rate                          | ≥ 0.01, ≤ 100 000, EUR per hour or per day; **owner-only**, no money moves (T-33) — except in the Candidate Pack copy of an application, previewed before the consent (BR-25, T-111)                 |
-| Phone, current employer               | **Owner-only**; never shared (D-07; no sharing path exists) (T-35)                                                                                                                                   |
-| Blocked organizations                 | **Owner-only**, ≤ 200. A blocked organization does not get the professional in its **external** pool or counts (BR-7); membership, the opportunities list and own applications are unaffected (T-35) |
+| Field                                 | Rule                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Main category + categories            | Any of the 12 v1.8 categories (B1.1…B3, Cat A, Cat C, Mecánico, Sheet Metal, NDT, Helper); the main one is among them, required once any is declared, never `""` (T-30)                                                                                                                                                                                        |
+| Aircraft                              | Any of the 12 v1.8 aircraft (T-30)                                                                                                                                                                                                                                                                                                                             |
+| Type ratings                          | Aircraft × licence category (the 8 licences, not the 4 trades), optional validity, restrictions ≤ 500; ≤ 40; each on a declared aircraft and category, once (T-31)                                                                                                                                                                                             |
+| General restrictions                  | Free text ≤ 2000; blank = none (T-31)                                                                                                                                                                                                                                                                                                                          |
+| English, engines, capabilities, tools | A1–C2; the 7 v1.8 engines; the 9 v1.8 capabilities; «own tools» yes/no (T-32)                                                                                                                                                                                                                                                                                  |
+| Base country, work permits            | The 27 EU member states; the base itself stays free text (T-34)                                                                                                                                                                                                                                                                                                |
+| Minimum rate                          | ≥ 0.01, ≤ 100 000, EUR per hour or per day; **owner-only**, no money moves (T-33) — except in the Candidate Pack copy of an application, previewed before the consent (BR-25, T-111)                                                                                                                                                                           |
+| Phone, current employer               | **Owner-only**; never shared (D-07; no sharing path exists) (T-35)                                                                                                                                                                                                                                                                                             |
+| Blocked organizations                 | **Owner-only**, ≤ 200. A blocked organization does not get the professional in its **external** pool, counts or outreach audience (BR-7, BR-26), its needs leave the professional's «Oportunidades» and cannot be applied to (`CFA16`; BR-14, BR-15; v2-16, T-160, LOCAL `20261024800000`); membership and the applications already made are unaffected (T-35) |
 
 **Used by matching since package matching-v18 (2026-10-22).** The declarations decide the v1.8 profile requirements
 a requirement states (BR-3.7–3.13: work permits, categories, aircraft, type ratings with validity and restrictions,

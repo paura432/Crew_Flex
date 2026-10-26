@@ -97,6 +97,9 @@ export const APPLICATION_CONFLICTS = [
   // rating, engines, years, capabilities; BR-3.7–3.13, trigger applications_profile_rules)
   "PROFILE_REQUIREMENTS_UNMET",
   "RESTRICTIONS_DECLARED", // CFA15: confirm while the professional declares general restrictions (T-87)
+  // CFA16: applying to a requirement of an organization the professional blocked in the passport (v2-16, T-160;
+  // v1.8 «Esta organización está bloqueada.»). Checked after the requirement's state, before the history.
+  "ORGANIZATION_BLOCKED",
 ] as const;
 export type ApplicationConflict = (typeof APPLICATION_CONFLICTS)[number];
 

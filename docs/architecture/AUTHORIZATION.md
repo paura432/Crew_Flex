@@ -122,6 +122,25 @@ only platform admins read). A professional with visibility `verified_orgs` enter
 reviewed organization, always pseudonymous; for any other organization it is as invisible as `private`. The
 S-7 exception (applying) is unchanged. `get_platform_summary` (DEFINER, platform admin, 42501 otherwise) returns
 counts only; the audit view reads `audit_events` under the existing policy.
+**Professional block (PKG professional-block, LOCAL `20261024800000`, v2-16, T-160).** The organizations a professional
+blocks in the passport (`technician_organization_blocks`, owner-only, written only by `save_professional_passport`) now
+bind the professional's own reads and writes too, through one private predicate,
+`app_private.technician_blocks_organization(profile, organization)` (STABLE, INVOKER, `search_path = ''`, no execute
+for `public`/`anon`/`authenticated`; `app_private` is not exposed): `list_opportunities` never returns a blocked
+organization's requirement (so the detail by id is a 404, for professionals and for a member's network view alike),
+`get_requirement_profile_rules` leaves its published rules out (an applied-to requirement stays readable), and
+`apply_to_requirement` refuses it with `CFA16` `ORGANIZATION_BLOCKED` after the requirement's state and before the
+history and the eligibility. Every function keeps its `auth.uid()` + role check and evaluates the block for the
+caller only — nobody can ask about another professional's blocks (the helper's profile parameter exists for the pool
+bodies, which iterate over candidates; a public function passes `auth.uid()` and nothing else). Applications made
+before the block are untouched on both sides (the professional withdraws or accepts as before; the organization
+still reads them through `get_requirement_applications`), but the opportunity detail page of such a requirement is a
+404 like any other blocked need — the application and its card stay in «Mis candidaturas». The pools, counts,
+directory and outreach audience (which already excluded the professional, T-35) are unchanged; the pool bodies
+(`ranked_external_pool`, `count_viable_candidates`, `count_visible_network`) keep their inline predicate, each pinned
+by its own test (the directory package, `20261024700000`, re-creates `count_visible_network` and adds a copy in
+`directory_visible`), until the package that next touches them. Proof: `tests/db/professional-block.test.ts`.
+
 **Shell and «Red visible» (PKG shell-visual, LOCAL `20261024600000`).** `count_visible_network(org)` (DEFINER) answers
 admins/managers of that organization only (42501 for members, professionals, other organizations, platform admins
 and anon) with one number: the professionals the external pool would let that organization find (BR-8, blocks

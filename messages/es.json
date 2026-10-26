@@ -746,7 +746,7 @@
       "permits": "Permisos de trabajo declarados",
       "permitsHint": "Países de la Unión Europea en los que puedes trabajar.",
       "blocks": "Organizaciones bloqueadas",
-      "blocksHint": "Una organización bloqueada no te encuentra entre sus candidatos externos y no se le avisa. Si presentas una candidatura a una de sus necesidades, esa candidatura sí la verá.",
+      "blocksHint": "Una organización bloqueada no te encuentra entre sus candidatos externos y no se le avisa; sus necesidades desaparecen de «Oportunidades» y no puedes presentarte a ellas, aunque las candidaturas que ya presentaste se mantienen.",
       "blocksNone": "Todavía no hay organizaciones en la red."
     },
     "item": {
@@ -2105,6 +2105,7 @@
       "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización.",
       "PROFILE_REQUIREMENTS_UNMET": "El perfil no cumple los requisitos de la necesidad (permiso de trabajo, categoría, aeronave, habilitación de tipo, motores, experiencia o capacidades).",
       "RESTRICTIONS_DECLARED": "El profesional declara restricciones generales: no se puede confirmar (perfil o restricciones pendientes de revisión).",
+      "ORGANIZATION_BLOCKED": "Esta organización está bloqueada.",
       "CLIENT_REQUIRED": "Una agencia de personal publica solo para un cliente representado: indica el cliente.",
       "CLIENT_NOT_ACTIVE": "La agencia ya no representa a este cliente: esta necesidad no puede avanzar."
     },
