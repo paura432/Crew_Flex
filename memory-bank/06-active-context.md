@@ -13,7 +13,8 @@ and the integrator's gate (`tmp/f2/gate.sh`, git-ignored) before a fast-forward 
 open decisions stay NEEDS_DECISION; every subagent: Fable, xhigh.
 F2 done (P01 matrix `71edd7b`). F3 so far: F3.0 inventory `a073683`; P02 passport (gate `3220560`, review fix `b13e6a6`);
 P03 calendar (merge `9ee9d8e`, gate `5ffe68e`); P04 opportunities fast-forwarded at `eb21de2` — review: no blockers,
-fixed «{n} días» (one `requirementDays` in `src/domain`) and the decision id D-06 Q6 (was a non-existent «D-08 · Q6»);
+fixed «{n} días» (one `requirementDays` in `src/domain`); then `f3/p03-fixes` merged (PKG P03 restores delta's locale
+in `finally`); partial coverage is labelled «D-06 Q6 ↔ SCOPE-2» everywhere (was «D-08 · Q6»; Q6 belongs to D-06);
 full gate on `e8b5843` green but smoke 322/323 (a test bug in `PKG P04 10`, fixed `bb37569`), then smoke 323/323.
 Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
 After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime

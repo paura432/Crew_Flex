@@ -2577,6 +2577,11 @@ await logout();
       ]),
     );
   } finally {
+    // Delta back to English even when a step above failed, or later English-asserting blocks cascade.
+    await asSeedUser("delta@crewflex.test", "user-preferences", {
+      method: "PATCH",
+      body: { locale: "en" },
+    });
     const p3Cancelled = await p3Move("delta@crewflex.test", "cancelled", {
       reason: "Local UI check: P03 restore",
     });
