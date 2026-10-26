@@ -2170,12 +2170,17 @@ await logout();
   await expectSpanish("PKG P02 4 passport in Spanish");
   const p2Es = await page.locator("main").evaluate((el) => el.textContent.replace(/\s+/g, " "));
   ok(
-    "PKG P02 5 v1.8 literals: «Empezar perfil vacío», «{%} completado · {n} evidencias», «Pasaporte visual», «Documentos y cursos próximos a revisar», «Logros de aprendizaje», «Guardar pasaporte»",
+    "PKG P02 5 v1.8 literals: «Empezar perfil vacío», «{%} completado · {n} evidencias», «Pasaporte visual», «Documentos y cursos próximos a revisar», «Logros de aprendizaje», the five step names as panels, «Guardar pasaporte»",
     [
       "Empezar perfil vacío",
       "Pasaporte visual",
       "Documentos y cursos próximos a revisar",
       "Logros de aprendizaje",
+      "01 · Identidad",
+      "02 · Cualificaciones",
+      "03 · Experiencia y cursos",
+      "04 · Tarifa y permisos de trabajo",
+      "05 · Visibilidad en la red",
       "Guardar pasaporte",
     ].every((s) => p2Es.includes(s)) && /\d+% completado · \d+ evidencias?/.test(p2Es),
     p2Es.slice(0, 160),
