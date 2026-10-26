@@ -2114,6 +2114,13 @@ await logout();
   const p2Closed =
     !(await p2Dialog.isVisible()) &&
     (await p2Trigger.evaluate((el) => document.activeElement === el));
+  // v1.8 keeps location, employer, English, tools and work countries (Professional2.jsx:113-128).
+  const p2Kept = () =>
+    page.evaluate(() => ({
+      base: document.querySelector("#baseLocation").value,
+      permits: document.querySelectorAll("fieldset#workPermits input:checked").length,
+    }));
+  const p2KeptBefore = await p2Kept();
   await p2Trigger.click();
   await p2Dialog.getByRole("button", { name: "Prepare draft" }).click();
   await page.waitForSelector("[role=status]:has-text('Empty draft prepared')", { timeout: 15000 });
@@ -2124,13 +2131,13 @@ await logout();
     rate: document.querySelector("#minRate").value,
     primary: document.querySelector("#primaryCategory").value,
     ticked: document.querySelectorAll(
-      "fieldset#categories input:checked, fieldset#aircraft input:checked, fieldset#engines input:checked, fieldset#skills input:checked, fieldset#workPermits input:checked",
+      "fieldset#categories input:checked, fieldset#aircraft input:checked, fieldset#engines input:checked, fieldset#skills input:checked",
     ).length,
     ratings: document.querySelectorAll("[id^='rating-'][id$='-aircraft']").length,
     visibility: document.querySelector("[role=radio][aria-checked=true]")?.textContent ?? "",
   }));
   ok(
-    "PKG P02 2 «Start from scratch»: the v1.8 text; Escape closes it (focus back); «Prepare draft» empties name, phone, years, rate, main category, every list and the ratings, visibility back to Private; a status says nothing is saved yet",
+    "PKG P02 2 «Start from scratch»: the v1.8 text; Escape closes it (focus back); «Prepare draft» empties name, phone, years, rate, main category, the category/aircraft/engine/capability lists and the ratings, keeps base and permits (v1.8), visibility back to Private; a status says nothing is saved yet",
     /An empty draft will be prepared\. Your published profile is kept/.test(p2DialogText) &&
       p2Closed &&
       p2Draft.name === "" &&
@@ -2140,7 +2147,8 @@ await logout();
       p2Draft.primary === "" &&
       p2Draft.ticked === 0 &&
       p2Draft.ratings === 0 &&
-      /^Private/.test(p2Draft.visibility),
+      /^Private/.test(p2Draft.visibility) &&
+      JSON.stringify(await p2Kept()) === JSON.stringify(p2KeptBefore),
     JSON.stringify(p2Draft),
   );
   // Saving the empty draft fails on the name (v1.8 «Escribe tu nombre profesional.»): nothing is sent.

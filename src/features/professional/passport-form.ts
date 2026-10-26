@@ -78,31 +78,25 @@ export function withPrimary(
 
 /**
  * v1.8 «Empezar perfil vacío» → «Preparar borrador» (`Professional2.jsx`, T-162): the form starts again
- * from an empty draft; the saved passport is untouched until «Guardar pasaporte». Every declaration,
- * text and optional value is emptied and the visibility goes back to private (v1.8); the enums without
- * an empty option (mobility, status, rate unit), the blocked organizations (a privacy choice, as the
- * v1.8 `blockEmployer`) and the version (`updatedAt`) are kept.
+ * from an empty draft; the saved passport is untouched until «Guardar pasaporte». Exactly v1.8's reset
+ * (`Professional2.jsx:113-128`): name, phone, categories, aircraft, type ratings, engines, capabilities, years and
+ * rate are emptied and the visibility goes back to private; base and country, employer, English, tools, work
+ * permits and restrictions are kept (v1.8 keeps location, employer, English, tools and work countries), as are the
+ * enums without an empty option, the blocked organizations and the version (`updatedAt`).
  */
 export function emptyPassport<P extends ProfessionalPassport>(current: P): P {
   return {
     ...current,
     displayName: "",
     phone: null,
-    baseLocation: null,
-    baseCountry: null,
-    currentEmployerId: null,
     primaryCategory: null,
     categories: [],
     aircraft: [],
     typeRatings: [],
-    generalRestrictions: null,
     yearsExperience: null,
-    englishLevel: null,
     engines: [],
     skills: [],
-    ownTools: false,
     minRate: null,
-    workPermits: [],
     visibility: "private",
   };
 }

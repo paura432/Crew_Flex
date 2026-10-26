@@ -78,7 +78,7 @@ describe("passportFromForm", () => {
 });
 
 describe("emptyPassport (v1.8 «Empezar perfil vacío», T-162)", () => {
-  it("empties every declaration and private value, keeps the enums, the blocks and the version", () => {
+  it("empties what v1.8 empties, keeps what v1.8 keeps, the enums, the blocks and the version", () => {
     const saved = {
       displayName: "Technician Delta",
       baseLocation: "Barcelona (BCN)",
@@ -115,7 +115,6 @@ describe("emptyPassport (v1.8 «Empezar perfil vacío», T-162)", () => {
     expect(draft).toEqual({
       ...saved,
       displayName: "",
-      baseLocation: null,
       yearsExperience: null,
       visibility: "private",
       primaryCategory: null,
@@ -123,15 +122,19 @@ describe("emptyPassport (v1.8 «Empezar perfil vacío», T-162)", () => {
       aircraft: [],
       engines: [],
       skills: [],
-      englishLevel: null,
-      ownTools: false,
-      baseCountry: null,
-      workPermits: [],
-      generalRestrictions: null,
       typeRatings: [],
       phone: null,
-      currentEmployerId: null,
       minRate: null,
+    });
+    // v1.8 keeps location, employer, English, tools and work countries (Professional2.jsx:113-128).
+    expect(draft).toMatchObject({
+      baseLocation: "Barcelona (BCN)",
+      baseCountry: "ES",
+      currentEmployerId: saved.currentEmployerId,
+      englishLevel: "C1",
+      ownTools: true,
+      workPermits: ["ES"],
+      generalRestrictions: "No run-ups",
     });
     // The version is what the next save checks (I-3): the empty draft still replaces THIS passport.
     expect(draft.updatedAt).toBe(saved.updatedAt);
