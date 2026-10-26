@@ -1,5 +1,7 @@
 # 20 · Diff v1.8 ↔ Next — Pantallas del técnico/profesional
 
+**F3 (26/10, tras P01, P02 y P03; `recount.py`):** filas 312 · = 112 · ≈ 115 · ≠ 2 · − 38 · + 36 · ✗ 9 → paridad 227/267 = 85,0 %, 15 filas retenidas por una decisión abierta. Las líneas siguientes son el estado histórico del 22/10.
+
 Filas 312 · = 50 · ≈ 124 · ≠ 14 · − 76 · + 40 · ✗ 8 (verificación v2 del 22/10 tras el bucle, Next `038329f`; xhigh: filas 309 · = 51 · ≈ 110 · ≠ 16 · − 85 · + 39 · ✗ 8; refresco de la mañana: filas 302 · = 58 · ≈ 100 · ≠ 12 · − 85 · + 39 · ✗ 8; 21/10: filas 299 · = 45 · ≈ 96 · ≠ 18 · − 94 · + 38 · ✗ 8)
 
 Alcance: inicio del técnico, pasaporte, cualificaciones y verificación, disponibilidad, wallet documental, logbook,
