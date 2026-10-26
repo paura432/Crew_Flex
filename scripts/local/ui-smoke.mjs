@@ -2220,6 +2220,389 @@ await logout();
   await logout();
 }
 
+// PKG P03 (calendar parity, F3 — TEC-04 #3/#26/#39/#42-43/#50/#52/#58/#64, SHOT-02 #1/#6; BR-4.9, T-15): the
+// availability page in Spanish with the v1.8 literals; the days of a confirmed assignment are disabled with
+// «Una asignación confirmada está protegida.» and the cycle generator skips them even with «Reemplazar…»; a stale
+// calendar save and a window delete that would uncover the assignment are refused with the v1.8 copy and nothing
+// is lost; another professional and an organization can neither read nor write delta's windows (function,
+// PostgREST, direct URL); the v1.8 dock below `lg`. Fixture through the local API (a need in January 2027,
+// delta's application confirmed, three windows); everything is restored at the end, whatever happens.
+{
+  const P3 = "2027-01";
+  const p3Key = () => ({ "Idempotency-Key": crypto.randomUUID() });
+  const p3Title = `Local UI check · P03 calendar ${Date.now()}`;
+  const p3Need = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+    method: "POST",
+    headers: p3Key(),
+    body: {
+      organizationId: mroOrg.id,
+      title: p3Title,
+      location: "Madrid (MAD)",
+      startsAt: `${P3}-18T06:00:00.000Z`,
+      endsAt: `${P3}-19T18:00:00.000Z`,
+      shift: "day",
+      headcount: 2,
+      urgency: "planned",
+      qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+    },
+  });
+  const p3Windows = {};
+  for (const [name, startsAt, endsAt, status] of [
+    ["covering", `${P3}-18T00:00:00.000Z`, `${P3}-21T00:00:00.000Z`, "available"],
+    ["blocked", `${P3}-04T00:00:00.000Z`, `${P3}-08T00:00:00.000Z`, "unavailable"],
+    ["aog", `${P3}-12T00:00:00.000Z`, `${P3}-13T00:00:00.000Z`, "aog_only"],
+  ]) {
+    const w = await asSeedUser("delta@crewflex.test", "professional-availability", {
+      method: "POST",
+      headers: p3Key(),
+      body: { startsAt, endsAt, status },
+    });
+    p3Windows[name] = w.data?.window;
+  }
+  const p3Applied = await asSeedUser("delta@crewflex.test", "applications", {
+    method: "POST",
+    headers: p3Key(),
+    body: { requirementId: p3Need.data?.requirement.id, shareConsent: true },
+  });
+  const p3App = {
+    id: p3Applied.data?.application.id,
+    updatedAt: p3Applied.data?.application.updatedAt,
+  };
+  const p3Move = async (email, to, extra = {}) => {
+    const res = await asSeedUser(email, "applications", {
+      method: "PATCH",
+      headers: p3Key(),
+      body: { applicationId: p3App.id, to, expectedUpdatedAt: p3App.updatedAt, ...extra },
+    });
+    if (res.data) p3App.updatedAt = res.data.transition.updatedAt;
+    return res;
+  };
+  await p3Move("admin.mro@crewflex.test", "shortlisted");
+  const p3Proposed = await p3Move("admin.mro@crewflex.test", "proposed");
+  await p3Move("delta@crewflex.test", "accepted", {
+    proposalId: p3Proposed.data?.transition.proposalId,
+    acceptTerms: true,
+  });
+  const p3Confirmed = await p3Move("admin.mro@crewflex.test", "confirmed");
+  const p3Mine = async () =>
+    (await asSeedUser("delta@crewflex.test", "professional-availability")).data?.windows ?? [];
+  const p3Before = (await p3Mine()).length;
+  ok(
+    "PKG P03 0 fixture (API): delta's application to the January 2027 need is confirmed; three windows (covering 18–20, blocked 4–7, AOG 12)",
+    p3Confirmed.data?.transition.status === "confirmed" &&
+      Object.values(p3Windows).every(Boolean) &&
+      p3Before >= 3,
+    JSON.stringify(p3Confirmed.error ?? p3Need.error ?? ""),
+  );
+  const p3Cell = (date) => page.locator(`main button[aria-label^='${date}:']`);
+  const p3Open = async (month = P3) => {
+    await page.goto(`${BASE}/app/professional/availability?month=${month}`);
+    await page.waitForLoadState("networkidle");
+  };
+  const p3Drafted = () => page.locator("main button[aria-label*='sin guardar']").count();
+  let p3Elsewhere = null;
+  try {
+    await login("delta@crewflex.test");
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    await p3Open();
+    await expectSpanish("PKG P03 1 availability in Spanish");
+    const p3Text = await page.locator("main").evaluate((el) => el.textContent.replace(/\s+/g, " "));
+    const p3Patterns = (await page.locator("#cycle-pattern option").allTextContents()).join("|");
+    const p3Brushes = (
+      await page
+        .getByRole("group", { name: "Estado a aplicar" })
+        .getByRole("button")
+        .allTextContents()
+    ).join("|");
+    ok(
+      "PKG P03 1b v1.8 literals: «Tu calendario» / «Tu tiempo, a tu manera.», the month's KPIs (3 · 4 · 1), «Planifica tu ciclo», the 14 patterns in v1.8's order, «Día 1 del ciclo (UTC)», publish / replace, «Previsualizar ciclo en el mes», the hint that respects assignments and past dates, «Enero de 2027», the four brushes (the first pressed), the protection sentence, the weekday header, «Añadir una ventana de tiempo», «Ventanas guardadas (n)»",
+      /Disponibles\s*3\s*Días publicados este mes\s*Bloqueados\s*4\s*Días marcados como no disponibles\s*Solo AOG\s*1\s*Días reservados para necesidades AOG\s*Ventanas\s*\d+/.test(
+        p3Text,
+      ) &&
+        /Lun\s*Mar\s*Mié\s*Jue\s*Vie\s*Sáb\s*Dom/.test(p3Text) &&
+        (await page
+          .getByRole("group", { name: "Estado a aplicar" })
+          .getByRole("button", { pressed: true })
+          .textContent()) === "Disponible" &&
+        [
+          "Tu calendario",
+          "Tu tiempo, a tu manera.",
+          "Planifica tu ciclo",
+          "Día 1 del ciclo (UTC)",
+          "Publicar descansos generados como disponibles",
+          "Reemplazar también los días que ya he guardado en este mes",
+          "Previsualizar ciclo en el mes",
+          "Se respetan las asignaciones confirmadas, las fechas pasadas y los intervalos parciales de los días que no reemplazas.",
+          "Enero de 2027",
+          "Las fechas con asignación confirmada están protegidas también en el servidor.",
+          "Añadir una ventana de tiempo",
+        ].every((s) => p3Text.includes(s)) &&
+        /Ventanas guardadas \(\d+\)/.test(p3Text) &&
+        p3Patterns ===
+          "7–3|7–4|5–2|7–3 / 7–4 alterno|6–4|5–5|4–4|10–10|15–15|Otro · ciclo personalizado|2 días, 2 noches, 4 libres|Noches (5 de trabajo, 2 libres)|Turno partido (5 de trabajo, 2 libres)|Flexible (solo descanso)" &&
+        p3Brushes === "Disponible|Bloqueado|Solo AOG|Descanso (limpiar)",
+      `${p3Patterns} · ${p3Brushes}`,
+    );
+    const p3Protected = (d) =>
+      `${P3}-${d}: Disponible, asignación confirmada. Una asignación confirmada está protegida.`;
+    const p3Label18 = (await p3Cell(`${P3}-18`).getAttribute("aria-label")) ?? "";
+    const p3Label19 = (await p3Cell(`${P3}-19`).getAttribute("aria-label")) ?? "";
+    ok(
+      "PKG P03 2 BR-4.9: the 18th and 19th are disabled with «Disponible, asignación confirmada. Una asignación confirmada está protegida.»; the 20th (same window) and an empty day stay enabled; «Solo AOG» and «Bloqueado» days read so",
+      (await p3Cell(`${P3}-18`).isDisabled()) &&
+        (await p3Cell(`${P3}-19`).isDisabled()) &&
+        p3Label18 === p3Protected("18") &&
+        p3Label19 === p3Protected("19") &&
+        (await p3Cell(`${P3}-20`).isEnabled()) &&
+        (await p3Cell(`${P3}-25`).isEnabled()) &&
+        (await p3Cell(`${P3}-12`).getAttribute("aria-label")) === `${P3}-12: Solo AOG` &&
+        (await p3Cell(`${P3}-04`).getAttribute("aria-label")) === `${P3}-04: Bloqueado`,
+      `${p3Label18} · ${p3Label19}`,
+    );
+    const p3ThisMonth = today.slice(0, 7);
+    await p3Open(p3ThisMonth);
+    ok(
+      "PKG P03 2b the current month: past days are disabled, today is editable",
+      (await p3Cell(today).isEnabled()) &&
+        (`${p3ThisMonth}-01` === today || (await p3Cell(`${p3ThisMonth}-01`).isDisabled())),
+      today,
+    );
+    // One click on an empty day saves at once (demo); the «clear» brush on that single-day window deletes it.
+    await p3Open();
+    await p3Cell(`${P3}-25`).click();
+    await page.waitForSelector("[role=status]:has-text('2027-01-25 marcado como disponible')", {
+      timeout: 15000,
+    });
+    await page.waitForLoadState("networkidle");
+    const p3Marked = (await p3Mine()).some(
+      (w) => w.startsAt === `${P3}-25T00:00:00.000Z` && w.endsAt === `${P3}-26T00:00:00.000Z`,
+    );
+    await page
+      .getByRole("group", { name: "Estado a aplicar" })
+      .getByRole("button", { name: "Descanso (limpiar)" })
+      .click();
+    await p3Cell(`${P3}-25`).click();
+    await page.waitForSelector("[role=status]:has-text('2027-01-25 limpiado')", { timeout: 15000 });
+    await page.waitForLoadState("networkidle");
+    ok(
+      "PKG P03 2c one click on an empty day: «2027-01-25 marcado como disponible», a whole-day UTC window stored; «Descanso (limpiar)» on it: «2027-01-25 limpiado», the window gone (TEC-04 #44)",
+      p3Marked &&
+        (await p3Mine()).length === p3Before &&
+        (await p3Cell(`${P3}-25`).getAttribute("aria-label")) === `${P3}-25: Descanso`,
+      `${p3Marked} · ${(await p3Mine()).length}`,
+    );
+    await p3Open();
+    await page
+      .getByRole("checkbox", { name: "Reemplazar también los días que ya he guardado en este mes" })
+      .check();
+    const p3Preview = async () => {
+      await page.getByRole("button", { name: "Previsualizar ciclo en el mes" }).click();
+      await page.waitForSelector("main [role=status]:has-text('sin guardar')", { timeout: 15000 });
+    };
+    await p3Preview();
+    const p3DraftedAll = await p3Drafted();
+    const p3DraftedAssigned = await page
+      .locator(
+        `main button[aria-label^='${P3}-18:'][aria-label*='sin guardar'], main button[aria-label^='${P3}-19:'][aria-label*='sin guardar']`,
+      )
+      .count();
+    const p3NavDisabled =
+      (await page.getByRole("button", { name: "Mes anterior" }).isDisabled()) &&
+      (await page.getByRole("button", { name: "Mes siguiente" }).isDisabled());
+    const p3Pending = await page.locator("main [role=status]:has-text('sin guardar')").innerText();
+    const p3Cut = await page
+      .locator("main [role=status]:has-text('sin guardar') + p")
+      .innerText()
+      .catch(() => "");
+    await page.getByRole("button", { name: "Deshacer último cambio" }).click();
+    const p3AfterUndo = await p3Drafted();
+    ok(
+      "PKG P03 3 «Reemplazar…» + preview: 29 days drafted («sin guardar», dashed), never the 2 assigned ones; «29 días modificados sin guardar…»; «5 días están dentro de un intervalo más largo…» (4–7 and the 20th); month arrows disabled while drafted; «Deshacer último cambio» empties the one-step draft",
+      p3DraftedAll === 29 &&
+        p3DraftedAssigned === 0 &&
+        p3NavDisabled &&
+        /^29 días modificados sin guardar\. Revisa el calendario y guarda o descarta para cambiar de mes\./.test(
+          p3Pending,
+        ) &&
+        /^5 días están dentro de un intervalo más largo o de horas parciales\. Al guardar solo se recortan los días marcados y se conservan las horas del resto\./.test(
+          p3Cut,
+        ) &&
+        p3AfterUndo === 0,
+      `${p3DraftedAll} drafted · ${p3DraftedAssigned} assigned drafted · nav disabled ${p3NavDisabled} · after undo ${p3AfterUndo} · ${p3Pending.slice(0, 60)}`,
+    );
+    // A stale save (W5-03): a window added from «another device» after the page loaded changes the version.
+    await p3Preview();
+    p3Elsewhere = (
+      await asSeedUser("delta@crewflex.test", "professional-availability", {
+        method: "POST",
+        headers: p3Key(),
+        body: {
+          startsAt: "2027-03-01T00:00:00.000Z",
+          endsAt: "2027-03-02T00:00:00.000Z",
+          status: "available",
+        },
+      })
+    ).data?.window;
+    await page.getByRole("button", { name: "Guardar calendario" }).click();
+    await page.waitForSelector("[role=alert]:has-text('Tu calendario cambió')", { timeout: 15000 });
+    const p3Conflict = await page.locator("[role=alert]").first().innerText();
+    const p3StillDrafted = await p3Drafted();
+    const p3AfterConflict = (await p3Mine()).length;
+    await page.getByRole("button", { name: "Descartar cambios" }).click();
+    ok(
+      "PKG P03 4 a stale save: «Tu calendario cambió en otra ventana o dispositivo. No se ha guardado nada: recarga para ver la versión más reciente.»; the 29-day draft stays; only the other device's window exists",
+      /^Tu calendario cambió en otra ventana o dispositivo\. No se ha guardado nada: recarga para ver la versión más reciente\./.test(
+        p3Conflict,
+      ) &&
+        p3StillDrafted === 29 &&
+        p3AfterConflict === p3Before + 1 &&
+        (await p3Drafted()) === 0,
+      `${p3Conflict.slice(0, 80)} · drafted ${p3StillDrafted} · windows ${p3Before} → ${p3AfterConflict}`,
+    );
+    // Deleting the window that covers the assignment: 409 ASSIGNMENT_PROTECTED with the v1.8 connected copy.
+    const p3Row = page.locator("main li", { hasText: "18 ene 2027, 00:00 UTC" });
+    await p3Row.getByRole("button", { name: "Eliminar" }).click();
+    await p3Row.getByRole("button", { name: "Sí, eliminarla" }).click();
+    await page.waitForSelector("[role=alert]:has-text('Conserva la disponibilidad')", {
+      timeout: 15000,
+    });
+    const p3ProtectedCopy = await page.locator("[role=alert]").first().innerText();
+    const p3RowsAfter = await page
+      .locator("main li", { hasText: "18 ene 2027, 00:00 UTC" })
+      .count();
+    const p3StillStored = (await p3Mine()).some((w) => w.id === p3Windows.covering.id);
+    ok(
+      "PKG P03 5 «Eliminar» → «Sí, eliminarla» of the window that covers the assignment: «Conserva la disponibilidad de tus asignaciones confirmadas.»; the window is still listed and stored",
+      /^Conserva la disponibilidad de tus asignaciones confirmadas\./.test(p3ProtectedCopy) &&
+        p3RowsAfter === 1 &&
+        p3StillStored,
+      `${p3ProtectedCopy.slice(0, 80)} · rows ${p3RowsAfter} · stored ${p3StillStored}`,
+    );
+    // The v1.8 dock below `lg` (SHOT-02 #6, T-141) and no horizontal overflow at the five widths.
+    await responsiveShots("P03-availability-es");
+    for (const width of [1024, 390, 360]) {
+      await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+      await page.waitForTimeout(300);
+      const p3Overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      );
+      const p3Dock = await page.evaluate(() => {
+        const nav = document.querySelector("nav[aria-label='Accesos rápidos']");
+        if (!nav) return null;
+        const r = nav.getBoundingClientRect();
+        return {
+          position: getComputedStyle(nav).position,
+          atBottom: Math.round(r.bottom) === window.innerHeight,
+          current: nav.querySelector("a[aria-current=page]")?.textContent?.trim() ?? "",
+        };
+      });
+      ok(
+        width < 1024
+          ? `PKG P03 7 @${width}: no horizontal overflow; the v1.8 dock is fixed at the bottom with «Calendario» current`
+          : `PKG P03 7 @${width}: no horizontal overflow; the dock is hidden from lg`,
+        !p3Overflow &&
+          (width < 1024
+            ? p3Dock?.position === "fixed" && p3Dock.atBottom && p3Dock.current === "Calendario"
+            : p3Dock === null ||
+              !(await page.locator("nav[aria-label='Accesos rápidos']").isVisible())),
+        JSON.stringify(p3Dock),
+      );
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=en]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+    await logout();
+    // Negative: another professional and an organization, through the function, PostgREST and the page.
+    const p3Covering = p3Windows.covering;
+    const p3EchoPatch = await asSeedUser("echo@crewflex.test", "professional-availability", {
+      method: "PATCH",
+      query: { id: p3Covering.id },
+      body: { startsAt: p3Covering.startsAt, endsAt: p3Covering.endsAt, status: "unavailable" },
+    });
+    const p3EchoDelete = await asSeedUser("echo@crewflex.test", "professional-availability", {
+      method: "DELETE",
+      query: { id: p3Covering.id },
+    });
+    const p3EchoRest = await seedRest(
+      "echo@crewflex.test",
+      `availability_windows?select=id&id=eq.${p3Covering.id}`,
+    );
+    const p3OrgRest = await seedRest(
+      "admin.mro@crewflex.test",
+      `availability_windows?select=id&id=eq.${p3Covering.id}`,
+    );
+    const p3OrgPut = await asSeedUser("admin.mro@crewflex.test", "professional-availability", {
+      method: "PUT",
+      headers: p3Key(),
+      body: { days: [{ date: `${P3}-25`, status: "available" }] },
+    });
+    const p3OrgGet = await asSeedUser("admin.mro@crewflex.test", "professional-availability");
+    await login("admin.mro@crewflex.test");
+    await page.goto(`${BASE}/app/professional/availability?month=${P3}`);
+    await page.waitForLoadState("networkidle");
+    const p3OrgPage = await page.locator("main").innerText();
+    await logout();
+    ok(
+      "PKG P03 6 negative: echo (another professional) PATCH / DELETE of delta's window → NOT_FOUND and reads 0 rows (PostgREST); admin.mro reads 0 rows, PUT → FORBIDDEN, GET lists nothing, direct URL → «No professional profile»; the window is intact",
+      p3EchoPatch.error?.code === "NOT_FOUND" &&
+        p3EchoDelete.error?.code === "NOT_FOUND" &&
+        Array.isArray(p3EchoRest) &&
+        p3EchoRest.length === 0 &&
+        Array.isArray(p3OrgRest) &&
+        p3OrgRest.length === 0 &&
+        p3OrgPut.error?.code === "FORBIDDEN" &&
+        p3OrgGet.data?.windows?.length === 0 &&
+        /No professional profile/.test(p3OrgPage) &&
+        (await p3Mine()).some((w) => w.id === p3Covering.id && w.status === "available"),
+      JSON.stringify([
+        p3EchoPatch.error?.code,
+        p3EchoDelete.error?.code,
+        p3EchoRest,
+        p3OrgRest,
+        p3OrgPut.error?.code,
+        p3OrgGet.data?.windows?.length,
+      ]),
+    );
+  } finally {
+    const p3Cancelled = await p3Move("delta@crewflex.test", "cancelled", {
+      reason: "Local UI check: P03 restore",
+    });
+    const p3Deleted = [];
+    for (const w of [...Object.values(p3Windows), p3Elsewhere])
+      if (w)
+        p3Deleted.push(
+          (
+            await asSeedUser("delta@crewflex.test", "professional-availability", {
+              method: "DELETE",
+              query: { id: w.id },
+            })
+          ).data?.deleted === true,
+        );
+    const p3Closed = await asSeedUser("admin.mro@crewflex.test", "work-requirements", {
+      method: "PATCH",
+      body: { id: p3Need.data?.requirement.id, status: "closed" },
+    });
+    ok(
+      "PKG P03 8 restore: assignment cancelled, the four windows deleted, the need closed (seed state back)",
+      p3Cancelled.data?.transition.status === "cancelled" &&
+        p3Deleted.length === 4 &&
+        p3Deleted.every(Boolean) &&
+        p3Closed.data?.requirement?.status === "closed" &&
+        (await p3Mine()).length === p3Before - 3,
+      JSON.stringify([
+        p3Cancelled.error,
+        p3Deleted,
+        p3Closed.error ?? p3Closed.data?.requirement?.status,
+      ]),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
