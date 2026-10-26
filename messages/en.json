@@ -2019,7 +2019,8 @@
       "rate": "{daily} / day · {hourly} / h",
       "rateHourly": "{hourly} / h",
       "shifts": "{count, plural, one {# shift} other {# shifts}} · {hours} base hours",
-      "fullBlock": "Full block"
+      "fullBlock": "Full block",
+      "days": "{count, plural, one {# day} other {# days}}"
     },
     "detail": {
       "eyebrow": "Opportunity",
@@ -2037,6 +2038,7 @@
       "sharedAvailability": "Your availability during the requirement period.",
       "sharedIdentity": "Your base and years of experience; your name only if your visibility is «Open» (otherwise an anonymous reference).",
       "notShared": "Never your contact details or documents: they stay protected.",
+      "noReservation": "Applications do not reserve the calendar: only a confirmed assignment protects its days.",
       "consent": "I authorise sharing this data with {organization} for this requirement.",
       "submit": "Apply",
       "sending": "Sending…",

@@ -101,6 +101,8 @@ export function ApplyPanel({
           <li>{tRoot("candidatePack.sharedCopy")}</li>
           <li>{t("notShared")}</li>
         </ul>
+        {/* v1.8 «Las candidaturas todavía no reservan el calendario.» with the BR-4.9 truth (P04, T-164). */}
+        <p className="mt-2 text-muted">{t("noReservation")}</p>
       </div>
       {packPreview ?? <p className="text-sm text-danger">{tRoot("candidatePack.previewError")}</p>}
       <label className="flex items-start gap-2 text-sm pointer-coarse:min-h-11 pointer-coarse:items-center">

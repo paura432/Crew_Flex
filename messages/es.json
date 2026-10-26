@@ -2019,7 +2019,8 @@
       "rate": "{daily} / día · {hourly} / h",
       "rateHourly": "{hourly} / h",
       "shifts": "{count, plural, one {# jornada} other {# jornadas}} · {hours} horas base",
-      "fullBlock": "Bloque completo"
+      "fullBlock": "Bloque completo",
+      "days": "{count, plural, one {# día} other {# días}}"
     },
     "detail": {
       "eyebrow": "Oportunidad",
@@ -2037,6 +2038,7 @@
       "sharedAvailability": "Tu disponibilidad durante el periodo de la necesidad.",
       "sharedIdentity": "Tu base y tus años de experiencia; tu nombre solo si tu visibilidad es «Abierta» (si no, una referencia anónima).",
       "notShared": "Nunca tu contacto ni tus documentos: siguen protegidos.",
+      "noReservation": "Las candidaturas no reservan el calendario: solo una asignación confirmada protege sus días.",
       "consent": "Autorizo compartir con {organization} estos datos para esta necesidad.",
       "submit": "Presentar candidatura",
       "sending": "Enviando…",
