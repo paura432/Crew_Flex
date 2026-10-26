@@ -106,7 +106,7 @@ más los bloques `PKG passport` (6) y `PKG shell-visual` (medallas, foto) de `sc
 
 **Cierre P02 (F3, 2026-10-26):** 25 VERIFIED_LOCAL · 2 OUT_OF_SCOPE (P02-04 borrador automático, P02-24 paso «Resumen»:
 T-162/T-163) · 2 NEEDS_DECISION (P02-25 OD-3 en PROD, P02-26 D-10). Inventario: TEC-02 + TEC-03 + TEC-08 + SHOT-03 pasan de
-42 huecos (≠/−) a 8, de los que 5 están retenidos por OD-3 o D-10 y 2 no se portan con motivo (TEC-02 #43, SHOT-03 #5); las
+42 huecos (≠/−) a 4: 2 retenidos (TEC-03 #16 OD-3, TEC-03 #27 D-10) y 2 que no se portan con motivo (TEC-02 #43, SHOT-03 #5); las
 filas de P01 (TEC-01, SHOT-01) re-verificadas contra `4d78d6d` (P01-19 pasa a verificado con `PKG P02 6`). Recuento
 `recount.py 20-technician.md 50-visual-meta-a11y.md`: 618 filas, = 174 · ≈ 207 · ≠ 58 · − 66 · + 85 · ✗ 28, paridad
 381 / 505 = 75,4 % (antes 323 / 502 = 64,3 %). Gate final en `3220560` (`gate.sh … full`, reset en orden de fichero, 59 migraciones, flags,
