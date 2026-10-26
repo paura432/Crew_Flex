@@ -23,6 +23,9 @@ export function RevokeClientButton({
   const t = useTranslations("recruiter.clients");
   const tRoot = useTranslations();
   const [confirming, setConfirming] = useState(false);
+  // Revoked here: no «Revocar» again while the list refresh that follows the action is still on its way
+  // (the stale `revocable` prop would otherwise offer a second revoke for a moment).
+  const [revoked, setRevoked] = useState(false);
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -32,6 +35,7 @@ export function RevokeClientButton({
       const result = await callAction(() => revokeClientAction(id));
       if (result.ok) {
         setConfirming(false);
+        setRevoked(true);
         setNotice({ tone: "ok", text: t("revoked", { name }) });
       } else {
         setNotice(actionErrorCopy(tRoot, result));
@@ -59,7 +63,7 @@ export function RevokeClientButton({
             </Button>
           </div>
         </div>
-      ) : revocable ? (
+      ) : revocable && !revoked ? (
         <Button
           size="sm"
           variant="ghost"
