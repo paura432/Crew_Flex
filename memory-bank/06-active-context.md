@@ -11,7 +11,7 @@ Phases: F0 baseline → F1 P0 security (local) → F2 integrate v2-16 and P01 �
 only matrix; % = closed rows with a test / applicable rows, none before) → F4 local release candidate → F5 STG (owner) →
 F6 production, one approval per step. Isolation: one worktree and short branch per batch, ff-merge here after gate +
 independent review, zero remote writes. SCOPE-2 and DEFAULTS (`08-product-decisions.md`) stand; every subagent: Fable, xhigh.
-Done 2026-10-26: F0 (v1.8 ZIP sha256 `53ee5b61…` = `tmp/references/crewflex-v18`; remote recount BLOCKED, 403) and F1a
+Done 2026-10-26: F0 (v1.8 ZIP sha256 `53ee5b61…` = `tmp/references/crewflex-v18`; production re-read: 42 migrations and 15 functions pending, 0 drift) and F1a
 (`fix/next-16.4.3` `dc1b421` merged at `d027183`; production candidate `hotfix/x01-deps` `352182c`).
 Gate at `d027183` (db reset in file order, 57 migrations, flags, fresh `functions serve`): `pnpm check` 0 (Vitest 1154,
 Deno 194), build 0 first run, E2E 48/48, race 19/19, ui-smoke 274/274 on `next build && next start`.
@@ -41,7 +41,8 @@ container); copy the git-ignored `.env.local`, `supabase/functions/.env` and `.e
    finished pack copies, free-text `description`/`arrival` visible to every professional (T-11 said no free text);
    directory: gate to `reviewed` organizations or daily budget (T9), window-probe residual (T44), notify professionals
    of the visibility-copy change (T-150), revive or discard `parked/directory-employer-block`.
-5. Claude cannot read the remote project (CLI 403, MCP refused): every remote count comes from the owner.
+5. Production Auth (read 2026-10-26): `site_url` `http://localhost:3000` with an empty redirect allow-list (confirmation
+   links point to localhost), minimum password 6, leaked-password check off — owner settings, before any sign-up use.
 
 ## Blocked on the owner
 
