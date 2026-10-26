@@ -3054,6 +3054,8 @@ await logout();
     const p4NetCard = page.locator("main article", { hasText: p4Title }).first();
     const p4NetCardText = (await p4NetCard.innerText().catch(() => "")).replace(/\s+/g, " ");
     const p4NetDetail = await p4NetCard.getByRole("link", { name: "View details" }).count();
+    // Counted on this page: after the logout the locator would query the publisher's page.
+    const p4NetCards = await p4NetCard.count();
     await logout();
     await login(MRO);
     const p4NetworkOwn = await p4Open(`/app/organization/network?q=${encodeURIComponent(p4Title)}`);
@@ -3065,7 +3067,7 @@ await logout();
     ok(
       "PKG P04 10 «Ofertas en la red» (MKT-03 #2): another organization lists the need with the same facts and «View details», no eligibility, no «Prepare application», no commission; Demo MRO Madrid does not see its own (T-90); an organization account on the professional URL → HTTP 404",
       p4Network.includes("Offers in the network.") &&
-        (await p4NetCard.count()) === 1 &&
+        p4NetCards === 1 &&
         /€400 \/ day · €50 \/ h/.test(p4NetCardText) &&
         /2 days · 2 people · Full block/.test(p4NetCardText) &&
         p4NetDetail === 1 &&
@@ -3074,7 +3076,7 @@ await logout();
         p4OrgResponse?.status() === 404,
       JSON.stringify({
         header: p4Network.includes("Offers in the network."),
-        cards: await p4NetCard.count(),
+        cards: p4NetCards,
         detail: p4NetDetail,
         card: p4NetCardText.slice(0, 400),
         own: p4NetworkOwn.slice(0, 400),
