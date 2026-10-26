@@ -841,7 +841,7 @@
   },
   "availability": {
     "confirmDelete": "Sí, eliminarla",
-    "eyebrow": "Mi tiempo",
+    "eyebrow": "Tu calendario",
     "title": "Tu tiempo, a tu manera.",
     "description": "Un día libre solo entra en el mercado cuando lo marcas como disponible. Las horas son UTC; las ventanas bloqueadas prevalecen sobre las disponibles.",
     "noProfileDescription": "La disponibilidad pertenece a las cuentas profesionales.",
@@ -908,7 +908,7 @@
       "publishRestHint": "Si no lo activas, se quedan como descanso privado. No se envía nada a las organizaciones.",
       "replace": "Reemplazar también los días que ya he guardado en este mes",
       "preview": "Previsualizar ciclo en el mes",
-      "hint": "7–3 / 7–4 alterna 7 de trabajo, 3 libres, 7 de trabajo y 4 libres. Se generan días completos UTC: revisa las horas si tu jornada usa otra zona. Los días de trabajo se guardan como bloqueados; los descansos son privados salvo que los publiques. Los intervalos parciales de los días que no reemplazas se conservan.",
+      "hint": "7–3 / 7–4 alterna 7 de trabajo, 3 libres, 7 de trabajo y 4 libres. Se generan días completos UTC: revisa las horas si tu jornada usa otra zona. Los días de trabajo se guardan como bloqueados; los descansos son privados salvo que los publiques. Se respetan las asignaciones confirmadas, las fechas pasadas y los intervalos parciales de los días que no reemplazas.",
       "rotation": {
         "7x3": "7–3",
         "7x4": "7–4",

@@ -841,7 +841,7 @@
   },
   "availability": {
     "confirmDelete": "Yes, delete it",
-    "eyebrow": "My time",
+    "eyebrow": "Your calendar",
     "title": "Your time, your way.",
     "description": "A free day only enters the market when you mark it as available. Times are UTC; blocked windows override available ones.",
     "noProfileDescription": "Availability belongs to professional accounts.",
@@ -908,7 +908,7 @@
       "publishRestHint": "If you leave it off, they stay as private rest. Nothing is sent to organizations.",
       "replace": "Also replace days I already saved this month",
       "preview": "Preview the cycle in this month",
-      "hint": "7–3 / 7–4 alternates 7 working days, 3 off, 7 working and 4 off. Whole UTC days are generated: check the hours if your shifts follow another time zone. Working days are saved as blocked; rest days stay private unless you publish them. Partial windows on days you do not replace are kept.",
+      "hint": "7–3 / 7–4 alternates 7 working days, 3 off, 7 working and 4 off. Whole UTC days are generated: check the hours if your shifts follow another time zone. Working days are saved as blocked; rest days stay private unless you publish them. Confirmed assignments, past dates and the partial windows of days you do not replace are kept.",
       "rotation": {
         "7x3": "7–3",
         "7x4": "7–4",
