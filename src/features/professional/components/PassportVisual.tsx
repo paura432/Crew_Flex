@@ -66,7 +66,7 @@ export async function PassportVisual({
       )}
       {/* v1.8 `details.tb-references`: folded by default, the same rows as «Mi espacio». */}
       <details className="mt-3 rounded-lg border border-line px-4 py-3">
-        <summary className="cursor-pointer text-sm font-semibold">
+        <summary className="flex cursor-pointer items-center text-sm font-semibold pointer-coarse:min-h-11">
           {tOverview("reviewTitle")}
         </summary>
         <div className="mt-3">
