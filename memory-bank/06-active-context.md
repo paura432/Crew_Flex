@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-27 11:30 CET (F3: P02–P07 integrated locally; P08 in progress). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-27 11:30 CET (F3: P02–P08 integrated locally; P09 in progress). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -29,6 +29,11 @@ merge `3cfcda9`, wording fix `48ed1ee`.
 P07 logbook (2026-10-27): re-verification only (ported 22/10, M14/N-12); citations fixed to BR-17 / T-19…T-22; `PKG P07`
 16 steps; matrix §P07 15 VERIFIED_LOCAL · 1 OUT · 1 BLOCKED (M-3 deploy); gate first run green (smoke 377/377);
 review no blockers, merge `c2f8d6a`, review fixes `79e149d`.
+P08 tools (2026-10-27): re-verification only (ported by `558654f`/`88d9a6d`/`44045db` after the 22/10 snapshot); T-166
+records those defaults; `PKG P08` 12 steps; 16 ✗ (v1.8 bugs «fix on port») → ≠/≈ — DENOMINATOR 1 246 → 1 262, reviewed
+row by row (≠ only lowers the ratio); matrix §P08 19 VERIFIED_LOCAL · 1 IMPLEMENTED_UNVERIFIED · 1 PARTIAL (editorial)
+· 1 NEEDS_DECISION (fuel D-11) · 2 BLOCKED (NEW-01/AB-37 offline; deploy) · 1 OUT; smoke 389/389 first run; merge
+`d4eed6a`, review fixes `a7ed382`.
 Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
 After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime
 container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the functions’ `.env`) into a worktree.
@@ -39,9 +44,9 @@ container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the fun
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories    |
 | Local `main` | = `origin/main` `51c835a`                                                                                                    |
-| Branch       | `feat/v18-html-parity` = this commit on `79e149d`: 59 migrations (39 not applied remotely), 23 functions; deployed nowhere   |
+| Branch       | `feat/v18-html-parity` = this commit on `a7ed382`: 59 migrations (39 not applied remotely), 23 functions; deployed nowhere   |
 | Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)         |
-| Parity       | inventory `recount.py` after P07: 796 / 1 246 = 63,9 % (156 decision-held, 135 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
+| Parity       | inventory `recount.py` after P08: 857 / 1 262 = 67,9 % (155 decision-held, 119 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
 
 ## Risks
 
@@ -63,5 +68,5 @@ other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-
 
 ## Next step (one)
 
-P08 Tools (TOOL-01…09, SHOT-04) in worktree `f3-p08`, branch `f3/p08-tools` from `b66151d` (integrate by merge); then
-P09…P14 one at a time (package map in `18-v18-inventory/README.md`). Never push or deploy.
+P09 Organization dashboard (ORG-01, ORG-07, SHOT-05) in worktree `f3-p09`, branch `f3/p09-org-dashboard` from `412033a`
+(integrate by merge); then P10…P14 one at a time (package map in `18-v18-inventory/README.md`). Never push or deploy.
