@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-27 11:30 CET (F3: P02–P05 integrated locally; P06 in progress). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-27 11:30 CET (F3: P02–P06 integrated locally; P07 in progress). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -22,6 +22,10 @@ P05 applications (2026-10-27): WIP of the cut session reused; `64c9199` feat (T-
 `2109926` smoke `PKG P05` 0…13, `e23c650` docs (matrix §P05: 22 VERIFIED_LOCAL · 4 OUT · 3 NEEDS_DECISION P05-19 OD-5/T-52,
 P05-20 D-07 P3 + D-10, P05-28 D-06 Q6 ↔ SCOPE-2; P01-26 verified); gate green (check 1170/195, E2E 48/48, race 19/19,
 smoke 344/344; earlier runs: 2 real fixes, 3 load flakes); review no blockers, docs fix `e649831`, fast-forwarded.
+P06 wallet (2026-10-27): re-verification only (no app code/migration; gaps closed by wallet-extras T-100…T-103, N-13,
+T-163); `PKG P06` 17 steps; matrix §P06 17 VERIFIED_LOCAL · 3 NEEDS_DECISION (D-10/OD-3, D-07 P3 + D-10) · 1 BLOCKED
+(D-10 deploy) · 1 OUT; gate (no reset) check 1170/195, E2E 48/48, race 19/19, smoke 361/361; review no blockers,
+merge `3cfcda9`, wording fix `48ed1ee`.
 Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
 After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime
 container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the functions’ `.env`) into a worktree.
@@ -32,9 +36,9 @@ container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the fun
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories    |
 | Local `main` | = `origin/main` `51c835a`                                                                                                    |
-| Branch       | `feat/v18-html-parity` = this commit on `e649831`: 59 migrations (39 not applied remotely), 23 functions; deployed nowhere   |
+| Branch       | `feat/v18-html-parity` = this commit on `48ed1ee`: 59 migrations (39 not applied remotely), 23 functions; deployed nowhere   |
 | Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)         |
-| Parity       | inventory `recount.py` after P05: 778 / 1 246 = 62,4 % (156 decision-held, 135 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
+| Parity       | inventory `recount.py` after P06: 782 / 1 246 = 62,8 % (156 decision-held, 135 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
 
 ## Risks
 
@@ -56,5 +60,5 @@ other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-
 
 ## Next step (one)
 
-P06 Wallet (TEC-05) in worktree `f3-p06`, branch `f3/p06-wallet` from `e23c650` (merge, not ff, after `e649831`); then
-P07…P14 one at a time (package map in `18-v18-inventory/README.md`). Never push or deploy.
+P07 Logbook (TEC-06) in worktree `f3-p07`, branch `f3/p07-logbook` from `0d96042` (integrate by merge); then P08…P14
+one at a time (package map in `18-v18-inventory/README.md`). Never push or deploy.
