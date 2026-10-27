@@ -6,7 +6,7 @@ import { ButtonLink } from "@/components/ui/Button";
  * v1.8 `.dashboard-hero` of the organization's «Resumen» (`Dashboard.jsx:24`, `styles/v11.css`; ORG-01 #7,
  * SHOT-05 #2; T-167): the two chips, «El técnico adecuado. Las fechas adecuadas.», the sentence and
  * «Explorar candidatos →» to the directory (BR-28, admin/manager — the directory refuses a plain member),
- * with the decorative «CF / AVIATION» mark from 601 px as v1.8. Static copy: no figure here is computed.
+ * with the decorative «CF / AVIATION» mark from 981 px as v1.8 (`@media(max-width:980px)` hides it). Static copy: no figure here is computed.
  */
 export async function OrganizationHero({ canManage }: { canManage: boolean }) {
   const t = await getTranslations("orgHome.hero");
@@ -40,7 +40,7 @@ export async function OrganizationHero({ canManage }: { canManage: boolean }) {
       {/* v1.8 hides the mark up to 600 px; the plane is the brand's own path (`<Plane size={80} strokeWidth={1} />`). */}
       <div
         aria-hidden
-        className="relative hidden shrink-0 -rotate-[8deg] flex-col items-center gap-3 px-6 py-4 min-[601px]:flex"
+        className="relative hidden shrink-0 -rotate-[8deg] flex-col items-center gap-3 px-6 py-4 min-[981px]:flex"
       >
         <svg
           viewBox="0 0 24 24"

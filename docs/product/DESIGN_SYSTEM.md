@@ -39,9 +39,9 @@ the inverse, a navy square with the orange plane (`src/app/icon.svg`, same path,
 `warn`; 12 px text, 38 px tall (44 px on touch).
 
 Organization «Resumen» hero (v1.8 `.dashboard-hero`, T-167): `bg-navy` (v1.8 `#0d2945` → the `navy` token), white
-h2 (16.3:1), body `#a9bfd2` (8.6:1) and the dark chip `#acc3d9` on `white/10` (9.0:1), the brand chip `warn` on
+h2 (16.3:1), body `#a9bfd2` (8.6:1) and the dark chip `#acc3d9` on `white/10` (6.7:1), the brand chip `warn` on
 `warn-bg` (v1.8 `.pill.orange`, 4.5:1), CTA `inverse`; the «CF / AVIATION» mark is decorative (`aria-hidden`,
-`min-[601px]:flex`) and reuses `PLANE_PATH`.
+`min-[981px]:flex`, v1.8 hides it up to 980 px) and reuses `PLANE_PATH`.
 
 Calendar partial day: `bg-partial` hatched utility (V1.8 `styles/v18.css:1`, `#eef6f4`/`#dcece6`, text `ok`);
 AOG-only day uses `warn` (V1.8 orange, never the error red) — second audit 2026-10-20.
