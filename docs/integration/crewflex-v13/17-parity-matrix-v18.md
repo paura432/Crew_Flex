@@ -434,7 +434,7 @@ Combustible (D-11, F-1 preparada) y «Sin conexión» (NEW-01). Cuentas: `delta@
 **Cierre P08 (F3, 2026-10-27):** 19 VERIFIED_LOCAL · 1 IMPLEMENTED_UNVERIFIED (P08-16, cambio de día y error de almacenamiento,
 no provocables) · 1 PARTIAL (P08-11, revisión editorial del contenido copiado) · 1 NEEDS_DECISION (P08-04, combustible, D-11) ·
 2 BLOCKED (P08-07 «Sin conexión» NEW-01; P08-23 despliegue) · 1 OUT_OF_SCOPE (P08-22). Inventario: 79 filas cambian de símbolo
-(`(F3: antes X)`), `recount.py 40-tools-learning.md`: 259 filas, = 131 · ≈ 31 · ≠ 21 · − 50 · + 13 · ✗ 13, paridad 162 / 233 =
+(`(F3: antes X)`), `recount.py 40-tools-learning.md`: 259 filas, = 128 · ≈ 34 · ≠ 21 · − 50 · + 13 · ✗ 13, paridad 162 / 233 =
 69,5 % (antes 102 / 217 = 47,0 %); retenidas 52 (D-11 50, NEW-01 2). SHOT-04 #3 − → ≈. Código de producto: ninguno (sin migración
 ni función nuevas); `scripts/local/ui-smoke.mjs` (bloque `PKG P08`, `7054b13`), docs y capturas (`4581823`). Gate final en
 `4581823` (`gate.sh … full`, run 1 de 1, sin reset: `migration up` 0, 59 migraciones, flags, `functions serve` nuevo, HEALTH
