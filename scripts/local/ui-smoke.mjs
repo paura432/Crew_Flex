@@ -4258,6 +4258,9 @@ await logout();
     const p6Locale =
       (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
         .ok === true;
+    // `p6Es` also set the browser's locale cookie (the settings action): the logged-out pages that follow
+    // («PKG account c/d») must be in English again, so the cookie goes too.
+    await ctx.clearCookies({ name: "crewflex-locale" });
     const p6After = await p6Mine();
     ok(
       "PKG P06 10 restore: the P06 documents deleted (wallet and trash), nothing of the smoke left, delta in English",
