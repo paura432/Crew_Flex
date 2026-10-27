@@ -5,6 +5,7 @@ import {
   evaluateRequirementInput,
   listWorkRequirementsQuery,
   patchRequirementInput,
+  toRequirementFields,
   updateWorkRequirementInput,
   viableCandidatesInput,
 } from "./work-requirement.ts";
@@ -99,6 +100,119 @@ describe("createWorkRequirementInput", () => {
       level: "hard",
     }));
     expect(errorsFor({ ...valid, qualifications }).qualifications).toBe("v.qualifications.max");
+  });
+});
+
+describe("v1.8 profile requirements in the builder payload (P10, BR-3.8–3.13, T-83)", () => {
+  beforeAll(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+  });
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it("accepts the six rules with the v1.8 values; absent means not required", () => {
+    const parsed = createWorkRequirementInput.parse({
+      ...valid,
+      category: "B1.1",
+      aircraft: ["A320 Family", "B737 NG"],
+      requiresTypeRating: true,
+      engines: ["LEAP-1A"],
+      minYears: 3,
+      requiredSkills: ["line_maintenance", "borescope"],
+    });
+    expect(parsed.category).toBe("B1.1");
+    expect(parsed.requiresTypeRating).toBe(true);
+    expect(createWorkRequirementInput.parse(valid)).not.toHaveProperty("category");
+  });
+
+  it("refuses values outside the v1.8 lists, duplicates and years outside 0–60", () => {
+    expect(errorsFor({ ...valid, category: "B9" })).toMatchObject({
+      category: "v.requirement.rules.category",
+    });
+    expect(errorsFor({ ...valid, aircraft: ["A380"] })).toMatchObject({
+      aircraft: "v.requirement.rules.aircraft",
+    });
+    expect(errorsFor({ ...valid, aircraft: ["A330", "A330"] })).toMatchObject({
+      aircraft: "v.requirement.rules.aircraft",
+    });
+    expect(errorsFor({ ...valid, engines: ["JT8D"] })).toMatchObject({
+      engines: "v.requirement.rules.engines",
+    });
+    expect(errorsFor({ ...valid, minYears: 61 })).toMatchObject({
+      minYears: "v.requirement.rules.minYears",
+    });
+    expect(errorsFor({ ...valid, minYears: 2.5 })).toMatchObject({
+      minYears: "v.requirement.rules.minYears",
+    });
+    expect(errorsFor({ ...valid, minYears: 0 })).toEqual({});
+    expect(errorsFor({ ...valid, requiredSkills: ["welding"] })).toMatchObject({
+      requiredSkills: "v.requirement.rules.skills",
+    });
+  });
+
+  it("a type rating needs a licence category and at least one aircraft (v1.8 «Selecciona una aeronave…»)", () => {
+    const issue = { requiresTypeRating: "v.requirement.rules.typeRating" };
+    expect(errorsFor({ ...valid, requiresTypeRating: true })).toMatchObject(issue);
+    expect(errorsFor({ ...valid, requiresTypeRating: true, category: "B1.1" })).toMatchObject(
+      issue,
+    );
+    expect(
+      errorsFor({ ...valid, requiresTypeRating: true, aircraft: ["A320 Family"] }),
+    ).toMatchObject(issue);
+    // A trade (NDT) is not a licence: no type rating for it (T-83).
+    expect(
+      errorsFor({ ...valid, requiresTypeRating: true, category: "NDT", aircraft: ["A320 Family"] }),
+    ).toMatchObject(issue);
+    expect(
+      errorsFor({ ...valid, requiresTypeRating: true, category: "B2", aircraft: ["A320 Family"] }),
+    ).toEqual({});
+    // Not asking for one is always fine, also as a draft.
+    expect(errorsFor({ ...valid, requiresTypeRating: false, intent: "draft" })).toEqual({});
+  });
+
+  it("toRequirementFields carries the stated rules back into the edit payload, never the unstated ones", () => {
+    const base = {
+      id: "33333333-3333-4333-8333-000000000001",
+      organizationId: valid.organizationId,
+      title: valid.title,
+      location: valid.location,
+      startsAt: valid.startsAt,
+      endsAt: valid.endsAt,
+      shift: "night" as const,
+      headcount: 2,
+      urgency: "urgent" as const,
+      status: "open" as const,
+      createdAt: "2026-10-01T00:00:00.000Z",
+      qualifications: [
+        { qualificationTypeId: B11, code: "B1.1", name: "Licence", level: "hard" as const },
+      ],
+      category: null,
+      aircraft: [],
+      requiresTypeRating: false,
+      engines: [],
+      minYears: null,
+      requiredSkills: [],
+    };
+    expect(toRequirementFields(base)).not.toHaveProperty("category");
+    expect(toRequirementFields(base)).not.toHaveProperty("minYears");
+    const stated = toRequirementFields({
+      ...base,
+      category: "B1.1",
+      aircraft: ["A320 Family"],
+      requiresTypeRating: true,
+      minYears: 0,
+      requiredSkills: ["ndt"],
+    });
+    expect(stated).toMatchObject({
+      category: "B1.1",
+      aircraft: ["A320 Family"],
+      requiresTypeRating: true,
+      minYears: 0,
+      requiredSkills: ["ndt"],
+    });
+    expect(stated).not.toHaveProperty("engines");
   });
 });
 

@@ -79,6 +79,13 @@ Deno.test("the edit sends the whole requirement and the version; never the organ
     p_status: null,
     // Recruiter (20261024500100): no client sent = no client (full replacement).
     p_on_behalf_of_client_id: null,
+    // v1.8 profile rules (P10, 20261027100000): not stated = the column defaults.
+    p_category: null,
+    p_aircraft: [],
+    p_requires_type_rating: false,
+    p_engines: [],
+    p_min_years: null,
+    p_required_skills: [],
   });
 });
 
@@ -121,6 +128,50 @@ Deno.test("the create sends the terms; a draft is created as draft, anything els
   );
   assertEquals([draft.p_status, draft.p_qualifications], ["draft", []]);
 });
+
+Deno.test(
+  "the create and the edit send the v1.8 profile rules; unstated ones travel as the column defaults (P10)",
+  () => {
+    const plain = createArgs(parseValue(builderInput, createWorkRequirementInput), "k");
+    assertEquals(
+      [
+        plain.p_category,
+        plain.p_aircraft,
+        plain.p_requires_type_rating,
+        plain.p_engines,
+        plain.p_min_years,
+        plain.p_required_skills,
+      ],
+      [null, [], false, [], null, []],
+    );
+    const { organizationId: _organization, ...editable } = builderInput; // an edit never carries it
+    const editInput = {
+      id: "33333333-3333-4333-8333-000000000001",
+      expectedUpdatedAt: "2031-01-01T10:00:00.123Z",
+      ...editable,
+    };
+    const ruled = updateArgs(
+      parseValue(
+        {
+          ...editInput,
+          category: "B1.1",
+          aircraft: ["A320 Family"],
+          requiresTypeRating: true,
+          engines: ["LEAP-1A", "CFM56-5B/7B"],
+          minYears: 3,
+          requiredSkills: ["line_maintenance"],
+        },
+        updateWorkRequirementInput,
+      ),
+    );
+    assertEquals(ruled.p_category, "B1.1");
+    assertEquals(ruled.p_aircraft, ["A320 Family"]);
+    assertEquals(ruled.p_requires_type_rating, true);
+    assertEquals(ruled.p_engines, ["LEAP-1A", "CFM56-5B/7B"]);
+    assertEquals(ruled.p_min_years, 3);
+    assertEquals(ruled.p_required_skills, ["line_maintenance"]);
+  },
+);
 
 Deno.test("an edit saves a draft as a draft or publishes it, never another status", () => {
   const { organizationId: _org, ...fields } = builderInput;

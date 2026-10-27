@@ -358,6 +358,14 @@
         "select": "Select a client.",
         "required": "Enter the represented client.",
         "inactive": "This client's representation is not active: choose an active client."
+      },
+      "rules": {
+        "category": "Select a category from the list.",
+        "aircraft": "Select aircraft from the list, without repeating.",
+        "engines": "Select engines from the list, without repeating.",
+        "minYears": "The minimum experience must be a whole number of 0 to 60 years.",
+        "skills": "Select capabilities from the list, without repeating.",
+        "typeRating": "Select an aircraft if you require a type rating."
       }
     },
     "qualifications": {
@@ -1203,7 +1211,8 @@
         "viableNeedsHard": "Add a hard requirement and the period to estimate the viable candidates.",
         "viableLoading": "Counting the viable candidates…",
         "viableUnavailable": "The number of viable candidates could not be computed.",
-        "draftNote": "A draft may be incomplete: it is neither published nor evaluated. Publishing it applies every validation."
+        "draftNote": "A draft may be incomplete: it is neither published nor evaluated. Publishing it applies every validation.",
+        "viableRulesNote": "The count does not apply the technical-profile requirements yet."
       },
       "preview": {
         "open": "Preview requirements",
@@ -1221,7 +1230,18 @@
       "saveAndPublish": "Save and publish",
       "copyPrefix": "Copy · ",
       "copyTitle": "Duplicate requirement",
-      "copyDescription": "Copy of «{title}»: check the dates (they start in 45 days) and save it as a draft or publish it. Nothing is saved until then."
+      "copyDescription": "Copy of «{title}»: check the dates (they start in 45 days) and save it as a draft or publish it. Nothing is saved until then.",
+      "rules": {
+        "title": "Technical profile",
+        "intro": "Requirements on the professional's passport (category, aircraft, engines, experience and capabilities): each one is checked only when stated; empty = not required. They are filters: no score compensates them.",
+        "category": "Required category",
+        "anyCategory": "Not required",
+        "minYears": "Minimum experience (years)",
+        "aircraft": "Accepted aircraft (one is enough)",
+        "engines": "Engines (one is enough)",
+        "requiredSkills": "Required capabilities (all of them)",
+        "requiresTypeRating": "Require a type rating (of the category, on an accepted aircraft, valid and unrestricted)"
+      }
     },
     "matches": {
       "eyebrow": "External network · matching preview",

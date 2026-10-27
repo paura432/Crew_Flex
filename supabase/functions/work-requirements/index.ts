@@ -15,7 +15,8 @@
 // PATCH /work-requirements { id, archive: true } → v1.8 «Archivar» (one way, T-64): a closed requirement,
 //                                      or a draft (closed in the same step); anything else 409
 // PUT /work-requirements { id, expectedUpdatedAt, title, …, qualifications, country?, timeZone?, description?,
-//                          shifts?, conditions?, intent? } → edit (admin/manager; M05): only while the
+//                          shifts?, conditions?, intent?, category?, aircraft?, requiresTypeRating?, engines?,
+//                          minYears?, requiredSkills? } → edit (admin/manager; M05): only while the
 //                                      requirement never received an application (409 `HAS_APPLICATIONS`),
 //                                      409 when changed since `expectedUpdatedAt` or closed; nothing changed
 //                                      is a 200 no-op; `intent: "draft"` saves a draft as a draft, `publish`
@@ -72,6 +73,13 @@ function fieldArgs(input: RequirementPayload) {
     p_shifts: input.shifts?.length ? input.shifts : null,
     p_conditions: input.conditions ?? null,
     p_on_behalf_of_client_id: input.onBehalfOfClientId ?? null,
+    // v1.8 profile requirements (P10, LOCAL 20261027100000; BR-3.8–3.13): absent / empty = not required.
+    p_category: input.category ?? null,
+    p_aircraft: input.aircraft ?? [],
+    p_requires_type_rating: input.requiresTypeRating ?? false,
+    p_engines: input.engines ?? [],
+    p_min_years: input.minYears ?? null,
+    p_required_skills: input.requiredSkills ?? [],
   };
 }
 

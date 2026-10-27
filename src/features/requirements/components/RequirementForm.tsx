@@ -13,6 +13,14 @@ import {
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { callAction } from "@/components/ui/Notice";
+import {
+  AIRCRAFT,
+  categoryKey,
+  ENGINES,
+  LICENCE_CATEGORIES,
+  PROFESSIONAL_CATEGORIES,
+  SKILLS,
+} from "@/domain/passport";
 import { QUALIFICATION_CATEGORIES, type QualificationType } from "@/domain/qualification";
 import {
   CONTRACT_TYPES,
@@ -58,6 +66,7 @@ import {
   readAutosave,
   type RequirementDraft,
   shiftFromInputs,
+  statesProfileRules,
   toBuilderErrors,
 } from "../form";
 import { UrgencyBadge } from "./RequirementChips";
@@ -109,6 +118,8 @@ export function RequirementForm({
   const tRecruiter = useTranslations("recruiter.builder");
   const t = useTranslations("organization.new");
   const tDomain = useTranslations("domain");
+  const tCategory = useTranslations("passport.categories");
+  const tSkill = useTranslations("passport.skills");
   const tRoot = useTranslations();
   const locale = useLocale() as Locale;
   const [draft, setDraft] = useState<RequirementDraft>(() =>
@@ -743,6 +754,135 @@ export function RequirementForm({
               );
             })}
           </div>
+
+          {/* v1.8 «01 · Perfil técnico» (Company2.jsx:114; P10, BR-3.8–3.13): each rule counts only when stated. */}
+          <div
+            role="group"
+            aria-labelledby="rules-title"
+            aria-describedby="rules-intro"
+            className="mt-6 space-y-4 border-t border-line pt-4"
+          >
+            <h3 id="rules-title" className="text-sm font-semibold">
+              {t("rules.title")}
+            </h3>
+            <p id="rules-intro" className="text-sm text-muted">
+              {t("rules.intro")}
+            </p>
+            <div className="grid gap-5 md:grid-cols-2">
+              <Field id="category" label={t("rules.category")} error={errors.category}>
+                <select
+                  {...control("category")}
+                  value={draft.category}
+                  onChange={(e) => set("category", e.target.value as RequirementDraft["category"])}
+                >
+                  <option value="">{t("rules.anyCategory")}</option>
+                  {PROFESSIONAL_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {tCategory(categoryKey(c))}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field id="minYears" label={t("rules.minYears")} error={errors.minYears}>
+                <input
+                  {...control("minYears")}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={60}
+                  step={1}
+                  value={draft.minYears}
+                  onChange={(e) => set("minYears", e.target.value)}
+                />
+              </Field>
+            </div>
+            {(
+              [
+                ["aircraft", AIRCRAFT, (v: string) => v] as const,
+                ["engines", ENGINES, (v: string) => v] as const,
+                [
+                  "requiredSkills",
+                  SKILLS,
+                  (v: string) => tSkill(v as (typeof SKILLS)[number]),
+                ] as const,
+              ] as const
+            ).map(([key, options, label]) => (
+              <fieldset
+                key={key}
+                className="min-w-0"
+                aria-describedby={errors[key] ? `${key}-error` : undefined}
+              >
+                <legend className="mb-2 text-sm font-semibold">{t(`rules.${key}`)}</legend>
+                {errors[key] && (
+                  <p id={`${key}-error`} className="mb-2 text-sm font-medium text-danger">
+                    {errors[key]}
+                  </p>
+                )}
+                <ul className="flex flex-wrap gap-2">
+                  {options.map((option) => {
+                    const checked = (draft[key] as readonly string[]).includes(option);
+                    return (
+                      <li key={option}>
+                        <label
+                          className={`inline-flex min-h-9 pointer-coarse:min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm ${
+                            checked ? "border-navy bg-navy text-white" : "border-line bg-white"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="size-4"
+                            checked={checked}
+                            onChange={(e) =>
+                              update((d) => ({
+                                ...d,
+                                [key]: e.target.checked
+                                  ? [...(d[key] as readonly string[]), option]
+                                  : (d[key] as readonly string[]).filter((v) => v !== option),
+                              }))
+                            }
+                          />
+                          {label(option)}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </fieldset>
+            ))}
+            <div>
+              <label className="flex items-center gap-3 py-1.5 text-sm pointer-coarse:py-3">
+                <input
+                  id="requiresTypeRating"
+                  type="checkbox"
+                  className="size-4"
+                  checked={draft.requiresTypeRating}
+                  aria-invalid={Boolean(errors.requiresTypeRating)}
+                  aria-describedby={
+                    errors.requiresTypeRating ? "requiresTypeRating-error" : undefined
+                  }
+                  onChange={(e) => set("requiresTypeRating", e.target.checked)}
+                />
+                {t("rules.requiresTypeRating")}
+              </label>
+              {/* T-83: a licence category and ≥ 1 aircraft; «Selecciona una aeronave si exiges habilitación de tipo.» */}
+              {errors.requiresTypeRating ? (
+                <p id="requiresTypeRating-error" className="text-sm font-medium text-danger">
+                  {errors.requiresTypeRating}
+                </p>
+              ) : (
+                draft.requiresTypeRating &&
+                !(
+                  draft.category &&
+                  (LICENCE_CATEGORIES as readonly string[]).includes(draft.category) &&
+                  draft.aircraft.length
+                ) && (
+                  <p className="text-sm text-warn">
+                    {translateKey(tRoot, "v.requirement.rules.typeRating")}
+                  </p>
+                )
+              )}
+            </div>
+          </div>
         </fieldset>
 
         <fieldset className="min-w-0 space-y-5">
@@ -913,6 +1053,10 @@ export function RequirementForm({
                 ? t("summary.viableUnavailable")
                 : t("summary.viable", { count: viableNow.value })}
         </p>
+        {/* T-86: the live count applies the country only, not the other profile rules (security floor). */}
+        {countable && statesProfileRules(draft) && (
+          <p className="text-white/85">{t("summary.viableRulesNote")}</p>
+        )}
         <RequirementPreview requirement={preview} />
         {isDraft && <p className="text-white/85">{t("summary.draftNote")}</p>}
         {/* v1.8 Company2.jsx:125, shown to the agency only (the client company never sees it: ORG-03 #13). */}

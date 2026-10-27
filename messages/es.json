@@ -358,6 +358,14 @@
         "select": "Selecciona un cliente.",
         "required": "Indica el cliente representado.",
         "inactive": "La representación de este cliente no está activa: elige un cliente activo."
+      },
+      "rules": {
+        "category": "Selecciona una categoría de la lista.",
+        "aircraft": "Selecciona aeronaves de la lista, sin repetir.",
+        "engines": "Selecciona motores de la lista, sin repetir.",
+        "minYears": "La experiencia mínima debe ser un número entero de 0 a 60 años.",
+        "skills": "Selecciona capacidades de la lista, sin repetir.",
+        "typeRating": "Selecciona una aeronave si exiges habilitación de tipo."
       }
     },
     "qualifications": {
@@ -1203,7 +1211,8 @@
         "viableNeedsHard": "Añade un requisito obligatorio y el periodo para estimar los candidatos viables.",
         "viableLoading": "Calculando los candidatos viables…",
         "viableUnavailable": "No se ha podido calcular el número de candidatos viables.",
-        "draftNote": "Un borrador puede estar incompleto: no se publica ni se evalúa. Al publicarlo se aplican todas las validaciones."
+        "draftNote": "Un borrador puede estar incompleto: no se publica ni se evalúa. Al publicarlo se aplican todas las validaciones.",
+        "viableRulesNote": "El recuento aún no aplica los requisitos del perfil técnico."
       },
       "preview": {
         "open": "Previsualizar requisitos",
@@ -1221,7 +1230,18 @@
       "saveAndPublish": "Guardar y publicar",
       "copyPrefix": "Copia · ",
       "copyTitle": "Duplicar necesidad",
-      "copyDescription": "Copia de «{title}»: revisa las fechas (empiezan dentro de 45 días) y guárdala como borrador o publícala. Nada se guarda hasta entonces."
+      "copyDescription": "Copia de «{title}»: revisa las fechas (empiezan dentro de 45 días) y guárdala como borrador o publícala. Nada se guarda hasta entonces.",
+      "rules": {
+        "title": "Perfil técnico",
+        "intro": "Requisitos del pasaporte del profesional (categoría, aeronaves, motores, experiencia y capacidades): cada uno se comprueba solo si lo indicas; vacío = no se exige. Son filtros: ninguna puntuación los compensa.",
+        "category": "Categoría obligatoria",
+        "anyCategory": "Sin exigir",
+        "minYears": "Experiencia mínima (años)",
+        "aircraft": "Aeronaves aceptadas (basta una)",
+        "engines": "Motores (basta uno)",
+        "requiredSkills": "Capacidades obligatorias (todas)",
+        "requiresTypeRating": "Exigir habilitación de tipo (de la categoría, en una aeronave aceptada, vigente y sin restricciones)"
+      }
     },
     "matches": {
       "eyebrow": "Red externa · vista previa del matching",

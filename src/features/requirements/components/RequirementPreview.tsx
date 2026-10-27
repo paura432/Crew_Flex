@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import type { RequiredQualification, WorkRequirement } from "@/domain/work-requirement";
 import type { Locale } from "@/i18n/config";
 import { formatCountry, formatDateTime } from "@/i18n/format";
+import { ProfileRuleChips } from "./ProfileRuleChips";
 import { QualificationChipList, UrgencyBadge } from "./RequirementChips";
 import { RequirementTerms } from "./RequirementTerms";
 
@@ -13,7 +14,20 @@ export type PreviewRequirement = Pick<
   WorkRequirement,
   "title" | "location" | "startsAt" | "endsAt" | "shift" | "headcount" | "urgency"
 > &
-  Pick<WorkRequirement, "country" | "timeZone" | "description" | "shifts" | "conditions"> & {
+  Pick<
+    WorkRequirement,
+    | "country"
+    | "timeZone"
+    | "description"
+    | "shifts"
+    | "conditions"
+    | "category"
+    | "aircraft"
+    | "requiresTypeRating"
+    | "engines"
+    | "minYears"
+    | "requiredSkills"
+  > & {
     qualifications: RequiredQualification[];
   };
 
@@ -89,6 +103,7 @@ export function RequirementPreview({ requirement }: { requirement: PreviewRequir
           ) : (
             <p className="text-sm text-muted">{t("noQualifications")}</p>
           )}
+          <ProfileRuleChips rules={requirement} />
           <RequirementTerms terms={requirement} />
         </div>
       </dialog>

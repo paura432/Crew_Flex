@@ -211,8 +211,7 @@ other organizations learn the client's **name** only, through `list_opportunitie
 representations only) — never its contact e-mail or id; the consent names agency and client. Another organization's
 commission is never shown (OUT).
 **v1.8 profile requirements (package matching-v18, LOCAL `20261023900000…200`).** The six new requirement columns
-(`category`, `aircraft`, `requires_type_rating`, `engines`, `min_years`, `required_skills`) have no INSERT or
-UPDATE grant (seed / owner only until the builder adopts them) and are frozen by both guards. Professionals read them
+(`category`, `aircraft`, `requires_type_rating`, `engines`, `min_years`, `required_skills`) have no INSERT or UPDATE grant — since P10 (LOCAL `20261027100000`) only the builder RPC overloads write them: the INVOKER create hands them to a BEFORE INSERT trigger through a transaction-local setting (RLS still decides who inserts), the DEFINER edit checks admin/manager, version, applications and closed before its one UPDATE — and are frozen by both guards. Professionals read them
 only through `get_requirement_profile_rules(ids)` (DEFINER): professional accounts only (42501), ≤ 200 ids, and only
 for requirements they may already see — published and current (D-12) or applied to; any other id is silently
 absent, so it is no existence oracle beyond `list_opportunities`. The candidate rows organizations already read

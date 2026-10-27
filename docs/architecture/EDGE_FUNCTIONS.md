@@ -65,6 +65,7 @@ is mapped field by field (`applications/pack.ts`): never name, contact, employer
   what the draft holds (400 with `issues`). GET adds `archived=include|exclude|only` (default `include`, as before) and
   every requirement carries `country`, `timeZone`, `description`, `shifts`, `conditions`, `archivedAt` (null = not
   stated). Drafts are not evaluable: `capacity-evaluate` / `matching-evaluate` answer 409 for them.
+- **`work-requirements` (P10, LOCAL `20261027100000`, T-168)** — POST and PUT also take the v1.8 profile rules `category`, `aircraft`, `requiresTypeRating`, `engines`, `minYears`, `requiredSkills` (the lists of `src/domain/passport.ts`, distinct values, 0–60 years; `requiresTypeRating` needs a licence category and ≥ 1 aircraft → 400 on `requiresTypeRating`, «Selecciona una aeronave si exiges habilitación de tipo.»). Full replacement: a rule not sent is cleared (the column defaults). They call the `20261027100000` overloads (`p_category, p_aircraft, p_requires_type_rating, p_engines, p_min_years, p_required_skills`); the old overloads stay for the deployed functions. A value the CHECKs refuse is 400 (23514). The live count (`matching-evaluate` with a period) still takes the country only (T-86).
 - **`matching-evaluate`** — POST `{ organizationId, startsAt, endsAt, urgency, hardQualificationTypeIds }` (strict,
   `viableCandidatesInput`, a period that has not started) → `ViableCandidatesResponse { viable }`: the live count (T-66) from RPC
   `count_viable_candidates` (DEFINER, admin/manager of that organization, a number only, never `private`

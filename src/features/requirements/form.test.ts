@@ -14,6 +14,7 @@ import {
   nextDayInputs,
   readAutosave,
   shiftFromInputs,
+  statesProfileRules,
   toBuilderErrors,
 } from "./form";
 
@@ -155,6 +156,75 @@ describe("requirement builder form (v2-09/10/12/14)", () => {
       headcount: 2,
       qualifications: [{ qualificationTypeId: B11, level: "hard" }],
     });
+  });
+
+  it("v1.8 profile rules (P10): stated ones reach the payload, unstated ones are omitted; a saved need round-trips", () => {
+    const empty = emptyDraft("x");
+    expect(statesProfileRules(empty)).toBe(false);
+    const fields = draftToFields(empty);
+    for (const key of [
+      "category",
+      "aircraft",
+      "requiresTypeRating",
+      "engines",
+      "minYears",
+      "requiredSkills",
+    ])
+      expect(fields).not.toHaveProperty(key);
+    const ruled = {
+      ...empty,
+      category: "B1.1" as const,
+      aircraft: ["A320 Family" as const],
+      requiresTypeRating: true,
+      minYears: " 3 ",
+      requiredSkills: ["borescope" as const],
+    };
+    expect(statesProfileRules(ruled)).toBe(true);
+    expect(draftToFields(ruled)).toMatchObject({
+      category: "B1.1",
+      aircraft: ["A320 Family"],
+      requiresTypeRating: true,
+      minYears: 3,
+      requiredSkills: ["borescope"],
+    });
+    expect(draftToFields(ruled)).not.toHaveProperty("engines");
+    const saved: WorkRequirement = {
+      id: "r2",
+      organizationId: ORG,
+      title: "Ruled need",
+      location: "Madrid (MAD)",
+      startsAt: "2026-12-01T08:00:00.000Z",
+      endsAt: "2026-12-03T08:00:00.000Z",
+      shift: "day",
+      headcount: 1,
+      urgency: "planned",
+      status: "draft",
+      createdAt: "2026-10-01T08:00:00.000Z",
+      qualifications: [],
+      category: "B2",
+      aircraft: ["A330", "A350"],
+      requiresTypeRating: true,
+      engines: ["Trent 700/1000"],
+      minYears: 0,
+      requiredSkills: [],
+    };
+    const draft = draftFromRequirement(saved);
+    expect([
+      draft.category,
+      draft.aircraft,
+      draft.requiresTypeRating,
+      draft.engines,
+      draft.minYears,
+    ]).toEqual(["B2", ["A330", "A350"], true, ["Trent 700/1000"], "0"]);
+    expect(draftToFields(draft)).toMatchObject({ minYears: 0, requiresTypeRating: true });
+    // A requirement from before the columns (no rule keys at all) starts with none.
+    const legacy = draftFromRequirement({
+      ...saved,
+      category: undefined,
+      aircraft: undefined,
+      minYears: undefined,
+    });
+    expect([legacy.category, legacy.aircraft, legacy.minYears]).toEqual(["", [], ""]);
   });
 
   it("condition errors keep their own field; other paths map to the top-level field", () => {

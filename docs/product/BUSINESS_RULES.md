@@ -90,9 +90,7 @@ Not ported (documented, T-86): «Completa tu perfil.» (a display name is mandat
 caducado» (courses are verified TRAINING qualifications, BR-2/BR-3), «Movilización máxima», «Herramientas propias» and
 «Tarifa mínima dentro del presupuesto» (the professional's mobilisation hours are not modelled; own tools and budget are
 builder terms not evaluated yet; the minimum rate is owner-only, T-33). Every requirement's rules are frozen with the
-rest of it once closed or after the first application (CFA12). Writing them through the builder form and its RPCs is a
-follow-up: today only the seed and the owner set them (no grant), and the builder sends only the country. IMPLEMENTED
-(local).
+rest of it once closed or after the first application (CFA12). Since P10 (F3, LOCAL `20261027100000`, T-168) the builder writes them: «Perfil técnico» in «03 · Cualificaciones» (category, accepted aircraft, «Exigir habilitación de tipo», engines, minimum years, capabilities; each starts «not required»), the shared schema and the RPC overloads carry them (`category`, `aircraft`, `requiresTypeRating`, `engines`, `minYears`, `requiredSkills`; absent / empty = not required), «Selecciona una aeronave si exiges habilitación de tipo.» is the form's and the CHECK's T-83 rule, and the detail, the preview and the opportunity show the stated rules as «Requisitos del perfil». The live count still takes the country only (T-86, security floor) and the form says so. IMPLEMENTED (local).
 
 ## BR-4 Availability
 
