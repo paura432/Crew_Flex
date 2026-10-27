@@ -1995,7 +1995,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
          select $1, id, '2030-01-01' from public.qualification_types where code = 'HF' returning id`,
         [SEED.platformAdmin],
       );
-      expect(await queryError(tx, review, [rows[0]!.id, "verified", null, null])).toMatch(
+      expect(await queryError(tx, review, [rows[0]!.id, "verified", "Checked", null])).toMatch(
         /own qualification/,
       );
     });
@@ -2036,11 +2036,109 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     });
   });
 
+  it("P12 / T-170 (migration 20261027300000): a verification needs evidence; it stays with the platform, never with the owner", async () => {
+    await asUser(db, SEED.platformAdmin, async (tx) => {
+      await golfPending(tx);
+      const id = await golfB11(tx);
+      for (const note of [null, "", "   "]) {
+        expect(await queryError(tx, review, [id, "verified", note, null])).toMatch(
+          /needs evidence/,
+        );
+      }
+      expect(await queryError(tx, review, [id, "verified", "x".repeat(501), null])).toMatch(
+        /too long/,
+      );
+      // Nothing was decided or written by the refused calls.
+      expect(
+        await rowCount(
+          tx,
+          "select 1 from public.qualification_reviews where qualification_id = $1",
+          [id],
+        ),
+      ).toBe(0);
+      const version = (
+        await tx.query<{ v: string }>(
+          "select updated_at::text as v from public.technician_qualifications where id = $1",
+          [id],
+        )
+      ).rows[0]!.v;
+      await tx.query(review, [id, "verified", "  EASA register ref. 123  ", null]);
+      // The platform admin reads the evidence (RLS), trimmed, with the version reviewed.
+      const evidence = await tx.query<Record<string, unknown>>(
+        `select decision, note, reviewed_by, qualification_version::text as qualification_version
+         from public.qualification_reviews where qualification_id = $1`,
+        [id],
+      );
+      expect(evidence.rows).toEqual([
+        {
+          decision: "verified",
+          note: "EASA register ref. 123",
+          reviewed_by: SEED.platformAdmin,
+          qualification_version: version,
+        },
+      ]);
+      // No write grant for anyone, platform admin included.
+      expect(
+        await queryError(
+          tx,
+          "insert into public.qualification_reviews (qualification_id, decision, note, qualification_version) values ($1, 'verified', 'forged', now())",
+          [id],
+        ),
+      ).toMatch(/permission denied/);
+      // The owner's column carries no verification evidence (only a rejection's reason, BR-2.6)…
+      await tx.exec("reset role");
+      const own = await tx.query<{ review_note: string | null }>(
+        "select review_note from public.technician_qualifications where id = $1",
+        [id],
+      );
+      expect(own.rows[0]?.review_note).toBeNull();
+      // …and neither the owner nor an organization admin reads the evidence table.
+      for (const who of [GOLF, SEED.adminMro]) {
+        await tx.query("select set_config('request.jwt.claims', $1, true)", [
+          JSON.stringify({ sub: who, role: "authenticated" }),
+        ]);
+        await tx.exec("set local role authenticated");
+        expect(await rowCount(tx, "select * from public.qualification_reviews")).toBe(0);
+        expect(
+          await rowCount(
+            tx,
+            "select * from public.own_qualification_reviews() where qualification_id = $1",
+            [id],
+          ),
+        ).toBe(0);
+        await tx.exec("reset role");
+      }
+    });
+    // A rejection writes the evidence row too and the owner reads its reason.
+    await asUser(db, SEED.platformAdmin, async (tx) => {
+      await golfPending(tx);
+      const id = await golfB11(tx);
+      await tx.query(review, [id, "rejected", "Number not in the register", null]);
+      expect(
+        await rowCount(
+          tx,
+          "select 1 from public.qualification_reviews where qualification_id = $1 and decision = 'rejected' and note = 'Number not in the register'",
+          [id],
+        ),
+      ).toBe(1);
+      await tx.exec("reset role");
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: GOLF, role: "authenticated" }),
+      ]);
+      await tx.exec("set local role authenticated");
+      const own = await tx.query<{ review_note: string }>(
+        "select review_note from public.own_qualification_reviews() where qualification_id = $1",
+        [id],
+      );
+      expect(own.rows[0]?.review_note).toBe("Number not in the register");
+    });
+  });
+
   it("pending → rejected needs a reason; the owner reads the reason; a decided row cannot be decided again", async () => {
     await asUser(db, SEED.platformAdmin, async (tx) => {
       await golfPending(tx);
       const id = await golfB11(tx);
-      expect(await queryError(tx, review, [id, "rejected", "   ", null])).toMatch(/needs a reason/);
+      expect(await queryError(tx, review, [id, "rejected", "   ", null])).toMatch(/needs evidence/);
       expect(await queryError(tx, review, [id, "pending", null, null])).toMatch(
         /verified or rejected/,
       );
@@ -2051,7 +2149,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
         null,
       ]);
       // Second reviewer (or a double click) after the first decision committed: conflict, no change.
-      expect(await queryError(tx, review, [id, "verified", null, null])).toMatch(
+      expect(await queryError(tx, review, [id, "verified", "late", null])).toMatch(
         /not awaiting review/,
       );
       await tx.exec("reset role");
@@ -2087,7 +2185,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     await asUser(db, SEED.platformAdmin, async (tx) => {
       await golfPending(tx);
       const id = await golfB11(tx);
-      await tx.query(review, [id, "verified", null, null]);
+      await tx.query(review, [id, "verified", "Checked against the register", null]);
       await tx.exec("reset role");
       await tx.query("select set_config('request.jwt.claims', $1, true)", [
         JSON.stringify({ sub: GOLF, role: "authenticated" }),
@@ -2117,7 +2215,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
         await queryError(tx, review, [
           "00000000-0000-4000-8000-00000000dead",
           "verified",
-          null,
+          "Checked",
           null,
         ]),
       ).toMatch(/not found/);
@@ -2128,7 +2226,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
         [id],
       );
       await tx.exec("set local role authenticated");
-      expect(await queryError(tx, review, [id, "verified", null, null])).toMatch(
+      expect(await queryError(tx, review, [id, "verified", "Checked", null])).toMatch(
         /not awaiting review/,
       );
     });
@@ -2179,7 +2277,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
       expect(
         await queryError(
           tx,
-          "select * from public.review_qualification($1, 'verified', $2::timestamptz - interval '1 second', null, null)",
+          "select * from public.review_qualification($1, 'verified', $2::timestamptz - interval '1 second', 'Checked', null)",
           [id, loaded],
         ),
       ).toMatch(/changed since it was loaded/);

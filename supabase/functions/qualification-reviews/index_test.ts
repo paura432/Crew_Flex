@@ -62,10 +62,17 @@ Deno.test(
       technician_profiles: {
         profile_id: "p1",
         base_location: "MAD",
+        general_restrictions: "No CRS on engines (QA)",
         profiles: { display_name: "Golf" },
       },
     });
-    assertEquals(item.professional, { id: "p1", displayName: "Golf", baseLocation: "MAD" });
+    // The declared restrictions travel to the reviewer (ADM-03 #9); nothing else of the passport does.
+    assertEquals(item.professional, {
+      id: "p1",
+      displayName: "Golf",
+      baseLocation: "MAD",
+      restrictions: "No CRS on engines (QA)",
+    });
     assertEquals(item.declaredAt, "2026-10-15T10:00:00.000Z");
     const history = toHistoryItem({
       entity_id: "q1",

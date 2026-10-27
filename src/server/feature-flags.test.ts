@@ -35,6 +35,7 @@ const validReview = {
   qualificationId: "00000000-0000-4000-8000-000000000001",
   decision: "verified",
   expectedUpdatedAt: "2026-10-15T10:00:00.000Z",
+  note: "Checked against the register", // evidence is required for every decision (T-170)
 };
 
 beforeEach(() => vi.clearAllMocks());

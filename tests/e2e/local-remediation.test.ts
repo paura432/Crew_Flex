@@ -295,6 +295,17 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
       body: { qualificationId: item!.id, decision: "rejected", expectedUpdatedAt: item!.updatedAt },
     });
     expect(rejectWithoutReason.status).toBe(400);
+    // P12 / T-170: a verification needs evidence too (v1.8 «Evidencia / observaciones de la revisión»).
+    const verifyWithoutEvidence = await call("qualification-reviews", {
+      method: "POST",
+      token: platformAdmin,
+      body: { qualificationId: item!.id, decision: "verified", expectedUpdatedAt: item!.updatedAt },
+    });
+    expect([verifyWithoutEvidence.status, verifyWithoutEvidence.body.error?.code]).toEqual([
+      400,
+      "VALIDATION_ERROR",
+    ]);
+    expect(await golfEligible()).toBe(false);
 
     // M1: a decision about a version the reviewer did not see is refused and changes nothing.
     const stale = await call("qualification-reviews", {

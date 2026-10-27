@@ -16,6 +16,7 @@ demand, never persisted (no duplicated derived state).
 auth.users 1─1 profiles 1─0..1 technician_profiles 1─* technician_qualifications *─1 qualification_types
                   │                        ├──────────1─* availability_windows
                   │                        └──────────1─* logbook_entries (owner only, M14)
+                  │                        ├──────────1─* technician_qualifications 1─* qualification_reviews (evidence, platform admins only, P12)
                   │                        ├──────────1─* technician_type_ratings (declared, package passport)
                   │                        ├──────────1─0..1 technician_private_details (owner only)
                   │                        ├──────────1─* technician_organization_blocks *─1 organizations (owner only)
@@ -156,6 +157,13 @@ platform admin only; no write grant (written by `review_organization`). The orga
 PK (`organization_id`, `profile_id`), `role` (`member` · `manager` · `admin`), `created_at`.
 Organization role is independent from `platform_role`.
 
+### `qualification_reviews` (`20261027300000`, LOCAL ONLY)
+
+`id`, `qualification_id` → `technician_qualifications` (cascade), `reviewed_by` → `profiles` (set null), `decision`
+(`verified` · `rejected`), `note` (evidence, 1–500, v1.8 «Evidencia / observaciones de la revisión», required for both
+decisions), `qualification_version` (the `updated_at` the reviewer saw), `created_at`. RLS select platform admin only; no
+write grant (written by `review_qualification`). The professional never reads it (P12, T-170).
+
 ### `qualification_types`
 
 Reference catalog. `id`, `code` (unique, e.g. `B1.1`, `TR-A320`, `EWIS`), `name`, `category`
@@ -176,7 +184,10 @@ lacked: `B1.2`, `B1.4`, `B3` (LICENSE, expiry required) and `MECHANIC`, `SHEET-M
 | `verification_status`   | `pending` · `verified` · `rejected` · `expired` | **no**                                                                         |
 | `reviewed_by`           | → `profiles`, nullable (platform admin)         | **no**                                                                         |
 | `reviewed_at`           | timestamptz, nullable                           | **no**                                                                         |
-| `review_note`           | text ≤ 500, nullable; required for rejections   | **no** (owner reads it via `own_qualification_reviews()`; not column-readable) |
+| `review_note`           | text ≤ 500, nullable; the reason of a rejection | **no** (owner reads it via `own_qualification_reviews()`; not column-readable) |
+
+Since `20261027300000` (P12, T-170) every decision needs a note: a rejection's note is copied to `review_note` for the
+owner; a verification's note is evidence and stays only in `qualification_reviews`.
 
 Trigger `reset_verification_on_change`: if the owner changes type/dates of a non-pending
 qualification, verification returns to `pending` (prevents "verify then extend expiry" tampering) and,

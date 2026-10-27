@@ -126,7 +126,7 @@ review() {
   local since; since="$(echo "select clock_timestamp();" | psql_owner)"
   [ "$(echo "select verification_status from public.technician_qualifications where id = $q;" | psql_owner)" = pending ] \
     || die "Golf's B1.1 must start pending"
-  printf "begin;\nselect verification_status from public.review_qualification(%s, 'verified', (select updated_at from public.technician_qualifications where id = %s), null, null);\nselect pg_sleep(1.5);\ncommit;\n" "$q" "$q" \
+  printf "begin;\nselect verification_status from public.review_qualification(%s, 'verified', (select updated_at from public.technician_qualifications where id = %s), 'Race check', null);\nselect pg_sleep(1.5);\ncommit;\n" "$q" "$q" \
     | psql_as "$PLATFORM_ADMIN" >"$OUT_A" &
   local a=$!
   sleep 0.4

@@ -1,6 +1,7 @@
 // Qualification review by a platform admin (phase 6; OD-3 / D-01 APPROVAL CHECKPOINT).
 //   GET  /qualification-reviews  → { pending (active + pending, oldest first, ≤ 100), recent (≤ 20 decisions) }
-//   POST /qualification-reviews { qualificationId, decision: verified|rejected, note? }
+//   POST /qualification-reviews { qualificationId, decision: verified|rejected, expectedUpdatedAt, note }
+//        (the note is required for both decisions since 20261027300000 — v1.8 evidence, T-170)
 //        → RPC review_qualification (SECURITY DEFINER: platform admin from the DB, no self-review,
 //          pending → decision only, row lock, audited with this request id)
 // Fails closed: unless the QUALIFICATION_REVIEW_ENABLED secret is "true" every call is 404, so an
@@ -53,6 +54,7 @@ const queueRow = z.object({
   technician_profiles: z.object({
     profile_id: z.string(),
     base_location: z.string().nullable(),
+    general_restrictions: z.string().nullable(),
     profiles: z.object({ display_name: z.string() }),
   }),
 });
@@ -65,6 +67,7 @@ export function toQueueItem(raw: unknown): ReviewQueueItem {
       id: r.technician_profiles.profile_id,
       displayName: r.technician_profiles.profiles.display_name,
       baseLocation: r.technician_profiles.base_location,
+      restrictions: r.technician_profiles.general_restrictions,
     },
     type: r.qualification_types,
     issuedAt: r.issued_at,
@@ -110,7 +113,7 @@ export const handler = createHandler("qualification-reviews", {
       actor.client
         .from("technician_qualifications")
         .select(
-          "id, issued_at, expires_at, created_at, updated_at, qualification_types!inner ( code, name, category ), technician_profiles!inner ( profile_id, base_location, profiles!inner ( display_name ) )",
+          "id, issued_at, expires_at, created_at, updated_at, qualification_types!inner ( code, name, category ), technician_profiles!inner ( profile_id, base_location, general_restrictions, profiles!inner ( display_name ) )",
         )
         .eq("verification_status", "pending")
         .eq("status", "active")
