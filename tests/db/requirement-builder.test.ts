@@ -1296,15 +1296,25 @@ describe("the builder writes the v1.8 profile requirements (P10, 20261027100000;
         (await sqlError(tx, UPDATE_RULES, [...stale, ...ruleArgs({ minYears: 9 })])).code,
       ).toBe("CF412");
       expect((await rulesRow(tx, id)).min_years).toBeNull();
-      // A member, another organization and a professional: 42501 (the role before the lock).
-      for (const who of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+      // A member, another organization, a professional, a platform admin and anon: 42501 (the role before the
+      // lock; anon has no EXECUTE at all).
+      for (const who of [
+        SEED.charlieMember,
+        SEED.adminOther,
+        SEED.delta,
+        SEED.platformAdmin,
+        null,
+      ]) {
+        await tx.exec("reset role");
         const args = await updateArgs(tx, id, { qualifications: [], status: "draft" });
         await actAs(tx, who);
         expect(
           (await sqlError(tx, UPDATE_RULES, [...args, ...ruleArgs({ minYears: 9 })])).code,
-          who,
+          String(who),
         ).toBe("42501");
       }
+      await tx.exec("reset role");
+      expect((await rulesRow(tx, id)).min_years).toBeNull();
       // Rules change on a published need with an application → CFA12; closed → 55000. The rules are cleared
       // first so Delta's application passes guard_application_profile_rules (CFA14).
       await edit({});
@@ -1358,6 +1368,22 @@ describe("the builder writes the v1.8 profile requirements (P10, 20261027100000;
         );
         expect(error.code, set).toBe("42501");
       }
+      // Nor a direct INSERT naming a rule column (only the RPC's trigger hand-off writes them).
+      await tx.exec("reset role");
+      const { rows } = await tx.query<{ organization_id: string }>(
+        "select organization_id from public.work_requirements where id = $1",
+        [id],
+      );
+      await actAs(tx, SEED.adminMro);
+      expect(
+        (
+          await sqlError(
+            tx,
+            "insert into public.work_requirements (organization_id, category) values ($1, 'B1.1')",
+            [rows[0]!.organization_id],
+          )
+        ).code,
+      ).toBe("42501");
       await tx.exec("reset role");
       expect(
         (

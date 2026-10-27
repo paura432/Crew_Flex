@@ -13,14 +13,7 @@ import {
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { callAction } from "@/components/ui/Notice";
-import {
-  AIRCRAFT,
-  categoryKey,
-  ENGINES,
-  LICENCE_CATEGORIES,
-  PROFESSIONAL_CATEGORIES,
-  SKILLS,
-} from "@/domain/passport";
+import { AIRCRAFT, categoryKey, ENGINES, PROFESSIONAL_CATEGORIES, SKILLS } from "@/domain/passport";
 import { QUALIFICATION_CATEGORIES, type QualificationType } from "@/domain/qualification";
 import {
   CONTRACT_TYPES,
@@ -33,6 +26,7 @@ import {
   shiftIssues,
   sortShifts,
   totalBaseHours,
+  typeRatingRuleIncomplete,
   URGENCIES,
   type WorkRequirement,
 } from "@/domain/work-requirement";
@@ -870,12 +864,7 @@ export function RequirementForm({
                   {errors.requiresTypeRating}
                 </p>
               ) : (
-                draft.requiresTypeRating &&
-                !(
-                  draft.category &&
-                  (LICENCE_CATEGORIES as readonly string[]).includes(draft.category) &&
-                  draft.aircraft.length
-                ) && (
+                typeRatingRuleIncomplete(draft) && (
                   <p className="text-sm text-warn">
                     {translateKey(tRoot, "v.requirement.rules.typeRating")}
                   </p>

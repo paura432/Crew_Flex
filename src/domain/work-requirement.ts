@@ -1,6 +1,12 @@
 import { EU_COUNTRIES, type EuCountry } from "./organization.ts";
 import type { RepresentationStatus } from "./recruiter.ts";
-import type { Aircraft, Engine, ProfessionalCategory, Skill } from "./passport.ts";
+import {
+  LICENCE_CATEGORIES,
+  type Aircraft,
+  type Engine,
+  type ProfessionalCategory,
+  type Skill,
+} from "./passport.ts";
 
 export const SHIFTS = ["day", "night", "split", "flexible"] as const;
 export type Shift = (typeof SHIFTS)[number];
@@ -381,4 +387,24 @@ export function duplicateSchedule<
       ? source.shifts.map((s) => ({ ...s, startsAt: move(s.startsAt), endsAt: move(s.endsAt) }))
       : source.shifts,
   };
+}
+
+/**
+ * T-83 (CHECK `work_requirements_type_rating_check`, ORG-03 #19): a type rating is asked for a licence category on at
+ * least one accepted aircraft — v1.8 «Selecciona una aeronave si exiges habilitación de tipo.». One predicate for the
+ * schema refinement and the form's pre-submit hint.
+ */
+export function typeRatingRuleIncomplete(rules: {
+  requiresTypeRating?: boolean | null;
+  category?: string | null;
+  aircraft?: readonly string[] | null;
+}): boolean {
+  return (
+    rules.requiresTypeRating === true &&
+    !(
+      rules.category != null &&
+      (LICENCE_CATEGORIES as readonly string[]).includes(rules.category) &&
+      (rules.aircraft?.length ?? 0) > 0
+    )
+  );
 }

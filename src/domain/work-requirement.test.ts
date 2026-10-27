@@ -15,6 +15,7 @@ import {
   shiftEnvelope,
   shiftIssues,
   totalBaseHours,
+  typeRatingRuleIncomplete,
 } from "./work-requirement";
 
 describe("isExpired (V1.8 «Vencida», display only)", () => {
@@ -190,5 +191,32 @@ describe("archive and duplicate (v2-14, T-64/T-65)", () => {
     expect(totalBaseHours(copy.shifts!)).toBe(24);
     const long = duplicateSchedule({ title: "x".repeat(120), ...NOV_PERIOD }, now, "Copy · ");
     expect(long.title).toHaveLength(120);
+  });
+});
+
+describe("typeRatingRuleIncomplete (T-83)", () => {
+  it("is false unless a type rating is asked", () => {
+    expect(typeRatingRuleIncomplete({ requiresTypeRating: false })).toBe(false);
+    expect(typeRatingRuleIncomplete({})).toBe(false);
+  });
+  it("needs a licence category and at least one aircraft", () => {
+    expect(typeRatingRuleIncomplete({ requiresTypeRating: true })).toBe(true);
+    expect(
+      typeRatingRuleIncomplete({ requiresTypeRating: true, category: "B1.1", aircraft: [] }),
+    ).toBe(true);
+    expect(
+      typeRatingRuleIncomplete({
+        requiresTypeRating: true,
+        category: "MECHANIC",
+        aircraft: ["A320 Family"],
+      }),
+    ).toBe(true);
+    expect(
+      typeRatingRuleIncomplete({
+        requiresTypeRating: true,
+        category: "B1.1",
+        aircraft: ["A320 Family"],
+      }),
+    ).toBe(false);
   });
 });

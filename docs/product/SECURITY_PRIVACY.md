@@ -38,7 +38,11 @@ the requirement (T-85), the engines and capabilities it asks for, the type ratin
 rules (BR-3.7–3.13). Applicants (`get_requirement_applications`, `get_organization_applications`) carry the same
 projection, `private` applicants included (their own act, S-7). The builder's live count takes the job's country and no
 other rule (security review MEDIUM-1: free rule parameters plus a count would let one organization reconstruct one
-candidate's declarations).
+candidate's declarations). Residual accepted with P10 (T-168, security review 2026-10-27): the rules are now API-writable, so
+"minimised to the requirement" means "whatever the organization asks" — an admin who edits a draft's engines, skills or
+type rating repeatedly can watch each per-need pseudonym's `hard_eligible`/`candidate_declarations` flip and learn the
+full declared set of ≤ 100 pseudonymous profiles. No identifier is added and the count stays country-only; a cap on rule
+edits of drafts is the upgrade if this matters.
 
 ## Threat model
 

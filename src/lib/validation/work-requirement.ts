@@ -17,15 +17,10 @@ import {
   shiftEnvelope,
   shiftIssues,
   URGENCIES,
+  typeRatingRuleIncomplete,
   type WorkRequirement,
 } from "../../domain/work-requirement.ts";
-import {
-  AIRCRAFT,
-  ENGINES,
-  LICENCE_CATEGORIES,
-  PROFESSIONAL_CATEGORIES,
-  SKILLS,
-} from "../../domain/passport.ts";
+import { AIRCRAFT, ENGINES, PROFESSIONAL_CATEGORIES, SKILLS } from "../../domain/passport.ts";
 
 const DAY_MS = 86_400_000;
 
@@ -219,14 +214,7 @@ function refineRequirement(
   }
   // T-83 (CHECK `work_requirements_type_rating_check`): a type rating is asked for a licence category on at least
   // one accepted aircraft — v1.8 «Selecciona una aeronave si exiges habilitación de tipo.» (ORG-03 #19).
-  if (
-    value.requiresTypeRating &&
-    !(
-      value.category &&
-      (LICENCE_CATEGORIES as readonly string[]).includes(value.category) &&
-      value.aircraft?.length
-    )
-  ) {
+  if (typeRatingRuleIncomplete(value)) {
     ctx.addIssue({
       code: "custom",
       path: ["requiresTypeRating"],

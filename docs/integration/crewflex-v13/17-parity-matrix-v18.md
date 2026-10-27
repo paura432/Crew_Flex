@@ -546,10 +546,10 @@ función nueva (`work-requirements` cambia: desplegarla no antes de la migració
 `MatchCard`, opcional) · 1 IMPLEMENTED_UNVERIFIED (P10-12 texto del cierre con asignaciones activas, verificado en código y por
 la API) · 2 NEEDS_DECISION (P10-08 cobertura parcial, D-06 Q6 ↔ SCOPE-2; P10-15 tarifa compartible, T-33) · 2 OUT_OF_SCOPE (P10-09
 urgencia deducida C-8/D-05; P10-16 afinidad T-03) · 1 BLOCKED (P10-19 despliegue). Inventario: 73 filas cambian de símbolo
-(`(F3: antes X)`), `recount.py 30-company-hiring.md 50-visual-meta-a11y.md`: 30 → = 88 · ≈ 156 · ≠ 14 · − 52 · + 50 · ✗ 33
+(`(F3: antes X)`), `recount.py 30-company-hiring.md 50-visual-meta-a11y.md`: 30 → = 84 · ≈ 160 · ≠ 14 · − 51 · + 50 · ✗ 34 tras integrar (ORG-07 #3 ✗ de P09; ORG-02 #14/#16/#27/#37 = → ≈ en la revisión)
 (antes = 46 · ≈ 143 · ≠ 24 · − 96 · ✗ 34); 50 → = 70 · ≈ 103 · ≠ 41 · − 24 · + 49 · ✗ 19 (antes = 67 · ≈ 100 · ≠ 45 · − 26); área
 417 / 548 = 76,1 % (antes 356 / 547 = 65,1 %); retenidas 55 (MKT-01 #16 y MKT-02 #6 pasan a T-33, SHOT-06 #2 deja C-2 por T-94);
-denominador +1: ORG-03 #13 `✗` → `≈` (la nota del recruiter, portada solo para la agencia). Total 935 / 1 263 = 74,0 % (antes
+denominador +1: ORG-03 #13 `✗` → `≈` (la nota del recruiter, portada solo para la agencia). Total 935 / 1 263 = 74,0 % en la rama; 935 / 1 262 = 74,1 % integrado con la corrección de P09 (antes
 874 / 1 262 = 69,3 %). Código de producto: migración `20261027100000` + PGlite (`b86854c`), `coverageDays` (`ae5c048`),
 «Perfil técnico» en el constructor, esquema, función, chips, mensajes y docs (`e2eca93`, T-168), `scripts/local/ui-smoke.mjs`
 (bloque `PKG P10`, `9566790`), inventario, matriz y capturas (`e3d7b2e`). Gate final en `e3d7b2e` (`gate.sh … full`, run 1
