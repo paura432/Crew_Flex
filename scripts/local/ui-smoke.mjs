@@ -4054,7 +4054,12 @@ await logout();
     await p6EditForm.locator("input[name=title]").fill(`${p6Pdf} editado`);
     await p6EditForm.getByRole("button", { name: "Guardar" }).click();
     const p6Updated = await p6Status("Documento actualizado.");
-    const p6Renamed = await p6Row(`${p6Pdf} editado`).count();
+    // The row re-renders after the action's revalidation: wait for it, never count at once (a production
+    // server refreshes a beat later than `next dev`).
+    const p6Renamed = await p6Row(`${p6Pdf} editado`)
+      .waitFor({ timeout: 15_000 })
+      .then(() => 1)
+      .catch(() => 0);
     ok(
       "PKG P06 4 inline edit (TEC-05 #29): «Editar» opens «Título», «Tipo», «Caducidad (opcional)», «Vincular a una cualificación (opcional)» with «Guardar» / «Cancelar»; saving → «Documento actualizado.» and the row carries the new title",
       p6EditLabels.join("|") ===
