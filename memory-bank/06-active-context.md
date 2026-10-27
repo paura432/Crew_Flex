@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-27 11:30 CET (F3: P02–P10 integrated locally; P11 in progress). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-27 11:30 CET (F3: P02–P11 integrated locally; P12 in progress). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -44,6 +44,11 @@ rules; INVOKER create → BEFORE INSERT trigger via tx-local setting; DEFINER ed
 `d045565`, fixes `e399356` (one T-83 predicate in src/domain, T-85 residual documented, anon/platform-admin/INSERT
 negatives); check 0 (1184/196) + build 0 after the fix. Held: D-06 Q6 ↔ SCOPE-2, T-33 (OD-7) rate filter; open for the
 matching owner: v1.8 requires the type rating on a DECLARED aircraft (`business.js:142`), ours checks them apart.
+P11 recruiter (2026-10-27): NEW LOCAL migration `20261027200000` (`app_private.requirement_cards` appends the
+represented client's NAME, as recorded, T-169; never the contact); pack copy names the recipient on both sides, «Red
+recruiter» eyebrow; smoke 420/420; security + code reviews no blockers; merge `b9f7d48`, fixes `938d56e` (cleanup of
+`Cliente P11`/`P11 recruiter` rows, restore captured org type, doc refs); check 0 (1185/197) + build 0 on the merge.
+Held: export «Preparar presentación para cliente» (D-07 P3 + D-10).
 Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
 After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime
 container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the functions’ `.env`) into a worktree.
@@ -54,9 +59,9 @@ container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the fun
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories    |
 | Local `main` | = `origin/main` `51c835a`                                                                                                    |
-| Branch       | `feat/v18-html-parity` = this commit on `e399356`: 60 migrations (40 not applied remotely), 23 functions; deployed nowhere   |
+| Branch       | `feat/v18-html-parity` = this commit on `938d56e`: 61 migrations (41 not applied remotely), 23 functions; deployed nowhere   |
 | Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)         |
-| Parity       | inventory `recount.py` after P10: 935 / 1 262 = 74,1 % (155 decision-held, 119 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
+| Parity       | inventory `recount.py` after P11: 943 / 1 262 = 74,7 % (155 decision-held, 119 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
 
 ## Risks
 
@@ -78,5 +83,5 @@ other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-
 
 ## Next step (one)
 
-P11 Recruiter (ORG-08) in worktree `f3-p11`, branch `f3/p11-recruiter` from `deb9cc1` (integrate by merge); then P12 Admin,
-P13 Notices, P14 Shell. Never push or deploy.
+P12 Admin (ADM-01…03) in worktree `f3-p12`, branch `f3/p12-admin` from `b9f7d48` (integrate by merge); then P13 Notices,
+P14 Shell. Never push or deploy.
