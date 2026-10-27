@@ -4,8 +4,7 @@
 -- shares when applying to a staffing agency's requirement is received by the agency FOR its client (the consent names
 -- both, T-134), so the two parties' application screens must say the same: «Mis candidaturas» → «Ver expediente» and
 -- the agency's «Candidaturas». Both read the requirement through the private projection `app_private.requirement_cards`
--- (`get_my_applications`, `get_organization_applications`, `get_requirement_applications`, 20261022130300 /
--- 20261024100100 / 20261024100900), which did not carry the client (T-134 note: «requirement_cards untouched»).
+-- (`get_my_applications`, `get_organization_applications`, 20261022130300 / 20261024100100 / 20261024100900), which did not carry the client (T-134 note: «requirement_cards untouched»).
 --
 -- Change (additive): the view gains the client's NAME — one key `clientName` inside `card` and one trailing column
 -- `client_name` (CREATE OR REPLACE VIEW appends columns only; nothing is renamed or dropped). It names the client as

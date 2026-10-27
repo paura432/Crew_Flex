@@ -19,15 +19,15 @@ bash scripts/local/sb-local.sh db query "delete from public.work_requirements wh
 bash scripts/local/sb-local.sh db query "delete from public.technician_qualifications q using public.qualification_types qt
   where qt.id = q.qualification_type_id and qt.code = 'B2'
     and q.technician_profile_id = '00000000-0000-4000-8000-000000000021' returning qt.code"
-# PKG recruiter: the browser smoke's revoked «Smoke client …» rows once nothing references them, and Lisbon back to
+# PKG recruiter / PKG P11: the browser smoke's revoked «Smoke client …» / «Cliente P11 …» rows once nothing references them, and Lisbon back to
 # an MRO if an interrupted run left it a staffing agency (no-ops before migration 20261024500000).
 bash scripts/local/sb-local.sh db query "do \$\$ begin
   if to_regclass('public.represented_clients') is not null then
     update public.represented_clients set status = 'revoked', revoked_at = now()
-      where name like 'Smoke client %' and status <> 'revoked';
+      where (name like 'Smoke client %' or name like 'Cliente P11 %') and status <> 'revoked';
     update public.work_requirements set status = 'closed'
-      where title like 'Local UI check · recruiter %' and status not in ('closed', 'draft');
-    delete from public.represented_clients rc where rc.name like 'Smoke client %'
+      where (title like 'Local UI check · recruiter %' or title like 'Local UI check · P11 recruiter %') and status not in ('closed', 'draft');
+    delete from public.represented_clients rc where (rc.name like 'Smoke client %' or rc.name like 'Cliente P11 %')
       and not exists (select 1 from public.work_requirements wr where wr.on_behalf_of_client_id = rc.id);
   end if;
   update public.organizations set type = 'mro' where name = 'Demo Aero Services Lisbon' and type <> 'mro';

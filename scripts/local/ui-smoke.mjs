@@ -6020,7 +6020,7 @@ await logout();
           })
         ).ok === true
       : true;
-    const p11TypeBack = await p11SetType("mro");
+    const p11TypeBack = await p11SetType(p11Agency.type);
     const p11Resumed = [];
     for (const id of p11Paused)
       p11Resumed.push(
