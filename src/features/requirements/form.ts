@@ -2,6 +2,7 @@
 // v2-14 drafts/autosave/duplicate). Pure: no React, no I/O. Inputs are kept as strings (what the controls hold);
 // `draftToFields` turns them into the shared schema's payload, which validates everything (the form shows its
 // issues, the server action and the Edge Function check it again).
+import type { Aircraft, Engine, ProfessionalCategory, Skill } from "@/domain/passport";
 import {
   type ContractType,
   DEFAULT_COUNTRY,
@@ -57,6 +58,16 @@ export interface RequirementDraft {
   description: string;
   /** Recruiter (BR-27): the represented client a staffing agency publishes for; "" = none chosen. */
   clientId: string;
+  /**
+   * v1.8 profile requirements (P10; BR-3.8–3.13, T-80): «Categoría», «Aeronaves aceptadas», «Exigir habilitación
+   * de tipo», «Motores», «Experiencia mínima (años)», «Capacidades obligatorias». "" / [] / false = not required.
+   */
+  category: ProfessionalCategory | "";
+  aircraft: Aircraft[];
+  requiresTypeRating: boolean;
+  engines: Engine[];
+  minYears: string;
+  requiredSkills: Skill[];
 }
 
 /** v1.8 «Movilización máxima»: 48 h, 12 h for AOG while the value is still one of those two defaults. */
@@ -96,6 +107,13 @@ export function emptyDraft(arrival: string): RequirementDraft {
     },
     description: "",
     clientId: "",
+    // No profile rule until the organization states one (T-168): a stated rule narrows the pool.
+    category: "",
+    aircraft: [],
+    requiresTypeRating: false,
+    engines: [],
+    minYears: "",
+    requiredSkills: [],
   };
 }
 
@@ -134,6 +152,12 @@ export function draftFromRequirement(r: WorkRequirement): RequirementDraft {
     },
     description: r.description ?? "",
     clientId: r.client?.id ?? "",
+    category: r.category ?? "",
+    aircraft: [...(r.aircraft ?? [])],
+    requiresTypeRating: r.requiresTypeRating ?? false,
+    engines: [...(r.engines ?? [])],
+    minYears: r.minYears === undefined || r.minYears === null ? "" : String(r.minYears),
+    requiredSkills: [...(r.requiredSkills ?? [])],
   };
 }
 
@@ -190,8 +214,26 @@ export function draftToFields(draft: RequirementDraft) {
     ...(draft.shifts.length ? { shifts: sortShifts(draft.shifts) } : {}),
     conditions,
     ...(draft.clientId ? { onBehalfOfClientId: draft.clientId } : {}),
+    // Profile rules: only what is stated travels (absent = not required, the column defaults).
+    ...(draft.category ? { category: draft.category } : {}),
+    ...(draft.aircraft.length ? { aircraft: draft.aircraft } : {}),
+    ...(draft.requiresTypeRating ? { requiresTypeRating: true } : {}),
+    ...(draft.engines.length ? { engines: draft.engines } : {}),
+    ...(draft.minYears.trim() !== "" ? { minYears: num(draft.minYears) } : {}),
+    ...(draft.requiredSkills.length ? { requiredSkills: draft.requiredSkills } : {}),
   };
 }
+
+/** Whether the draft states any v1.8 profile rule (the live count does not apply them yet, T-86). */
+export const statesProfileRules = (draft: RequirementDraft) =>
+  Boolean(
+    draft.category ||
+    draft.aircraft.length ||
+    draft.requiresTypeRating ||
+    draft.engines.length ||
+    draft.minYears.trim() !== "" ||
+    draft.requiredSkills.length,
+  );
 
 /**
  * v1.8 «Selecciona un cliente.» (Company2.jsx:103, BR-27.3): a staffing agency's builder (`recruiter`) publishes only

@@ -96,11 +96,11 @@ memory bank. Procedure (owner, dashboard «Account → Access Tokens»):
 5. Writes (§0b, functions deploy, secrets) use a separate token created for that window — the matching **Read-write**
    permissions only, expiry 1–7 days — revoked when the step is done.
 
-## 1. What the branch adds (state at `8fa806a`, 2026-10-23; rows 37–39 added 2026-10-26)
+## 1. What the branch adds (state at `8fa806a`, 2026-10-23; rows 37–39 added 2026-10-26, row 40 added 2026-10-27 — P10; `work-requirements` must be deployed no earlier than that migration: the new function calls the 23-argument overloads)
 
 Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M08/M09 (`15-autonomous-migration-backlog.md`
 §6.3 has each package's commits, gates and technical defaults T-01…T-148; `08-product-decisions.md` the defaults;
-`BUSINESS_RULES.md` BR-1…BR-29). **39 migrations** not applied anywhere but the local Docker DB, in file order:
+`BUSINESS_RULES.md` BR-1…BR-29). **40 migrations** not applied anywhere but the local Docker DB, in file order:
 
 | #   | File (apply in this order — `db push` applies pending files in file order) | Package                                      |
 | --- | -------------------------------------------------------------------------- | -------------------------------------------- |
@@ -143,6 +143,7 @@ Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M0
 | 37  | `20261024700000_candidate_directory`                                       | directory (search-only)                      |
 | 38  | `20261024800000_professional_block_opportunities`                          | professional-block (v2-16)                   |
 | 39  | `20261026100000_revoke_trigger_function_execute`                           | F1b security (REVOKE only)                   |
+| 40  | `20261027100000_requirement_profile_rules_builder`                         | P10 needs and matching (builder rules)       |
 
 **Edge Functions** (22 directories): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
 **changed since release 1** — `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-profile`, `professional-qualifications`, `professional-availability`, `user-preferences` (every one of them parses the new schema/statuses and

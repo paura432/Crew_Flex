@@ -90,9 +90,7 @@ Not ported (documented, T-86): «Completa tu perfil.» (a display name is mandat
 caducado» (courses are verified TRAINING qualifications, BR-2/BR-3), «Movilización máxima», «Herramientas propias» and
 «Tarifa mínima dentro del presupuesto» (the professional's mobilisation hours are not modelled; own tools and budget are
 builder terms not evaluated yet; the minimum rate is owner-only, T-33). Every requirement's rules are frozen with the
-rest of it once closed or after the first application (CFA12). Writing them through the builder form and its RPCs is a
-follow-up: today only the seed and the owner set them (no grant), and the builder sends only the country. IMPLEMENTED
-(local).
+rest of it once closed or after the first application (CFA12). Since P10 (F3, LOCAL `20261027100000`, T-168) the builder writes them: «Perfil técnico» in «03 · Cualificaciones» (category, accepted aircraft, «Exigir habilitación de tipo», engines, minimum years, capabilities; each starts «not required»), the shared schema and the RPC overloads carry them (`category`, `aircraft`, `requiresTypeRating`, `engines`, `minYears`, `requiredSkills`; absent / empty = not required), «Selecciona una aeronave si exiges habilitación de tipo.» is the form's and the CHECK's T-83 rule, and the detail, the preview and the opportunity show the stated rules as «Requisitos del perfil». The live count still takes the country only (T-86, security floor) and the form says so. IMPLEMENTED (local).
 
 ## BR-4 Availability
 
@@ -435,7 +433,7 @@ asignaciones confirmadas»** (dashboard) = Σ over the organization's requiremen
 its shifts (v2-09) or, without shifts, the started 24-hour blocks of its period (at least one); one application covers
 every shift (Q6). Counted from `get_requirement_application_counts` (admin/manager only, counts per status per
 requirement with headcount, period and shift count; a closed account's application still counts, T-42). Plain members
-see the status chips only. IMPLEMENTED (local).
+see the status chips only. IMPLEMENTED (local). The day rule of this KPI is `coverageDays` (started 24-hour blocks; one night 22:00–06:00 = 1), **not** `requirementDays` of `work-requirement.ts` («{n} días» on the cards, UTC calendar days, BR-10 / T-164: that night = 2): two v1.8 literals for two figures (`Dashboard.jsx` KPI vs `Marketplace.jsx:90`), kept as two functions on purpose and pinned by `coverage.test.ts` (P10, review of the P05 nit).
 
 ## BR-24 Document wallet trash and type filter (N-19, N-20; T-100…T-102) — `walletList` (`src/features/documents/map.ts`)
 

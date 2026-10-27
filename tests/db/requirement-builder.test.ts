@@ -1051,3 +1051,321 @@ describe("live count of viable candidates (v2-13, T-66)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------------------------------------------
+// P10 (F3): the builder writes the v1.8 profile requirements (20261027100000) — ORG-02 #11-#14, #16, #19.
+// ---------------------------------------------------------------------------------------------------------------
+const CREATE_RULES =
+  "select * from public.create_work_requirement_idempotent($1, $2, $3, 'Madrid (MAD)', $4, $5, 'day', 1, $6, $7::jsonb, $8, $9, $10, $11, $12::jsonb, $13::jsonb, null, $14, $15::text[], $16, $17::text[], $18, $19::text[])";
+const UPDATE_RULES =
+  "select * from public.update_work_requirement($1, $2, $3, 'Madrid (MAD)', $4, $5, 'day', 1, 'planned', $6::jsonb, $7, 'ES', 'Europe/Madrid', $8, $9::jsonb, $10::jsonb, null, $11, $12::text[], $13, $14::text[], $15, $16::text[])";
+
+interface RuleArgs {
+  category?: string | null;
+  aircraft?: string[] | null;
+  requiresTypeRating?: boolean | null;
+  engines?: string[] | null;
+  minYears?: number | null;
+  requiredSkills?: string[] | null;
+}
+const ruleArgs = (r: RuleArgs) => [
+  r.category ?? null,
+  r.aircraft ?? null,
+  r.requiresTypeRating ?? null,
+  r.engines ?? null,
+  r.minYears ?? null,
+  r.requiredSkills ?? null,
+];
+
+async function rulesRow(tx: Transaction, id: string) {
+  await tx.exec("reset role");
+  return (
+    await tx.query<{
+      category: string | null;
+      aircraft: string[];
+      requires_type_rating: boolean;
+      engines: string[];
+      min_years: number | null;
+      required_skills: string[];
+    }>(
+      "select category, aircraft, requires_type_rating, engines, min_years, required_skills from public.work_requirements where id = $1",
+      [id],
+    )
+  ).rows[0]!;
+}
+
+const NO_RULES_ROW = {
+  category: null,
+  aircraft: [],
+  requires_type_rating: false,
+  engines: [],
+  min_years: null,
+  required_skills: [],
+};
+
+describe("the builder writes the v1.8 profile requirements (P10, 20261027100000; BR-3.8–3.13)", () => {
+  it("creates with the rules normalised (distinct, sorted, no NULL arrays); without them the defaults, as before", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await actAs(tx, SEED.managerMro);
+      const ruled = (
+        await tx.query<{ id: string; replayed: boolean }>(CREATE_RULES, [
+          ...createArgs({}),
+          ...ruleArgs({
+            category: "B1.1",
+            aircraft: ["B737 NG", "A320 Family", "A320 Family"],
+            requiresTypeRating: true,
+            engines: ["LEAP-1A"],
+            minYears: 3,
+            requiredSkills: ["borescope", "line_maintenance"],
+          }),
+        ])
+      ).rows[0]!;
+      expect(ruled.replayed).toBe(false);
+      expect(await rulesRow(tx, ruled.id)).toEqual({
+        category: "B1.1",
+        aircraft: ["A320 Family", "B737 NG"],
+        requires_type_rating: true,
+        engines: ["LEAP-1A"],
+        min_years: 3,
+        required_skills: ["borescope", "line_maintenance"],
+      });
+      // The hand-over setting is cleared: the next insert in the same transaction gets the defaults.
+      await actAs(tx, SEED.managerMro);
+      const plain = (
+        await tx.query<{ id: string }>(CREATE_RULES, [...createArgs({}), ...ruleArgs({})])
+      ).rows[0]!;
+      expect(await rulesRow(tx, plain.id)).toEqual(NO_RULES_ROW);
+      // The 17-argument overload (recruiter) still works and still writes no rule.
+      const old = await create(tx, SEED.managerMro);
+      expect(await rulesRow(tx, old.id)).toEqual(NO_RULES_ROW);
+    });
+  });
+
+  it("the CHECKs of 20261023900000 judge the values: unknown lists and a type rating without aircraft are 23514", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await actAs(tx, SEED.adminMro);
+      const refused = async (rules: RuleArgs) =>
+        (await sqlError(tx, CREATE_RULES, [...createArgs({}), ...ruleArgs(rules)])).code;
+      expect(await refused({ category: "B9" })).toBe("23514");
+      expect(await refused({ aircraft: ["A380"] })).toBe("23514");
+      expect(await refused({ engines: ["JT8D"] })).toBe("23514");
+      expect(await refused({ minYears: 61 })).toBe("23514");
+      expect(await refused({ requiredSkills: ["welding"] })).toBe("23514");
+      // T-83: a licence category and ≥ 1 aircraft, else no type rating.
+      expect(await refused({ requiresTypeRating: true })).toBe("23514");
+      expect(await refused({ requiresTypeRating: true, category: "B1.1" })).toBe("23514");
+      expect(
+        await refused({ requiresTypeRating: true, category: "NDT", aircraft: ["A320 Family"] }),
+      ).toBe("23514");
+      // Nothing was written by the refused attempts (the savepoints rolled back).
+      await tx.exec("reset role");
+      const { rows } = await tx.query<{ n: number }>(
+        "select count(*)::int as n from public.work_requirements where title = 'Builder fixture' and requires_type_rating",
+      );
+      expect(rows[0]!.n).toBe(0);
+    });
+  });
+
+  it("the same key replays; the same key with other rules is CF409; a member or another organization gets 42501", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const key = randomUUID();
+      await actAs(tx, SEED.adminMro);
+      const rules = { category: "B2", aircraft: ["A330"], minYears: 2 };
+      const first = (
+        await tx.query<{ id: string; replayed: boolean }>(CREATE_RULES, [
+          ...createArgs({ key }),
+          ...ruleArgs(rules),
+        ])
+      ).rows[0]!;
+      const again = (
+        await tx.query<{ id: string; replayed: boolean }>(CREATE_RULES, [
+          ...createArgs({ key }),
+          ...ruleArgs({ ...rules, aircraft: ["A330", "A330"] }), // duplicates are not identity
+        ])
+      ).rows[0]!;
+      expect(again).toEqual({ id: first.id, replayed: true });
+      expect(
+        (
+          await sqlError(tx, CREATE_RULES, [
+            ...createArgs({ key }),
+            ...ruleArgs({ ...rules, minYears: 5 }),
+          ])
+        ).code,
+      ).toBe("CF409");
+      await actAs(tx, SEED.charlieMember);
+      expect((await sqlError(tx, CREATE_RULES, [...createArgs({}), ...ruleArgs(rules)])).code).toBe(
+        "42501",
+      );
+      await actAs(tx, SEED.adminOther);
+      expect(
+        (await sqlError(tx, CREATE_RULES, [...createArgs({ org: mroId }), ...ruleArgs(rules)]))
+          .code,
+      ).toBe("42501");
+    });
+  });
+
+  it("the stated rules are what the pool and the apply check apply (hard_eligibility: Echo's A330 misses «A320 Family»)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await actAs(tx, SEED.adminMro);
+      const { id } = (
+        await tx.query<{ id: string }>(CREATE_RULES, [
+          ...createArgs({ shifts: null, startsAt: at(20, 8), endsAt: at(22, 16) }),
+          ...ruleArgs({ aircraft: ["A320 Family"] }),
+        ])
+      ).rows[0]!;
+      await makeAvailable(tx, [SEED.delta, SEED.echo]);
+      await tx.exec("reset role");
+      const declared = await tx.query<{ profile_id: string; aircraft: string[] }>(
+        "select profile_id, aircraft from public.technician_profiles where profile_id = any($1::uuid[])",
+        [[SEED.delta, SEED.echo]],
+      );
+      const deltaDeclaresA320 = declared.rows
+        .find((r) => r.profile_id === SEED.delta)
+        ?.aircraft.includes("A320 Family");
+      const echoDeclaresA320 = declared.rows
+        .find((r) => r.profile_id === SEED.echo)
+        ?.aircraft.includes("A320 Family");
+      const eligible = async (profile: string) =>
+        (
+          await tx.query<{ profile_ok: boolean }>(
+            "select profile_ok from app_private.hard_eligibility($1, $2)",
+            [id, profile],
+          )
+        ).rows[0]!.profile_ok;
+      expect(await eligible(SEED.delta)).toBe(Boolean(deltaDeclaresA320));
+      expect(await eligible(SEED.echo)).toBe(Boolean(echoDeclaresA320));
+    });
+  });
+
+  it("edits the rules by name (changed + audit), with the version, applications and closed checks of the other fields", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      await actAs(tx, SEED.adminMro);
+      const { id } = (
+        await tx.query<{ id: string }>(CREATE_RULES, [
+          ...createArgs({ status: "draft", qualifications: [] }),
+          ...ruleArgs({ category: "B1.1", minYears: 1 }),
+        ])
+      ).rows[0]!;
+      // The fixture is a draft without qualifications: a draft save keeps it so (R-D4).
+      const edit = async (
+        rules: RuleArgs,
+        o: Parameters<typeof updateArgs>[2] = { qualifications: [], status: "draft" },
+      ) => {
+        const args = await updateArgs(tx, id, o);
+        await actAs(tx, SEED.adminMro);
+        return tx.query<{ id: string; updated_at: Date; changed: string[] }>(UPDATE_RULES, [
+          ...args,
+          ...ruleArgs(rules),
+        ]);
+      };
+      // Same rules: no rule field reported, nothing audited for them.
+      const same = (await edit({ category: "B1.1", minYears: 1 })).rows[0]!;
+      expect(same.changed).toEqual([]);
+      // Category, aircraft and the type rating together (the CHECK sees them in one UPDATE), years cleared.
+      const changed = (
+        await edit({
+          category: "B2",
+          aircraft: ["A350", "A330"],
+          requiresTypeRating: true,
+          engines: ["GE90"],
+        })
+      ).rows[0]!;
+      expect(changed.changed.sort()).toEqual(
+        ["aircraft", "category", "engines", "minYears", "requiresTypeRating"].sort(),
+      );
+      expect(await rulesRow(tx, id)).toEqual({
+        category: "B2",
+        aircraft: ["A330", "A350"],
+        requires_type_rating: true,
+        engines: ["GE90"],
+        min_years: null,
+        required_skills: [],
+      });
+      const audit = await tx.query<{ metadata: { fields: string[] } }>(
+        "select metadata from public.audit_events where entity_id = $1 and action = 'requirement.updated' order by created_at desc limit 1",
+        [id],
+      );
+      expect(audit.rows[0]!.metadata.fields.sort()).toEqual(
+        ["aircraft", "category", "engines", "minYears", "requiresTypeRating"].sort(),
+      );
+      // Stale version → CF412 before anything is written.
+      const stale = await updateArgs(tx, id, { qualifications: [], status: "draft" });
+      stale[1] = new Date(Date.parse(stale[1] as string) - 1000).toISOString();
+      await actAs(tx, SEED.adminMro);
+      expect(
+        (await sqlError(tx, UPDATE_RULES, [...stale, ...ruleArgs({ minYears: 9 })])).code,
+      ).toBe("CF412");
+      expect((await rulesRow(tx, id)).min_years).toBeNull();
+      // A member, another organization and a professional: 42501 (the role before the lock).
+      for (const who of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+        const args = await updateArgs(tx, id, { qualifications: [], status: "draft" });
+        await actAs(tx, who);
+        expect(
+          (await sqlError(tx, UPDATE_RULES, [...args, ...ruleArgs({ minYears: 9 })])).code,
+          who,
+        ).toBe("42501");
+      }
+      // Rules change on a published need with an application → CFA12; closed → 55000. The rules are cleared
+      // first so Delta's application passes guard_application_profile_rules (CFA14).
+      await edit({});
+      expect(await rulesRow(tx, id)).toEqual(NO_RULES_ROW);
+      await tx.exec("reset role");
+      await tx.query("update public.work_requirements set status = 'open' where id = $1", [id]);
+      await tx.query(
+        "insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level) values ($1, $2, 'hard')",
+        [id, b11],
+      );
+      await tx.query(
+        "insert into public.applications (requirement_id, technician_profile_id, status) values ($1, $2, 'withdrawn')",
+        [id, SEED.delta],
+      );
+      let args = await updateArgs(tx, id, {
+        qualifications: [{ qualification_type_id: b11, requirement_level: "hard" }],
+      });
+      await actAs(tx, SEED.adminMro);
+      expect((await sqlError(tx, UPDATE_RULES, [...args, ...ruleArgs({ minYears: 9 })])).code).toBe(
+        "CFA12",
+      );
+      await tx.exec("reset role");
+      await tx.query("delete from public.applications where requirement_id = $1", [id]);
+      await tx.query("update public.work_requirements set status = 'closed' where id = $1", [id]);
+      args = await updateArgs(tx, id, {
+        qualifications: [{ qualification_type_id: b11, requirement_level: "hard" }],
+      });
+      await actAs(tx, SEED.adminMro);
+      expect((await sqlError(tx, UPDATE_RULES, [...args, ...ruleArgs({ minYears: 9 })])).code).toBe(
+        "55000",
+      );
+    });
+  });
+
+  it("the six columns still have no direct grant: PostgREST-style writes by an admin are 42501", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const { id } = await create(tx, SEED.adminMro, { status: "draft" });
+      await actAs(tx, SEED.adminMro);
+      for (const set of [
+        "category = 'B1.1'",
+        "aircraft = '{\"A320 Family\"}'",
+        "requires_type_rating = true",
+        "engines = '{\"GE90\"}'",
+        "min_years = 2",
+        "required_skills = '{ndt}'",
+      ]) {
+        const error = await sqlError(
+          tx,
+          `update public.work_requirements set ${set} where id = $1`,
+          [id],
+        );
+        expect(error.code, set).toBe("42501");
+      }
+      await tx.exec("reset role");
+      expect(
+        (
+          await tx.query<{ n: number }>(
+            "select count(*)::int as n from pg_trigger where tgrelid = 'public.work_requirements'::regclass and tgname = 'work_requirements_apply_profile_rules'",
+          )
+        ).rows[0]!.n,
+      ).toBe(1);
+    });
+  });
+});

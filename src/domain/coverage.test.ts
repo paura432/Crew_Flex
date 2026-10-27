@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { periodDays, requirementDays } from "./work-requirement";
 import {
   confirmedCoverage,
   countStatuses,
+  coverageDays,
   coveredShifts,
-  requirementDays,
   seatsByRequirement,
   seatsTaken,
   sumCounts,
@@ -29,14 +30,29 @@ describe("BR-23 confirmed coverage (v1.8 business.js coverage())", () => {
   });
 
   it("days of a period: started 24-hour blocks, at least one (T-92)", () => {
-    expect(requirementDays("2026-11-10T08:00:00.000Z", "2026-11-10T16:00:00.000Z")).toBe(1);
-    expect(requirementDays("2026-11-10T08:00:00.000Z", "2026-11-12T16:00:00.000Z")).toBe(3);
-    expect(requirementDays("2026-11-10T22:00:00.000Z", "2026-11-11T06:00:00.000Z")).toBe(1);
-    expect(requirementDays("2026-11-10T00:00:00.000Z", "2026-11-11T00:00:00.000Z")).toBe(1);
-    expect(requirementDays("2026-11-10T00:00:00.000Z", "2026-11-11T00:00:00.001Z")).toBe(2);
+    expect(coverageDays("2026-11-10T08:00:00.000Z", "2026-11-10T16:00:00.000Z")).toBe(1);
+    expect(coverageDays("2026-11-10T08:00:00.000Z", "2026-11-12T16:00:00.000Z")).toBe(3);
+    expect(coverageDays("2026-11-10T22:00:00.000Z", "2026-11-11T06:00:00.000Z")).toBe(1);
+    expect(coverageDays("2026-11-10T00:00:00.000Z", "2026-11-11T00:00:00.000Z")).toBe(1);
+    expect(coverageDays("2026-11-10T00:00:00.000Z", "2026-11-11T00:00:00.001Z")).toBe(2);
     // With shifts (v2-09) the shifts count, whatever the envelope.
-    expect(requirementDays("2026-11-10T08:00:00.000Z", "2026-11-20T16:00:00.000Z", 3)).toBe(3);
-    expect(requirementDays("2026-11-10T08:00:00.000Z", "2026-11-12T16:00:00.000Z", null)).toBe(3);
+    expect(coverageDays("2026-11-10T08:00:00.000Z", "2026-11-20T16:00:00.000Z", 3)).toBe(3);
+    expect(coverageDays("2026-11-10T08:00:00.000Z", "2026-11-12T16:00:00.000Z", null)).toBe(3);
+  });
+
+  it("coverageDays (24-hour blocks, T-92) and requirementDays (UTC calendar days, BR-10/T-164) are two rules on purpose", () => {
+    const night = ["2026-11-10T22:00:00.000Z", "2026-11-11T06:00:00.000Z"] as const;
+    expect(coverageDays(...night)).toBe(1); // one 8-hour block
+    expect(periodDays(...night)).toBe(2); // touches 10 and 11 Nov
+    expect(requirementDays({ startsAt: night[0], endsAt: night[1] })).toBe(2);
+    // They agree on whole UTC days and on day shifts, and both take the shift count when there are shifts.
+    const whole = ["2026-11-10T00:00:00.000Z", "2026-11-13T00:00:00.000Z"] as const;
+    expect(coverageDays(...whole)).toBe(3);
+    expect(periodDays(...whole)).toBe(3);
+    const day = ["2026-11-10T08:00:00.000Z", "2026-11-12T16:00:00.000Z"] as const;
+    expect(coverageDays(...day)).toBe(periodDays(...day));
+    expect(coverageDays(...night, 4)).toBe(4);
+    expect(requirementDays({ startsAt: night[0], endsAt: night[1], shifts: [1, 2, 3, 4] })).toBe(4);
   });
 
   it("«Jornadas cubiertas» = Σ filled seats × days; organization counters are the sums", () => {

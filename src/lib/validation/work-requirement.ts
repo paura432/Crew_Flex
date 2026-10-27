@@ -19,6 +19,13 @@ import {
   URGENCIES,
   type WorkRequirement,
 } from "../../domain/work-requirement.ts";
+import {
+  AIRCRAFT,
+  ENGINES,
+  LICENCE_CATEGORIES,
+  PROFESSIONAL_CATEGORIES,
+  SKILLS,
+} from "../../domain/passport.ts";
 
 const DAY_MS = 86_400_000;
 
@@ -91,6 +98,8 @@ export const requirementConditionsRow = requirementConditionsInput.extend({
   arrival: z.string().min(1).max(160).optional(),
 });
 
+const distinct = (values: readonly string[]) => new Set(values).size === values.length;
+
 const requirementFields = {
   title: z.string("v.title.required").trim().min(3, "v.title.min").max(120, "v.title.max"),
   location: z
@@ -133,6 +142,32 @@ const requirementFields = {
    * publishes a draft (draft → open).
    */
   intent: z.enum(["draft", "publish"]).optional(),
+  // v1.8 profile requirements (matching-v18 columns, LOCAL 20261023900000; written by the builder since P10,
+  // LOCAL 20261027100000; BR-3.8–3.13). Each is checked only when stated: absent / empty = not required (T-80).
+  // The same lists as the CHECK constraints (`src/domain/passport.ts`); duplicates are refused.
+  category: z.enum(PROFESSIONAL_CATEGORIES, "v.requirement.rules.category").optional(),
+  aircraft: z
+    .array(z.enum(AIRCRAFT, "v.requirement.rules.aircraft"))
+    .max(AIRCRAFT.length, "v.requirement.rules.aircraft")
+    .refine(distinct, "v.requirement.rules.aircraft")
+    .optional(),
+  requiresTypeRating: z.boolean("v.requirement.rules.typeRating").optional(),
+  engines: z
+    .array(z.enum(ENGINES, "v.requirement.rules.engines"))
+    .max(ENGINES.length, "v.requirement.rules.engines")
+    .refine(distinct, "v.requirement.rules.engines")
+    .optional(),
+  minYears: z
+    .number("v.requirement.rules.minYears")
+    .int("v.requirement.rules.minYears")
+    .min(0, "v.requirement.rules.minYears")
+    .max(60, "v.requirement.rules.minYears")
+    .optional(),
+  requiredSkills: z
+    .array(z.enum(SKILLS, "v.requirement.rules.skills"))
+    .max(SKILLS.length, "v.requirement.rules.skills")
+    .refine(distinct, "v.requirement.rules.skills")
+    .optional(),
 };
 type RequirementFields = z.infer<z.ZodObject<typeof requirementFields>>;
 
@@ -180,6 +215,22 @@ function refineRequirement(
       code: "custom",
       path: ["qualifications"],
       message: "v.qualifications.hard",
+    });
+  }
+  // T-83 (CHECK `work_requirements_type_rating_check`): a type rating is asked for a licence category on at least
+  // one accepted aircraft — v1.8 «Selecciona una aeronave si exiges habilitación de tipo.» (ORG-03 #19).
+  if (
+    value.requiresTypeRating &&
+    !(
+      value.category &&
+      (LICENCE_CATEGORIES as readonly string[]).includes(value.category) &&
+      value.aircraft?.length
+    )
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["requiresTypeRating"],
+      message: "v.requirement.rules.typeRating",
     });
   }
   if (value.shifts?.length) {
@@ -239,6 +290,12 @@ export function toRequirementFields(r: WorkRequirement) {
     ...(r.shifts?.length ? { shifts: r.shifts } : {}),
     ...(r.conditions ? { conditions: r.conditions } : {}),
     ...(r.client ? { onBehalfOfClientId: r.client.id } : {}),
+    ...(r.category ? { category: r.category } : {}),
+    ...(r.aircraft?.length ? { aircraft: r.aircraft } : {}),
+    ...(r.requiresTypeRating ? { requiresTypeRating: true } : {}),
+    ...(r.engines?.length ? { engines: r.engines } : {}),
+    ...(r.minYears !== undefined && r.minYears !== null ? { minYears: r.minYears } : {}),
+    ...(r.requiredSkills?.length ? { requiredSkills: r.requiredSkills } : {}),
   };
 }
 

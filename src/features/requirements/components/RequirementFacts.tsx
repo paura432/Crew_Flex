@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import type { WorkRequirement } from "@/domain/work-requirement";
 import type { Locale } from "@/i18n/config";
 import { formatCountry, formatDateTime } from "@/i18n/format";
+import { ProfileRuleChips } from "./ProfileRuleChips";
 import { QualificationChips, RequirementStatusChip, UrgencyChip } from "./RequirementBadges";
 import { RequirementTerms } from "./RequirementTerms";
 
@@ -25,6 +26,12 @@ export async function RequirementFacts({
         | "shifts"
         | "conditions"
         | "client"
+        | "category"
+        | "aircraft"
+        | "requiresTypeRating"
+        | "engines"
+        | "minYears"
+        | "requiredSkills"
       >
     > & {
       /** An opportunity's represented client (BR-27; the professional's projection carries the name only). */
@@ -79,6 +86,8 @@ export async function RequirementFacts({
         ))}
       </dl>
       <QualificationChips qualifications={requirement.qualifications} />
+      {/* v1.8 profile requirements the need states (P10, BR-3.8–3.13); nothing when none. */}
+      <ProfileRuleChips rules={requirement} />
       <RequirementTerms terms={requirement} confirmedSeats={confirmedSeats} />
     </div>
   );
