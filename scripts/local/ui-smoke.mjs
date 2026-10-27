@@ -5462,6 +5462,256 @@ await logout();
   }
 }
 
+// PKG P10 (needs and matching parity, F3 — ORG-02 #11/#12/#13/#14/#16/#19, ORG-03 #19, SHOT-07 #3; migration
+// 20261027100000, T-168, BR-3.8–3.13): the builder writes the v1.8 profile requirements («Perfil técnico» under
+// «03 · Cualificaciones») in Spanish — the six controls, «Selecciona una aeronave si exiges habilitación de tipo.»,
+// the «Requisitos del perfil» chips in the preview, on the saved draft and after the edit, the edit form restoring
+// them, the published need's matching listing them per candidate, the API returning them. Negatives: a plain member
+// cannot edit them (FORBIDDEN), a type rating without aircraft is refused on `requiresTypeRating`, another
+// organization's admin gets a 404 on the need. Five widths on the builder. Restore: the need closed and archived
+// (never deleted), admin.mro back to English, the locale cookie gone.
+{
+  const ADMIN = "admin.mro@crewflex.test";
+  const MEMBER = "charlie@crewflex.test";
+  const OTHER = "admin.other@crewflex.test";
+  const p10Title = `Local UI check · P10 rules ${Date.now()}`;
+  const p10Day = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const p10Main = async () => (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  const p10Rules = () => page.locator("[aria-labelledby=rules-title]");
+  const p10Es = async () => {
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) === "es") return;
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+  };
+  const p10Overflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  /** The whole edit payload of the need as the API returns it (full replacement), with overrides. */
+  const p10Put = (r, over) => ({
+    id: r.id,
+    expectedUpdatedAt: r.updatedAt,
+    title: r.title,
+    location: r.location,
+    startsAt: r.startsAt,
+    endsAt: r.endsAt,
+    shift: r.shift,
+    headcount: r.headcount,
+    urgency: r.urgency,
+    qualifications: r.qualifications.map((q) => ({
+      qualificationTypeId: q.qualificationTypeId,
+      level: q.level,
+    })),
+    ...over,
+  });
+  let p10Id;
+  try {
+    // 0. The builder in Spanish: the «Perfil técnico» block with the six v1.8 controls.
+    await login(ADMIN);
+    await p10Es();
+    await page.goto(`${BASE}/app/organization/requirements/new`);
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => localStorage.clear());
+    await expectSpanish("PKG P10 0 «Nueva necesidad» in Spanish");
+    const p10Form = await p10Main();
+    ok(
+      "PKG P10 0b «Perfil técnico» (ORG-02 #11/#12/#13/#14/#16/#19): «Categoría obligatoria» (12 + «Sin exigir»), «Aeronaves aceptadas (basta una)» (12), «Motores (basta uno)» (7), «Capacidades obligatorias (todas)» (9), «Experiencia mínima (años)», «Exigir habilitación de tipo…»; each starts not required",
+      /Perfil técnico/.test(p10Form) &&
+        /Categoría obligatoria/.test(p10Form) &&
+        (await page.locator("#category option").count()) === 13 &&
+        (await page.locator("#category").inputValue()) === "" &&
+        /Aeronaves aceptadas \(basta una\)/.test(p10Form) &&
+        /Motores \(basta uno\)/.test(p10Form) &&
+        /Capacidades obligatorias \(todas\)/.test(p10Form) &&
+        (await p10Rules().locator("input[type=checkbox]").count()) === 12 + 7 + 9 + 1 &&
+        (await p10Rules().locator("input[type=checkbox]:checked").count()) === 0 &&
+        /Experiencia mínima \(años\)/.test(p10Form) &&
+        (await page.locator("#minYears").inputValue()) === "" &&
+        /Exigir habilitación de tipo/.test(p10Form),
+      `options=${await page.locator("#category option").count()} boxes=${await p10Rules().locator("input[type=checkbox]").count()}`,
+    );
+    // 1. T-83 / ORG-03 #19: the type rating needs a licence category and an aircraft.
+    await page.locator("#requiresTypeRating").check();
+    const p10Warn = /Selecciona una aeronave si exiges habilitación de tipo\./.test(
+      await p10Main(),
+    );
+    await page.fill("#title", p10Title);
+    await page.fill("#location", "Madrid (MAD)");
+    await page.fill("#startsAt", `${p10Day(40)}T08:00`);
+    await page.fill("#endsAt", `${p10Day(42)}T16:00`);
+    await page.locator("label:has-text('B1.1')").first().click();
+    await page.selectOption("#category", "B1.1");
+    await p10Rules().locator("label:has-text('A320 Family')").first().click();
+    await page.fill("#minYears", "3");
+    await p10Rules().locator("label:has-text('Boroscopia')").first().click();
+    const p10Aside = page.getByRole("complementary", { name: "Revisar antes de publicar" });
+    await p10Aside
+      .getByText(/aún no aplica los requisitos del perfil técnico/)
+      .waitFor({ timeout: 15000 })
+      .catch(() => {});
+    const p10AsideText = (await p10Aside.innerText()).replace(/\s+/g, " ");
+    ok(
+      "PKG P10 1 «Selecciona una aeronave si exiges habilitación de tipo.» while the rating has no category/aircraft (T-83); gone with B1.1 + A320 Family; the live count says it does not apply the profile rules yet (T-86)",
+      p10Warn &&
+        !/Selecciona una aeronave si exiges/.test(await p10Main()) &&
+        /El recuento aún no aplica los requisitos del perfil técnico\./.test(p10AsideText),
+      p10AsideText.slice(0, 160),
+    );
+    // 2. The preview lists the stated rules as the candidate checklist words them.
+    await page.getByRole("button", { name: "Previsualizar requisitos" }).click();
+    const p10Preview = (await page.locator("dialog[open]").innerText()).replace(/\s+/g, " ");
+    await page.keyboard.press("Escape");
+    ok(
+      "PKG P10 2 preview: «Requisitos del perfil» — «Categoría B1.1», «Aeronave: A320 Family», «Habilitación de tipo B1.1 · A320 Family», «Experiencia mínima: 3 años», «Capacidad: Boroscopia»",
+      /Requisitos del perfil/i.test(p10Preview) &&
+        /Categoría B1\.1/.test(p10Preview) &&
+        /Aeronave: A320 Family/.test(p10Preview) &&
+        /Habilitación de tipo B1\.1 · A320 Family/.test(p10Preview) &&
+        /Experiencia mínima: 3 años/.test(p10Preview) &&
+        /Capacidad: Boroscopia/.test(p10Preview),
+      p10Preview.slice(0, 200),
+    );
+    const p10Widths = [];
+    for (const width of [1440, 1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+      await page.waitForTimeout(250);
+      if (await p10Overflow()) p10Widths.push(width);
+      if (width === 1440 || width === 390) await shot(`p10-builder-rules-${width}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    ok(
+      "PKG P10 3 @1440/1024/768/390/360: no horizontal overflow on the builder",
+      p10Widths.length === 0,
+      p10Widths.join(),
+    );
+    // 4. Saved as a draft: the detail shows the chips; the edit form restores every control.
+    await page.getByRole("button", { name: "Guardar borrador" }).click();
+    await page.waitForURL((u) => /\/requirements\/[0-9a-f-]{36}$/.test(u.pathname), {
+      timeout: 30000,
+    });
+    await page.waitForLoadState("networkidle");
+    p10Id = page.url().split("/").pop();
+    const p10Draft = await p10Main();
+    await page.goto(`${BASE}/app/organization/requirements/${p10Id}/edit`);
+    await page.waitForLoadState("networkidle");
+    const p10Restored =
+      (await page.locator("#category").inputValue()) === "B1.1" &&
+      (await p10Rules().locator("label:has-text('A320 Family') input").first().isChecked()) &&
+      (await p10Rules().locator("label:has-text('Boroscopia') input").first().isChecked()) &&
+      (await page.locator("#requiresTypeRating").isChecked()) &&
+      (await page.locator("#minYears").inputValue()) === "3" &&
+      (await p10Rules().locator("input[type=checkbox]:checked").count()) === 3;
+    ok(
+      "PKG P10 4 «Guardar borrador»: the detail shows «Requisitos del perfil» (Categoría B1.1 · Aeronave: A320 Family · Habilitación de tipo · Experiencia mínima: 3 años · Capacidad: Boroscopia); «Editar» restores the six controls",
+      /Borrador/.test(p10Draft) &&
+        /Categoría B1\.1/.test(p10Draft) &&
+        /Aeronave: A320 Family/.test(p10Draft) &&
+        /Habilitación de tipo B1\.1 · A320 Family/.test(p10Draft) &&
+        /Experiencia mínima: 3 años/.test(p10Draft) &&
+        /Capacidad: Boroscopia/.test(p10Draft) &&
+        p10Restored,
+      `restored=${p10Restored} · ${p10Draft.slice(0, 120)}`,
+    );
+    // 5. Edited (2 years) and published from the edit form: the detail, the matching rows per candidate, the API.
+    await page.fill("#minYears", "2");
+    await page.getByRole("button", { name: "Guardar y publicar" }).click();
+    await page.waitForURL((u) => u.pathname === `/app/organization/requirements/${p10Id}`, {
+      timeout: 30000,
+    });
+    await page.waitForLoadState("networkidle");
+    const p10Open = await p10Main();
+    await shot("p10-detail-rules");
+    await page.goto(`${BASE}/app/organization/requirements/${p10Id}/matches?eligible=0`);
+    await page.waitForLoadState("networkidle");
+    await page
+      .locator("main article")
+      .first()
+      .waitFor({ timeout: 20000 })
+      .catch(() => {});
+    const p10Matches = await p10Main();
+    const p10Cards = await page.locator("main article").count();
+    const p10CardsWithRules = await page
+      .locator("main article")
+      .filter({ hasText: /Experiencia mínima: 2 años/ })
+      .count();
+    const p10Api = (await asSeedUser(ADMIN, "work-requirements", { query: { id: p10Id } })).data
+      ?.requirement;
+    ok(
+      "PKG P10 5 published with «Experiencia mínima: 2 años»: the detail chip, every evaluated candidate card lists the rule rows («Requisitos del perfil» with the type rating and the 2 years, BR-3.8–3.13), the API returns category/aircraft/requiresTypeRating/minYears/requiredSkills",
+      /Abierta/.test(p10Open) &&
+        /Experiencia mínima: 2 años/.test(p10Open) &&
+        p10Cards > 0 &&
+        p10CardsWithRules === p10Cards &&
+        /Habilitación de tipo B1\.1 · A320 Family/.test(p10Matches) &&
+        p10Api?.category === "B1.1" &&
+        JSON.stringify(p10Api?.aircraft) === '["A320 Family"]' &&
+        p10Api?.requiresTypeRating === true &&
+        p10Api?.minYears === 2 &&
+        JSON.stringify(p10Api?.requiredSkills) === '["borescope"]',
+      `cards=${p10Cards}/${p10CardsWithRules} api=${JSON.stringify({ c: p10Api?.category, a: p10Api?.aircraft, tr: p10Api?.requiresTypeRating, y: p10Api?.minYears, s: p10Api?.requiredSkills })}`,
+    );
+    await logout();
+    // 6. Negatives: a member cannot edit the rules; a rating without aircraft is refused by field; another
+    // organization's admin gets a 404 on the need.
+    const p10AsMember = await asSeedUser(MEMBER, "work-requirements", {
+      method: "PUT",
+      body: p10Put(p10Api, { minYears: 9 }),
+    });
+    const p10BadRating = await asSeedUser(ADMIN, "work-requirements", {
+      method: "PUT",
+      body: p10Put(p10Api, { requiresTypeRating: true }),
+    });
+    const p10After = (await asSeedUser(ADMIN, "work-requirements", { query: { id: p10Id } })).data
+      ?.requirement;
+    await login(OTHER);
+    const p10CrossUrl = `${BASE}/app/organization/requirements/${p10Id}`;
+    expectedErrorUrls.add(p10CrossUrl);
+    const p10Cross = await page.goto(p10CrossUrl);
+    await page.waitForLoadState("networkidle");
+    expectedErrorUrls.delete(p10CrossUrl);
+    ok(
+      "PKG P10 6 negatives: charlie (member) PUT minYears → FORBIDDEN; a type rating without aircraft → VALIDATION_ERROR on `requiresTypeRating`; the rules unchanged (2 years, B1.1 · A320 Family); admin.other → 404 on the need",
+      p10AsMember.error?.code === "FORBIDDEN" &&
+        p10BadRating.error?.code === "VALIDATION_ERROR" &&
+        (p10BadRating.error?.issues ?? []).some((i) => i.path === "requiresTypeRating") &&
+        p10After?.minYears === 2 &&
+        p10After?.category === "B1.1" &&
+        p10Cross?.status() === 404,
+      `member=${p10AsMember.error?.code} rating=${p10BadRating.error?.code}/${JSON.stringify(p10BadRating.error?.issues ?? []).slice(0, 80)} cross=${p10Cross?.status()}`,
+    );
+    await logout();
+  } finally {
+    // Restore: the need closed and archived (never deleted), admin.mro in English, the locale cookie gone.
+    const p10Closed = p10Id
+      ? (
+          await asSeedUser(ADMIN, "work-requirements", {
+            method: "PATCH",
+            body: { id: p10Id, status: "closed" },
+          })
+        ).ok === true
+      : true;
+    const p10Archived = p10Id
+      ? (
+          await asSeedUser(ADMIN, "work-requirements", {
+            method: "PATCH",
+            body: { id: p10Id, archive: true },
+          })
+        ).ok === true
+      : true;
+    const p10English =
+      (await asSeedUser(ADMIN, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P10 7 restore: the need closed and archived, admin.mro in English (seed state back)",
+      p10Closed && p10Archived && p10English,
+      `${p10Closed} ${p10Archived} ${p10English}`,
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
