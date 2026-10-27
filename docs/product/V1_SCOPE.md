@@ -82,7 +82,7 @@ Current phase: **Foundation + Prototype V0**. Milestone:
   sheet: not started (D-11). Without an account (v1.8 default, T-145): translator, torque, conversions, glossary and
   durations are also public at `/tools` (no session, no data read, same CSP): IMPLEMENTED (local, 2026-10-23,
   shell-visual); the daily challenge stays signed-in.
-- Logbook from the prototype (M14, N-12): IMPLEMENTED (local only, 2026-10-22; `/app/professional/logbook`, migration `20261023200000`, `professional-logbook`; not deployed). Owner only, self-declared (BR-16, defaults T-15…T-18).
+- Logbook from the prototype (M14, N-12): IMPLEMENTED (local only, 2026-10-22; `/app/professional/logbook`, migration `20261023200000`, `professional-logbook`; not deployed). Owner only, self-declared (BR-17, defaults T-19…T-22; T-112 for the Candidate Pack copy).
 - Rates, logistics and contract conditions on requirements. IMPLEMENTED (local, 2026-10-22, area-30 v2 backlog
   v2-09/10/12/13/14, BR-1.10…BR-1.15): informative terms without any payment or commission, shifts with base hours,
   country and zone, drafts with autosave, archive and duplicate, «Review before publishing» with the live count. Not

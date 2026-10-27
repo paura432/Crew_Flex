@@ -43,7 +43,7 @@ function EntryFields({
 }: {
   prefix: string;
   entry?: LogbookEntry;
-  /** `YYYY-MM-DD` in Madrid (BR-16): the latest date allowed and the new entry's default. */
+  /** `YYYY-MM-DD` in Madrid (BR-17.2): the latest date allowed and the new entry's default. */
   today: string;
   errors: FieldErrors;
   disabled: boolean;
