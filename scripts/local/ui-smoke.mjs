@@ -1654,7 +1654,7 @@ ok(
   JSON.stringify(calDeleted.error ?? ""),
 );
 
-// PKG logbook — N-12 personal logbook (M14, BR-16): nav order, future date refused, create (the form
+// PKG logbook — N-12 personal logbook (M14, BR-17): nav order, future date refused, create (the form
 // empties), hours in the locale's format, selection flag, inline edit, archive → archive view → restore,
 // delete; an organization admin of a member's org reads nothing. Restores: the smoke entry is deleted.
 {

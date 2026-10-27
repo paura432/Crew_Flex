@@ -1,4 +1,4 @@
-// Personal logbook (M14, N-12; BUSINESS_RULES BR-16) — own entries only. LOCAL ONLY.
+// Personal logbook (M14, N-12; BUSINESS_RULES BR-17) — own entries only. LOCAL ONLY.
 //   GET    /professional-logbook?view=active|archived&limit=  → { entries, total } newest first (RLS)
 //   POST   /professional-logbook { entryDate, aircraft, ata?, hours, category, environment,
 //          description, cvRelevant? }  Idempotency-Key REQUIRED → 201 created · 200 replay · 409
