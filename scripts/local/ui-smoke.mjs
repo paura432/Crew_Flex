@@ -3842,6 +3842,437 @@ await logout();
   }
 }
 
+// PKG P06 (wallet parity, F3 — TEC-05 #2-#5/#7-#16/#18/#20-#24/#27-#31/#37; T-100…T-103): the v1.8 «Wallet
+// documental» in Spanish — the sidebar entry «Documentos», the header («Mi expediente» / «Wallet documental»), the
+// upload panel («Subir un documento», the 5 MB sentence, «Archivo» + its hint, «Tipo» = Licencia, «Título» + hint,
+// «Caducidad (opcional)», «Vincular a una cualificación (opcional)» over delta's own qualifications only, «Subir
+// documento»), a PDF licence expiring in 30 days («Documento guardado en tu wallet privado.», the row with «Licencia» ·
+// «Sin analizar · no compartible» · «Caduca pronto», «PDF · {n} B · caduca el {f}», «Abrir» / «Editar» / «Archivar»)
+// and a PNG course, the 60-day review in «Mi espacio» and in the passport's folded «Documentos y cursos próximos a
+// revisar» («Próximos 60 días», «Abrir» → the wallet, the «Según las fechas declaradas…» footer), the type filter
+// («Todos · Licencias · Cursos · Otros», «No hay documentos de este tipo.»), the inline edit («Documento actualizado.»),
+// the viewer («Vista previa de {título}», the PDF hint, «Cerrar» gives the focus back to «Abrir»), the trash («Documento
+// archivado…», «Papelera (n)», «archivado el … · se elimina definitivamente a partir del …», the 30-day note,
+// «Restaurar» → «Documento restaurado.», «Eliminar definitivamente» only there) and the five widths. Negatives: echo
+// cannot read, edit, archive or delete delta's document (404), an organization account cannot upload (403) and gets
+// «No professional profile» on the wallet URL. Both documents are deleted at the end whatever happens; delta is left in
+// English.
+{
+  const DELTA = "delta@crewflex.test";
+  const ECHO = "echo@crewflex.test";
+  const MRO = "admin.mro@crewflex.test";
+  const p6Day = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const p6Date = (d) =>
+    new Intl.DateTimeFormat("es-ES", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(`${d}T00:00:00Z`));
+  const p6Open = async (path) => {
+    await page.goto(`${BASE}${path}`);
+    await page.waitForLoadState("networkidle");
+    return (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  };
+  const p6Es = async () => {
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) === "es") return;
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+  };
+  const p6Status = (text) =>
+    page
+      .locator("main [role=status]")
+      .filter({ hasText: text })
+      .first()
+      .waitFor({ timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+  const p6Stamp = Date.now();
+  const p6Pdf = `Local UI check · P06 licencia ${p6Stamp}`;
+  const p6Png = `Local UI check · P06 curso ${p6Stamp}`;
+  const p6Soon = p6Day(30); // «Caduca pronto» (≤ 45 days) and inside the 60-day review window
+  const p6PdfBytes = Buffer.from("%PDF-1.4\n%P06\n%%EOF\n");
+  const p6PngBytes = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  const p6Row = (title) => page.locator("main li", { hasText: title });
+  const p6Upload = async (title, kind, file, expiresAt) => {
+    await page.setInputFiles("#file", file);
+    await page.fill("#title", title);
+    await page.selectOption("#kind", kind);
+    if (expiresAt) await page.fill("#expiresAt", expiresAt);
+    await page.getByRole("button", { name: "Subir documento" }).click();
+    await p6Row(title).waitFor({ timeout: 15_000 });
+  };
+  /** Delta's own documents (both views) whose title starts with the smoke prefix: ids by title. */
+  const p6Mine = async () => {
+    const found = {};
+    for (const query of [{}, { view: "trash" }]) {
+      const listed = await asSeedUser(DELTA, "professional-documents", { query });
+      for (const d of listed.data?.documents ?? []) {
+        if (d.title.startsWith("Local UI check · P06 ")) found[d.title] = d.id;
+      }
+    }
+    return found;
+  };
+  try {
+    await login(DELTA);
+    await p6Es();
+    const p6Quals =
+      (await asSeedUser(DELTA, "professional-qualifications")).data?.qualifications ?? [];
+    const p6Page = await p6Open("/app/professional/documents");
+    await expectSpanish("PKG P06 0 «Wallet documental» in Spanish");
+    const p6Nav = await page
+      .locator("a[href='/app/professional/documents'][aria-current=page]")
+      .first()
+      .innerText()
+      .catch(() => "");
+    const p6QualOptions = await page.locator("#qualificationId option").allInnerTexts();
+    ok(
+      "PKG P06 0b v1.8 wallet: sidebar «Documentos» current; «Mi expediente» / «Wallet documental» / the private sentence; «Subir un documento» with the 5 MB sentence, «Archivo» + its hint, «Tipo» = «Licencia», «Título» + «Si lo dejas vacío…», «Caducidad (opcional)», «Vincular a una cualificación (opcional)» = «— Sin vincular —» + delta's own qualifications only, «Subir documento»; «Tus documentos (n)», «Papelera (n)», the sharing note",
+      /Documentos/.test(p6Nav) &&
+        /Mi expediente/i.test(p6Page) &&
+        p6Page.includes("Wallet documental") &&
+        p6Page.includes(
+          "Tus licencias, cursos y otros documentos, guardados de forma privada. Solo tú puedes verlos.",
+        ) &&
+        p6Page.includes("Subir un documento") &&
+        p6Page.includes(
+          "PDF, PNG o JPEG, hasta 5 MB. Subir un documento no acredita una licencia ni una habilitación: la verificación es un proceso aparte.",
+        ) &&
+        p6Page.includes("El tipo se comprueba por el contenido del archivo, no por su nombre.") &&
+        (await page.locator("#kind option:checked").innerText()) === "Licencia" &&
+        p6Page.includes("Si lo dejas vacío se usa el nombre del archivo.") &&
+        p6Page.includes("Caducidad (opcional)") &&
+        p6Page.includes("Vincular a una cualificación (opcional)") &&
+        p6Page.includes("Solo tus propias cualificaciones declaradas.") &&
+        p6QualOptions[0] === "— Sin vincular —" &&
+        p6QualOptions.length === p6Quals.length + 1 &&
+        p6Quals.every((q) => p6QualOptions.includes(`${q.type.code} · ${q.type.name}`)) &&
+        /Tus documentos \(\d+\)/.test(p6Page) &&
+        /Papelera \(\d+\)/.test(p6Page) &&
+        p6Page.includes("Ninguna empresa puede ver estos documentos."),
+      JSON.stringify({ nav: p6Nav, options: p6QualOptions.length, quals: p6Quals.length }),
+    );
+
+    // Upload: a PDF licence that expires in 30 days and a PNG course without a date.
+    await p6Upload(
+      p6Pdf,
+      "license",
+      { name: "p06.pdf", mimeType: "application/pdf", buffer: p6PdfBytes },
+      p6Soon,
+    );
+    const p6Saved = await p6Status("Documento guardado en tu wallet privado.");
+    await p6Upload(p6Png, "course", { name: "p06.png", mimeType: "image/png", buffer: p6PngBytes });
+    const p6PdfText = (await p6Row(p6Pdf).innerText()).replace(/\s+/g, " ");
+    const p6PngText = (await p6Row(p6Png).innerText()).replace(/\s+/g, " ");
+    const p6Buttons = await p6Row(p6Pdf).getByRole("button").allInnerTexts();
+    ok(
+      "PKG P06 1 upload: «Documento guardado en tu wallet privado.»; the PDF row «Licencia» · «Sin analizar · no compartible» · «Caduca pronto», «PDF · {bytes} B · caduca el {f}» and «Abrir» / «Editar» / «Archivar {título}»; the PNG row «Curso», «Imagen PNG · {bytes} B», no expiry chip",
+      p6Saved &&
+        p6PdfText.includes("Licencia") &&
+        p6PdfText.includes("Sin analizar · no compartible") &&
+        p6PdfText.includes("Caduca pronto") &&
+        p6PdfText.includes(`PDF · ${p6PdfBytes.length} B · caduca el ${p6Date(p6Soon)}`) &&
+        p6Buttons.join("|") === "Abrir|Editar|Archivar" &&
+        (await p6Row(p6Pdf)
+          .getByRole("button", { name: `Archivar ${p6Pdf}` })
+          .count()) === 1 &&
+        p6PngText.includes("Curso") &&
+        p6PngText.includes(`Imagen PNG · ${p6PngBytes.length} B`) &&
+        !/Vigente|Caduca pronto|Caducado/.test(p6PngText),
+      `${p6PdfText.slice(0, 160)} · ${p6Buttons.join("|")}`,
+    );
+
+    // TEC-05 #24: the 60-day review in «Mi espacio» and the passport's folded <details> (T-163).
+    const p6Home = await p6Open("/app/professional");
+    const p6HomeRow = page.locator("main li", { hasText: p6Pdf }).first();
+    const p6HomeRowText = (await p6HomeRow.innerText().catch(() => "")).replace(/\s+/g, " ");
+    const p6HomeHref = await p6HomeRow
+      .getByRole("link", { name: `Abrir · ${p6Pdf}` })
+      .getAttribute("href")
+      .catch(() => null);
+    await p6Open("/app/professional/profile");
+    const p6Details = page.locator("main details", {
+      has: page.locator("summary", { hasText: "Documentos y cursos próximos a revisar" }),
+    });
+    await p6Details.locator("summary").click();
+    const p6DetailsText = (await p6Details.innerText().catch(() => "")).replace(/\s+/g, " ");
+    ok(
+      "PKG P06 2 60-day review (TEC-05 #24): «Mi espacio» lists «{título} · {f}» with «Próximos 60 días» and «Abrir» → the wallet; the passport's folded «Documentos y cursos próximos a revisar» lists the same row with the «Según las fechas declaradas…» footer",
+      p6Home.includes("Documentos y cursos próximos a revisar") &&
+        p6HomeRowText.includes(`${p6Pdf} · ${p6Date(p6Soon)}`) &&
+        p6HomeRowText.includes("Próximos 60 días") &&
+        p6HomeHref === "/app/professional/documents" &&
+        p6DetailsText.includes(`${p6Pdf} · ${p6Date(p6Soon)}`) &&
+        p6DetailsText.includes("Próximos 60 días") &&
+        p6DetailsText.includes(
+          "Según las fechas declaradas. No se envían avisos externos; los documentos sin fecha no se consideran verificados.",
+        ),
+      JSON.stringify({ home: p6HomeRowText.slice(0, 120), passport: p6DetailsText.slice(0, 120) }),
+    );
+
+    // TEC-05 #6: the type filter (T-102) over the three kinds.
+    await p6Open("/app/professional/documents");
+    const p6Chips = page.getByRole("group", { name: "Filtrar por tipo" });
+    const p6Labels = await p6Chips.getByRole("button").allInnerTexts();
+    await p6Chips.getByRole("button", { name: "Cursos" }).click();
+    const p6Courses = {
+      pressed: await p6Chips.getByRole("button", { name: "Cursos" }).getAttribute("aria-pressed"),
+      heading: await page.locator("main h2", { hasText: "Tus documentos" }).innerText(),
+      rows: await page.locator("main li").count(),
+      png: await p6Row(p6Png).count(),
+      pdf: await p6Row(p6Pdf).count(),
+    };
+    await p6Chips.getByRole("button", { name: "Otros" }).click();
+    const p6Others = {
+      rows: await page.locator("main li").count(),
+      none: await page.getByText("No hay documentos de este tipo.").count(),
+      mine: (await p6Row(p6Png).count()) + (await p6Row(p6Pdf).count()),
+    };
+    await p6Chips.getByRole("button", { name: "Todos" }).click();
+    ok(
+      "PKG P06 3 type filter (TEC-05 #6, T-102): «Todos · Licencias · Cursos · Otros» (aria-pressed); «Cursos» leaves the PNG and «Tus documentos ({n})» follows; «Otros» hides both and, with nothing of that type, says «No hay documentos de este tipo.»",
+      p6Labels.join("|") === "Todos|Licencias|Cursos|Otros" &&
+        p6Courses.pressed === "true" &&
+        p6Courses.heading === `Tus documentos (${p6Courses.rows})` &&
+        p6Courses.png === 1 &&
+        p6Courses.pdf === 0 &&
+        p6Others.mine === 0 &&
+        (p6Others.rows > 0 || p6Others.none === 1),
+      JSON.stringify({ labels: p6Labels.join("|"), courses: p6Courses, others: p6Others }),
+    );
+
+    // TEC-05 #29: inline edit (title, kind, expiry, link) → «Documento actualizado.».
+    await p6Row(p6Pdf).getByRole("button", { name: "Editar" }).click();
+    // While editing, the row holds the form (the title is an input value, not text): the only form in the list.
+    const p6EditForm = page.locator("main li form");
+    const p6EditLabels = await p6EditForm.locator("label").allInnerTexts();
+    await p6EditForm.locator("input[name=title]").fill(`${p6Pdf} editado`);
+    await p6EditForm.getByRole("button", { name: "Guardar" }).click();
+    const p6Updated = await p6Status("Documento actualizado.");
+    // The row re-renders after the action's revalidation: wait for it, never count at once (a production
+    // server refreshes a beat later than `next dev`).
+    const p6Renamed = await p6Row(`${p6Pdf} editado`)
+      .waitFor({ timeout: 15_000 })
+      .then(() => 1)
+      .catch(() => 0);
+    ok(
+      "PKG P06 4 inline edit (TEC-05 #29): «Editar» opens «Título», «Tipo», «Caducidad (opcional)», «Vincular a una cualificación (opcional)» with «Guardar» / «Cancelar»; saving → «Documento actualizado.» and the row carries the new title",
+      p6EditLabels.join("|") ===
+        "Título|Tipo|Caducidad (opcional)|Vincular a una cualificación (opcional)" &&
+        p6Updated &&
+        p6Renamed === 1,
+      JSON.stringify({ labels: p6EditLabels.join("|"), updated: p6Updated, renamed: p6Renamed }),
+    );
+    const p6PdfNow = `${p6Pdf} editado`;
+
+    // TEC-05 #27/#28: the viewer (T-103) in Spanish.
+    await p6Row(p6PdfNow).getByRole("button", { name: "Abrir" }).click();
+    const p6Dialog = page.getByRole("dialog", { name: p6PdfNow });
+    await p6Dialog.locator("iframe").waitFor({ timeout: 15_000 });
+    const p6Viewer = {
+      frameTitle: await p6Dialog.locator("iframe").getAttribute("title"),
+      blob: ((await p6Dialog.locator("iframe").getAttribute("src")) ?? "").startsWith("blob:"),
+      hint: await p6Dialog
+        .getByText("Si el PDF no se muestra, ábrelo en una pestaña nueva.")
+        .count(),
+      newTab: await p6Dialog.getByRole("button", { name: "Abrir en una pestaña nueva" }).count(),
+    };
+    await p6Dialog.getByRole("button", { name: "Cerrar" }).click();
+    await p6Dialog.waitFor({ state: "detached", timeout: 5_000 });
+    const p6FocusBack = await p6Row(p6PdfNow)
+      .getByRole("button", { name: "Abrir" })
+      .evaluate((el) => el === document.activeElement);
+    ok(
+      "PKG P06 5 viewer (TEC-05 #27/#28, T-103): «Abrir» opens the dialog named by the title with the PDF in a blob frame «Vista previa de {título}», «Si el PDF no se muestra, ábrelo en una pestaña nueva.» and «Abrir en una pestaña nueva»; «Cerrar» returns the focus to «Abrir»",
+      p6Viewer.frameTitle === `Vista previa de ${p6PdfNow}` &&
+        p6Viewer.blob &&
+        p6Viewer.hint === 1 &&
+        p6Viewer.newTab === 1 &&
+        p6FocusBack,
+      JSON.stringify({ ...p6Viewer, focus: p6FocusBack }),
+    );
+
+    // TEC-05 #30/#31: trash (T-100/T-101) — archive, the trash view, restore.
+    const p6TrashBefore = Number(
+      /Papelera \((\d+)\)/.exec(
+        (await page.locator("main").innerText()).replace(/\s+/g, " "),
+      )?.[1] ?? "-1",
+    );
+    await p6Row(p6PdfNow)
+      .getByRole("button", { name: `Archivar ${p6PdfNow}` })
+      .click();
+    await p6Row(p6PdfNow).waitFor({ state: "detached", timeout: 15_000 });
+    const p6ArchivedNotice = await p6Status(
+      "Documento archivado. Puedes restaurarlo desde la papelera.",
+    );
+    await page.getByRole("link", { name: `Papelera (${p6TrashBefore + 1})` }).click();
+    await page.waitForURL((u) => u.search === "?view=trash");
+    await p6Row(p6PdfNow).waitFor({ timeout: 15_000 });
+    const p6TrashText = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+    const p6TrashHeading = await page.locator("main h2", { hasText: "Papelera" }).innerText();
+    const p6TrashRowText = (await p6Row(p6PdfNow).innerText()).replace(/\s+/g, " ");
+    const p6TrashButtons = await p6Row(p6PdfNow).getByRole("button").allInnerTexts();
+    const p6NoUpload = (await page.locator("#file").count()) === 0;
+    await p6Row(p6PdfNow)
+      .getByRole("button", { name: `Restaurar ${p6PdfNow}` })
+      .click();
+    await p6Row(p6PdfNow).waitFor({ state: "detached", timeout: 15_000 });
+    const p6RestoredNotice = await p6Status("Documento restaurado.");
+    await page.getByRole("link", { name: "Ver wallet" }).click();
+    await page.waitForURL((u) => u.search === "");
+    const p6Back = await p6Row(p6PdfNow).count();
+    ok(
+      "PKG P06 6 trash (TEC-05 #30/#31, T-100/T-101): «Archivar» → «Documento archivado. Puedes restaurarlo desde la papelera.» and «Papelera (n+1)»; the trash has no upload panel, the 30-day note, the row «archivado el {f} · se elimina definitivamente a partir del {f}» with «Restaurar» and «Eliminar definitivamente»; «Restaurar» → «Documento restaurado.»; «Ver wallet» shows it again",
+      p6ArchivedNotice &&
+        p6TrashBefore >= 0 &&
+        p6NoUpload &&
+        p6TrashHeading === `Papelera (${p6TrashBefore + 1})` &&
+        p6TrashText.includes(
+          "Puedes restaurar un documento archivado durante 30 días; después se elimina definitivamente, también su archivo. Ninguna empresa puede verlo.",
+        ) &&
+        /archivado el \d{2} \S+ \d{4} · se elimina definitivamente a partir del \d{2} \S+ \d{4}/.test(
+          p6TrashRowText,
+        ) &&
+        p6TrashButtons.join("|") === "Restaurar|Eliminar definitivamente" &&
+        p6RestoredNotice &&
+        p6Back === 1,
+      JSON.stringify({
+        before: p6TrashBefore,
+        row: p6TrashRowText.slice(0, 160),
+        buttons: p6TrashButtons.join("|"),
+        back: p6Back,
+      }),
+    );
+
+    // TEC-05 #35: «Exportar mis datos y archivos» carries the wallet files (base64) with their metadata.
+    const p6Export = await page.request.get(`${BASE}/app/settings/export`);
+    const p6ExportBody = p6Export.ok() ? await p6Export.json() : null;
+    const p6Exported = (p6ExportBody?.documents ?? []).find((d) => d.title === p6PdfNow);
+    ok(
+      "PKG P06 7b export (TEC-05 #35): «Exportar mis datos y archivos» includes the wallet document with its metadata and the file bytes in base64, nothing omitted",
+      p6ExportBody?.format === "crewflex-account-export/1" &&
+        p6Exported?.kind === "license" &&
+        p6Exported?.expiresAt === p6Soon &&
+        p6Exported?.mimeType === "application/pdf" &&
+        p6Exported?.contentBase64 === p6PdfBytes.toString("base64") &&
+        p6ExportBody?.filesOmitted === 0,
+      JSON.stringify({ status: p6Export.status(), omitted: p6ExportBody?.filesOmitted }),
+    );
+
+    // The five widths: one column, no horizontal scroll (the dock below lg carries no «Documentos»).
+    for (const width of [1440, 1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+      await page.waitForTimeout(300);
+      const p6Overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      );
+      ok(`PKG P06 7 @${width}: no horizontal overflow`, !p6Overflow, `overflow=${p6Overflow}`);
+      if (width === 1440 || width === 390) await shot(`p06-wallet-${width}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // Identity from the JWT (S-2): echo cannot read, edit, archive or delete delta's document; an organization
+    // account cannot upload at all.
+    const p6Ids = await p6Mine();
+    const p6Target = p6Ids[p6PdfNow];
+    const p6Stranger = {
+      url: (await asSeedUser(ECHO, "professional-documents", { query: { id: p6Target, url: "1" } }))
+        .error?.code,
+      patch: (
+        await asSeedUser(ECHO, "professional-documents", {
+          method: "PATCH",
+          query: { id: p6Target },
+          body: { kind: "other", title: "stolen", expiresAt: null, qualificationId: null },
+        })
+      ).error?.code,
+      archive: (
+        await asSeedUser(ECHO, "professional-documents", {
+          method: "PATCH",
+          query: { id: p6Target },
+          body: { archived: true },
+        })
+      ).error?.code,
+      del: (
+        await asSeedUser(ECHO, "professional-documents", {
+          method: "DELETE",
+          query: { id: p6Target },
+        })
+      ).error?.code,
+      orgUpload: (
+        await asSeedUser(MRO, "professional-documents", {
+          method: "POST",
+          headers: { "Idempotency-Key": crypto.randomUUID() },
+          body: { kind: "license", title: "nope" },
+        })
+      ).error?.code,
+    };
+    const p6Intact = (await asSeedUser(DELTA, "professional-documents")).data?.documents?.find(
+      (d) => d.id === p6Target,
+    );
+    ok(
+      "PKG P06 8 negatives (API): echo gets 404 on delta's document (signed URL, edit, archive, delete) and the row is intact; an organization account cannot upload (FORBIDDEN)",
+      Boolean(p6Target) &&
+        p6Stranger.url === "NOT_FOUND" &&
+        p6Stranger.patch === "NOT_FOUND" &&
+        p6Stranger.archive === "NOT_FOUND" &&
+        p6Stranger.del === "NOT_FOUND" &&
+        p6Stranger.orgUpload === "FORBIDDEN" &&
+        p6Intact?.title === p6PdfNow &&
+        p6Intact?.kind === "license" &&
+        p6Intact?.archivedAt === null,
+      JSON.stringify(p6Stranger),
+    );
+
+    await logout();
+    await login(MRO);
+    const p6OrgPage = await p6Open("/app/professional/documents");
+    const p6OrgNav = await page.locator("a[href='/app/professional/documents']").count();
+    ok(
+      "PKG P06 9 negative (browser): an organization account on the wallet URL reads «No professional profile» / «The document wallet belongs to professional accounts.», no upload form, no «Documents» entry",
+      p6OrgPage.includes("No professional profile") &&
+        p6OrgPage.includes("The document wallet belongs to professional accounts.") &&
+        (await page.locator("#file").count()) === 0 &&
+        p6OrgNav === 0,
+      p6OrgPage.slice(0, 120),
+    );
+    await logout();
+  } finally {
+    // Restore: every P06 document of delta deleted (wallet and trash), delta back in English.
+    const p6Left = await p6Mine();
+    const p6Removed = [];
+    for (const id of Object.values(p6Left)) {
+      p6Removed.push(
+        (
+          await asSeedUser(DELTA, "professional-documents", {
+            method: "DELETE",
+            query: { id },
+          })
+        ).data?.deleted === true,
+      );
+    }
+    const p6Locale =
+      (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    // `p6Es` also set the browser's locale cookie (the settings action): the logged-out pages that follow
+    // («PKG account c/d») must be in English again, so the cookie goes too.
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    const p6After = await p6Mine();
+    ok(
+      "PKG P06 10 restore: the P06 documents deleted (wallet and trash), nothing of the smoke left, delta in English",
+      p6Removed.length === 2 &&
+        p6Removed.every(Boolean) &&
+        Object.keys(p6After).length === 0 &&
+        p6Locale,
+      JSON.stringify({ removed: p6Removed, left: Object.keys(p6After).length, locale: p6Locale }),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
