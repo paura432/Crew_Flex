@@ -132,12 +132,15 @@ async function logout() {
       ")",
     );
   // Submit the sign-out form directly: the Next dev overlay badge can intercept pointer events in headless runs.
-  if (!(await page.locator("form:has(button:has-text('Sign out'))").count())) {
+  // The account may be in Spanish at this point (PKG P05 logs out from «Cerrar sesión»).
+  const signOut =
+    "form:has(button:has-text('Sign out')), form:has(button:has-text('Cerrar sesión'))";
+  if (!(await page.locator(signOut).count())) {
     await page.goto(`${BASE}/app`);
     await page.waitForLoadState("networkidle");
   }
   await page
-    .locator("form:has(button:has-text('Sign out'))")
+    .locator(signOut)
     .last()
     .evaluate((f) => f.requestSubmit());
   await page.waitForURL((u) => !u.pathname.startsWith("/app"), { timeout: 20000 });
@@ -3147,6 +3150,694 @@ await logout();
         p4Archived.length === 4 &&
         p4Archived.every(Boolean),
       JSON.stringify([p4Withdrawn.error, p4BlocksLeft.length, p4Deleted, p4Archived]),
+    );
+  }
+}
+
+// PKG P05 (applications parity, F3 — HIRE-01 #1-#6/#8/#9/#12/#13, HIRE-02 #5/#9/#16/#18/#19/#21/#24, HIRE-03 #3-#7,
+// HIRE-04 #1/#7/#8/#11, HIRE-05 #1/#4/#5/#7/#9/#14, SHOT-11 #4/#5; P01-26; T-165): the v1.8 «Mis candidaturas» and
+// «Candidaturas» («De candidatura a cobertura.») in Spanish — the home row «{empresa} · {n} jornadas», the card
+// («{org} · {base} · {periodo} · {n} jornadas», the frozen proposal with its terms and «{h} h × {tarifa} €/h = {base}»,
+// «Historial», «Ver expediente» with the dated copy), accepting after the explicit tick, the organization-wide list
+// filtered by the offer («Oferta seleccionada», «Ver todas», «Volver a ofertas», «Todas ({n})» + the 9 tabs, the
+// pseudonym and the open name), rejecting with a mandatory reason, the empty tab, confirming («Cubierta»,
+// «100% cobertura confirmada», «1 / 1 plazas confirmadas», «Finalizar» disabled, the cancel hint), the covered note in
+// the neutral tone on the technician's own confirmed card and the technician's cancellation with a reason (Q3).
+// Negatives: a plain member is refused (page and API), another organization gets 404 (API, pack and URL), another
+// technician cannot move the application (404), the wrong side gets 403, a professional on the organization URL is
+// sent home. Fixture through the local API (a 1-seat need with two shifts and terms ≥ 35 days ahead on days free of
+// delta's and echo's windows; both apply; delta proposed); everything is restored at the end whatever happens.
+{
+  const DELTA = "delta@crewflex.test";
+  const ECHO = "echo@crewflex.test";
+  const MRO = "admin.mro@crewflex.test";
+  const OTHER = "admin.other@crewflex.test";
+  const p5Key = () => ({ "Idempotency-Key": crypto.randomUUID() });
+  const p5Day = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const p5Short = (d) =>
+    new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", timeZone: "UTC" })
+      .format(new Date(`${d}T00:00:00Z`))
+      .toUpperCase();
+  const p5Windows = async (email) =>
+    (await asSeedUser(email, "professional-availability")).data?.windows ?? [];
+  const p5Existing = [...(await p5Windows(DELTA)), ...(await p5Windows(ECHO))];
+  // The first 3-day span from `from` days ahead with no window of either professional (a 2-day need fits).
+  const p5Free = (from) => {
+    for (let n = from; n < from + 180; n++) {
+      const s = Date.parse(`${p5Day(n)}T00:00:00.000Z`);
+      const e = s + 3 * 86_400_000;
+      if (!p5Existing.some((w) => Date.parse(w.startsAt) < e && Date.parse(w.endsAt) > s)) return n;
+    }
+    return from;
+  };
+  const p5N = p5Free(35);
+  const p5Start = p5Day(p5N);
+  const p5End = p5Day(p5N + 1);
+  const p5Period = `${p5Short(p5Start)} → ${p5Short(p5End)}`;
+  const p5Title = `Local UI check · P05 candidaturas ${Date.now()}`;
+  const p5Reason = "Local UI check · P05 motivo del rechazo";
+  const p5CancelReason = "Local UI check · P05 cancelada por el técnico";
+  // The nine states in the domain order (`APPLICATION_STATUSES`) and their Spanish labels (es `domain.applicationStatus`).
+  const APPLICATION_ORDER = [
+    "received",
+    "shortlisted",
+    "proposed",
+    "accepted",
+    "confirmed",
+    "finished",
+    "rejected",
+    "withdrawn",
+    "cancelled",
+  ];
+  const p5Labels = [
+    "Recibida",
+    "Preseleccionada",
+    "Propuesta",
+    "Aceptada",
+    "Confirmada",
+    "Finalizada",
+    "Rechazada",
+    "Retirada",
+    "Cancelada",
+  ];
+  const p5Need = await asSeedUser(MRO, "work-requirements", {
+    method: "POST",
+    headers: p5Key(),
+    body: {
+      organizationId: mroOrg.id,
+      title: p5Title,
+      location: "Madrid (MAD)",
+      startsAt: `${p5Start}T06:00:00.000Z`,
+      endsAt: `${p5End}T18:00:00.000Z`,
+      shift: "day",
+      headcount: 1,
+      urgency: "planned",
+      country: "ES",
+      timeZone: "Europe/Madrid",
+      qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+      description: "Revisión programada de línea en hangar; se valora experiencia previa en A320.",
+      shifts: [
+        { startsAt: `${p5Start}T06:00:00.000Z`, endsAt: `${p5Start}T14:00:00.000Z`, baseHours: 8 },
+        { startsAt: `${p5End}T10:00:00.000Z`, endsAt: `${p5End}T18:00:00.000Z`, baseHours: 8 },
+      ],
+      conditions: {
+        hourlyRate: 50,
+        shiftHours: 8,
+        perDiem: 30,
+        overtimeRate: 60,
+        contractType: "contractor",
+        flights: true,
+        accommodation: true,
+        localTransport: true,
+        meals: false,
+      },
+    },
+  });
+  const p5Id = p5Need.data?.requirement?.id;
+  const p5Win = {};
+  const p5App = {};
+  try {
+    for (const email of [DELTA, ECHO]) {
+      const w = await asSeedUser(email, "professional-availability", {
+        method: "POST",
+        headers: p5Key(),
+        body: {
+          startsAt: `${p5Start}T00:00:00.000Z`,
+          endsAt: `${p5Day(p5N + 2)}T00:00:00.000Z`,
+          status: "available",
+        },
+      });
+      p5Win[email] = w.data?.window?.id;
+      const a = await asSeedUser(email, "applications", {
+        method: "POST",
+        headers: p5Key(),
+        body: { requirementId: p5Id, shareConsent: true },
+      });
+      p5App[email] = { id: a.data?.application?.id, updatedAt: a.data?.application?.updatedAt };
+    }
+    const p5Move = async (email, app, to, extra = {}) => {
+      const res = await asSeedUser(email, "applications", {
+        method: "PATCH",
+        headers: p5Key(),
+        body: { applicationId: app.id, to, expectedUpdatedAt: app.updatedAt, ...extra },
+      });
+      if (res.data) app.updatedAt = res.data.transition.updatedAt;
+      return res;
+    };
+    await p5Move(MRO, p5App[DELTA], "shortlisted");
+    const p5Proposed = await p5Move(MRO, p5App[DELTA], "proposed");
+    ok(
+      "PKG P05 0 fixture (API): a 1-seat need with two 8 h shifts and terms (≥ 35 days ahead, days free of delta's and echo's windows); both apply; delta's application is proposed (v1), echo's received",
+      p5Need.data?.requirement?.status === "open" &&
+        p5Need.data?.requirement?.shifts?.length === 2 &&
+        Boolean(p5Win[DELTA] && p5Win[ECHO] && p5App[DELTA].id && p5App[ECHO].id) &&
+        p5Proposed.data?.transition?.status === "proposed",
+      JSON.stringify({ start: p5Start, errors: [p5Need.error, p5Proposed.error].filter(Boolean) }),
+    );
+
+    // Identity from the JWT (S-2, HIRE-02 #19): the wrong side, a stranger, another organization, a plain member.
+    const p5WrongSide = await asSeedUser(ECHO, "applications", {
+      method: "PATCH",
+      headers: p5Key(),
+      body: {
+        applicationId: p5App[ECHO].id,
+        to: "shortlisted",
+        expectedUpdatedAt: p5App[ECHO].updatedAt,
+      },
+    });
+    const p5Stranger = await asSeedUser(ECHO, "applications", {
+      method: "PATCH",
+      headers: p5Key(),
+      body: {
+        applicationId: p5App[DELTA].id,
+        to: "withdrawn",
+        expectedUpdatedAt: p5App[DELTA].updatedAt,
+      },
+    });
+    const p5OtherList = await asSeedUser(OTHER, "applications", { query: { requirementId: p5Id } });
+    const p5OtherMove = await asSeedUser(OTHER, "applications", {
+      method: "PATCH",
+      headers: p5Key(),
+      body: {
+        applicationId: p5App[DELTA].id,
+        to: "confirmed",
+        expectedUpdatedAt: p5App[DELTA].updatedAt,
+      },
+    });
+    const p5OtherPack = await asSeedUser(OTHER, "applications", {
+      query: { view: "pack", applicationId: p5App[DELTA].id },
+    });
+    const p5MemberList = await asSeedUser("charlie@crewflex.test", "applications", {
+      query: { organizationId: mroOrg.id, view: "list", offset: "0", limit: "20" },
+    });
+    const p5MemberOne = await asSeedUser("charlie@crewflex.test", "applications", {
+      query: { requirementId: p5Id },
+    });
+    ok(
+      "PKG P05 1 negatives (API): the technician cannot take the organization's step (403), nor move another's application (404); another organization reads, moves and opens the pack as 404; a plain member is FORBIDDEN on both lists",
+      p5WrongSide.error?.code === "FORBIDDEN" &&
+        p5Stranger.error?.code === "NOT_FOUND" &&
+        p5OtherList.error?.code === "NOT_FOUND" &&
+        p5OtherMove.error?.code === "NOT_FOUND" &&
+        p5OtherPack.error?.code === "NOT_FOUND" &&
+        p5MemberList.error?.code === "FORBIDDEN" &&
+        p5MemberOne.error?.code === "FORBIDDEN",
+      JSON.stringify([
+        p5WrongSide.error?.code,
+        p5Stranger.error?.code,
+        p5OtherList.error?.code,
+        p5OtherMove.error?.code,
+        p5OtherPack.error?.code,
+        p5MemberList.error?.code,
+        p5MemberOne.error?.code,
+      ]),
+    );
+
+    const p5Open = async (path) => {
+      await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      return (await page.locator("main").innerText()).replace(/\s+/g, " ");
+    };
+    const p5Es = async () => {
+      await page.goto(`${BASE}/app/settings`);
+      await page.waitForLoadState("networkidle");
+      if ((await page.evaluate(() => document.documentElement.lang)) === "es") return;
+      await page.locator("[role=radio][lang=es]").first().click();
+      await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", {
+        timeout: 15000,
+      });
+    };
+    const p5Done = (status) =>
+      page
+        .getByRole("status")
+        .filter({ hasText: `Hecho: ${status}.` })
+        .first()
+        .waitFor({ timeout: 15000 })
+        .then(() => true)
+        .catch(() => false);
+
+    await login(DELTA);
+    await p5Es();
+    // P01-26: the home row «{empresa} · {n} jornadas» (the days of the two published shifts).
+    const p5Home = await p5Open("/app/professional");
+    const p5HomeRow = page
+      .locator("section[aria-labelledby=home-applications] li", { hasText: p5Title })
+      .first();
+    const p5HomeRowText = (await p5HomeRow.innerText().catch(() => "")).replace(/\s+/g, " ");
+    const p5Follow = await p5HomeRow
+      .getByRole("link", { name: /Ver seguimiento/ })
+      .getAttribute("href")
+      .catch(() => null);
+    ok(
+      "PKG P05 2 P01-26 «Mi espacio»: the «Mis candidaturas» row carries the title, «Demo MRO Madrid · 2 jornadas», the chip «Propuesta» and «Ver seguimiento» → the card",
+      /Mis candidaturas/.test(p5Home) &&
+        p5HomeRowText.includes(p5Title) &&
+        p5HomeRowText.includes("Demo MRO Madrid · 2 jornadas") &&
+        /Propuesta/.test(p5HomeRowText) &&
+        p5Follow === `/app/professional/applications#a-${p5App[DELTA].id}`,
+      JSON.stringify({ row: p5HomeRowText.slice(0, 200), follow: p5Follow }),
+    );
+
+    const p5Mine = await p5Open("/app/professional/applications");
+    await expectSpanish("PKG P05 3 «Mis candidaturas» in Spanish");
+    const p5Card = () => page.locator("main article", { hasText: p5Title }).first();
+    const p5CardText = (await p5Card().innerText()).replace(/\s+/g, " ");
+    const p5Pills = await page.locator("main nav a").allInnerTexts();
+    ok(
+      "PKG P05 3b v1.8 «Mis candidaturas»: «Mi actividad» / «Tus candidaturas.» / the three-step sentence; «Todas (n)» current + the present states; the card: «Propuesta», the title as a link, «Demo MRO Madrid · Madrid (MAD) · {periodo} · 2 jornadas», «Propuesta · versión 1 · Pendiente de aceptación», «Enviada el», the frozen terms («Tarifa 50,00 € / h · 400,00 € / día», «Turno y duración Día · 8 h», «Contrato», «Dietas / horas extra 30,00 € / día · 60,00 € / h extra», «Cobertura», «Logística», «Vuelos: incluido», «16 h × 50,00 €/h = 800,00 € para el técnico», «16 horas base en 2 jornadas»), the notice, «Historial», «Ver expediente», «Aceptar propuesta» and «Retirar candidatura»",
+      /Mi actividad/i.test(p5Mine) &&
+        p5Mine.includes("Tus candidaturas.") &&
+        p5Mine.includes("La empresa revisa condiciones; el técnico acepta; la empresa confirma.") &&
+        /^Todas \(\d+\)$/.test(p5Pills[0] ?? "") &&
+        (await page.locator("main nav a[aria-current=true]").innerText()).startsWith("Todas") &&
+        p5Pills.includes("Propuesta") &&
+        (await p5Card().getByRole("link", { name: p5Title }).getAttribute("href")) ===
+          `/app/professional/opportunities/${p5Id}` &&
+        p5CardText.includes(`Demo MRO Madrid · Madrid (MAD) · ${p5Period} · 2 jornadas`) &&
+        /Propuesta · versión 1\s*· Pendiente de aceptación/.test(p5CardText) &&
+        /Enviada el /.test(p5CardText) &&
+        // Term labels are CSS-uppercased (`innerText` keeps the transform); amounts drop «,00» (P04-04).
+        /Tarifa 50 € \/ h · 400 € \/ día/i.test(p5CardText) &&
+        /Turno y duración Día · 8 h/i.test(p5CardText) &&
+        /Contrato Contractor · EUR/i.test(p5CardText) &&
+        /Dietas \/ horas extra 30 € \/ día · 60 € \/ h extra/i.test(p5CardText) &&
+        /Cobertura Bloque completo: una candidatura cubre todas las jornadas/i.test(p5CardText) &&
+        /Logística Vuelos: incluido · Alojamiento: incluido · Transporte local: incluido · Comidas: no incluidas/i.test(
+          p5CardText.replace(/ (Alojamiento|Transporte|Comidas)/g, " · $1"),
+        ) &&
+        p5CardText.includes("16 h × 50 €/h = 800 € para el técnico") &&
+        p5CardText.includes("16 horas base en 2 jornadas") &&
+        p5CardText.includes(
+          "CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
+        ) &&
+        p5CardText.includes("Historial") &&
+        (await p5Card().getByRole("link", { name: "Ver expediente" }).count()) === 1 &&
+        (await p5Card().getByRole("button", { name: "Aceptar propuesta" }).count()) === 1 &&
+        (await p5Card().getByRole("button", { name: "Retirar candidatura" }).count()) === 1,
+      JSON.stringify({ pills: p5Pills, card: p5CardText.slice(0, 700) }),
+    );
+
+    // HIRE-01 #5 / SHOT-11 #3: a `?status=` the technician has nothing in (only by URL: the pills list the present
+    // states) shows v1.8's empty state instead of a blank list.
+    const p5Codes = APPLICATION_ORDER;
+    const p5AbsentIdx = p5Labels.findIndex((label) => !p5Pills.includes(label));
+    const p5AbsentTab = await p5Open(
+      `/app/professional/applications?status=${p5Codes[p5AbsentIdx] ?? "finished"}`,
+    );
+    ok(
+      "PKG P05 3c a `?status=` the technician has nothing in (by URL): «Sin candidaturas en este estado» / «Selecciona otra oferta o prepara una candidatura.», the pills stay «Todas (n)» + the present states, no card",
+      p5AbsentIdx >= 0 &&
+        p5AbsentTab.includes("Sin candidaturas en este estado") &&
+        p5AbsentTab.includes("Selecciona otra oferta o prepara una candidatura.") &&
+        (await page.locator("main article").count()) === 0 &&
+        (await page.locator("main nav a").allInnerTexts()).join("|") === p5Pills.join("|"),
+      JSON.stringify({ status: p5Codes[p5AbsentIdx], text: p5AbsentTab.slice(0, 160) }),
+    );
+    await p5Open("/app/professional/applications");
+
+    // Responsive «Mis candidaturas» (SHOT-11 #7): no overflow at the five widths; the v1.8 dock below `lg`.
+    for (const width of [1440, 1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+      await page.waitForTimeout(300);
+      const p5Layout = await page.evaluate(() => {
+        const nav = document.querySelector("nav[aria-label='Accesos rápidos']");
+        const current = nav?.querySelector("a[aria-current=page]");
+        const visible = nav ? getComputedStyle(nav).display !== "none" : false;
+        return {
+          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+          dock: visible
+            ? {
+                position: getComputedStyle(nav).position,
+                bottom: Math.round(nav.getBoundingClientRect().bottom),
+                current: current?.textContent?.trim() ?? "",
+              }
+            : null,
+        };
+      });
+      ok(
+        width < 1024
+          ? `PKG P05 4 @${width}: no horizontal overflow; the v1.8 dock is fixed at the bottom with «Candidaturas» current`
+          : `PKG P05 4 @${width}: no horizontal overflow; the dock is hidden from lg`,
+        !p5Layout.overflow &&
+          (width < 1024
+            ? p5Layout.dock?.position === "fixed" &&
+              p5Layout.dock.bottom === 1100 &&
+              p5Layout.dock.current === "Candidaturas"
+            : p5Layout.dock === null),
+        JSON.stringify(p5Layout),
+      );
+      if (width === 1440 || width === 390) await shot(`p05-applications-${width}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // R-08: accept exactly version 1 after the tick.
+    await p5Card().getByRole("button", { name: "Aceptar propuesta" }).click();
+    const p5AcceptStep = p5Card().getByRole("group", { name: "Aceptar propuesta" });
+    const p5AcceptButton = p5AcceptStep.getByRole("button", { name: "Aceptar propuesta" });
+    const p5DisabledBeforeTick = await p5AcceptButton.isDisabled();
+    await p5AcceptStep
+      .getByRole("checkbox", { name: "Acepto exactamente estas condiciones (versión 1)." })
+      .check();
+    await p5AcceptButton.click();
+    const p5Accepted = await p5Done("Aceptada");
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    // The history is a folded `<details>` (HIRE-01 #9): open it, or `innerText` leaves it out.
+    await p5Card().locator("details summary", { hasText: "Historial" }).click();
+    const p5AcceptedText = (await p5Card().innerText()).replace(/\s+/g, " ");
+    ok(
+      "PKG P05 5 «Aceptar propuesta» (R-08): disabled until «Acepto exactamente estas condiciones (versión 1).» is ticked; «Hecho: Aceptada.»; the card reads «Aceptada», «Condiciones aceptadas · versión 1» and the history «Aceptada · … · profesional · v1»",
+      p5DisabledBeforeTick &&
+        p5Accepted &&
+        /^Aceptada/.test(p5AcceptedText) &&
+        p5AcceptedText.includes("Condiciones aceptadas · versión 1") &&
+        /Aceptada · [^·]+ · profesional · v1/.test(p5AcceptedText),
+      p5AcceptedText.slice(0, 300),
+    );
+
+    // v2-15 / HIRE-05: the professional's own dated copy, pseudonymous, protected.
+    await p5Card().getByRole("link", { name: "Ver expediente" }).click();
+    await page.waitForLoadState("networkidle");
+    const p5OwnPack = (
+      await page
+        .locator(`#pack-${p5App[DELTA].id}`)
+        .innerText()
+        .catch(() => "")
+    ).replace(/\s+/g, " ");
+    ok(
+      "PKG P05 6 «Ver expediente» (own copy): «CREWFLEX» + «Expediente compartido», «Esta es la copia que recibió Demo MRO Madrid…», «Cualificaciones» («Aeronaves:», «Motores:»), «Cursos», «Capacidades», «Permisos de trabajo», «Restricciones generales», «Experiencia compartida», the protection sentence, «Copia del perfil:»; no e-mail; «Cerrar expediente»",
+      p5OwnPack.includes("CREWFLEX") &&
+        p5OwnPack.includes("Expediente compartido") &&
+        p5OwnPack.includes(
+          "Esta es la copia que recibió Demo MRO Madrid al presentar tu candidatura.",
+        ) &&
+        p5OwnPack.includes("Cualificaciones") &&
+        p5OwnPack.includes("Aeronaves:") &&
+        p5OwnPack.includes("Motores:") &&
+        p5OwnPack.includes("Cursos") &&
+        p5OwnPack.includes("Capacidades") &&
+        p5OwnPack.includes("Permisos de trabajo") &&
+        p5OwnPack.includes("Restricciones generales") &&
+        p5OwnPack.includes("Experiencia compartida") &&
+        p5OwnPack.includes(
+          "Los originales, nombres de archivos y metadatos identificativos permanecen protegidos.",
+        ) &&
+        p5OwnPack.includes("Copia del perfil:") &&
+        !/@crewflex\.test/.test(p5OwnPack) &&
+        (await p5Card().getByRole("link", { name: "Cerrar expediente" }).count()) === 1,
+      p5OwnPack.slice(0, 300),
+    );
+    await shot("p05-pack-1440");
+    await logout();
+
+    // The organization-wide «Candidaturas» (v2-05, v1.8 `Workflow.jsx:53-74`) filtered by the offer.
+    await login(MRO, { ensureEnglish: false });
+    await p5Es();
+    const p5OrgUrl = `/app/organization/applications?requirementId=${p5Id}`;
+    const p5Org = await p5Open(p5OrgUrl);
+    await expectSpanish("PKG P05 7 «Candidaturas» in Spanish");
+    const p5OrgPills = await page.locator("main nav a").allInnerTexts();
+    const p5DeltaCard = () => page.locator(`main article#a-${p5App[DELTA].id}`);
+    const p5EchoCard = () => page.locator(`main article#a-${p5App[ECHO].id}`);
+    const p5DeltaText = (await p5DeltaCard().innerText()).replace(/\s+/g, " ");
+    const p5EchoText = (await p5EchoCard().innerText()).replace(/\s+/g, " ");
+    ok(
+      "PKG P05 7b v1.8 «Candidaturas»: the sidebar entry, «Pipeline» / «De candidatura a cobertura.», «Oferta seleccionada: {título}» + «Ver todas» + «Volver a ofertas», «Todas (2)» current + the 9 states; delta pseudonymous («Profesional anónimo CF-…», «Aceptada», «Elegible») and echo by name («Technician Echo», «Recibida»); each card links the need and reads «Madrid (MAD) · {periodo} · 2 jornadas»",
+      (await page.locator("a[href='/app/organization/applications']").count()) >= 1 &&
+        /Pipeline/i.test(p5Org) &&
+        p5Org.includes("De candidatura a cobertura.") &&
+        p5Org.includes(`Oferta seleccionada: ${p5Title}`) &&
+        (await page.getByRole("link", { name: "Ver todas" }).count()) === 1 &&
+        (await page.getByRole("link", { name: "Volver a ofertas" }).count()) === 1 &&
+        p5OrgPills.length === 10 &&
+        p5OrgPills[0] === "Todas (2)" &&
+        p5OrgPills.slice(1).join("|") === p5Labels.join("|") &&
+        /Profesional anónimo CF-[0-9A-F]{10}/.test(p5DeltaText) &&
+        /Aceptada/.test(p5DeltaText) &&
+        /Elegible/.test(p5DeltaText) &&
+        !/Technician Delta/.test(p5DeltaText) &&
+        /Technician Echo/.test(p5EchoText) &&
+        /^Recibida/.test(p5EchoText) &&
+        (await p5DeltaCard().getByRole("link", { name: p5Title }).getAttribute("href")) ===
+          `/app/organization/requirements/${p5Id}` &&
+        p5DeltaText.includes(`Madrid (MAD) · ${p5Period} · 2 jornadas`) &&
+        p5EchoText.includes(`Madrid (MAD) · ${p5Period} · 2 jornadas`),
+      JSON.stringify({
+        pills: p5OrgPills,
+        delta: p5DeltaText.slice(0, 200),
+        echo: p5EchoText.slice(0, 200),
+      }),
+    );
+    await shot("p05-org-applications-1440");
+
+    // HIRE-02 #5: reject with a mandatory reason, visible to both parties (T-10); the empty tab (HIRE-01 #5).
+    await p5EchoCard().getByRole("button", { name: "Rechazar" }).click();
+    const p5RejectStep = p5EchoCard().getByRole("group", { name: "Rechazar" });
+    const p5RejectButton = p5RejectStep.getByRole("button", { name: "Rechazar" });
+    const p5RejectDisabled = await p5RejectButton.isDisabled();
+    const p5RejectText = (await p5RejectStep.innerText()).replace(/\s+/g, " ");
+    await p5RejectStep.getByRole("textbox", { name: /Motivo/ }).fill(p5Reason);
+    await p5RejectButton.click();
+    const p5Rejected = await p5Done("Rechazada");
+    const p5RejectedTab = await p5Open(`${p5OrgUrl}&status=rejected`);
+    const p5RejectedCount = await page.locator("main article").count();
+    const p5EmptyTab = await p5Open(`${p5OrgUrl}&status=withdrawn`);
+    ok(
+      "PKG P05 8 «Rechazar»: «Motivo (obligatorio)» + «Lo verá la otra parte. Máximo 1000 caracteres.», the button disabled until a reason; «Hecho: Rechazada.»; the «Rechazada» tab lists it with «Motivo: …»; «Retirada» is «Sin candidaturas en este estado» / «Selecciona otra oferta o prepara una candidatura.»",
+      p5RejectDisabled &&
+        p5RejectText.includes("Motivo (obligatorio)") &&
+        p5RejectText.includes("Lo verá la otra parte. Máximo 1000 caracteres.") &&
+        p5Rejected &&
+        p5RejectedCount === 1 &&
+        p5RejectedTab.includes(`Motivo: ${p5Reason}`) &&
+        /Technician Echo/.test(p5RejectedTab) &&
+        p5EmptyTab.includes("Sin candidaturas en este estado") &&
+        p5EmptyTab.includes("Selecciona otra oferta o prepara una candidatura."),
+      JSON.stringify({
+        step: p5RejectText.slice(0, 160),
+        rejected: p5RejectedTab.slice(0, 160),
+        empty: p5EmptyTab.slice(0, 120),
+      }),
+    );
+
+    // HIRE-04: confirm (the server re-checks), «Cubierta», the coverage, «Finalizar» disabled, the cancel hint.
+    await p5Open(p5OrgUrl);
+    await p5DeltaCard().getByRole("button", { name: "Confirmar asignación" }).click();
+    const p5ConfirmStep = p5DeltaCard().getByRole("group", { name: "Confirmar asignación" });
+    const p5ConfirmHint = (await p5ConfirmStep.innerText()).replace(/\s+/g, " ");
+    await p5ConfirmStep.getByRole("button", { name: "Confirmar asignación" }).click();
+    const p5Confirmed = await p5Done("Confirmada");
+    await p5Open(p5OrgUrl);
+    const p5ConfirmedText = (await p5DeltaCard().innerText()).replace(/\s+/g, " ");
+    const p5Finish = p5DeltaCard().getByRole("button", { name: /Finalizar/ });
+    const p5FinishDisabled =
+      (await p5Finish.isDisabled()) &&
+      (await p5Finish.getAttribute("title")) === "Disponible después de la última jornada.";
+    await p5DeltaCard().getByRole("button", { name: "Cancelar asignación" }).click();
+    const p5CancelStep = p5DeltaCard().getByRole("group", { name: "Cancelar asignación" });
+    const p5CancelHint = (await p5CancelStep.innerText()).replace(/\s+/g, " ");
+    await p5CancelStep.getByRole("button", { name: "Volver" }).click();
+    const p5Detail = await p5Open(`/app/organization/requirements/${p5Id}`);
+    ok(
+      "PKG P05 9 «Confirmar asignación»: the hint «El servidor vuelve a comprobar…»; «Hecho: Confirmada.»; the card «Confirmada» + «La necesidad está cubierta.»; «Finalizar» disabled with «Disponible después de la última jornada.»; «Cancelar asignación» explains «Se liberarán plazas…» (backed out); the need reads «Cubierta», «100% cobertura confirmada», «1 / 1 plazas confirmadas»",
+      p5ConfirmHint.includes("El servidor vuelve a comprobar") &&
+        p5Confirmed &&
+        /^Confirmada/.test(p5ConfirmedText) &&
+        p5ConfirmedText.includes("La necesidad está cubierta.") &&
+        p5FinishDisabled &&
+        p5CancelHint.includes(
+          "Se liberarán plazas y se restaurará la disponibilidad anterior del técnico. El historial conservará el motivo.",
+        ) &&
+        /Cubierta/.test(p5Detail) &&
+        /100\s?% cobertura confirmada/.test(p5Detail) &&
+        /1 \/ 1 plazas confirmadas/.test(p5Detail),
+      JSON.stringify({
+        hint: p5ConfirmHint.slice(0, 120),
+        card: p5ConfirmedText.slice(0, 160),
+        cancel: p5CancelHint.slice(0, 140),
+        detail: p5Detail.slice(0, 300),
+      }),
+    );
+
+    // The requirement's own page and the organization's reading of the dated copy (BR-25: never identity or contact).
+    const p5ByNeed = await p5Open(`/app/organization/requirements/${p5Id}/applications`);
+    await p5DeltaCard().getByRole("link", { name: "Ver expediente" }).click();
+    await page.waitForLoadState("networkidle");
+    const p5OrgPack = (
+      await page
+        .locator(`#pack-${p5App[DELTA].id}`)
+        .innerText()
+        .catch(() => "")
+    ).replace(/\s+/g, " ");
+    ok(
+      "PKG P05 10 the need's «Candidaturas»: «Madrid (MAD) · {periodo} · 2 jornadas», «Volver a la necesidad», «Preselecciona, propón y confirma…»; «Ver expediente» opens «Copia del expediente técnico que el profesional compartió al presentarse.» with «Copia del perfil:» and never an e-mail or real name",
+      /Candidaturas/i.test(p5ByNeed) &&
+        p5ByNeed.includes(`Madrid (MAD) · ${p5Period} · 2 jornadas`) &&
+        (await page.getByRole("link", { name: "Volver a la necesidad" }).count()) === 1 &&
+        p5ByNeed.includes("Preselecciona, propón y confirma.") &&
+        p5OrgPack.includes(
+          "Copia del expediente técnico que el profesional compartió al presentarse.",
+        ) &&
+        p5OrgPack.includes("Copia del perfil:") &&
+        p5OrgPack.includes(
+          "Los originales, nombres de archivos y metadatos identificativos permanecen protegidos.",
+        ) &&
+        !/@crewflex\.test|Technician Delta/.test(p5OrgPack),
+      JSON.stringify({ page: p5ByNeed.slice(0, 200), pack: p5OrgPack.slice(0, 200) }),
+    );
+    await logout();
+
+    // Negatives in the browser: a plain member, another organization's admin on the URL, a professional on it.
+    await login("charlie@crewflex.test");
+    const p5MemberGlobal = await p5Open("/app/organization/applications");
+    const p5MemberByNeed = await p5Open(`/app/organization/requirements/${p5Id}/applications`);
+    await logout();
+    await login(OTHER);
+    // The HTTP 404 is the behaviour under test (S-5): not a console error for step 17.
+    expectedErrorUrls.add(`${BASE}/app/organization/requirements/${p5Id}/applications`);
+    const p5OtherResponse = await page.goto(
+      `${BASE}/app/organization/requirements/${p5Id}/applications`,
+    );
+    await page.waitForLoadState("networkidle");
+    // The filtered list streams its shell (`app/loading.tsx`) before `notFound()`: the body is the not-found page
+    // (no card, no data) with HTTP 200 — recorded in the matrix (P05-21); the need's own URL is a real 404.
+    const p5OtherGlobal = await p5Open(`/app/organization/applications?requirementId=${p5Id}`);
+    const p5OtherCards = await page.locator("main article").count();
+    await logout();
+    await login(DELTA, { ensureEnglish: false });
+    await page.goto(`${BASE}/app/organization/applications`);
+    await page.waitForLoadState("networkidle");
+    const p5ProfessionalPath = new URL(page.url()).pathname;
+    ok(
+      "PKG P05 11 negatives (browser): a plain member reads «Applications are handled by admins and managers» on both pages; another organization's admin gets HTTP 404 on the need's URL and the not-found page (no card) on the filtered list; a professional on the organization URL is sent to «Mi espacio»",
+      p5MemberGlobal.includes("Applications are handled by admins and managers") &&
+        p5MemberByNeed.includes("Applications are handled by admins and managers") &&
+        p5OtherResponse?.status() === 404 &&
+        /Not found/.test(p5OtherGlobal) &&
+        !p5OtherGlobal.includes(p5Title) &&
+        p5OtherCards === 0 &&
+        p5ProfessionalPath === "/app/professional",
+      JSON.stringify({
+        member: p5MemberGlobal.slice(0, 400),
+        byNeed: p5MemberByNeed.slice(0, 200),
+        other: p5OtherResponse?.status(),
+        otherGlobal: p5OtherGlobal.slice(0, 120),
+        cards: p5OtherCards,
+        path: p5ProfessionalPath,
+      }),
+    );
+
+    // SHOT-11 #4: the covered note in the neutral tone on the own confirmed card; Q3: the technician cancels with a reason.
+    await p5Open("/app/professional/applications");
+    const p5OwnConfirmed = (await p5Card().innerText()).replace(/\s+/g, " ");
+    const p5NoteClass = await p5Card()
+      .getByText("La necesidad está cubierta.")
+      .getAttribute("class")
+      .catch(() => null);
+    await p5Card().getByRole("button", { name: "Cancelar asignación" }).click();
+    const p5OwnCancel = p5Card().getByRole("group", { name: "Cancelar asignación" });
+    await p5OwnCancel.getByRole("textbox", { name: /Motivo/ }).fill(p5CancelReason);
+    await p5OwnCancel.getByRole("button", { name: "Cancelar asignación" }).click();
+    const p5Cancelled = await p5Done("Cancelada");
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p5OwnCancelled = (await p5Card().innerText()).replace(/\s+/g, " ");
+    const p5NeedAfter = (await asSeedUser(MRO, "work-requirements", { query: { id: p5Id } })).data
+      ?.requirement?.status;
+    ok(
+      "PKG P05 12 the own confirmed card: «Confirmada» with «La necesidad está cubierta.» in the neutral tone (not a warning); «Cancelar asignación» with a reason → «Hecho: Cancelada.»; the card reads «Cancelada» + «Motivo: …», no «Ver expediente» (T-113) and no action; the need is open again",
+      /^Confirmada/.test(p5OwnConfirmed) &&
+        p5OwnConfirmed.includes("La necesidad está cubierta.") &&
+        /text-muted/.test(p5NoteClass ?? "") &&
+        !/text-warn/.test(p5NoteClass ?? "") &&
+        p5Cancelled &&
+        /^Cancelada/.test(p5OwnCancelled) &&
+        p5OwnCancelled.includes(`Motivo: ${p5CancelReason}`) &&
+        !p5OwnCancelled.includes("La necesidad está cubierta.") &&
+        (await p5Card().getByRole("link", { name: "Ver expediente" }).count()) === 0 &&
+        (await p5Card().getByRole("button").count()) === 0 &&
+        p5NeedAfter === "open",
+      JSON.stringify({ note: p5NoteClass, after: p5OwnCancelled.slice(0, 200), need: p5NeedAfter }),
+    );
+  } finally {
+    // Seed state back whatever happened: delta and admin.mro in English (later English-asserting blocks), the
+    // applications ended, the windows deleted, the need closed and archived.
+    try {
+      if ((await page.evaluate(() => location.pathname)).startsWith("/app")) await logout();
+    } catch {
+      /* the page may be mid-navigation; the API restore below does not need it */
+    }
+    const p5Locales = [];
+    for (const email of [DELTA, MRO])
+      p5Locales.push(
+        (await asSeedUser(email, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+          .data?.preferences?.locale === "en",
+      );
+    const p5Ended = [];
+    for (const email of [DELTA, ECHO]) {
+      const mine = (await asSeedUser(email, "applications")).data?.applications ?? [];
+      const app = mine.find((a) => a.requirementId === p5Id);
+      if (!app) continue;
+      if (["withdrawn", "rejected", "cancelled", "finished"].includes(app.status)) {
+        p5Ended.push(true);
+        continue;
+      }
+      const to = app.status === "confirmed" ? "cancelled" : "withdrawn";
+      const res = await asSeedUser(email, "applications", {
+        method: "PATCH",
+        headers: p5Key(),
+        body: {
+          applicationId: app.id,
+          to,
+          expectedUpdatedAt: app.updatedAt,
+          ...(to === "cancelled" ? { reason: "Local UI check · P05 restore" } : {}),
+        },
+      });
+      p5Ended.push(res.data?.transition?.status === to);
+    }
+    const p5Deleted = [];
+    for (const email of [DELTA, ECHO]) {
+      if (!p5Win[email]) continue;
+      p5Deleted.push(
+        (
+          await asSeedUser(email, "professional-availability", {
+            method: "DELETE",
+            query: { id: p5Win[email] },
+          })
+        ).data?.deleted === true,
+      );
+    }
+    const p5Closed = p5Id
+      ? (
+          await asSeedUser(MRO, "work-requirements", {
+            method: "PATCH",
+            body: { id: p5Id, status: "closed" },
+          })
+        ).ok === true
+      : false;
+    const p5Archived = p5Closed
+      ? (
+          await asSeedUser(MRO, "work-requirements", {
+            method: "PATCH",
+            body: { id: p5Id, archive: true },
+          })
+        ).ok === true
+      : false;
+    ok(
+      "PKG P05 13 restore: delta and admin.mro in English, the applications ended, both windows deleted, the need closed and archived (seed state back)",
+      p5Locales.every(Boolean) &&
+        p5Ended.every(Boolean) &&
+        p5Deleted.length === 2 &&
+        p5Deleted.every(Boolean) &&
+        p5Closed &&
+        p5Archived,
+      JSON.stringify({
+        locales: p5Locales,
+        ended: p5Ended,
+        deleted: p5Deleted,
+        closed: p5Closed,
+        archived: p5Archived,
+      }),
     );
   }
 }
