@@ -435,7 +435,7 @@ asignaciones confirmadas»** (dashboard) = Σ over the organization's requiremen
 its shifts (v2-09) or, without shifts, the started 24-hour blocks of its period (at least one); one application covers
 every shift (Q6). Counted from `get_requirement_application_counts` (admin/manager only, counts per status per
 requirement with headcount, period and shift count; a closed account's application still counts, T-42). Plain members
-see the status chips only. IMPLEMENTED (local).
+see the status chips only. IMPLEMENTED (local). The day rule of this KPI is `coverageDays` (started 24-hour blocks; one night 22:00–06:00 = 1), **not** `requirementDays` of `work-requirement.ts` («{n} días» on the cards, UTC calendar days, BR-10 / T-164: that night = 2): two v1.8 literals for two figures (`Dashboard.jsx` KPI vs `Marketplace.jsx:90`), kept as two functions on purpose and pinned by `coverage.test.ts` (P10, review of the P05 nit).
 
 ## BR-24 Document wallet trash and type filter (N-19, N-20; T-100…T-102) — `walletList` (`src/features/documents/map.ts`)
 

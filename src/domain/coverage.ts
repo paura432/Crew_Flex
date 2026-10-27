@@ -45,11 +45,16 @@ export function confirmedCoverage(headcount: number, seats: number): ConfirmedCo
 const DAY_MS = 86_400_000;
 
 /**
- * Working days («jornadas») of a requirement: its shifts (v2-09) when it has them; a continuous period
- * counts its started 24-hour blocks, at least one (T-92): 08:00–16:00 → 1; 10 Nov 08:00 → 12 Nov 16:00
- * → 3; one night 22:00–06:00 → 1.
+ * Working days («jornadas») a seat covers, for «Jornadas cubiertas» (T-92): its shifts (v2-09) when it has
+ * them; a continuous period counts its started 24-hour blocks, at least one: 08:00–16:00 → 1; 10 Nov 08:00 →
+ * 12 Nov 16:00 → 3; one night 22:00–06:00 → 1.
+ *
+ * NOT the same rule as `requirementDays` in `work-requirement.ts` («{n} días» of the cards, BR-10 / T-164),
+ * which counts the UTC calendar days the period touches: that night is 2 days there and 1 block here. Both
+ * are v1.8 literals for different figures (`Dashboard.jsx` KPI vs `Marketplace.jsx:90` card), so they stay
+ * two functions on purpose (P10 review of the P05 nit); `coverage.test.ts` pins the divergent case.
  */
-export const requirementDays = (startsAt: string, endsAt: string, shiftCount?: number | null) =>
+export const coverageDays = (startsAt: string, endsAt: string, shiftCount?: number | null) =>
   shiftCount ?? Math.max(1, Math.ceil((Date.parse(endsAt) - Date.parse(startsAt)) / DAY_MS));
 
 export interface RequirementCounts {
@@ -71,7 +76,7 @@ export const coveredShifts = (rows: readonly RequirementCounts[]) =>
     (sum, r) =>
       sum +
       confirmedCoverage(r.headcount, seatsTaken(r.counts)).filled *
-        requirementDays(r.startsAt, r.endsAt, r.shiftCount),
+        coverageDays(r.startsAt, r.endsAt, r.shiftCount),
     0,
   );
 
