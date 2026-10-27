@@ -22,6 +22,7 @@ import { coveredShifts, seatsByRequirement, sumCounts } from "@/domain/coverage"
 import { getRequirementApplicationCounts } from "@/features/applications/api";
 import { getVisibleNetworkCount } from "@/features/organizations/api";
 import { CoverageGuide } from "@/features/requirements/components/CoverageGuide";
+import { OrganizationHero } from "@/features/requirements/components/OrganizationHero";
 
 import type { OrganizationRow } from "@/types/database";
 
@@ -115,6 +116,10 @@ export async function OrganizationOverview({
         description={description}
         actions={headerActions}
       />
+      {/* v1.8 order (`Dashboard.jsx:24`): title → hero → the four KPIs → the two panels. */}
+      <div className="mb-6">
+        <OrganizationHero canManage={canManage} />
+      </div>
       {!result.ok ? (
         <ApiErrorState error={result.error} requestId={result.requestId} />
       ) : result.data.requirements.length === 0 ? (

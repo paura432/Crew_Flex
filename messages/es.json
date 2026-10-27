@@ -2527,7 +2527,15 @@
   "orgHome": {
     "visibleNetwork": "Red visible",
     "visibleNetworkDetail": "Según permisos y privacidad",
-    "network": "Red profesional"
+    "network": "Red profesional",
+    "hero": {
+      "brand": "CrewFlex Aviation",
+      "tag": "Capacidad técnica flexible",
+      "title": "El técnico adecuado. Las fechas adecuadas.",
+      "body": "Define cualificaciones, ventanas de disponibilidad y condiciones para encontrar perfiles realmente viables.",
+      "cta": "Explorar candidatos",
+      "mark": "CF / AVIATION"
+    }
   },
   "directory": {
     "eyebrow": "Red profesional",

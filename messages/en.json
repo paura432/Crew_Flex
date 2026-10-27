@@ -2527,7 +2527,15 @@
   "orgHome": {
     "visibleNetwork": "Visible network",
     "visibleNetworkDetail": "Subject to permissions and privacy",
-    "network": "Professional network"
+    "network": "Professional network",
+    "hero": {
+      "brand": "CrewFlex Aviation",
+      "tag": "Flexible technical capacity",
+      "title": "The right technician. The right dates.",
+      "body": "Define qualifications, availability windows and conditions to find truly viable profiles.",
+      "cta": "Explore candidates",
+      "mark": "CF / AVIATION"
+    }
   },
   "directory": {
     "eyebrow": "Professional network",
