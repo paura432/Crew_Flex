@@ -5712,6 +5712,350 @@ await logout();
   }
 }
 
+// PKG P11 (recruiter parity, F3 — ORG-08 #1-#8, #11; migration 20261027200000, T-169, BR-27.6): in Spanish, a staffing
+// agency's «Buscar candidatos» reads «Red recruiter» (v1.8 «RED RECRUITER»); the Candidate Pack copy names the client it
+// was received for on both sides (v1.8 «Alcance y destinatario: {empresa} para {cliente}»): the agency's «Candidaturas»
+// («… recibida para el cliente {cliente}.») and Delta's «Mis candidaturas» → «Ver expediente» («Esta es la copia que
+// recibió {org}, para su cliente {cliente}, …»); the API carries the name and never the client's e-mail; after the
+// revocation the application still names the client (T-169) while the opportunity is gone (T-134). Negatives: another
+// organization's admin cannot add a client to the agency (FORBIDDEN), gets 404 on its need and keeps «Red profesional»;
+// echo (another professional) cannot read Delta's copy (NOT_FOUND). Setup through the local API as `PKG recruiter`
+// (Lisbon becomes an agency; its open needs paused). Restore: application withdrawn, need closed and archived, client
+// revoked, Delta's window removed, Lisbon an MRO again with its needs resumed, both accounts in English, cookie gone.
+{
+  const AGENCY_ADMIN = "admin.other@crewflex.test";
+  const OTHER_ADMIN = "admin.mro@crewflex.test";
+  const PRO = "delta@crewflex.test";
+  const OTHER_PRO = "echo@crewflex.test";
+  const p11Client = `Cliente P11 ${Date.now()}`;
+  const p11Email = "p11-client@smoke-client.test";
+  const p11Title = `Local UI check · P11 recruiter ${Date.now()}`;
+  const p11Main = async () => (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  const p11Es = async () => {
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) === "es") return;
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+  };
+  const p11Overflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  const [p11Agency] = await seedRest(
+    AGENCY_ADMIN,
+    "organizations?select=id,type&name=eq.Demo%20Aero%20Services%20Lisbon",
+  );
+  const p11Headers = await seedHeaders(AGENCY_ADMIN);
+  const p11SetType = (type) =>
+    fetch(new URL(`/rest/v1/organizations?id=eq.${p11Agency.id}`, supabaseUrl), {
+      method: "PATCH",
+      headers: { ...p11Headers, Prefer: "return=minimal" },
+      body: JSON.stringify({ type }),
+    }).then((r) => r.ok);
+  let p11Paused = [];
+  let p11ClientId;
+  let p11Id;
+  let p11App;
+  let p11Window;
+  try {
+    // Setup: Lisbon is an agency (its open needs paused, MEDIUM-1 guard), one client activated by the platform admin,
+    // a need for that client, Delta available and applied (the copy is frozen on applying).
+    p11Paused = (
+      await asSeedUser(AGENCY_ADMIN, "work-requirements", {
+        query: { organizationId: p11Agency.id, status: "open" },
+      })
+    ).data.requirements.map((r) => r.id);
+    for (const id of p11Paused)
+      await asSeedUser(AGENCY_ADMIN, "work-requirements", {
+        method: "PATCH",
+        body: { id, status: "paused" },
+      });
+    const p11TypeSet = await p11SetType("staffing_agency");
+    const p11Added = await asSeedUser(AGENCY_ADMIN, "represented-clients", {
+      method: "POST",
+      body: { organizationId: p11Agency.id, name: p11Client, contactEmail: p11Email },
+    });
+    p11ClientId = p11Added.data?.client?.id;
+    const p11Activated = await asSeedUser("platform.admin@crewflex.test", "represented-clients", {
+      method: "PATCH",
+      body: { id: p11ClientId, action: "activate", note: "P11 smoke: mandate ref. FX-P11" },
+    });
+    const p11Types = await seedRest(AGENCY_ADMIN, "qualification_types?select=id&code=in.(B1.1)");
+    const p11Start = new Date(Date.now() + 45 * 86_400_000);
+    p11Start.setUTCHours(6, 0, 0, 0);
+    const p11Created = await asSeedUser(AGENCY_ADMIN, "work-requirements", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: {
+        organizationId: p11Agency.id,
+        title: p11Title,
+        location: "Lisbon (LIS)",
+        startsAt: p11Start.toISOString(),
+        endsAt: new Date(p11Start.getTime() + 36 * 3_600_000).toISOString(),
+        shift: "day",
+        headcount: 1,
+        urgency: "planned",
+        qualifications: p11Types.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+        onBehalfOfClientId: p11ClientId,
+      },
+    });
+    p11Id = p11Created.data?.requirement?.id;
+    p11Window = await asSeedUser(PRO, "professional-availability", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: {
+        startsAt: new Date(p11Start.getTime() - 86_400_000).toISOString(),
+        endsAt: new Date(p11Start.getTime() + 3 * 86_400_000).toISOString(),
+        status: "available",
+      },
+    });
+    const p11Applied = await asSeedUser(PRO, "applications", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: { requirementId: p11Id, shareConsent: true },
+    });
+    p11App = p11Applied.data?.application;
+    ok(
+      "PKG P11 0 setup: Lisbon is an agency with an active client, a need for it and Delta's application",
+      p11TypeSet &&
+        p11Activated.data?.client?.status === "active" &&
+        p11Created.data?.requirement?.client?.name === p11Client &&
+        Boolean(p11App?.id),
+      JSON.stringify(
+        p11Added.error ?? p11Activated.error ?? p11Created.error ?? p11Applied.error ?? {},
+      ),
+    );
+
+    // 1. The agency's directory in Spanish: «Red recruiter» (ORG-08 #2).
+    await login(AGENCY_ADMIN);
+    await p11Es();
+    await page.goto(`${BASE}/app/organization/candidates`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P11 1 «Buscar candidatos» of an agency in Spanish");
+    const p11Directory = await p11Main();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await shot("p11-directory-recruiter-1440");
+    ok(
+      "PKG P11 1b the agency's directory reads «Red recruiter» / «Encuentra a tu próximo técnico.» (v1.8 «RED RECRUITER»)",
+      // innerText returns the eyebrow as CSS renders it (uppercase).
+      /red recruiter/i.test(p11Directory) &&
+        p11Directory.includes("Encuentra a tu próximo técnico.") &&
+        !/red profesional/i.test(p11Directory),
+      p11Directory.slice(0, 160),
+    );
+
+    // 2. The agency's «Candidaturas» with the copy open: the intro names the client (ORG-08 #7).
+    await page.goto(`${BASE}/app/organization/applications?pack=${p11App.id}#pack-${p11App.id}`);
+    await page.waitForLoadState("networkidle");
+    const p11OrgPack = await p11Main();
+    await shot("p11-org-pack-client-1440");
+    ok(
+      "PKG P11 2 the agency's «Candidaturas» → «Ver expediente» reads «… recibida para el cliente {cliente}.», the «Expediente compartido» badge; never the client's e-mail",
+      p11OrgPack.includes(
+        `Copia del expediente técnico que el profesional compartió al presentarse, recibida para el cliente ${p11Client}.`,
+      ) &&
+        p11OrgPack.includes("Expediente compartido") &&
+        !p11OrgPack.includes(p11Email),
+      p11OrgPack.slice(0, 200),
+    );
+    await logout();
+
+    // 3. Delta's «Mis candidaturas» → «Ver expediente»: «Esta es la copia que recibió {org}, para su cliente …».
+    await login(PRO);
+    await p11Es();
+    await page.goto(`${BASE}/app/professional/applications`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P11 3 «Mis candidaturas» in Spanish");
+    await page
+      .locator(`article[aria-labelledby="a-${p11App.id}"]`)
+      .getByRole("link", { name: "Ver expediente" })
+      .click();
+    await page.waitForSelector(`#pack-${p11App.id}`, { timeout: 15000 });
+    const p11OwnPack = await p11Main();
+    await shot("p11-own-pack-client-1440");
+    ok(
+      "PKG P11 3b the copy's intro: «Esta es la copia que recibió Demo Aero Services Lisbon, para su cliente {cliente}, al presentar tu candidatura.» (v1.8 «Alcance y destinatario»); «Cerrar expediente»; no e-mail",
+      p11OwnPack.includes(
+        `Esta es la copia que recibió Demo Aero Services Lisbon, para su cliente ${p11Client}, al presentar tu candidatura.`,
+      ) &&
+        p11OwnPack.includes("Cerrar expediente") &&
+        !p11OwnPack.includes(p11Email),
+      p11OwnPack.slice(0, 200),
+    );
+    let p11Spill = false;
+    for (const width of [1440, 1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+      await page.waitForTimeout(200);
+      if (await p11Overflow()) p11Spill = true;
+      if (width === 390) await shot("p11-own-pack-client-390");
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    ok(
+      "PKG P11 4 @1440/1024/768/390/360: no horizontal overflow with the copy open",
+      !p11Spill,
+      "",
+    );
+    await logout();
+
+    // 5. The API: the name on the card, never the e-mail; the proposal-free list of a plain MRO need stays null.
+    const p11Mine = await asSeedUser(PRO, "applications");
+    const p11MineRow = (p11Mine.data?.applications ?? []).find((a) => a.id === p11App.id);
+    const p11OrgList = await asSeedUser(AGENCY_ADMIN, "applications", {
+      query: { view: "list", organizationId: p11Agency.id, requirementId: p11Id },
+    });
+    ok(
+      "PKG P11 5 API: Delta's application and the agency's list carry `requirement.clientName`; the e-mail and the client id never leave the agency's portfolio",
+      p11MineRow?.requirement?.clientName === p11Client &&
+        p11OrgList.data?.applications?.[0]?.requirement?.clientName === p11Client &&
+        !JSON.stringify(p11Mine).includes(p11Email) &&
+        !JSON.stringify(p11Mine).includes(p11ClientId),
+      JSON.stringify(p11Mine.error ?? p11OrgList.error ?? {}),
+    );
+
+    // 6. Negatives: another organization's admin, another professional.
+    const p11Intruder = await asSeedUser(OTHER_ADMIN, "represented-clients", {
+      method: "POST",
+      body: { organizationId: p11Agency.id, name: "Intruso P11", contactEmail: "" },
+    });
+    const p11EchoPack = await asSeedUser(OTHER_PRO, "applications", {
+      query: { view: "pack", applicationId: p11App.id },
+    });
+    const p11OtherPack = await asSeedUser(OTHER_ADMIN, "applications", {
+      query: { view: "pack", applicationId: p11App.id },
+    });
+    await login(OTHER_ADMIN);
+    await page.goto(`${BASE}/app/organization/candidates`);
+    await page.waitForLoadState("networkidle");
+    const p11OtherDirectory = await p11Main();
+    const p11CrossUrl = `${BASE}/app/organization/requirements/${p11Id}`;
+    expectedErrorUrls.add(p11CrossUrl);
+    const p11Cross = await page.goto(p11CrossUrl);
+    await page.waitForLoadState("networkidle");
+    expectedErrorUrls.delete(p11CrossUrl);
+    ok(
+      "PKG P11 6 negatives: admin.mro cannot add a client to Lisbon (FORBIDDEN), gets 404 on its need and keeps «Professional network»; echo and admin.mro get NOT_FOUND on Delta's copy",
+      p11Intruder.error?.code === "FORBIDDEN" &&
+        p11Cross?.status() === 404 &&
+        /professional network/i.test(p11OtherDirectory) &&
+        !/recruiter network/i.test(p11OtherDirectory) &&
+        p11EchoPack.error?.code === "NOT_FOUND" &&
+        p11OtherPack.error?.code === "NOT_FOUND",
+      `${p11Intruder.error?.code} ${p11Cross?.status()} ${p11EchoPack.error?.code} ${p11OtherPack.error?.code}`,
+    );
+    await logout();
+
+    // 7. Revoked: the opportunity is gone (T-134); the application still names the client (T-169).
+    const p11Revoked = await asSeedUser(AGENCY_ADMIN, "represented-clients", {
+      method: "PATCH",
+      body: { id: p11ClientId, action: "revoke" },
+    });
+    const p11Gone = await asSeedUser(PRO, "opportunities", { query: { id: p11Id } });
+    const p11MineAfter = (await asSeedUser(PRO, "applications")).data?.applications?.find(
+      (a) => a.id === p11App.id,
+    );
+    ok(
+      "PKG P11 7 revoked: Delta no longer reads the opportunity (NOT_FOUND) but the application still says it was made for the client (T-169)",
+      p11Revoked.data?.client?.status === "revoked" &&
+        p11Gone.error?.code === "NOT_FOUND" &&
+        p11MineAfter?.requirement?.clientName === p11Client,
+      JSON.stringify(p11Revoked.error ?? p11Gone.error ?? {}),
+    );
+  } finally {
+    // Seed state back whatever happened: application withdrawn, need closed and archived, client revoked, window
+    // removed, Lisbon an MRO with its needs resumed, Delta and admin.other in English, the locale cookie gone.
+    try {
+      if ((await page.evaluate(() => location.pathname)).startsWith("/app")) await logout();
+    } catch {
+      /* not signed in */
+    }
+    const p11Fresh = p11App
+      ? (await asSeedUser(PRO, "applications")).data?.applications?.find((a) => a.id === p11App.id)
+      : null;
+    const p11Withdrawn =
+      p11Fresh && p11Fresh.status !== "withdrawn"
+        ? (
+            await asSeedUser(PRO, "applications", {
+              method: "PATCH",
+              headers: { "Idempotency-Key": crypto.randomUUID() },
+              body: {
+                applicationId: p11App.id,
+                to: "withdrawn",
+                expectedUpdatedAt: p11Fresh.updatedAt,
+              },
+            })
+          ).ok === true
+        : true;
+    const p11Closed = p11Id
+      ? (
+          await asSeedUser(AGENCY_ADMIN, "work-requirements", {
+            method: "PATCH",
+            body: { id: p11Id, status: "closed" },
+          })
+        ).ok === true
+      : true;
+    const p11Archived = p11Id
+      ? (
+          await asSeedUser(AGENCY_ADMIN, "work-requirements", {
+            method: "PATCH",
+            body: { id: p11Id, archive: true },
+          })
+        ).ok === true
+      : true;
+    const p11ClientGone = p11ClientId
+      ? ["revoked", undefined].includes(
+          (
+            await asSeedUser(AGENCY_ADMIN, "represented-clients", {
+              method: "PATCH",
+              body: { id: p11ClientId, action: "revoke" },
+            })
+          ).data?.client?.status,
+        )
+      : true;
+    const p11WindowGone = p11Window?.data?.window?.id
+      ? (
+          await asSeedUser(PRO, "professional-availability", {
+            method: "DELETE",
+            query: { id: p11Window.data.window.id },
+          })
+        ).ok === true
+      : true;
+    const p11TypeBack = await p11SetType("mro");
+    const p11Resumed = [];
+    for (const id of p11Paused)
+      p11Resumed.push(
+        (
+          await asSeedUser(AGENCY_ADMIN, "work-requirements", {
+            method: "PATCH",
+            body: { id, status: "open" },
+          })
+        ).ok,
+      );
+    const p11English =
+      (await asSeedUser(PRO, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true &&
+      (
+        await asSeedUser(AGENCY_ADMIN, "user-preferences", {
+          method: "PATCH",
+          body: { locale: "en" },
+        })
+      ).ok === true;
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P11 8 restore: application withdrawn, need closed and archived, client revoked, Delta's window removed, Lisbon an MRO again with its needs resumed, both accounts in English",
+      p11Withdrawn &&
+        p11Closed &&
+        p11Archived &&
+        p11ClientGone &&
+        p11WindowGone &&
+        p11TypeBack &&
+        p11Resumed.every(Boolean) &&
+        p11English,
+      `${p11Withdrawn} ${p11Closed} ${p11Archived} ${p11ClientGone} ${p11WindowGone} ${p11TypeBack} ${p11Resumed} ${p11English}`,
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
