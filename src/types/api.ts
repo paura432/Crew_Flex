@@ -251,7 +251,7 @@ export interface DocumentDeleteResponse {
  */
 export interface LogbookEntry {
   id: string;
-  /** YYYY-MM-DD, never after today in Madrid (BR-16). */
+  /** YYYY-MM-DD, never after today in Madrid (BR-17). */
   entryDate: string;
   aircraft: string;
   /** ATA chapter, free text ≤ 10. */

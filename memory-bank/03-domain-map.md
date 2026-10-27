@@ -69,7 +69,7 @@ AOG-only availability (C-8, D-05), requirement terms/rates (C-9), tools beyond D
 (Since package matching-v18, LOCAL `20261023900*`: rating restrictions (D-02), minimum experience (D-03), the work
 permit for the job's country (D-04) and the other v1.8 profile requirements are modelled as technical defaults
 T-80…T-87 — BR-3.7–3.13, BR-5.6.) (The logbook exists locally since
-`20261023200000`, BR-16.)
+`20261023200000`, BR-17.)
 
 ## Pending functional decisions that change rules
 
