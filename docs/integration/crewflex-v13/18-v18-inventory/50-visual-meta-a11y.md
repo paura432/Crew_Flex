@@ -890,15 +890,15 @@ Capturas: `evidencias/shots/demo/D-TEC-02-pasaporte-1440.png`; Next `v18-compare
 
 ## SHOT-04 · Herramientas — v1.8 `S-COM-01` (`D-TOOL-00`) ↔ Next `N-TOOL-01`
 
-**Estado global:** PARCIAL. Es la pantalla más fiel: la misma identidad teal, el mismo hero «N·m ⇆ lbf·in», las mismas fichas y la misma nota de privacidad. Solo cambia el número de herramientas (D-11).
+**Estado global:** IGUAL salvo el combustible (F3: antes PARCIAL). F3 (P08, 27/10): 6 de las 7 fichas en el orden de v1.8 (`558654f`); solo falta Combustible (D-11). Es la pantalla más fiel: la misma identidad teal, el mismo hero «N·m ⇆ lbf·in», las mismas fichas y la misma nota de privacidad. Verificado en `PKG P08 0b/6`; captura `docs/audit/evidence/parity/P08/P08-tools-after-1440.jpg`.
 
 | # | Elemento | v1.8 (`D-TOOL-00-herramientas-1440.png`) | Next (`next-after/tools-1440.jpg`, lote 11, EN) | Diff | Sev. | Bloqueo | Acción |
 |---|---|---|---|---|---|---|---|
 | 1 | Cabecera | «TU CAJA DE HERRAMIENTAS» / «Para cada jornada.» / «Cálculos claros. Unidades visibles. Referencias a mano.» | «YOUR TOOLBOX» / «For every shift.» / igual, con línea divisoria | = | — | — | — |
 | 2 | Hero | `#112e40`, «CREWFLEX · WORKBENCH», «Tu oficio, un poco más sencillo.», CTA menta «Abrir conversor de par ›», arte «N·m ⇆ lbf·in / Precisión en cada unidad.» | idéntico en composición y color | = | — | — | — |
-| 3 | Fichas | **7**: Reto diario, Traductor, Par de apriete, Combustible, Conversiones, Inglés y siglas, Duración | **3**: Torque, Conversions, Duration | − | P2 | D-11 (combustible) (v2: reto, traductor e «Inglés y siglas» desbloqueados, alcance LATER) | portar reto diario, traductor e «Inglés y siglas»; combustible tras la revisión técnica |
+| 3 | Fichas | **7**: Reto diario, Traductor, Par de apriete, Combustible, Conversiones, Inglés y siglas, Duración | **6** en el orden de v1.8: Reto diario, Traductor, Par de apriete, Conversiones, Inglés y siglas, Duración (`src/features/tools/ids.ts`, `ToolsHome.tsx`; `558654f`). F3 en ejecución: `PKG P08 0b` (es), 28a (en); `parity/P08/P08-tools-after-1440.jpg` | ≈ (F3: antes −) | P2 | D-11 (combustible) | Combustible tras la revisión técnica D-11 (F-1 del área 40) |
 | 4 | Ficha | icono `#e8f3f1`, estrella de favorito, título, subtítulo y «Abrir herramienta ›» teal | igual | = | — | — | — |
-| 5 | Nota de privacidad | «Tu uso de herramientas es privado. Los cálculos de combustible se descartan al salir; se guardan tus favoritos y el progreso de los retos en este navegador.» | «…calculations run in your browser and are never sent to a server. Favourites are stored in this browser.» | ≈ | — | — | — |
+| 5 | Nota de privacidad | «Tu uso de herramientas es privado. Los cálculos de combustible se descartan al salir; se guardan tus favoritos y el progreso de los retos en este navegador.» | «Tu uso de herramientas es privado: los cálculos se hacen en tu navegador y no se envían a ningún servidor. Tus favoritos y el progreso de los retos se guardan en este navegador.» (es:1621; `558654f`): favoritos y progreso de los retos como v1.8, sin la frase del combustible (D-11). F3: `PKG P08 0b` | ≈ | — | — | — (TOOL-01 #33) |
 | 6 | Banda | «**Herramientas de trabajo** · Conversores, combustible e inglés en tu espacio CrewFlex.» + bandas de demo | — | ✗ | — | DEMO-ONLY | — |
 
 Capturas: `evidencias/shots/demo/D-TOOL-00-herramientas-1440.png`; Next `v18-compare/next-after/tools-1440.jpg` (lote 11). xhigh: `evidencias/xhigh/50/SHOT-04-next-1440.jpg`, `SHOT-04-next-390.jpg`, `SHOT-04-v18-390.jpg`.
