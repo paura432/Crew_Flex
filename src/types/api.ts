@@ -484,8 +484,9 @@ export interface OpportunityRequirement extends RequirementProfileRules {
   conditions?: RequirementConditions | null;
   /**
    * Recruiter (BR-27, LOCAL 20261024500100): the client a staffing agency publishes for — «Publicada por {org} para el
-   * cliente {cliente}», named in the consent (the professional must know who receives the data). Only while the
-   * representation is active. Optional: absent from older functions; null = no client.
+   * cliente {cliente}», named in the consent (the professional must know who receives the data). Opportunities list
+   * it only while the representation is active (T-134); application cards name it as recorded, also after a
+   * revocation (LOCAL 20261027200000, T-169). Optional: absent from older functions; null = no client.
    */
   clientName?: string | null;
 }

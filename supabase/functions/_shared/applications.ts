@@ -110,8 +110,12 @@ const card = z.object({
   // Requirement builder terms: on every card since 20261023600000, absent from older proposal versions.
   ...termsColumns,
   timeZone: timeZoneColumn,
+  // Recruiter (LOCAL 20261027200000, T-169): the represented client's name as recorded; absent from older cards.
+  clientName: z.string().nullish(),
 });
-const terms = card.omit({ id: true, createdAt: true, status: true });
+// A proposal version freezes the card too (`clientName` included, as v1.8's jobSnapshot.client); the API's proposal
+// terms do not repeat it: the application's requirement card says who received the copy.
+const terms = card.omit({ id: true, createdAt: true, status: true, clientName: true });
 
 const proposal = z
   .object({ id: z.string(), version: z.number().int(), createdAt: z.string(), terms })
@@ -185,6 +189,7 @@ function toCardRequirement(raw: z.infer<typeof card>) {
     createdAt: toIso(raw.createdAt),
     qualifications: [...raw.qualifications].sort(byLevelThenCode),
     ...toTerms(raw, raw.timeZone),
+    clientName: raw.clientName ?? null,
   };
 }
 

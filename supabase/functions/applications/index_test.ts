@@ -312,6 +312,42 @@ const RULE_COLUMNS = {
 };
 
 Deno.test(
+  "my application: the card names the represented client as recorded (T-169); a proposal's terms never do",
+  () => {
+    const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });
+    const forClient = {
+      ...applicationRow,
+      requirement_id: "r1",
+      requirement: { ...card, clientName: "Operador cliente 1" },
+      current_proposal: {
+        ...applicationRow.current_proposal,
+        terms: { ...terms, clientName: "Operador cliente 1" },
+      },
+    };
+    const mine = toMyApplication(forClient, own, RULES);
+    assertEquals(mine.requirement.clientName, "Operador cliente 1");
+    assertEquals("clientName" in (mine.currentProposal?.terms ?? {}), false);
+    // Older cards (before 20261027200000) and plain organizations: null, never undefined.
+    const plain = toMyApplication(
+      { ...applicationRow, requirement_id: "r1", requirement: card },
+      own,
+      RULES,
+    );
+    assertEquals(plain.requirement.clientName, null);
+    const org = toOrganizationApplication({
+      ...applicationRow,
+      requirement_id: "r1",
+      requirement: { ...card, clientName: "Operador cliente 1" },
+      ...RULE_COLUMNS,
+      ...candidateColumns("verified"),
+      candidate_ref: "CF-1",
+      total: 1,
+    });
+    assertEquals(org.application.requirement.clientName, "Operador cliente 1");
+  },
+);
+
+Deno.test(
   "my application: the card (any status), proposal vN, timeline and my own eligibility",
   () => {
     const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });

@@ -144,6 +144,7 @@ Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M0
 | 38  | `20261024800000_professional_block_opportunities`                          | professional-block (v2-16)                   |
 | 39  | `20261026100000_revoke_trigger_function_execute`                           | F1b security (REVOKE only)                   |
 | 40  | `20261027100000_requirement_profile_rules_builder`                         | P10 needs and matching (builder rules)       |
+| 41  | `20261027200000_requirement_cards_client`                                  | P11 recruiter (card names the client, T-169) |
 
 **Edge Functions** (22 directories): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
 **changed since release 1** — `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-profile`, `professional-qualifications`, `professional-availability`, `user-preferences` (every one of them parses the new schema/statuses and
