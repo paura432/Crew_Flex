@@ -5203,6 +5203,265 @@ await logout();
   }
 }
 
+// PKG P09 (organization dashboard parity, F3 — ORG-01 #1/#3-#11/#19/#21-#27/#32, ORG-07 #1-#5/#7/#8/#12/#14/#16,
+// SHOT-05 #1-#6; T-146, T-167): the v1.8 company «Resumen» in Spanish — header, the `.dashboard-hero` (two chips,
+// «El técnico adecuado. Las fechas adecuadas.», the sentence, «Explorar candidatos →» to the directory, the «CF /
+// AVIATION» mark), the four KPIs in v1.8's order with their details («Red visible» = the directory's own total, real
+// data), the needs panel with «{p}% cubierto», «Cómo cerrar una cobertura», the quick links and the note; the
+// «Organización» screen (status chip, review note, the five fields, the 27 EU countries, «Guardar organización», the
+// last-15 activity). Negatives: a plain member gets the hero without its CTA, one KPI, no quick links, a read-only
+// organization and the managers-only notice on the directory; another organization's admin sees only its own needs,
+// a 404 on a Demo MRO need, and the profile function and the network count refuse Demo MRO's id. Five widths.
+// Restore: the three accounts back to English, the locale cookie gone. No write to the database.
+{
+  const ADMIN = "admin.mro@crewflex.test";
+  const MEMBER = "charlie@crewflex.test";
+  const OTHER = "admin.other@crewflex.test";
+  const p9Main = async () => (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  const p9Es = async () => {
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) === "es") return;
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+  };
+  const p9Overflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  const p9Hero = () => page.locator("main section[aria-labelledby=org-hero-title]");
+  const p9Cta = () => p9Hero().locator("a[href='/app/organization/candidates']");
+  /** The dashboard KPIs: `dt` labels in document order, as written (the CSS uppercases them; the hero and the panels have none). */
+  const p9Labels = async () =>
+    (await page.locator("main dl dt").allInnerTexts()).map((s) => s.toLocaleLowerCase("es"));
+  const p9Value = async (label) =>
+    (
+      await page
+        .locator("main dl > div", { has: page.locator("dt", { hasText: new RegExp(label, "i") }) })
+        .locator("dd")
+        .first()
+        .innerText()
+    ).trim();
+  let p9MroTitles = [];
+  try {
+    // 0. The admin's «Resumen» in Spanish: v1.8 order title → hero → KPIs → panels.
+    await login(ADMIN);
+    await p9Es();
+    await page.goto(`${BASE}/app/organization`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P09 0 «Resumen» in Spanish");
+    const p9Home = await p9Main();
+    const p9HeroText = (await p9Hero().innerText()).replace(/\s+/g, " ");
+    const p9HeroBox = await p9Hero().boundingBox();
+    const p9KpiBox = await page.locator("main dl").first().boundingBox();
+    const p9Labs = await p9Labels();
+    ok(
+      "PKG P09 0b header + hero (ORG-01 #3-#7, SHOT-05 #1/#2; T-167): «DEMO MRO MADRID» / h1 «Operaciones» / «De una necesidad concreta a un equipo disponible.», «Red profesional» and «Nueva necesidad»; the hero with «CrewFlex Aviation» · «Capacidad técnica flexible», h2 «El técnico adecuado. Las fechas adecuadas.», the sentence, «Explorar candidatos →» to /app/organization/candidates and the «CF / AVIATION» mark, above the KPIs",
+      (await page.locator("main h1").count()) === 1 &&
+        /^DEMO MRO MADRID Operaciones De una necesidad concreta a un equipo disponible\./.test(
+          p9Home,
+        ) &&
+        (await page
+          .locator("main a[href='/app/organization/candidates']", { hasText: "Red profesional" })
+          .count()) === 1 &&
+        (await page
+          .locator("main a[href='/app/organization/requirements/new']", {
+            hasText: "Nueva necesidad",
+          })
+          .count()) === 1 &&
+        (await p9Hero().count()) === 1 &&
+        /^CrewFlex Aviation Capacidad técnica flexible El técnico adecuado\. Las fechas adecuadas\. Define cualificaciones, ventanas de disponibilidad y condiciones para encontrar perfiles realmente viables\. Explorar candidatos → CF \/ AVIATION$/.test(
+          p9HeroText,
+        ) &&
+        (await p9Hero().locator("h2#org-hero-title").count()) === 1 &&
+        (await p9Cta().count()) === 1 &&
+        p9HeroBox !== null &&
+        p9KpiBox !== null &&
+        p9HeroBox.y + p9HeroBox.height <= p9KpiBox.y,
+      `${p9HeroText.slice(0, 120)} · ${p9Labs.join("|")}`,
+    );
+    ok(
+      "PKG P09 1 the four KPIs in v1.8's order (ORG-01 #8-#11, SHOT-05 #3; T-92, T-93, T-146): «Necesidades abiertas · De tu organización», «Candidaturas en curso · N pendientes de confirmar», «Jornadas cubiertas · Solo asignaciones confirmadas», «Red visible · Según permisos y privacidad», every value a number",
+      p9Labs.join("|") ===
+        "necesidades abiertas|candidaturas en curso|jornadas cubiertas|red visible" &&
+        /NECESIDADES ABIERTAS \d+ De tu organización CANDIDATURAS EN CURSO \d+ \d+ pendientes? de confirmar JORNADAS CUBIERTAS \d+ Solo asignaciones confirmadas RED VISIBLE \d+ Según permisos y privacidad/.test(
+          p9Home,
+        ),
+      p9Labs.join("|"),
+    );
+    // Needs panel, guide, quick links, note (ORG-01 #21-#27).
+    const p9Rows = page.locator("main table tbody tr");
+    const p9RowCount = await p9Rows.count();
+    p9MroTitles = await page
+      .locator("main table tbody tr a[href^='/app/organization/requirements/']")
+      .allInnerTexts();
+    ok(
+      "PKG P09 2 panels (ORG-01 #21-#27, SHOT-05 #4/#5): «Necesidades» + «Ver todas» → /app/organization/requirements with ≤ 5 rows, each with «{p}% cubierto»; «Cómo cerrar una cobertura» with the 4 v1.8 steps; «Constructor · Necesidades estructuradas» and «Candidate Packs · Expedientes y seguimiento»; the non-contractual note; no «Ver comisiones» (SCOPE OUT)",
+      p9RowCount >= 1 &&
+        p9RowCount <= 5 &&
+        (await page
+          .locator("main a[href='/app/organization/requirements']", { hasText: "Ver todas" })
+          .count()) === 1 &&
+        (await p9Rows.filter({ hasText: /\d+[\s\u00a0]*%[\s\u00a0]*cubierto/ }).count()) ===
+          p9RowCount &&
+        /Cómo cerrar una cobertura Publica fechas y requisitos\. Compara candidatos elegibles\. Revisa el Candidate Pack y propone\. El técnico acepta y confirmas la asignación\./.test(
+          p9Home,
+        ) &&
+        (await page.locator("main nav[aria-label='Accesos rápidos'] a").allInnerTexts())
+          .map((s) => s.replace(/\s+/g, " "))
+          .join("|") ===
+          "Constructor Necesidades estructuradas|Candidate Packs Expedientes y seguimiento" &&
+        /Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado\. CrewFlex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma\./.test(
+          p9Home,
+        ) &&
+        !/comisi/i.test(p9Home),
+      `rows=${p9RowCount} · ${p9Home.slice(-200)}`,
+    );
+    // 3. «Red visible» is real data: the directory's own total (T-146: one predicate, `directory_visible`).
+    const p9Network = Number(await p9Value("Red visible"));
+    await p9Cta().click();
+    await page.waitForURL(/\/app\/organization\/candidates$/);
+    await page.waitForLoadState("networkidle");
+    const p9Directory = await p9Main();
+    const p9DirTotal = Number(/(\d+) perfil(?:es)? · página/.exec(p9Directory)?.[1] ?? NaN);
+    ok(
+      "PKG P09 3 «Explorar candidatos» opens «Red profesional» and «Red visible» equals the directory's total (real data, T-146)",
+      Number.isInteger(p9Network) && p9Network > 0 && p9DirTotal === p9Network,
+      `kpi=${p9Network} directory=${p9DirTotal}`,
+    );
+    // 4. «Organización» (ORG-07 #1-#5, #7, #8, #12): the v1.8 connected screen, read without writing.
+    await page.goto(`${BASE}/app/organization/settings`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P09 4 «Organización» in Spanish");
+    const p9Org = await p9Main();
+    const p9Countries = await page.locator("main select#country option:not([disabled])").count();
+    const p9ActivityRows = await page.locator("main ol li").count();
+    ok(
+      "PKG P09 4b «Organización» (ORG-07 #1-#5/#7/#8/#12; T-50…T-52): h1 «Organización», chip «Pendiente», «Pendiente de revisión…», «La revisión se registra desde administración. La empresa no puede verificarse a sí misma.»; «Razón social», «Tipo de organización», «Identificación fiscal», «País» with the 27 EU countries, «Domicilio fiscal»; «Guardar organización» + «Guardar un cambio devuelve la revisión a pendiente.»; «Actividad de esta organización» (≤ 15 rows) with its note",
+      (await page.locator("main h1", { hasText: "Organización" }).count()) === 1 &&
+        /Pendiente Revisión Pendiente de revisión: un administrador de la plataforma comprobará estos datos\. La revisión se registra desde administración\. La empresa no puede verificarse a sí misma\./.test(
+          p9Org,
+        ) &&
+        (await page.locator("main label", { hasText: /^Razón social/ }).count()) === 1 &&
+        (await page.locator("main label", { hasText: /^Tipo de organización/ }).count()) === 1 &&
+        (await page.locator("main label", { hasText: /^Identificación fiscal/ }).count()) === 1 &&
+        (await page.locator("main label", { hasText: /^País/ }).count()) === 1 &&
+        (await page.locator("main label", { hasText: /^Domicilio fiscal/ }).count()) === 1 &&
+        p9Countries === 27 &&
+        (await page.locator("main select#country").inputValue()) === "ES" &&
+        (await page
+          .locator("main button[type=submit]", { hasText: "Guardar organización" })
+          .count()) === 1 &&
+        /Guardar un cambio devuelve la revisión a pendiente\./.test(p9Org) &&
+        /Actividad de esta organización/.test(p9Org) &&
+        p9ActivityRows <= 15 &&
+        /Últimos 15 eventos de tu organización: qué se hizo y cuándo, sin datos personales\./.test(
+          p9Org,
+        ),
+      `countries=${p9Countries} activity=${p9ActivityRows} · ${p9Org.slice(0, 160)}`,
+    );
+    // 5. Five widths on the «Resumen» and «Organización», no horizontal overflow; the captures.
+    const p9Widths = [];
+    for (const path of ["/app/organization", "/app/organization/settings"]) {
+      await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      for (const width of [1440, 1024, 768, 390, 360]) {
+        await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+        await page.waitForTimeout(250);
+        if (await p9Overflow()) p9Widths.push(`${path}@${width}`);
+        if (path === "/app/organization" && (width === 1440 || width === 390))
+          await shot(`P09-home-after-${width}`);
+        if (path === "/app/organization/settings" && width === 1440)
+          await shot(`P09-organization-after-${width}`);
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    ok(
+      "PKG P09 5 @1440/1024/768/390/360: no horizontal overflow on /app/organization and /app/organization/settings",
+      p9Widths.length === 0,
+      p9Widths.join(","),
+    );
+    await logout();
+
+    // 6. Negative: a plain member (ORG-01 #20/#32, ORG-07 #8/#12/#16; T-93, T-146).
+    await login(MEMBER);
+    await p9Es();
+    await page.goto(`${BASE}/app/organization`);
+    await page.waitForLoadState("networkidle");
+    const p9MemberHome = await p9Main();
+    const p9MemberLabels = await p9Labels();
+    await page.goto(`${BASE}/app/organization/settings`);
+    await page.waitForLoadState("networkidle");
+    const p9MemberOrg = await p9Main();
+    const p9MemberForm = await page.locator("main form").count();
+    await page.goto(`${BASE}/app/organization/candidates`);
+    await page.waitForLoadState("networkidle");
+    const p9MemberDir = await p9Main();
+    ok(
+      "PKG P09 6 negative (member): the hero without «Explorar candidatos», only «Necesidades abiertas» (no applications, shifts or network counters), no «Red profesional» / «Nueva necesidad» / quick links; «Organización» read-only («Solo el administrador…») without the activity; the directory shows the managers-only notice",
+      /El técnico adecuado\. Las fechas adecuadas\./.test(p9MemberHome) &&
+        !/Explorar candidatos/.test(p9MemberHome) &&
+        p9MemberLabels.join("|") === "necesidades abiertas" &&
+        !/Red profesional|Nueva necesidad|Accesos rápidos|Constructor/.test(p9MemberHome) &&
+        /Cómo cerrar una cobertura/.test(p9MemberHome) &&
+        /Solo el administrador de la organización puede cambiar estos datos\./.test(p9MemberOrg) &&
+        p9MemberForm === 0 &&
+        !/Actividad de esta organización/.test(p9MemberOrg) &&
+        /El análisis de capacidad está disponible para managers y administradores/.test(
+          p9MemberDir,
+        ),
+      `${p9MemberLabels.join("|")} · form=${p9MemberForm} · ${p9MemberDir.slice(0, 80)}`,
+    );
+    await logout();
+
+    // 7. Negative: another organization's admin (S-2, S-7): own needs only, 404 on a Demo MRO need, refusals by id.
+    await login(OTHER);
+    await p9Es();
+    await page.goto(`${BASE}/app/organization`);
+    await page.waitForLoadState("networkidle");
+    const p9OtherHome = await p9Main();
+    const p9OtherTitles = await page
+      .locator("main table tbody tr a[href^='/app/organization/requirements/']")
+      .allInnerTexts();
+    expectedErrorUrls.add(madUrl);
+    const p9Cross = await page.goto(madUrl);
+    await page.waitForLoadState("networkidle");
+    expectedErrorUrls.delete(madUrl);
+    const p9Profile = await asSeedUser(OTHER, "organization-profile", {
+      query: { organizationId: aoMro.id },
+    });
+    const p9Count = await seedRest(OTHER, "rpc/count_visible_network", {
+      p_organization_id: aoMro.id,
+    });
+    ok(
+      "PKG P09 7 negative (another organization): «DEMO AERO SERVICES LISBON» lists none of Demo MRO's needs; a Demo MRO need URL is a 404; `organization-profile` and `count_visible_network` refuse Demo MRO's id (no data, 42501)",
+      /^DEMO AERO SERVICES LISBON Operaciones/.test(p9OtherHome) &&
+        p9MroTitles.length > 0 &&
+        p9OtherTitles.every((t) => !p9MroTitles.includes(t)) &&
+        p9Cross?.status() === 404 &&
+        p9Profile.data === undefined &&
+        p9Profile.error !== undefined &&
+        p9Count.code === "42501",
+      `cross=${p9Cross?.status()} profile=${JSON.stringify(p9Profile.error ?? "").slice(0, 60)} count=${JSON.stringify(p9Count).slice(0, 80)}`,
+    );
+    await logout();
+  } finally {
+    // Restore: the three accounts in English, the locale cookie gone (the blocks that follow expect English).
+    const p9Back = [];
+    for (const email of [ADMIN, MEMBER, OTHER])
+      p9Back.push(
+        (await asSeedUser(email, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+          .ok === true,
+      );
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P09 8 restore: admin.mro, charlie and admin.other in English",
+      p9Back.every(Boolean),
+      p9Back.join(),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
