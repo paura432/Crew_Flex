@@ -4273,6 +4273,440 @@ await logout();
   }
 }
 
+// PKG P07 (logbook parity, F3 — TEC-06 #1-#14; BR-17, T-19…T-22, T-112): the v1.8 «Logbook personal» in Spanish —
+// the sidebar entry «Logbook», the header («MI EXPERIENCIA» / «Logbook personal» / the demo sentence), the panel
+// «Nueva entrada» with the connected disclaimer, «Fecha de la tarea» = today in Madrid (also its max), «Aeronave» with
+// the 12 v1.8 suggestions, the 6 categories and 5 environments with the v1.8 defaults, «ATA (opcional)», «Horas» + its
+// hint, «Descripción técnica», «Disponible para seleccionar en Candidate Pack» + «Los expedientes ya enviados conservan
+// su copia.», the v1.8 refusals (a future date → «El logbook registra actividad realizada, no futura.» + «Indica una
+// tarea realizada, fecha válida y descripción.»; 25 h → «Horas: valor no válido…»), «Guardar entrada» → «Entrada
+// guardada» with the form emptied, the row («{aeronave} · {categoría}», the date chip, «ATA {n} · {h} h» with the
+// Spanish decimal mark · environment, «Autodeclarada»), the five widths, «Seleccionable para expediente» kept after a
+// reload, the inline «Editar experiencia» → «Logbook actualizado», «Archivar» → «Ver archivo» / «Entradas archivadas»
+// → «Restaurar» → «Ver activas», «Eliminar» → «Eliminar definitivamente» → «Entrada eliminada», and the empty texts.
+// Negatives: echo cannot read, edit, archive or delete delta's entry (404 / RLS), nor write one in delta's name (strict
+// schema); an organization account cannot create an entry (FORBIDDEN) and gets «No professional profile» on the URL,
+// without a «Logbook» entry. The entry is deleted at the end whatever happens; delta is left in English.
+{
+  const DELTA = "delta@crewflex.test";
+  const ECHO = "echo@crewflex.test";
+  const MRO = "admin.mro@crewflex.test";
+  const LB = "/app/professional/logbook";
+  const P7_PREFIX = "A320 EC-QAA (P07 ";
+  const p7Aircraft = `${P7_PREFIX}${Date.now()})`;
+  const p7Madrid = (offsetDays) =>
+    new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(
+      new Date(Date.now() + offsetDays * 86_400_000),
+    );
+  const p7Today = p7Madrid(0);
+  // `formatDate("es", …)`: day · short month · year, rendered in UTC (BR-10).
+  const p7Chip = new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${p7Today}T00:00:00Z`));
+  const p7Main = async () => (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  const p7Es = async () => {
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) === "es") return;
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+  };
+  const p7Status = (text) =>
+    page
+      .locator("main [role=status], main [role=alert]")
+      .filter({ hasText: text })
+      .first()
+      .waitFor({ timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+  const p7Row = () => page.locator("main li", { hasText: p7Aircraft });
+  /** Delta's own entries (both views): the smoke's ones by id, and the totals the UI must mirror. */
+  const p7List = async () => {
+    const mine = [];
+    const total = {};
+    for (const view of ["active", "archived"]) {
+      const listed = await asSeedUser(DELTA, "professional-logbook", { query: { view } });
+      total[view] = listed.data?.total ?? -1;
+      for (const e of listed.data?.entries ?? []) {
+        if (e.aircraft.startsWith(P7_PREFIX)) mine.push({ ...e, view });
+      }
+    }
+    return { mine, total };
+  };
+  const p7Fill = async (values) => {
+    for (const [sel, value] of Object.entries(values)) await page.fill(sel, value);
+  };
+  try {
+    await login(DELTA);
+    await p7Es();
+    await page.goto(`${BASE}${LB}`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P07 0 «Logbook personal» in Spanish");
+    const p7Page = await p7Main();
+    const p7Before = await p7List();
+    const p7Nav = await page
+      .locator(`a[href='${LB}'][aria-current=page]`)
+      .first()
+      .innerText()
+      .catch(() => "");
+    const p7Cats = await page.locator("#category option").allInnerTexts();
+    const p7Envs = await page.locator("#environment option").allInnerTexts();
+    const p7Suggestions = await page
+      .locator("#aircraft-options option")
+      .evaluateAll((os) => os.map((o) => o.value));
+    const p7Labels = await page.locator("main form label").allInnerTexts();
+    ok(
+      "PKG P07 0b v1.8 logbook (TEC-06 #1-#9, #11): sidebar «Logbook» current; «MI EXPERIENCIA» / «Logbook personal» / «Registro auxiliar privado…»; «Nueva entrada» with the connected disclaimer; «Fecha de la tarea» = today in Madrid and max today; «Aeronave» (free text) with the 12 v1.8 suggestions; the 6 categories, default «Defect Rectification»; the 5 environments, default «Line Maintenance»; «ATA (opcional)», «Horas» + «De 0 a 24, en pasos de 0,1.», «Descripción técnica», «Disponible para seleccionar en Candidate Pack» + «Los expedientes ya enviados conservan su copia.», «Guardar entrada»; «Historial» + «Ver archivo»; the empty text iff no active entry",
+      p7Nav.trim() === "Logbook" &&
+        /MI EXPERIENCIA Logbook personal Registro auxiliar privado\. No sustituye registros oficiales de la empresa\./.test(
+          p7Page,
+        ) &&
+        /Nueva entrada Registro autodeclarado; no constituye certificación de experiencia ni puesta en servicio\. Solo tú puedes verlo; las entradas marcadas «Seleccionable para expediente» se copian en el expediente de las candidaturas que presentes\./.test(
+          p7Page,
+        ) &&
+        (await page.inputValue("#entryDate")) === p7Today &&
+        (await page.getAttribute("#entryDate", "max")) === p7Today &&
+        (await page.getAttribute("#aircraft", "maxlength")) === "100" &&
+        p7Suggestions.length === 12 &&
+        p7Suggestions[0] === "A320 Family" &&
+        p7Suggestions[11] === "Robinson R44" &&
+        p7Cats.join("|") ===
+          "Defect Rectification|Inspection|Component Replacement|Troubleshooting|Sheet Metal / Structures|Cabin / Interiors" &&
+        (await page.inputValue("#category")) === "defect_rectification" &&
+        p7Envs.join("|") ===
+          "Line Maintenance|Base Maintenance|Engine Bay Check|AOG Intervention|Workshop" &&
+        (await page.inputValue("#environment")) === "line_maintenance" &&
+        [
+          "Fecha de la tarea",
+          "Aeronave",
+          "Categoría de tarea",
+          "Entorno",
+          "ATA (opcional)",
+          "Horas",
+          "Descripción técnica",
+        ].every((l) => p7Labels.includes(l)) &&
+        (await page.getAttribute("#ata", "maxlength")) === "10" &&
+        (await page.getAttribute("#hours", "step")) === "0.1" &&
+        (await page.getAttribute("#hours", "max")) === "24" &&
+        (await page.getAttribute("#description", "maxlength")) === "3000" &&
+        /De 0 a 24, en pasos de 0,1\./.test(p7Page) &&
+        /Disponible para seleccionar en Candidate Pack/.test(p7Page) &&
+        /Los expedientes ya enviados conservan su copia\./.test(p7Page) &&
+        !(await page.isChecked("input[name=cvRelevant]")) &&
+        (await page.getByRole("button", { name: "Guardar entrada" }).count()) === 1 &&
+        /Historial/.test(p7Page) &&
+        (await page.getByRole("link", { name: "Ver archivo" }).count()) === 1 &&
+        /Todavía no hay entradas\. Las que guardes aparecerán aquí\./.test(p7Page) ===
+          (p7Before.total.active === 0),
+      `nav=${p7Nav} cats=${p7Cats.join("|")} envs=${p7Envs.join("|")} sugg=${p7Suggestions.length} active=${p7Before.total.active} ${p7Page.slice(0, 200)}`,
+    );
+
+    // v1.8 refusals: a future date (the demo sentence + the connected one), then 25 h.
+    await p7Fill({
+      "#entryDate": p7Madrid(2),
+      "#aircraft": p7Aircraft,
+      "#hours": "3.5",
+      "#description": "Local UI check · P07 · sustitución de rueda principal izquierda.",
+    });
+    await page.getByRole("button", { name: "Guardar entrada" }).click();
+    const p7FutureField = await page
+      .locator("#entryDate-error")
+      .innerText()
+      .catch(() => "");
+    const p7FutureNotice = await p7Status(
+      "Indica una tarea realizada, fecha válida y descripción.",
+    );
+    const p7Unsaved = (await p7List()).mine.length === 0;
+    await p7Fill({ "#entryDate": p7Today, "#hours": "25" });
+    await page.getByRole("button", { name: "Guardar entrada" }).click();
+    const p7HoursField = await page
+      .locator("#hours-error")
+      .innerText()
+      .catch(() => "");
+    const p7HoursNotice = await p7Status("Revisa los campos marcados.");
+    ok(
+      "PKG P07 1 refusals (TEC-06 #3, #7, #10; BR-17.2): a date two days ahead → «El logbook registra actividad realizada, no futura.» on the field and «Indica una tarea realizada, fecha válida y descripción.», nothing saved; 25 h → «Horas: valor no válido. De 0 a 24, en pasos de 0,1.» and «Revisa los campos marcados.»",
+      p7FutureField === "El logbook registra actividad realizada, no futura." &&
+        p7FutureNotice &&
+        p7Unsaved &&
+        p7HoursField === "Horas: valor no válido. De 0 a 24, en pasos de 0,1." &&
+        p7HoursNotice,
+      `date=${p7FutureField} notice=${p7FutureNotice} unsaved=${p7Unsaved} hours=${p7HoursField} notice=${p7HoursNotice}`,
+    );
+
+    await p7Fill({ "#hours": "3.5", "#ata": "32" });
+    await page.selectOption("#category", "component_replacement");
+    await page.selectOption("#environment", "aog_intervention");
+    await page.getByRole("button", { name: "Guardar entrada" }).click();
+    const p7Saved = await p7Status("Entrada guardada");
+    await p7Row()
+      .waitFor({ timeout: 15000 })
+      .catch(() => {});
+    const p7RowText = (
+      await p7Row()
+        .innerText()
+        .catch(() => "no row")
+    ).replace(/\s+/g, " ");
+    const p7After = await p7List();
+    const p7Entry = p7After.mine.find((e) => e.aircraft === p7Aircraft);
+    ok(
+      "PKG P07 2 save (TEC-06 #10, #11, #14; T-20): «Guardar entrada» → «Entrada guardada»; the form empties back to the defaults; the row «{aeronave} · Component Replacement», the date chip, «ATA 32 · 3,5 h · AOG Intervention» (Spanish decimal mark), the description, «Autodeclarada», «Seleccionable para expediente» off, «Editar» / «Archivar»; the API holds the entry active, not selectable, hours 3.5",
+      p7Saved &&
+        (await page.inputValue("#aircraft")) === "" &&
+        (await page.inputValue("#entryDate")) === p7Today &&
+        (await page.inputValue("#category")) === "defect_rectification" &&
+        (await page.inputValue("#hours")) === "" &&
+        (await p7Row().count()) === 1 &&
+        p7RowText.includes(`${p7Aircraft} · Component Replacement`) &&
+        p7RowText.includes(p7Chip) &&
+        p7RowText.includes("ATA 32 · 3,5 h · AOG Intervention") &&
+        p7RowText.includes("sustitución de rueda principal izquierda") &&
+        p7RowText.includes("Autodeclarada") &&
+        !(await p7Row().getByLabel("Seleccionable para expediente").isChecked()) &&
+        (await p7Row().getByRole("button", { name: "Editar" }).count()) === 1 &&
+        (await p7Row().getByRole("button", { name: "Archivar" }).count()) === 1 &&
+        !/Todavía no hay entradas/.test(await p7Main()) &&
+        p7Entry?.view === "active" &&
+        p7Entry.cvRelevant === false &&
+        p7Entry.hours === 3.5 &&
+        p7Entry.ata === "32" &&
+        p7Entry.entryDate === p7Today,
+      `saved=${p7Saved} chip=${p7Chip} ${p7RowText.slice(0, 200)} api=${JSON.stringify(p7Entry ?? null).slice(0, 120)}`,
+    );
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    for (const width of [1440, 1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+      await page.waitForTimeout(300);
+      const p7Overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      );
+      ok(`PKG P07 3 @${width}: no horizontal overflow`, !p7Overflow, `overflow=${p7Overflow}`);
+      if (width === 1440 || width === 390) await shot(`p07-logbook-${width}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await p7Row().getByLabel("Seleccionable para expediente").check();
+    const p7Selected = await p7Status("Logbook actualizado");
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p7SelectedApi = (await p7List()).mine.find((e) => e.id === p7Entry?.id)?.cvRelevant;
+    ok(
+      "PKG P07 4 selection (TEC-06 #9; T-112): «Seleccionable para expediente» → «Logbook actualizado»; still checked after a reload and `cvRelevant` true in the API",
+      p7Selected &&
+        (await p7Row().getByLabel("Seleccionable para expediente").isChecked()) &&
+        p7SelectedApi === true,
+      `status=${p7Selected} api=${p7SelectedApi}`,
+    );
+
+    await p7Row().getByRole("button", { name: "Editar" }).click();
+    // While editing, the aircraft is an input value, not text: the row is the one holding the edit form.
+    const p7EditRow = page.locator("main li", { has: page.locator("#edit-aircraft") });
+    await p7EditRow.waitFor({ timeout: 15000 }).catch(() => {});
+    const p7EditTitle = await p7EditRow
+      .locator("h3")
+      .innerText()
+      .catch(() => "");
+    const p7EditOpen =
+      (await page.inputValue("#edit-aircraft")) === p7Aircraft &&
+      (await page.inputValue("#edit-hours")) === "3.5" &&
+      (await page.inputValue("#edit-ata")) === "32" &&
+      (await page.inputValue("#edit-category")) === "component_replacement" &&
+      (await page.inputValue("#edit-entryDate")) === p7Today &&
+      (await p7EditRow.getByRole("button", { name: "Guardar cambios" }).count()) === 1 &&
+      (await p7EditRow.getByRole("button", { name: "Cancelar" }).count()) === 1;
+    await p7Fill({ "#edit-hours": "2", "#edit-ata": "32-41" });
+    await page.getByRole("button", { name: "Guardar cambios" }).click();
+    const p7Edited = await p7Status("Logbook actualizado");
+    await p7Row()
+      .filter({ hasText: "ATA 32-41 · 2 h · AOG Intervention" })
+      .waitFor({ timeout: 15000 })
+      .catch(() => {});
+    const p7EditedRow = (await p7Row().innerText()).replace(/\s+/g, " ");
+    ok(
+      "PKG P07 5 inline edit (TEC-06 #12; T-22): «Editar» opens «Editar experiencia» in the row with the entry's values, «Guardar cambios» / «Cancelar»; 2 h and ATA 32-41 → «Logbook actualizado» and the row reads «ATA 32-41 · 2 h · AOG Intervention»",
+      p7EditTitle === "Editar experiencia" &&
+        p7EditOpen &&
+        p7Edited &&
+        p7EditedRow.includes("ATA 32-41 · 2 h · AOG Intervention"),
+      `title=${p7EditTitle} open=${p7EditOpen} status=${p7Edited} ${p7EditedRow.slice(0, 160)}`,
+    );
+
+    // Negatives through the API: another technician and an organization account.
+    const p7Id = p7Entry?.id ?? "00000000-0000-0000-0000-000000000000";
+    const p7Echo = {
+      list: (await asSeedUser(ECHO, "professional-logbook")).data?.entries?.some(
+        (e) => e.id === p7Id,
+      ),
+      rest: await seedRest(ECHO, `logbook_entries?select=id&id=eq.${p7Id}`),
+      edit: (
+        await asSeedUser(ECHO, "professional-logbook", {
+          method: "PATCH",
+          query: { id: p7Id },
+          body: { hours: 1 },
+        })
+      ).error?.code,
+      archive: (
+        await asSeedUser(ECHO, "professional-logbook", {
+          method: "PATCH",
+          query: { id: p7Id },
+          body: { archived: true },
+        })
+      ).error?.code,
+      remove: (
+        await asSeedUser(ECHO, "professional-logbook", { method: "DELETE", query: { id: p7Id } })
+      ).error?.code,
+      // S-2: the owner is the JWT subject; a payload naming delta is refused by the strict schema.
+      impersonate: (
+        await asSeedUser(ECHO, "professional-logbook", {
+          method: "POST",
+          headers: { "Idempotency-Key": crypto.randomUUID() },
+          body: {
+            entryDate: p7Today,
+            aircraft: p7Aircraft,
+            hours: 1,
+            category: "inspection",
+            environment: "workshop",
+            description: "P07 impersonation attempt",
+            technicianProfileId: p7Id,
+          },
+        })
+      ).error?.code,
+    };
+    const p7Mro = (
+      await asSeedUser(MRO, "professional-logbook", {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: {
+          entryDate: p7Today,
+          aircraft: "P07 org",
+          hours: 1,
+          category: "inspection",
+          environment: "workshop",
+          description: "P07 organization attempt",
+        },
+      })
+    ).error?.code;
+    const p7Intact = (await p7List()).mine.find((e) => e.id === p7Id);
+    ok(
+      "PKG P07 6 negatives (API; TEC-06 #14, BR-17.4, S-2): echo does not list delta's entry (function and PostgREST), gets NOT_FOUND on edit, archive and delete, and cannot create one naming delta (VALIDATION_ERROR); an organization account cannot create an entry (FORBIDDEN); the entry is intact (2 h, active)",
+      p7Echo.list === false &&
+        Array.isArray(p7Echo.rest) &&
+        p7Echo.rest.length === 0 &&
+        p7Echo.edit === "NOT_FOUND" &&
+        p7Echo.archive === "NOT_FOUND" &&
+        p7Echo.remove === "NOT_FOUND" &&
+        p7Echo.impersonate === "VALIDATION_ERROR" &&
+        p7Mro === "FORBIDDEN" &&
+        p7Intact?.view === "active" &&
+        p7Intact.hours === 2,
+      JSON.stringify({ ...p7Echo, mro: p7Mro, intact: p7Intact?.hours }).slice(0, 240),
+    );
+
+    await p7Row().getByRole("button", { name: "Archivar" }).click();
+    const p7Archived = await p7Status("Logbook actualizado");
+    await page.waitForFunction(
+      (a) => !document.querySelector("main")?.innerText.includes(a),
+      p7Aircraft,
+      { timeout: 15000 },
+    );
+    await page.getByRole("link", { name: "Ver archivo" }).click();
+    await page.waitForURL(/view=archived/);
+    await page.waitForLoadState("networkidle");
+    const p7ArchivePage = await p7Main();
+    const p7ArchiveRow = (
+      await p7Row()
+        .innerText()
+        .catch(() => "no row")
+    ).replace(/\s+/g, " ");
+    ok(
+      "PKG P07 7 archive (TEC-06 #13): «Archivar» → «Logbook actualizado» and the row leaves the history; «Ver archivo» → `?view=archived`, «Entradas archivadas» with the row («Restaurar», «Eliminar»; no «Editar», «Archivar» or selection) and «Ver activas»",
+      p7Archived &&
+        /Entradas archivadas/.test(p7ArchivePage) &&
+        (await p7Row().count()) === 1 &&
+        (await p7Row().getByRole("button", { name: "Restaurar" }).count()) === 1 &&
+        (await p7Row().getByRole("button", { name: "Eliminar" }).count()) === 1 &&
+        (await p7Row().getByRole("button", { name: "Editar" }).count()) === 0 &&
+        (await p7Row().getByRole("button", { name: "Archivar" }).count()) === 0 &&
+        !p7ArchiveRow.includes("Seleccionable para expediente") &&
+        (await page.getByRole("link", { name: "Ver activas" }).count()) === 1,
+      `status=${p7Archived} ${p7ArchivePage.slice(0, 160)}`,
+    );
+
+    await p7Row().getByRole("button", { name: "Restaurar" }).click();
+    const p7Restored = await p7Status("Logbook actualizado");
+    await page.getByRole("link", { name: "Ver activas" }).click();
+    await page.waitForURL((u) => u.pathname === LB && !u.search.includes("archived"));
+    await page.waitForLoadState("networkidle");
+    const p7Back = (await p7Row().count()) === 1;
+    await p7Row().getByRole("button", { name: "Archivar" }).click();
+    await p7Status("Logbook actualizado");
+    await page.goto(`${BASE}${LB}?view=archived`);
+    await page.waitForLoadState("networkidle");
+    await p7Row().getByRole("button", { name: "Eliminar" }).click();
+    const p7Confirm =
+      (await p7Row().getByRole("button", { name: "Eliminar definitivamente" }).count()) === 1 &&
+      (await p7Row().getByRole("button", { name: "Cancelar" }).count()) === 1;
+    await p7Row().getByRole("button", { name: "Eliminar definitivamente" }).click();
+    const p7Deleted = await p7Status("Entrada eliminada");
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p7Final = await p7List();
+    const p7EmptyArchive = /No hay entradas archivadas\./.test(await p7Main());
+    ok(
+      "PKG P07 8 restore and delete (TEC-06 #13; T-22): «Restaurar» → «Logbook actualizado» and «Ver activas» shows the row again; archived once more, «Eliminar» asks «Eliminar definitivamente» / «Cancelar» → «Entrada eliminada»; the row is gone in both views and «No hay entradas archivadas.» shows iff the archive is empty",
+      p7Restored &&
+        p7Back &&
+        p7Confirm &&
+        p7Deleted &&
+        (await p7Row().count()) === 0 &&
+        p7Final.mine.length === 0 &&
+        p7EmptyArchive === (p7Final.total.archived === 0),
+      `restored=${p7Restored} back=${p7Back} confirm=${p7Confirm} deleted=${p7Deleted} left=${p7Final.mine.length} archived=${p7Final.total.archived} empty=${p7EmptyArchive}`,
+    );
+    await logout();
+
+    await login(MRO);
+    await page.goto(`${BASE}${LB}`);
+    await page.waitForLoadState("networkidle");
+    const p7OrgPage = await p7Main();
+    const p7OrgNav = await page.locator(`nav a[href='${LB}']`).count();
+    ok(
+      "PKG P07 9 negative (browser): an organization account on the logbook URL reads «No professional profile» / «The logbook belongs to professional accounts.», no entry form, no «Logbook» entry",
+      /No professional profile/.test(p7OrgPage) &&
+        /The logbook belongs to professional accounts\./.test(p7OrgPage) &&
+        (await page.locator("#entryDate").count()) === 0 &&
+        p7OrgNav === 0,
+      p7OrgPage.slice(0, 120),
+    );
+    await logout();
+  } finally {
+    // Restore: every P07 entry of delta deleted (both views), delta back in English, the locale cookie gone.
+    const p7Left = (await p7List()).mine;
+    const p7Removed = [];
+    for (const e of p7Left) {
+      p7Removed.push(
+        (await asSeedUser(DELTA, "professional-logbook", { method: "DELETE", query: { id: e.id } }))
+          .data?.deleted === true,
+      );
+    }
+    const p7Locale =
+      (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    // `p7Es` also set the browser's locale cookie (the settings action): the blocks that follow expect English.
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    const p7Check = (await p7List()).mine;
+    ok(
+      "PKG P07 10 restore: nothing of the smoke left in the logbook (both views), delta in English",
+      p7Removed.every(Boolean) && p7Check.length === 0 && p7Locale,
+      JSON.stringify({ removed: p7Removed, left: p7Check.length, locale: p7Locale }),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
