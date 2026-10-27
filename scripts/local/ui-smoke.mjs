@@ -4707,6 +4707,502 @@ await logout();
   }
 }
 
+// PKG P08 (tools parity, F3 — TOOL-01 #1/#2/#15/#17/#23/#24/#28/#30/#33, TOOL-05 #1-#16, TOOL-06 #1-#12, TOOL-07
+// #1-#19, TOOL-08 #1-#3/#9, TOOL-09, SHOT-04 #3/#5; BR-16, T-145, T-166): the v1.8 workbench in Spanish — header, hero,
+// the six tiles in v1.8's order (fuel out, D-11), the privacy note, a favourite (star, «Tus favoritos» chip with a 17 px
+// icon, kept after a reload); «Inglés y siglas» (tabs, «102 entradas · 46 capítulos de referencia», «Todos» + the 13 areas,
+// trimmed accent-free search, the entry with «Copiar ficha», the empty text, the ATA index that keeps the search and has an
+// empty state, «hidraulica» → 29, the 21-card practice, the 4 sources); «Traductor» (one h1, EN → ES, 5 rows / 2000,
+// «fuel» → «Combustible», the two suggestions, swap keeps the text, no match texts, the Google link only after the consent
+// tick that any edit clears, no request leaves); «Reto diario» (one h1, the Madrid day, 0 → «1 día» ICU, «Diez minutos para
+// ti» with 10, 5 questions with feedback, «Reto completado», no repeat after a reload, the medals with one set of names,
+// the editorial footnote, progress stored under the user's id with ids and answers only); «Logros de aprendizaje» in Mi
+// espacio with the ICU line; five widths. Negatives: no session → 307 to /login and /tools/daily is a 404; echo on the same
+// browser sees none of delta's progress (a key per user id); an organization account shares the bench (v1.8 roles).
+// Restore: the learning key(s) the smoke created are removed, favourites put back, delta in English, the locale cookie gone.
+{
+  const DELTA = "delta@crewflex.test";
+  const ECHO = "echo@crewflex.test";
+  const MRO = "admin.mro@crewflex.test";
+  const p8Today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(
+    new Date(),
+  );
+  // `formatDate("es", "YYYY-MM-DD")`: day · short month · year, rendered in UTC (BR-10).
+  const p8Date = new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${p8Today}T00:00:00Z`));
+  const p8Main = async () => (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  const p8Es = async () => {
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) === "es") return;
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+  };
+  const p8Keys = () =>
+    page.evaluate(() =>
+      Object.keys(localStorage).filter((k) => k.startsWith("crewflex-learning-")),
+    );
+  const p8Overflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  const P8_AREAS = [
+    "Todos",
+    "Mecánica",
+    "Verbos",
+    "Dirección",
+    "Electricidad",
+    "Fluidos",
+    "Estado",
+    "Estructuras",
+    "Materiales",
+    "Inspección",
+    "Combustible",
+    "Medición",
+    "Documentación",
+    "Siglas",
+  ];
+  let p8KeysBefore = [];
+  let p8FavoritesBefore = null;
+  try {
+    await login(DELTA);
+    await p8Es();
+    await page.goto(`${BASE}/app/tools`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P08 0 «Herramientas» in Spanish");
+    p8KeysBefore = await p8Keys();
+    p8FavoritesBefore = await page.evaluate(() => localStorage.getItem("crewflex-tool-favorites"));
+    const p8Home = await p8Main();
+    const p8Tiles = (
+      await page.locator("main section:not([aria-labelledby]) h2").allInnerTexts()
+    ).join("|");
+    ok(
+      "PKG P08 0b v1.8 workbench home (TOOL-01 #5-#8, #11-#14, #23-#30, #33; SHOT-04 #1-#5): one h1 «Para cada jornada.» under «TU CAJA DE HERRAMIENTAS» + «Cálculos claros…»; hero «CREWFLEX · WORKBENCH» / «Tu oficio, un poco más sencillo.» / «Abrir conversor de par» → /app/tools/torque; the six tiles in v1.8's order with their subtitles, no fuel tile (D-11); the privacy note names favourites and challenge progress; «Herramientas» current in the menu",
+      (await page.locator("main h1").count()) === 1 &&
+        /TU CAJA DE HERRAMIENTAS Para cada jornada\. Cálculos claros\. Unidades visibles\. Referencias a mano\./.test(
+          p8Home,
+        ) &&
+        /CREWFLEX · WORKBENCH Tu oficio, un poco más sencillo\./.test(p8Home) &&
+        (await page
+          .locator("main a[href='/app/tools/torque']", { hasText: "Abrir conversor de par" })
+          .count()) === 1 &&
+        p8Tiles === "Reto diario|Traductor|Par de apriete|Conversiones|Inglés y siglas|Duración" &&
+        /5 o 10 preguntas · rachas/.test(p8Home) &&
+        /Español · inglés · francés/.test(p8Home) &&
+        /N·m · lbf·ft · lbf·in/.test(p8Home) &&
+        /22 magnitudes técnicas/.test(p8Home) &&
+        /Diccionario · ATA · práctica/.test(p8Home) &&
+        /HH:MM y horas decimales/.test(p8Home) &&
+        (await page.locator("main a[href*='fuel']").count()) === 0 &&
+        /Tu uso de herramientas es privado: los cálculos se hacen en tu navegador y no se envían a ningún servidor\. Tus favoritos y el progreso de los retos se guardan en este navegador\./.test(
+          p8Home,
+        ) &&
+        (await page.locator("aside a[href='/app/tools'][aria-current=page]").count()) === 1,
+      `${p8Tiles} · ${p8Home.slice(0, 160)}`,
+    );
+
+    // 1. Favourite (TOOL-01 #16-#21, #31): star → chip, kept after a reload, removed again.
+    const p8Star = page.locator("main button[aria-label='Añadir favorito Par de apriete']");
+    const p8StarBefore = await p8Star.count();
+    await p8Star.click();
+    const p8Chip = page.locator(
+      "section[aria-labelledby=tool-favorites] a[href='/app/tools/torque']",
+    );
+    await p8Chip.waitFor({ timeout: 10000 });
+    const p8Icon = await p8Chip.locator("svg").boundingBox();
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p8Stored = await page.evaluate(() => localStorage.getItem("crewflex-tool-favorites"));
+    const p8ChipAfterReload = await p8Chip.count();
+    const p8Pressed = page.locator("main button[aria-label='Quitar favorito Par de apriete']");
+    const p8PressedState = await p8Pressed.getAttribute("aria-pressed");
+    await p8Pressed.click();
+    await page.waitForTimeout(300);
+    ok(
+      "PKG P08 1 favourite (TOOL-01 #16-#21, #31): «Añadir favorito Par de apriete» → «Tus favoritos» chip to /app/tools/torque with a 17 px icon; kept after a reload (`crewflex-tool-favorites` lists `torque`, aria-pressed=true); «Quitar favorito…» removes the block",
+      p8StarBefore === 1 &&
+        p8Icon !== null &&
+        Math.round(p8Icon.width) === 17 &&
+        p8ChipAfterReload === 1 &&
+        JSON.parse(p8Stored ?? "[]").includes("torque") &&
+        p8PressedState === "true" &&
+        (await p8Chip.count()) === 0 &&
+        (await p8Star.count()) === 1,
+      `icon=${p8Icon?.width} stored=${p8Stored} pressed=${p8PressedState}`,
+    );
+
+    // 2. «Inglés y siglas» (TOOL-05).
+    await page.goto(`${BASE}/app/tools/knowledge`);
+    await page.waitForLoadState("networkidle");
+    const p8Search = page.getByRole("searchbox", { name: "Buscar término, sigla o ATA" });
+    const p8Areas = (await page.locator("#knowledge-area option").allInnerTexts()).join("|");
+    const p8KnowledgeHead = await p8Main();
+    const p8TermsPressed = await page
+      .getByRole("button", { name: "Diccionario ES / EN" })
+      .getAttribute("aria-pressed");
+    const p8PlaceholderTerms = await p8Search.getAttribute("placeholder");
+    await p8Search.fill(" TORQUE ");
+    await page
+      .getByRole("button", { name: /^Torque\b/ })
+      .first()
+      .click();
+    const p8Entry = await p8Main();
+    await p8Search.fill("zzzz");
+    const p8EmptyTerms = await page.locator("main [role=status]").allInnerTexts();
+    await page.getByRole("button", { name: "Índice ATA" }).click();
+    const p8SearchKept = await p8Search.inputValue();
+    const p8PlaceholderAta = await p8Search.getAttribute("placeholder");
+    const p8EmptyAta = await page.locator("main [role=status]").allInnerTexts();
+    await p8Search.fill("hidraulica");
+    const p8Ata29 = (await page.locator("main ul[lang=es] li").allInnerTexts())
+      .map((x) => x.replace(/\s+/g, " ").trim())
+      .join("|");
+    await p8Search.fill("28");
+    const p8Ata28 = (await page.locator("main ul[lang=es] li").allInnerTexts())
+      .map((x) => x.replace(/\s+/g, " ").trim())
+      .join("|");
+    await page.getByRole("button", { name: "Práctica breve" }).click();
+    const p8Practice1 = await p8Main();
+    await page.getByRole("button", { name: "Mostrar significado" }).click();
+    const p8Revealed = await page.getByRole("button", { name: "Siguiente término" }).count();
+    await page.getByRole("button", { name: "Siguiente término" }).click();
+    const p8Practice2 = await p8Main();
+    const p8Sources = await page
+      .locator("main details a[target=_blank][rel=noreferrer]")
+      .evaluateAll((as) => as.map((a) => `${a.textContent.trim()} ${a.getAttribute("href")}`));
+    ok(
+      "PKG P08 2 «Inglés y siglas» (TOOL-05 #1-#16): one h1; «Diccionario ES / EN» pressed, «102 entradas · 46 capítulos de referencia», the two placeholders; «Todos» + the 13 areas in v1.8's order; « TORQUE » (trimmed, case-free) → the Torque entry: «Mecánica» / «Torque» / «Par de apriete» / «Referencia editorial inicial · 2026-10-13.1» / «Copiar ficha» (not «Copiar con unidades»); «zzzz» → «No hay entradas para esta búsqueda…»; «Índice ATA» keeps the search and has an empty state; «hidraulica» → «29 Energía hidráulica»; «28» → Combustible; «Práctica breve» 1/21 → «Mostrar significado» → «Siguiente término» → 2/21 + «Ejemplos originales de lenguaje…»; «Fuentes y revisión editorial» with the 4 v1.8 links",
+      (await page.locator("main h1").count()) === 1 &&
+        /^Inglés y siglas$/.test((await page.locator("main h1").innerText()).trim()) &&
+        p8TermsPressed === "true" &&
+        /102 entradas · 46 capítulos de referencia/.test(p8KnowledgeHead) &&
+        p8PlaceholderTerms === "Término, sigla o significado: torque, holgura, AMM…" &&
+        p8PlaceholderAta === "Número o sistema: 28, combustible…" &&
+        p8Areas === P8_AREAS.join("|") &&
+        /Mecánica Torque Par de apriete/.test(p8Entry) &&
+        /Referencia editorial inicial · 2026-10-13\.1/.test(p8Entry) &&
+        /Copiar ficha/.test(p8Entry) &&
+        !/Copiar con unidades/.test(p8Entry) &&
+        p8EmptyTerms.some((x) =>
+          /No hay entradas para esta búsqueda\. Prueba el término inglés o una sigla\./.test(x),
+        ) &&
+        p8SearchKept === "zzzz" &&
+        p8EmptyAta.some((x) => /Ningún capítulo coincide con esta búsqueda/.test(x)) &&
+        p8Ata29 === "29 Energía hidráulica" &&
+        /^28 Combustible$/.test(p8Ata28) &&
+        /INGLÉS TÉCNICO · 1\/21/.test(p8Practice1) &&
+        p8Revealed === 1 &&
+        /INGLÉS TÉCNICO · 2\/21/.test(p8Practice2) &&
+        /Ejemplos originales de lenguaje; no son instrucciones para una tarea concreta\./.test(
+          p8Practice2,
+        ) &&
+        p8Sources.join("|") ===
+          "FAA · Aviation Maintenance Technician Handbooks https://www.faa.gov/regulations_policies/handbooks_manuals/aviation|ASD-STE100 · Inglés técnico simplificado https://www.asd-ste100.org/about_STE.html|ATA · Estándares de documentación https://ataebiz.org/standards/|EASA · Part-145 https://www.easa.europa.eu/en/the-agency/faqs/part-145",
+      `areas=${p8Areas} · ata=${p8Ata29}/${p8Ata28} · empty=${p8EmptyTerms.join(";")} / ${p8EmptyAta.join(";")} · sources=${p8Sources.length}`,
+    );
+
+    // 3. «Traductor» (TOOL-06). The external link is read, never followed.
+    await page.goto(`${BASE}/app/tools/translator`);
+    await page.waitForLoadState("networkidle");
+    const p8Translator = await p8Main();
+    const p8Pair = async () => [
+      await page.locator("#translator-from").inputValue(),
+      await page.locator("#translator-to").inputValue(),
+    ];
+    const p8PairStart = await p8Pair();
+    const p8Rows = await page.locator("#translator-text").getAttribute("rows");
+    const p8Max = await page.locator("#translator-text").getAttribute("maxlength");
+    const p8Counter0 = await page.locator("#translator-count").innerText();
+    const p8AllSuggestions = await page.locator("main ul li button").count();
+    await page.fill("#translator-text", "fu");
+    const p8Suggested = (await page.locator("main ul li button b").allInnerTexts()).join("|");
+    await page.fill("#translator-text", "fuel");
+    const p8Live = page.locator("main [aria-live=polite]").first();
+    const p8Match = await p8Live.innerText();
+    await page.getByRole("button", { name: "Intercambiar idiomas" }).click();
+    const p8PairSwapped = await p8Pair();
+    const p8TextSwapped = await page.locator("#translator-text").inputValue();
+    await page.fill("#translator-text", "xyz");
+    await page.getByRole("button", { name: "Intercambiar idiomas" }).click();
+    const p8TextKept = await page.locator("#translator-text").inputValue();
+    const p8NoMatch = await p8Main();
+    await page.getByText("Traducir texto libre con Google Translate").click();
+    const p8External = page.locator("main a[href^='https://translate.google.com/']");
+    const p8HintBefore = await page
+      .getByText("Introduce texto, elige idiomas distintos y confirma el envío.")
+      .count();
+    const p8LinkBefore = await p8External.count();
+    await page.getByLabel("Quiero enviar este texto a Google para traducirlo.").check();
+    const p8Href = await p8External.getAttribute("href");
+    await page.fill("#translator-text", "xyz2");
+    const p8ConsentAfterEdit = await page
+      .getByLabel("Quiero enviar este texto a Google para traducirlo.")
+      .isChecked();
+    const p8LinkAfterEdit = await p8External.count();
+    ok(
+      "PKG P08 3 «Traductor» (TOOL-06 #1-#12): one h1 «Traductor» (no second header); «IDIOMAS · ES / EN / FR» / «Traductor de apoyo» / the lead; EN → ES by default; textarea 5 rows, 2000 max, «0/2000 caracteres · no se guarda el texto.»; «Repertorio sin conexión» with the 32 rows; «fu» → the 2 suggestions (Fuel, Fuselage); «fuel» → «Equivalencia del repertorio local» «Combustible»; swap → ES → EN with «Combustible» kept; «xyz» survives a swap (v1.8 emptied it) with «Sin coincidencia exacta local…» + «No hay sugerencias locales para este texto.»; the Google link only after the consent tick (sl/tl/text), gone again after an edit; the footnote; no request to translate.google.com",
+      (await page.locator("main h1").count()) === 1 &&
+        /^Traductor$/.test((await page.locator("main h1").innerText()).trim()) &&
+        /IDIOMAS · ES \/ EN \/ FR Traductor de apoyo Repertorio técnico local y acceso a traducción libre con conexión\./.test(
+          p8Translator,
+        ) &&
+        p8PairStart.join(">") === "en>es" &&
+        p8Rows === "5" &&
+        p8Max === "2000" &&
+        p8Counter0 === "0/2000 caracteres · no se guarda el texto." &&
+        /Repertorio sin conexión 32 términos y frases originales de apoyo\. No es un traductor automático completo\./.test(
+          p8Translator,
+        ) &&
+        p8AllSuggestions === 32 &&
+        /Equivalencia del repertorio local\s+Combustible/i.test(p8Match) &&
+        p8Suggested === "Fuel|Fuselage" &&
+        p8PairSwapped.join(">") === "es>en" &&
+        p8TextSwapped === "Combustible" &&
+        p8TextKept === "xyz" &&
+        /Sin coincidencia exacta local\. Puedes consultar las sugerencias o abrir la traducción libre externa\./.test(
+          p8NoMatch,
+        ) &&
+        /No hay sugerencias locales para este texto\./.test(p8NoMatch) &&
+        /El significado depende del contexto\. Traducciones de apoyo pendientes de revisión editorial; no sustituyen instrucciones de mantenimiento controladas\./.test(
+          p8NoMatch,
+        ) &&
+        p8HintBefore === 1 &&
+        p8LinkBefore === 0 &&
+        p8Href === "https://translate.google.com/?sl=en&tl=es&text=xyz&op=translate" &&
+        p8ConsentAfterEdit === false &&
+        p8LinkAfterEdit === 0 &&
+        ![...hosts].some((h) => /google/.test(h)),
+      `pair=${p8PairStart}/${p8PairSwapped} text=${p8TextSwapped}/${p8TextKept} href=${p8Href} suggested=${p8Suggested} n=${p8AllSuggestions}`,
+    );
+
+    // 4. «Reto diario» (TOOL-07, TOOL-08 #1-#3): delta has no progress in this browser yet (a key per user id).
+    await page.goto(`${BASE}/app/tools/daily`);
+    await page.waitForLoadState("networkidle");
+    const p8Start = page.getByRole("button", { name: "Comenzar reto de hoy" });
+    await p8Start.waitFor({ timeout: 15000 });
+    const p8Intro = await p8Main();
+    const p8IntroTitle = page.locator("main h2", { hasText: /minutos para ti/ });
+    await page.getByRole("button", { name: "10 preguntas" }).click();
+    const p8Ten = await p8IntroTitle.innerText();
+    await page.getByRole("button", { name: "5 preguntas" }).click();
+    const p8Five = await p8IntroTitle.innerText();
+    await p8Start.click();
+    await page.getByText("Pregunta 1 de 5").waitFor({ timeout: 10000 });
+    const p8Q1 = await p8Main();
+    const p8Options = page.locator("main [role=group][aria-label=Respuestas] button");
+    const p8Confirm = page.getByRole("button", { name: "Confirmar respuesta" });
+    const p8DisabledBefore = await p8Confirm.isDisabled();
+    const p8OptionCount = await p8Options.count();
+    let p8Feedback = false;
+    for (let i = 1; i <= 5; i++) {
+      await p8Options.first().click();
+      await p8Confirm.click();
+      if (i < 5) {
+        await page.getByText(`Pregunta ${i + 1} de 5`).waitFor({ timeout: 10000 });
+        if (i === 1)
+          p8Feedback = /Respuesta anterior correcta|Repaso de la respuesta anterior/.test(
+            (await page.locator("main [role=status]").allInnerTexts()).join(" "),
+          );
+      }
+    }
+    await page.getByText("Reto completado").waitFor({ timeout: 10000 });
+    const p8Done = await p8Main();
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await page.getByText("Reto completado").waitFor({ timeout: 15000 });
+    const p8AfterReload = await p8Main();
+    const p8KeysAfter = await p8Keys();
+    const p8NewKeys = p8KeysAfter.filter((k) => !p8KeysBefore.includes(k));
+    const p8Record = await page.evaluate(
+      ([k, d]) => {
+        const parsed = JSON.parse(localStorage.getItem(k) ?? "{}");
+        const day = parsed[d];
+        return {
+          days: Object.keys(parsed),
+          fields: day ? Object.keys(day).sort() : [],
+          ids: day?.ids?.length,
+          answers: day?.answers?.length,
+          raw: JSON.stringify(parsed),
+        };
+      },
+      [p8NewKeys[0] ?? "", p8Today],
+    );
+    ok(
+      "PKG P08 4 «Reto diario» (TOOL-07 #1-#19, TOOL-08 #1, #3, #9): one h1 «Reto diario»; «APRENDE UN POCO CADA DÍA» / «Tu reto aeronáutico» / «… · {hoy} · día de referencia: Madrid»; «Racha actual 0 días», «Mejor racha 0 días», «Días completados 0»; «Cinco minutos para ti» ↔ «Diez minutos para ti» with 10 (v1.8 kept «Cinco»); «Comenzar reto de hoy» → «Fundamentos · Pregunta 1 de 5», «Progreso del reto», 4 options, «Confirmar respuesta» disabled until a choice; feedback after an answer; «Reto completado», «{n} de 5 respuestas correctas», «Has sumado un día…», «Revisar respuestas y explicaciones»; «1 día» (ICU) in both streaks and 1 completed; medals «Primer reto · Desbloqueado», «Una semana aprendiendo» / «Constancia de 30 días» · «Por conseguir · 7 / 30 días seguidos»; the editorial footnote; still completed after a reload (no repeat); one new key `crewflex-learning-<user id>` with only `ids` (5) and `answers` (5) for today",
+      (await page.locator("main h1").count()) === 1 &&
+        /APRENDE UN POCO CADA DÍA Tu reto aeronáutico Fundamentos, inglés, siglas y sistemas ATA · /.test(
+          p8Intro,
+        ) &&
+        p8Intro.includes(`· ${p8Date} · día de referencia: Madrid`) &&
+        /Racha actual 0 días Mejor racha 0 días Días completados 0/i.test(p8Intro) && // labels uppercased by CSS &&
+        /Cinco minutos para ti/.test(p8Intro) &&
+        /Elige 5 o 10 preguntas\. Recibirás una explicación después de cada respuesta\. El reto cambia cada día\./.test(
+          p8Intro,
+        ) &&
+        p8Ten === "Diez minutos para ti" &&
+        p8Five === "Cinco minutos para ti" &&
+        /Fundamentos · Pregunta 1 de 5/.test(p8Q1) &&
+        (await page.locator("main progress[aria-label='Progreso del reto']").count()) === 0 && // finished: no bar
+        p8OptionCount === 4 &&
+        p8DisabledBefore === true &&
+        p8Feedback &&
+        /Reto completado [0-5] de 5 respuestas correctas Has sumado un día de aprendizaje\. Vuelve mañana para continuar tu racha\. Revisar respuestas y explicaciones/.test(
+          p8Done,
+        ) &&
+        /Racha actual 1 día Mejor racha 1 día Días completados 1/i.test(p8Done) &&
+        /Tu colección de constancia Primer reto Desbloqueado Una semana aprendiendo Por conseguir · 7 días seguidos Constancia de 30 días Por conseguir · 30 días seguidos/.test(
+          p8Done,
+        ) &&
+        /Completar el reto suma un día, aunque haya errores\. Repetir o recargar no suma días extra\./.test(
+          p8Done,
+        ) &&
+        /Contenido editorial de formación, no examen habilitante\. Los logros no acreditan cualificación ni influyen en la selección profesional\. No incluye procedimientos ni extractos de AMM\/TCM\. Catálogo inicial pendiente de revisión formal\./.test(
+          p8Done,
+        ) &&
+        /Reto completado/.test(p8AfterReload) &&
+        !/Comenzar reto de hoy/.test(p8AfterReload) &&
+        p8NewKeys.length === 1 &&
+        /^crewflex-learning-[0-9a-f-]{36}$/.test(p8NewKeys[0]) &&
+        p8Record.days.join() === p8Today &&
+        p8Record.fields.join() === "answers,ids" &&
+        p8Record.ids === 5 &&
+        p8Record.answers === 5 &&
+        !/prompt|explanation/.test(p8Record.raw),
+      `keys=${p8NewKeys.join()} record=${JSON.stringify(p8Record).slice(0, 160)} ten=${p8Ten}`,
+    );
+
+    // 5. «Logros de aprendizaje» in Mi espacio (TOOL-08 #2, #3, #9): the same medals and the ICU line.
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    await page.getByText("Racha actual: 1 día").waitFor({ timeout: 15000 });
+    const p8Space = await p8Main();
+    ok(
+      "PKG P08 5 «Logros de aprendizaje» in Mi espacio (TOOL-08 #2, #3, #9): «Privados en este navegador · separados de las cualificaciones.», «Primer reto · Desbloqueado» with the same names as the challenge, «Racha actual: 1 día · Mejor racha: 1 día · Retos completados: 1» (v1.8 «1 días»), «Las insignias resumen datos declarados. No conceden autorización de firma…», «Abrir el reto diario»",
+      /Logros de aprendizaje/.test(p8Space) &&
+        /Privados en este navegador · separados de las cualificaciones\./.test(p8Space) &&
+        /Primer reto Desbloqueado Una semana aprendiendo Por conseguir · 7 días seguidos Constancia de 30 días Por conseguir · 30 días seguidos/.test(
+          p8Space,
+        ) &&
+        /Racha actual: 1 día · Mejor racha: 1 día · Retos completados: 1/.test(p8Space) &&
+        /Las insignias resumen datos declarados\. No conceden autorización de firma ni sustituyen la revisión de licencia, tipo o competencia\./.test(
+          p8Space,
+        ) &&
+        (await page
+          .locator("main a[href='/app/tools/daily']", { hasText: "Abrir el reto diario" })
+          .count()) === 1,
+      p8Space.slice(0, 120),
+    );
+
+    // 6. Five widths on the home and the challenge, no horizontal overflow.
+    const p8Widths = [];
+    for (const path of ["/app/tools", "/app/tools/daily"]) {
+      await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      for (const width of [1440, 1024, 768, 390, 360]) {
+        await page.setViewportSize({ width, height: width < 800 ? 1100 : 900 });
+        await page.waitForTimeout(250);
+        if (await p8Overflow()) p8Widths.push(`${path}@${width}`);
+        if (path === "/app/tools" && (width === 1440 || width === 390))
+          await shot(`P08-tools-after-${width}`);
+        if (path === "/app/tools/daily" && width === 390) await shot(`P08-daily-after-${width}`);
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    ok(
+      "PKG P08 6 @1440/1024/768/390/360: no horizontal overflow on /app/tools and /app/tools/daily",
+      p8Widths.length === 0,
+      p8Widths.join(","),
+    );
+    await logout();
+
+    // 7. Negatives without a session: the daily challenge needs an account (T-145); it has no public route.
+    const p8Anon = await page.request.get(`${BASE}/app/tools/daily`, { maxRedirects: 0 });
+    const p8PublicDaily = await page.request.get(`${BASE}/tools/daily`, { maxRedirects: 0 });
+    const p8PublicHome = await page.request.get(`${BASE}/tools`, { maxRedirects: 0 });
+    ok(
+      "PKG P08 7 negative (no session): /app/tools/daily → 307 to /login?next=…; /tools/daily → 404 (T-145: the challenge needs an account); /tools → 200",
+      p8Anon.status() === 307 &&
+        /\/login\?next=%2Fapp%2Ftools%2Fdaily$/.test(p8Anon.headers().location ?? "") &&
+        p8PublicDaily.status() === 404 &&
+        p8PublicHome.status() === 200,
+      `${p8Anon.status()} ${p8Anon.headers().location} · ${p8PublicDaily.status()} · ${p8PublicHome.status()}`,
+    );
+
+    // 8. Negative: echo on the same browser (delta's key still stored) sees no progress and creates no key by looking.
+    await login(ECHO);
+    await page.goto(`${BASE}/app/tools/daily`);
+    await page.waitForLoadState("networkidle");
+    const p8EchoStart = page.locator(
+      "main button:has-text('Start today\\'s challenge'), main button:has-text('Comenzar reto de hoy')",
+    );
+    await p8EchoStart.waitFor({ timeout: 15000 });
+    const p8EchoPage = await p8Main();
+    const p8EchoKeys = await p8Keys();
+    ok(
+      "PKG P08 8 negative (another user, same browser): echo gets the start screen with 0 days, not delta's completed challenge; delta's key is untouched and no key is created for echo by looking",
+      /Reto completado|Challenge completed/.test(p8EchoPage) === false &&
+        /0 (días|days)/.test(p8EchoPage) &&
+        p8EchoKeys.join() === p8KeysAfter.join(),
+      `${p8EchoKeys.length} keys · ${p8EchoPage.slice(0, 100)}`,
+    );
+    await logout();
+
+    // 9. An organization account shares the bench (v1.8: technician, company and recruiter roles all have tools).
+    await login(MRO);
+    await page.goto(`${BASE}/app/tools`);
+    await page.waitForLoadState("networkidle");
+    const p8OrgTiles = await page.locator("main section:not([aria-labelledby]) h2").count();
+    await page.goto(`${BASE}/app/tools/knowledge`);
+    await page.waitForLoadState("networkidle");
+    const p8OrgKnowledge = await p8Main();
+    ok(
+      "PKG P08 9 an organization account uses the same six tools (TOOL-01 #1: every signed-in account); «Inglés y siglas» renders its 102 entries for it",
+      p8OrgTiles === 6 && /102/.test(p8OrgKnowledge) && /46/.test(p8OrgKnowledge),
+      `tiles=${p8OrgTiles}`,
+    );
+    await logout();
+  } finally {
+    // Restore: the smoke's learning key(s) removed, favourites as before, delta in English, the locale cookie gone.
+    await page.goto(`${BASE}/login`);
+    await page.waitForLoadState("networkidle");
+    const p8Removed = await page.evaluate(
+      ([before, favorites]) => {
+        const removed = [];
+        for (const k of Object.keys(localStorage)) {
+          if (k.startsWith("crewflex-learning-") && !before.includes(k)) {
+            localStorage.removeItem(k);
+            removed.push(k);
+          }
+        }
+        if (favorites === null) localStorage.removeItem("crewflex-tool-favorites");
+        else localStorage.setItem("crewflex-tool-favorites", favorites);
+        return {
+          removed,
+          keys: Object.keys(localStorage).filter((k) => k.startsWith("crewflex-learning-")),
+          favorites: localStorage.getItem("crewflex-tool-favorites"),
+        };
+      },
+      [p8KeysBefore, p8FavoritesBefore],
+    );
+    const p8Locale =
+      (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    // `p8Es` also set the browser's locale cookie (the settings action): the blocks that follow expect English.
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P08 10 restore: the smoke's learning key removed (the earlier ones untouched), favourites as before, delta in English",
+      p8Removed.keys.join() === p8KeysBefore.join() &&
+        p8Removed.favorites === p8FavoritesBefore &&
+        p8Locale,
+      JSON.stringify(p8Removed).slice(0, 160),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
