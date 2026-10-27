@@ -5,6 +5,7 @@ import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { DIRECTORY_PAGE_SIZE, utcDay } from "@/domain/directory";
+import { isStaffingAgency } from "@/domain/recruiter";
 import type { WorkRequirement } from "@/domain/work-requirement";
 import { searchCandidateDirectory } from "@/features/directory/api";
 import { DirectoryCard } from "@/features/directory/components/DirectoryCard";
@@ -45,11 +46,12 @@ const evaluableAtRequestTime = (requirements: WorkRequirement[]) =>
 export default async function CandidatesPage({
   searchParams,
 }: PageProps<"/app/organization/candidates">) {
-  const [search, { organization, canManage }, t, tDashboard] = await Promise.all([
+  const [search, { organization, canManage }, t, tDashboard, tRecruiter] = await Promise.all([
     searchParams,
     requireOrganizationContext(),
     getTranslations("directory"),
     getTranslations("organization.dashboard"),
+    getTranslations("recruiter"),
   ]);
   if (!canManage) {
     return (
@@ -79,7 +81,14 @@ export default async function CandidatesPage({
 
   return (
     <>
-      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+      {/* v1.8 CandidateDirectory.jsx:20: «RED RECRUITER» for an agency, «RED PROFESIONAL» otherwise (ORG-08 #2). */}
+      <PageHeader
+        eyebrow={
+          isStaffingAgency(organization.type) ? tRecruiter("directoryEyebrow") : t("eyebrow")
+        }
+        title={t("title")}
+        description={t("description")}
+      />
       <p className="mb-4 text-sm text-muted">{t("visibleNote")}</p>
       <EvaluateForm requirements={evaluable} />
       <DirectoryFilters query={query} errors={errors} />
