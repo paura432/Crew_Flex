@@ -2072,6 +2072,7 @@
       "requirementPaused": "The requirement is paused: no proposals or confirmations.",
       "requirementClosed": "The requirement is closed.",
       "requirementCovered": "The requirement is covered.",
+      "days": "{count, plural, one {# shift} other {# shifts}}",
       "reason": "Reason: {reason}",
       "history": "History",
       "event": "{status} · {date} · {actor}",

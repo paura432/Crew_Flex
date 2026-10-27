@@ -9,6 +9,7 @@ import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { APPLICATION_STATUSES, type ApplicationStatus } from "@/domain/applications";
 import { hasPackCopy } from "@/domain/candidate-pack";
+import { requirementDays } from "@/domain/work-requirement";
 import { listMyApplications } from "@/features/applications/api";
 import { ApplicationActions } from "@/features/applications/components/ApplicationActions";
 import { ApplicationDetails } from "@/features/applications/components/ApplicationDetails";
@@ -36,13 +37,14 @@ const REQUIREMENT_NOTE = {
 export default async function MyApplicationsPage({
   searchParams,
 }: PageProps<"/app/professional/applications">) {
-  const [{ status: statusParam, pack: packParam }, actor, t, tDomain, tPack, locale] =
+  const [{ status: statusParam, pack: packParam }, actor, t, tDomain, tPack, tHiring, locale] =
     await Promise.all([
       searchParams,
       requireSessionActor(),
       getTranslations("applications"),
       getTranslations("domain"),
       getTranslations("candidatePack"),
+      getTranslations("hiring.applications"),
       getLocale() as Promise<Locale>,
     ]);
   const header = (
@@ -108,6 +110,10 @@ export default async function MyApplicationsPage({
             {pill(null, t("all", { count: all.length }))}
             {present.map((s) => pill(s, tDomain(`applicationStatus.${s}`)))}
           </nav>
+          {/* A `?status=` with nothing in it (only by URL: the pills list the present states): v1.8's empty state. */}
+          {shown.length === 0 && (
+            <StateMessage title={tHiring("emptyTitle")} description={tHiring("emptyDescription")} />
+          )}
           <div className="space-y-4">
             {shown.map((application) => {
               const r = application.requirement;
@@ -139,9 +145,11 @@ export default async function MyApplicationsPage({
                         r.title
                       )}
                     </h2>
+                    {/* v1.8 «{empresa} · {n} fechas» (Workflow.jsx:57): the period and its days (T-165). */}
                     <p className="text-sm text-muted tabular-nums">
                       {r.organizationName} · {r.location} ·{" "}
-                      {formatPeriod(locale, r.startsAt, r.endsAt)}
+                      {formatPeriod(locale, r.startsAt, r.endsAt)} ·{" "}
+                      {t("card.days", { count: requirementDays(r) })}
                     </p>
                     {note && (
                       <p

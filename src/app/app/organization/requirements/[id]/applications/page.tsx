@@ -5,6 +5,7 @@ import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
+import { requirementDays } from "@/domain/work-requirement";
 import { listRequirementApplications } from "@/features/applications/api";
 import { OrgApplicationCard } from "@/features/applications/components/OrgApplicationCard";
 import { getRequirement } from "@/features/requirements/api";
@@ -63,7 +64,8 @@ export default async function RequirementApplicationsPage({
       <PageHeader
         eyebrow={t("orgEyebrow")}
         title={requirement.title}
-        description={`${requirement.location} · ${formatPeriod(locale, requirement.startsAt, requirement.endsAt)}`}
+        // v1.8 «{candidato} · {n} fechas» (Workflow.jsx:57) once per page: the period and its days (T-165).
+        description={`${requirement.location} · ${formatPeriod(locale, requirement.startsAt, requirement.endsAt)} · ${t("card.days", { count: requirementDays(requirement) })}`}
         actions={
           <ButtonLink href={`/app/organization/requirements/${requirement.id}`}>
             {t("back")}

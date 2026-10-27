@@ -4,7 +4,12 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import { canFinish } from "@/domain/applications";
 import { hasPackCopy } from "@/domain/candidate-pack";
 import type { MatchResult } from "@/domain/matching";
-import type { RequirementStatus, WorkRequirement } from "@/domain/work-requirement";
+import {
+  requirementDays,
+  type RequirementShift,
+  type RequirementStatus,
+  type WorkRequirement,
+} from "@/domain/work-requirement";
 import { MatchExplanation } from "@/features/matching/components/MatchCard";
 import type { Locale } from "@/i18n/config";
 import { formatPeriod } from "@/i18n/format";
@@ -19,6 +24,8 @@ type CardRequirement = Pick<
   "id" | "title" | "location" | "startsAt" | "endsAt"
 > & {
   status: RequirementStatus;
+  /** Published shifts (v2-09): «{n} jornadas» counts them, else the period's UTC days (T-165). */
+  shifts?: readonly RequirementShift[] | null;
 };
 
 /** An application as the organization reads it; no applicant = the technician closed the account. */
@@ -108,9 +115,11 @@ export async function OrgApplicationCard({
               {requirement.title}
             </Link>
           </h2>
+          {/* v1.8 «{candidato} · {n} fechas» (Workflow.jsx:57): the period and its days (T-165). */}
           <p className="text-sm text-muted tabular-nums">
             {requirement.location} ·{" "}
-            {formatPeriod(locale, requirement.startsAt, requirement.endsAt)}
+            {formatPeriod(locale, requirement.startsAt, requirement.endsAt)} ·{" "}
+            {t("card.days", { count: requirementDays(requirement) })}
           </p>
           <p className="mt-1 font-semibold break-words">{name}</p>
           <p className="text-sm text-muted">{profile}</p>

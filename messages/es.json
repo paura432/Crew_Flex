@@ -2072,6 +2072,7 @@
       "requirementPaused": "La necesidad está pausada: no admite propuestas ni confirmaciones.",
       "requirementClosed": "La necesidad está cerrada.",
       "requirementCovered": "La necesidad está cubierta.",
+      "days": "{count, plural, one {# jornada} other {# jornadas}}",
       "reason": "Motivo: {reason}",
       "history": "Historial",
       "event": "{status} · {date} · {actor}",
