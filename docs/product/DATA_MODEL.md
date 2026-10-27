@@ -272,7 +272,11 @@ clients would end outside these rules (55000, BR-27.7). Changes audited
 `applications_client_active` (`guard_application_client`) refuses an application and every forward step (shortlisted,
 proposed, accepted, confirmed) while the representation is not active (`CFA01` for the new application — the applicant
 learns only «not open» —, `CFR02` for the agency's steps). `list_opportunities` returns
-`client_name` (active representations only; the others are not listed); `app_private.requirement_cards` is unchanged.
+`client_name` (active representations only; the others are not listed). `app_private.requirement_cards` (P11, `20261027200000`,
+T-169) names the client AS RECORDED — key `clientName` in `card`, trailing column `client_name` — so «Mis candidaturas», the
+agency's «Candidaturas» and the Candidate Pack copy's recipient line say for whom the copy was received, also after a
+revocation (the history stays true). A proposal version freezes the card as before, so its `terms` carry `clientName`
+(null for an MRO; v1.8 `jobSnapshot.client`); the Edge Function's proposal terms do not repeat it — the card does.
 
 ### `represented_clients` (`20261024500000`, LOCAL ONLY — recruiter, D-12 provisional, BR-27)
 

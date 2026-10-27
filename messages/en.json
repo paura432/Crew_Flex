@@ -1445,6 +1445,7 @@
     "noAgencyTitle": "Your account does not belong to a staffing agency",
     "noAgencyBody": "The recruiter workspace is for organizations of type “Staffing agency” that represent clients. Open it with an agency account.",
     "networkEyebrow": "Recruiter network · matching preview",
+    "directoryEyebrow": "Recruiter network",
     "requirementEyebrow": "Requirement for a client",
     "clients": {
       "title": "Client portfolio",
@@ -2168,7 +2169,9 @@
     "previewIntro": "When you apply, {organization} also receives this dated copy of your passport and your logbook, as they are now. Check it: restrictions and logbook entries are copied exactly as you wrote them, and the copy stays while the application is in progress or ends in an assignment (it is deleted if you withdraw, it is rejected or cancelled).",
     "sharedCopy": "The dated copy of your dossier shown below: all your active qualifications, your declared restrictions and minimum rate, and the logbook entries you marked.",
     "orgIntro": "Copy of the technical dossier the professional shared when applying.",
+    "orgIntroClient": "Copy of the technical dossier the professional shared when applying, received for the client {client}.",
     "ownIntro": "This is the copy {organization} received when you applied.",
+    "ownIntroClient": "This is the copy {organization} received, for its client {client}, when you applied.",
     "view": "View dossier",
     "hide": "Close dossier",
     "years": "{count, plural, one {# year} other {# years}}",

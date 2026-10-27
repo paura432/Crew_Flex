@@ -4566,6 +4566,8 @@ describe("V. applications: the D-06 state machine in the database (migration 202
           "description",
           "shifts",
           "timeZone",
+          // the represented client as recorded (20261027200000, T-169; v1.8 jobSnapshot.client), null for an MRO
+          "clientName",
         ].sort(),
       );
       await step(tx, SEED.delta, id, "accepted", { proposalId: v2.proposal_id });

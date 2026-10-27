@@ -901,6 +901,55 @@ describe("what professionals learn, and no action for a revoked client", () => {
     });
   });
 
+  it("application cards name the client as recorded, never its e-mail; also after a revocation (20261027200000, T-169)", async () => {
+    await asUser(db, SEED.adminOther, async (tx) => {
+      await setUpAgency(tx);
+      const client = await activeClient(tx);
+      const forClient = await createAs(tx, SEED.adminOther, agencyId, { client });
+      const plain = await createAs(tx, SEED.adminMro, mroId);
+      await makeAvailable(tx, [SEED.delta]);
+      await actAs(tx, SEED.delta);
+      await tx.query(APPLY, [forClient, randomUUID()]);
+      await tx.query(APPLY, [plain, randomUUID()]);
+
+      type Card = { requirement_id: string; requirement: { clientName?: string | null } };
+      const mine = async () => {
+        await actAs(tx, SEED.delta);
+        const { rows } = await tx.query<Card>(
+          "select requirement_id, requirement from public.get_my_applications()",
+        );
+        const text = JSON.stringify(rows);
+        for (const secret of ["ops@client.test", client, agencyId])
+          expect(text).not.toContain(secret);
+        return Object.fromEntries(rows.map((r) => [r.requirement_id, r.requirement.clientName]));
+      };
+      // «Mis candidaturas»: the agency's requirement names the client; the MRO's carries null (not undefined).
+      expect(await mine()).toEqual({ [forClient]: "Operador cliente 1", [plain]: null });
+
+      // The agency's «Candidaturas» (both RPCs) read the same card.
+      await actAs(tx, SEED.adminOther);
+      const org = await tx.query<Card>(
+        "select requirement_id, requirement from public.get_organization_applications($1)",
+        [agencyId],
+      );
+      expect(org.rows.map((r) => r.requirement.clientName)).toEqual(["Operador cliente 1"]);
+      expect(JSON.stringify(org.rows)).not.toContain("ops@client.test");
+      const byReq = await tx.query<{ application_id: string }>(
+        "select application_id from public.get_requirement_applications($1)",
+        [forClient],
+      );
+      expect(byReq.rows).toHaveLength(1);
+
+      // Revoked: the opportunity leaves the list (T-134) but the application stays one made for that client.
+      await tx.query("select * from public.revoke_represented_client($1)", [client]);
+      await actAs(tx, SEED.delta);
+      expect(
+        (await tx.query("select id from public.list_opportunities($1)", [forClient])).rows,
+      ).toEqual([]);
+      expect(await mine()).toEqual({ [forClient]: "Operador cliente 1", [plain]: null });
+    });
+  });
+
   it("revoked: not listed, no application, no forward step; winding down still works", async () => {
     await asUser(db, SEED.adminOther, async (tx) => {
       await setUpAgency(tx);

@@ -174,7 +174,15 @@ export default async function MyApplicationsPage({
                           ? `/app/professional/applications?status=${status}`
                           : "/app/professional/applications"
                       }
-                      intro={tPack("ownIntro", { organization: r.organizationName })}
+                      intro={
+                        // v1.8 «Alcance y destinatario: {org} para {cliente}» (Workflow.jsx:28; BR-27.6, T-169)
+                        r.clientName
+                          ? tPack("ownIntroClient", {
+                              organization: r.organizationName,
+                              client: r.clientName,
+                            })
+                          : tPack("ownIntro", { organization: r.organizationName })
+                      }
                     />
                   )}
                   <ApplicationActions

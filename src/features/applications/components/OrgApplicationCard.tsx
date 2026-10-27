@@ -26,6 +26,8 @@ type CardRequirement = Pick<
   status: RequirementStatus;
   /** Published shifts (v2-09): «{n} jornadas» counts them, else the period's UTC days (T-165). */
   shifts?: readonly RequirementShift[] | null;
+  /** A staffing agency's represented client, as recorded (BR-27.6, T-169): the copy's recipient line names it. */
+  clientName?: string | null;
 };
 
 /** An application as the organization reads it; no applicant = the technician closed the account. */
@@ -138,7 +140,11 @@ export async function OrgApplicationCard({
           applicationId={application.id}
           open={pack.open}
           baseHref={pack.baseHref}
-          intro={tPack("orgIntro")}
+          intro={
+            requirement.clientName
+              ? tPack("orgIntroClient", { client: requirement.clientName })
+              : tPack("orgIntro")
+          }
         />
       )}
       {/* A closed account's applications are terminal (account closure), so no button shows. */}

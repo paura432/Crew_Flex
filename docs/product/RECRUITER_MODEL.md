@@ -40,7 +40,9 @@
 - Builder: «Cliente destinatario del expediente» (active clients only), «Selecciona un cliente.» to publish, the
   recruiter note of v1.8 shown to the agency only (v1.8 showed it to the client company too, ORG-03 #13 ✗).
 - Professionals: «Publicada por {org} para el cliente {cliente}» on the opportunity card and detail, and in
-  «Ofertas en la red»; the client's contact never leaves the agency.
+  «Ofertas en la red»; the client's contact never leaves the agency. The application screens of both parties name the
+  client the Candidate Pack copy was received for («… recibió {org}, para su cliente {cliente} …»), as recorded, also
+  after a revocation (`requirement_cards`, `20261027200000`, T-169). For an agency, «Buscar candidatos» is «Red recruiter».
 - No commercial terms (fees, commissions) are modelled: OD-7 / OUT. The Candidate Pack's «Preparar presentación para
   cliente» export stays off with the pack (D-07 P3).
 
@@ -48,5 +50,5 @@
 
 Who may confirm a representation when the client has a Crew Flex account (client-organization confirmation);
 whether a client may see the agency's pipeline for its requirements; KYB of agencies (C-14 / OD-5); whether the
-proposal snapshot and «Mis candidaturas» should repeat the client's name (today only the opportunity and the consent
-name it; the client is frozen once applied to, so the consent stays true).
+API's proposal terms should repeat the client's name (the database freezes it with each version and «Mis candidaturas» and
+the agency's «Candidaturas» name it since T-169; the client is frozen once applied to, so the consent stays true).

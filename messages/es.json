@@ -1445,6 +1445,7 @@
     "noAgencyTitle": "Tu cuenta no pertenece a una agencia de personal",
     "noAgencyBody": "El espacio recruiter es para organizaciones de tipo «Agencia de personal» que representan a clientes. Ábrelo con una cuenta de una agencia.",
     "networkEyebrow": "Red recruiter · vista previa del matching",
+    "directoryEyebrow": "Red recruiter",
     "requirementEyebrow": "Necesidad para cliente",
     "clients": {
       "title": "Cartera de clientes",
@@ -2168,7 +2169,9 @@
     "previewIntro": "Además, al presentarte {organization} recibirá esta copia fechada de tu pasaporte y de tu logbook, tal como están ahora. Revísala: las restricciones y las entradas del logbook se copian tal cual las escribiste, y la copia se queda mientras la candidatura siga en curso o termine en una asignación (se borra si la retiras, la rechazan o se cancela).",
     "sharedCopy": "La copia fechada de tu expediente que ves debajo: todas tus cualificaciones activas, tus restricciones y tu tarifa mínima declaradas y las entradas del logbook que marcaste.",
     "orgIntro": "Copia del expediente técnico que el profesional compartió al presentarse.",
+    "orgIntroClient": "Copia del expediente técnico que el profesional compartió al presentarse, recibida para el cliente {client}.",
     "ownIntro": "Esta es la copia que recibió {organization} al presentar tu candidatura.",
+    "ownIntroClient": "Esta es la copia que recibió {organization}, para su cliente {client}, al presentar tu candidatura.",
     "view": "Ver expediente",
     "hide": "Cerrar expediente",
     "years": "{count, plural, one {# año} other {# años}}",
