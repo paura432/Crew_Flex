@@ -6285,6 +6285,456 @@ await logout();
   }
 }
 
+// PKG P13 (notices and messaging parity, F3 — HIRE-07 #1-#6/#8, TEC-07 #2/#5/#11-#17/#19/#21/#22, ACC-03 #2-#4;
+// re-verification of v2-18 `20261023800000`, N-10/v2-17 `20261024400000…400200`, S-16 `20261023500000`, v2-16
+// `20261024800000`, N-13/N-14 `20261023400100`; no new code): in Spanish, Delta's «Configuración» shows the v1.8
+// «Avisos de oportunidades» labels and refuses the v1.8 errors, saves, offers «Exportar mis datos y archivos» →
+// «Exportación preparada.» (`CrewFlex-mis-datos.json`) and «Cerrar cuenta» with «Escribe CERRAR» (a wrong word is
+// refused and nothing is closed); the passport offers the four v1.8 visibilities and «Organizaciones bloqueadas»;
+// «Avisos internos» lists «AOG: {título}» and «Actualización de candidatura · {título} · Demo MRO Madrid ·
+// Preseleccionada» (no raw code) with «Nuevo», the bell counts them, «Marcar todas como leídas» empties it, and an
+// account without notices reads the empty state. Negatives: an organization account cannot read the notifications
+// table (no grant), another professional reads 0 preference rows (RLS), the organization admin cannot mark Delta's
+// notice (404) nor read notice preferences (403), anon is 401. Setup through the local API (AOG need, Delta's
+// window and preferences, the distribution, the application, the shortlist). Restore in `finally`: Delta's
+// preferences as they were, the application withdrawn, the window deleted, the need closed, the notices read,
+// Delta back in English, cookie gone.
+{
+  const DELTA = "delta@crewflex.test";
+  const ORG_ADMIN = "admin.mro@crewflex.test";
+  const p13Title = `Local UI check · P13 notices ${Date.now()}`;
+  const p13Main = async () => (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  const p13Overflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  const p13Shot = (name) =>
+    page.screenshot({
+      path: `docs/audit/evidence/parity/P13/P13-${name}.jpg`,
+      type: "jpeg",
+      quality: 70,
+      fullPage: false,
+    });
+  const p13Widths = async (name) => {
+    const out = {};
+    for (const width of [1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: 1100 });
+      await page.waitForTimeout(250);
+      out[width] = await p13Overflow();
+      if (width === 390) await p13Shot(`${name}-after-390`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    return out;
+  };
+  const p13Prefs = async () => (await asSeedUser(DELTA, "notice-preferences")).data.preferences;
+  const p13PutPrefs = async (p) =>
+    (
+      await asSeedUser(DELTA, "notice-preferences", {
+        method: "PUT",
+        body: {
+          urgentOptIn: p.urgentOptIn,
+          aogOptIn: p.aogOptIn,
+          mobilizationHours: p.mobilizationHours,
+          timeZone: p.timeZone,
+          quietStart: p.quietStart,
+          quietEnd: p.quietEnd,
+        },
+      })
+    ).ok === true;
+  const p13Before = await p13Prefs();
+  let p13NeedId = null;
+  let p13WindowId = null;
+  let p13ApplicationId = null;
+  try {
+    // 0) Setup: Delta accepts AOG notices with 12 h of mobilization; an AOG need she is eligible for is
+    //    distributed (→ «AOG: {título}»), then she applies and is shortlisted (→ «Actualización de candidatura»).
+    const p13Opted = await p13PutPrefs({ ...p13Before, aogOptIn: true, mobilizationHours: 12 });
+    const p13Need = await asSeedUser(ORG_ADMIN, "work-requirements", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: {
+        organizationId: mroOrg.id,
+        title: p13Title,
+        location: "Madrid (MAD)",
+        startsAt: "2027-02-08T06:00:00.000Z",
+        endsAt: "2027-02-09T18:00:00.000Z",
+        shift: "day",
+        headcount: 1,
+        urgency: "aog",
+        qualifications: hiringTypes.map((q) => ({ qualificationTypeId: q.id, level: "hard" })),
+      },
+    });
+    p13NeedId = p13Need.data?.requirement.id ?? null;
+    const p13Window = await asSeedUser(DELTA, "professional-availability", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: {
+        startsAt: "2027-02-08T00:00:00.000Z",
+        endsAt: "2027-02-10T00:00:00.000Z",
+        status: "available",
+      },
+    });
+    p13WindowId = p13Window.data?.window.id ?? null;
+    const p13Outreach = await asSeedUser(ORG_ADMIN, "requirement-outreach", {
+      method: "POST",
+      body: { requirementId: p13NeedId },
+    });
+    const p13Application = await asSeedUser(DELTA, "applications", {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: { requirementId: p13NeedId, shareConsent: true },
+    });
+    p13ApplicationId = p13Application.data?.application.id ?? null;
+    const p13OrgView = await asSeedUser(ORG_ADMIN, "applications", {
+      query: { requirementId: p13NeedId },
+    });
+    const p13Shortlisted = await asSeedUser(ORG_ADMIN, "applications", {
+      method: "PATCH",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: {
+        applicationId: p13ApplicationId,
+        to: "shortlisted",
+        expectedUpdatedAt: p13OrgView.data?.applications.find((a) => a.id === p13ApplicationId)
+          ?.updatedAt,
+      },
+    });
+    ok(
+      "PKG P13 0 setup through the local API: Delta opted in to AOG, an AOG need distributed once, her application shortlisted",
+      p13Opted &&
+        Boolean(p13NeedId) &&
+        Boolean(p13WindowId) &&
+        p13Outreach.ok === true &&
+        Boolean(p13ApplicationId) &&
+        p13Shortlisted.ok === true,
+      `${p13Opted} need=${p13NeedId} window=${p13WindowId} outreach=${p13Outreach.ok ?? p13Outreach.error?.code} application=${p13ApplicationId} shortlist=${p13Shortlisted.ok ?? p13Shortlisted.error?.code}`,
+    );
+
+    // 1) Settings in Spanish: the v1.8 «Avisos de oportunidades» block (TEC-07 #12-#17, ACC-03 #4).
+    await login(DELTA);
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P13 1 «Configuración» in Spanish");
+    const p13Settings = await p13Main();
+    ok(
+      "PKG P13 1b TEC-07 #12-#17: «Avisos de oportunidades» with the v1.8 connected labels («Quiero avisos internos de trabajos urgentes», «Quiero avisos internos AOG», «Horas mínimas que necesitas para movilizarte», «Zona horaria IANA para avisos», «Silencio desde/hasta (opcional)») and its note; «Tus datos» offers «Exportar mis datos y archivos» and «Cerrar cuenta»",
+      /Avisos de oportunidades/.test(p13Settings) &&
+        /Quiero avisos internos de trabajos urgentes/.test(p13Settings) &&
+        /Quiero avisos internos AOG/.test(p13Settings) &&
+        /Horas mínimas que necesitas para movilizarte/.test(p13Settings) &&
+        /Zona horaria IANA para avisos/.test(p13Settings) &&
+        /Silencio desde \(opcional\)/.test(p13Settings) &&
+        /Silencio hasta \(opcional\)/.test(p13Settings) &&
+        /Sin movilización declarada no se distribuyen avisos\. El silencio también se respeta para AOG; no se envían correos o SMS\./.test(
+          p13Settings,
+        ) &&
+        /Tus datos/.test(p13Settings) &&
+        /Exportar mis datos y archivos/.test(p13Settings) &&
+        /Cerrar cuenta/.test(p13Settings),
+      p13Settings.slice(0, 200),
+    );
+    await p13Shot("settings-after-1440");
+    const p13SettingsWidths = await p13Widths("settings");
+    ok(
+      "PKG P13 1c no horizontal overflow at 1024 / 768 / 390 / 360 on «Configuración»",
+      Object.values(p13SettingsWidths).every((o) => !o),
+      JSON.stringify(p13SettingsWidths),
+    );
+    const p13Panel = page.locator("#notice-preferences");
+    const p13Save = p13Panel.getByRole("button", { name: "Guardar preferencias de avisos" });
+    await p13Panel.getByLabel("Zona horaria IANA para avisos").fill("Mars/Olympus");
+    await p13Panel.getByLabel("Silencio desde (opcional)").fill("22:00");
+    await p13Panel.getByLabel("Silencio hasta (opcional)").fill("");
+    await p13Save.click();
+    await p13Panel
+      .getByText("Horas de silencio no válidas.")
+      .waitFor({ timeout: 15000 })
+      .catch(() => {});
+    const p13PanelErrors = (await p13Panel.innerText()).replace(/\s+/g, " ");
+    ok(
+      "PKG P13 2 TEC-07 #15/#16: the v1.8 errors «Zona horaria no válida.» and «Horas de silencio no válidas.» show in the panel and nothing was saved (the API still has Europe/Madrid, no quiet hours)",
+      /Zona horaria no válida\./.test(p13PanelErrors) &&
+        /Horas de silencio no válidas\./.test(p13PanelErrors) &&
+        (await p13Prefs()).timeZone === "Europe/Madrid" &&
+        (await p13Prefs()).quietStart === null,
+      p13PanelErrors.slice(0, 200),
+    );
+    await p13Panel.getByLabel("Zona horaria IANA para avisos").fill("Europe/Madrid");
+    await p13Panel.getByLabel("Silencio desde (opcional)").fill("23:00");
+    await p13Panel.getByLabel("Silencio hasta (opcional)").fill("06:30");
+    await p13Save.click();
+    const p13Saved = await p13Panel
+      .getByRole("status")
+      .filter({ hasText: "Preferencias de avisos guardadas." })
+      .waitFor({ timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+    const p13AfterSave = await p13Prefs();
+    ok(
+      "PKG P13 2b a valid form saves («Preferencias de avisos guardadas.») and the API reads the quiet hours 23:00–06:30",
+      p13Saved && p13AfterSave.quietStart === "23:00" && p13AfterSave.quietEnd === "06:30",
+      `${p13Saved} ${p13AfterSave.quietStart}-${p13AfterSave.quietEnd}`,
+    );
+
+    // 3) «Tus datos»: the export (TEC-07 #21) and a refused closure (TEC-07 #22) — the account stays.
+    const [p13Download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 20000 }).catch(() => null),
+      page.getByRole("link", { name: "Exportar mis datos y archivos" }).click(),
+    ]);
+    const p13ExportReady = await page
+      .waitForSelector("[role=status]:has-text('Exportación preparada.')", { timeout: 20000 })
+      .then(() => true)
+      .catch(() => false);
+    ok(
+      "PKG P13 3 TEC-07 #21: «Exportar mis datos y archivos» → «Exportación preparada.» and the v1.8 file name «CrewFlex-mis-datos.json»",
+      p13ExportReady && p13Download?.suggestedFilename() === "CrewFlex-mis-datos.json",
+      `${p13ExportReady} ${p13Download?.suggestedFilename()}`,
+    );
+    await page.locator("summary", { hasText: "Cerrar cuenta" }).click();
+    const p13CloseText = (
+      await page.locator("details:has(summary:has-text('Cerrar cuenta'))").innerText()
+    ).replace(/\s+/g, " ");
+    await page.fill("#confirm", "NO");
+    await page.getByRole("button", { name: "Cerrar mi cuenta" }).click();
+    const p13Refused = await page
+      .waitForSelector("text=Escribe CERRAR para confirmar.", { timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+    const p13StillThere = (await asSeedUser(DELTA, "notice-preferences")).ok === true;
+    ok(
+      "PKG P13 3b TEC-07 #22: «Cerrar cuenta» shows the v1.8 text («Elimina credenciales, perfil y archivos. …»), «Escribe CERRAR» and «Cerrar mi cuenta»; another word is refused with «Escribe CERRAR para confirmar.» and the account still answers",
+      /Elimina credenciales, perfil y archivos\. Los registros de compromisos y auditoría se conservan sin el perfil para resolver el historial operativo\./.test(
+        p13CloseText,
+      ) &&
+        /Escribe CERRAR/.test(p13CloseText) &&
+        /Cerrar mi cuenta/.test(p13CloseText) &&
+        p13Refused &&
+        p13StillThere,
+      `${p13Refused} ${p13StillThere} ${p13CloseText.slice(0, 160)}`,
+    );
+
+    // 4) The passport: four v1.8 visibilities and the blocks per organization (TEC-07 #2/#5/#11, ACC-03 #2/#3).
+    await page.goto(`${BASE}/app/professional/profile`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P13 4 «Mi pasaporte» in Spanish");
+    const p13Radios = await page
+      .locator("[role=radiogroup][aria-label='Visibilidad'] [role=radio]")
+      .allInnerTexts();
+    const p13Passport = await p13Main();
+    ok(
+      "PKG P13 4b TEC-07 #2/#5, ACC-03 #2: four visibility radios in v1.8 order «Privado · Anónimo · Empresas verificadas · Abierto», «Empresas verificadas» described as an anonymous profile for reviewed organizations; TEC-07 #11, ACC-03 #3: «Organizaciones bloqueadas» lists «Demo MRO Madrid» as a checkbox",
+      p13Radios.length === 4 &&
+        /^Privado/.test(p13Radios[0]) &&
+        /^Anónimo/.test(p13Radios[1]) &&
+        /^Empresas verificadas/.test(p13Radios[2]) &&
+        /Perfil anónimo, en el matching y en el directorio solo de las organizaciones con la revisión registrada por la plataforma\./.test(
+          p13Radios[2],
+        ) &&
+        /^Abierto/.test(p13Radios[3]) &&
+        /Organizaciones bloqueadas/.test(p13Passport) &&
+        (await page.locator(`input[name=blockedOrganizationIds][value='${mroOrg.id}']`).count()) ===
+          1,
+      p13Radios.map((r) => r.slice(0, 30)).join(" | "),
+    );
+    await page
+      .locator("[role=radiogroup][aria-label='Visibilidad']")
+      .scrollIntoViewIfNeeded()
+      .catch(() => {});
+    await p13Shot("passport-visibility-after-1440");
+
+    // 5) «Avisos internos» (HIRE-07 #1-#6/#8, TEC-07 #19).
+    await page.goto(`${BASE}/app/notices`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P13 5 «Avisos internos» in Spanish");
+    const p13Bell = () =>
+      page.locator("a[href='/app/notices'][aria-label]").first().getAttribute("aria-label");
+    const p13Notices = await p13Main();
+    const p13AogCard = page.locator("main article", { hasText: `AOG: ${p13Title}` });
+    const p13UpdateCard = page
+      .locator("main article", { hasText: "Actualización de candidatura" })
+      .filter({ hasText: p13Title });
+    const p13AogText = (await p13AogCard.count()) ? await p13AogCard.innerText() : "";
+    const p13UpdateText = (await p13UpdateCard.count()) ? await p13UpdateCard.innerText() : "";
+    ok(
+      "PKG P13 5b HIRE-07 #1-#4, TEC-07 #19: «Avisos internos» lists «AOG: {título} · Demo MRO Madrid · Consulta las condiciones…» and «Actualización de candidatura · {título} · Demo MRO Madrid · Preseleccionada» (no raw «shortlisted»), each with «Nuevo»; the bell reads «Avisos: n sin leer»; no e-mail/push sentence",
+      /Avisos internos/.test(p13Notices) &&
+        /No se envían correos ni notificaciones push\./.test(p13Notices) &&
+        (await p13AogCard.count()) === 1 &&
+        /Demo MRO Madrid · Consulta las condiciones y decide si quieres presentar candidatura\./.test(
+          p13AogText,
+        ) &&
+        (await p13AogCard.getByText("Nuevo", { exact: true }).count()) === 1 &&
+        (await p13UpdateCard.count()) === 1 &&
+        /Demo MRO Madrid · Preseleccionada/.test(p13UpdateText) &&
+        !/shortlisted/.test(p13UpdateText) &&
+        (await p13UpdateCard.getByText("Nuevo", { exact: true }).count()) === 1 &&
+        /^Avisos: [1-9]\d* sin leer$/.test((await p13Bell()) ?? ""),
+      `bell=${await p13Bell()} aog=${p13AogText.slice(0, 80)} update=${p13UpdateText.slice(0, 80)}`,
+    );
+    await p13Shot("notices-after-1440");
+    const p13NoticesWidths = await p13Widths("notices");
+    ok(
+      "PKG P13 5c no horizontal overflow at 1024 / 768 / 390 / 360 on «Avisos internos»",
+      Object.values(p13NoticesWidths).every((o) => !o),
+      JSON.stringify(p13NoticesWidths),
+    );
+    ok(
+      "PKG P13 5d HIRE-07 #5: the action names its destination — «Ver oportunidad» on the distribution notice, «Ver candidatura» on the application notice (v1.8: «Ver oportunidades» on both)",
+      (await p13AogCard.getByRole("button", { name: "Ver oportunidad" }).count()) === 1 &&
+        (await p13UpdateCard.getByRole("button", { name: "Ver candidatura" }).count()) === 1,
+      "",
+    );
+    await page.getByRole("button", { name: "Marcar todas como leídas" }).click();
+    const p13AllRead = await page
+      .getByRole("status")
+      .filter({ hasText: "Todos tus avisos están leídos." })
+      .waitFor({ timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p13BellAfter = await page
+      .locator("a[href='/app/notices']")
+      .first()
+      .getAttribute("aria-label");
+    ok(
+      "PKG P13 5e HIRE-07 #8: «Marcar todas como leídas» → «Todos tus avisos están leídos.», no «Nuevo» chip left on the two notices and the bell is back to its plain name «Avisos» (no count)",
+      p13AllRead &&
+        (await p13AogCard.getByText("Nuevo", { exact: true }).count()) === 0 &&
+        (await p13UpdateCard.getByText("Nuevo", { exact: true }).count()) === 0 &&
+        p13BellAfter === "Avisos",
+      `${p13AllRead} bell=${p13BellAfter}`,
+    );
+    await logout();
+
+    // 6) Empty state (HIRE-07 #6): a seed account with no notices at all (English account; the Spanish
+    //    literal is es.json «No tienes avisos.»).
+    let p13Empty = null;
+    for (const email of [
+      "alpha@crewflex.test",
+      "golf@crewflex.test",
+      "platform.admin@crewflex.test",
+    ]) {
+      const total = (
+        await asSeedUser(email, "notifications", { query: { offset: "0", limit: "1" } })
+      ).data?.total;
+      if (total === 0) {
+        p13Empty = email;
+        break;
+      }
+    }
+    if (p13Empty) {
+      await login(p13Empty);
+      await page.goto(`${BASE}/app/notices`);
+      await page.waitForLoadState("networkidle");
+      ok(
+        "PKG P13 6 HIRE-07 #6: an account with 0 notices (API total 0) reads the empty state «You have no notices.» and no «Mark all as read» button",
+        /You have no notices\./.test(await p13Main()) &&
+          (await page.getByRole("button", { name: "Mark all as read" }).count()) === 0,
+        p13Empty,
+      );
+      await logout();
+    } else {
+      ok("PKG P13 6 HIRE-07 #6: empty state (skipped: no seed account without notices)", false, "");
+    }
+
+    // 7) Negatives (isolation): nobody reads or marks another person's notices or preferences.
+    const p13DeltaNotices = await asSeedUser(DELTA, "notifications", {
+      query: { offset: "0", limit: "5" },
+    });
+    const p13DeltaNoticeId = p13DeltaNotices.data?.notices.find(
+      (n) => n.requirementTitle === p13Title,
+    )?.id;
+    const p13OrgTable = await seedRest(ORG_ADMIN, "notifications?select=id&limit=1");
+    const p13OrgMark = await asSeedUser(ORG_ADMIN, "notifications", {
+      method: "PATCH",
+      body: { id: p13DeltaNoticeId },
+    });
+    const p13OrgPrefs = await asSeedUser(ORG_ADMIN, "notice-preferences");
+    const p13AlphaPrefRows = await seedRest(
+      "alpha@crewflex.test",
+      "technician_notice_preferences?select=profile_id",
+    );
+    const p13DeltaPrefRows = await seedRest(
+      DELTA,
+      "technician_notice_preferences?select=profile_id",
+    );
+    const p13AnonNotices = await fetch(new URL("/functions/v1/notifications", supabaseUrl), {
+      headers: { apikey: publishableKey },
+    });
+    const p13AnonPrefs = await fetch(new URL("/functions/v1/notice-preferences", supabaseUrl), {
+      headers: { apikey: publishableKey },
+    });
+    ok(
+      "PKG P13 7 negatives: admin.mro cannot SELECT the notifications table (42501, no grant), cannot mark Delta's notice (404 NOT_FOUND) and has no notice preferences (403 FORBIDDEN); Alpha reads 0 preference rows while Delta reads her own (RLS); anon → 401 on both functions",
+      Boolean(p13DeltaNoticeId) &&
+        !Array.isArray(p13OrgTable) &&
+        p13OrgTable?.code === "42501" &&
+        p13OrgMark.error?.code === "NOT_FOUND" &&
+        p13OrgPrefs.error?.code === "FORBIDDEN" &&
+        Array.isArray(p13AlphaPrefRows) &&
+        p13AlphaPrefRows.length === 0 &&
+        Array.isArray(p13DeltaPrefRows) &&
+        p13DeltaPrefRows.length === 1 &&
+        p13AnonNotices.status === 401 &&
+        p13AnonPrefs.status === 401,
+      `id=${Boolean(p13DeltaNoticeId)} table=${p13OrgTable?.code} mark=${p13OrgMark.error?.code} prefs=${p13OrgPrefs.error?.code} alpha=${JSON.stringify(p13AlphaPrefRows)} delta=${p13DeltaPrefRows?.length} anon=${p13AnonNotices.status}/${p13AnonPrefs.status}`,
+    );
+  } finally {
+    // Restore: preferences, application, window, need, notices, language, cookie.
+    const p13PrefsBack = await p13PutPrefs(p13Before);
+    let p13Withdrawn = p13ApplicationId === null;
+    if (p13ApplicationId) {
+      const mine = await asSeedUser(DELTA, "applications");
+      const current = mine.data?.applications.find((a) => a.id === p13ApplicationId);
+      p13Withdrawn =
+        current?.status === "withdrawn" ||
+        (
+          await asSeedUser(DELTA, "applications", {
+            method: "PATCH",
+            headers: { "Idempotency-Key": crypto.randomUUID() },
+            body: {
+              applicationId: p13ApplicationId,
+              to: "withdrawn",
+              expectedUpdatedAt: current?.updatedAt,
+            },
+          })
+        ).ok === true;
+    }
+    const p13WindowGone =
+      p13WindowId === null ||
+      (
+        await asSeedUser(DELTA, "professional-availability", {
+          method: "DELETE",
+          query: { id: p13WindowId },
+        })
+      ).ok === true;
+    const p13NeedClosed =
+      p13NeedId === null ||
+      (
+        await asSeedUser(ORG_ADMIN, "work-requirements", {
+          method: "PATCH",
+          body: { id: p13NeedId, status: "closed" },
+        })
+      ).ok === true;
+    for (const email of [DELTA, ORG_ADMIN, "manager.mro@crewflex.test"]) {
+      await asSeedUser(email, "notifications", { method: "PATCH", body: { all: true } });
+    }
+    const p13English =
+      (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P13 8 restore: Delta's notice preferences as before, the application withdrawn, the window deleted, the need closed, Delta in English",
+      p13PrefsBack && p13Withdrawn && p13WindowGone && p13NeedClosed && p13English,
+      `${p13PrefsBack} ${p13Withdrawn} ${p13WindowGone} ${p13NeedClosed} ${p13English}`,
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
