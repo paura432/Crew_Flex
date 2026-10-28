@@ -6945,7 +6945,7 @@ await logout();
     const p14OpenOverflow = await p14Overflow();
     await p14Shot("menu-after-390");
     ok(
-      "PKG P14a 2 SH-05 #4/#9/#11, SH-04 #2, SHOT-09 #1: at 390 the header crumb is gone, the navy bar carries the brand, one bell and «Cerrar sesión»; «Menú» (aria-expanded=false, sections hidden) opens the same two sections (aria-expanded=true, section headings hidden) without horizontal overflow; the footer keeps «CREWFLEX AVIATION» and hides the motto",
+      "PKG P14a 2 SH-05 #4/#9/#11, SH-04 #2, SHOT-09 #1: at 390 the header crumb is gone, one bell and «Cerrar sesión»; «Menú» (aria-expanded=false, sections hidden) opens the same two sections (aria-expanded=true, section headings hidden) without horizontal overflow; the footer keeps «CREWFLEX AVIATION» and hides the motto",
       p14Closed.crumb === null &&
         p14Closed.barBells === 1 &&
         p14Closed.signOut.join() === "Cerrar sesión" &&
@@ -7158,6 +7158,7 @@ await logout();
     );
     await logout();
   } finally {
+    await page.setViewportSize({ width: 1440, height: 900 });
     if (/\/app/.test(page.url())) await logout().catch(() => {});
     const p14English =
       (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
