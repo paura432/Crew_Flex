@@ -1,6 +1,6 @@
 # 30 · Diff v1.8 ↔ Next — Empresa/recruiter, marketplace y contratación
 
-**F3 (26/10, tras P04 — MKT-03, MKT-04 y MKT-05 re-verificadas; `recount.py`):** filas 393 · = 30 · ≈ 140 · ≠ 26 · − 115 · + 50 · ✗ 32 → paridad 170/311 = 54,7 %, 44 filas retenidas por una decisión abierta o SCOPE. Las líneas siguientes son el estado histórico del 22/10.
+**F3 (28/10, P13 — HIRE-06, HIRE-07 y HIRE-08 re-verificadas, 8 filas de HIRE-07 cambian de símbolo `(F3: antes X)`; `recount.py`):** filas 393 · = 87 · ≈ 172 · ≠ 12 · − 38 · + 51 · ✗ 33 → paridad 259/309 = 83,8 %, 46 filas retenidas por una decisión abierta o SCOPE (antes de P13, `recount.py` sobre `d5c42dc`: = 86 · ≈ 166 · ≠ 12 · − 45 · + 50 · ✗ 34 → 252/309 = 81,6 %, 46 retenidas; 26/10, tras P04 — MKT-03, MKT-04 y MKT-05 re-verificadas: = 30 · ≈ 140 · ≠ 26 · − 115 · + 50 · ✗ 32 → 170/311 = 54,7 %, 44 retenidas). Las líneas siguientes son el estado histórico del 22/10.
 
 Filas 393 · = 25 · ≈ 138 · ≠ 26 · − 123 · + 50 · ✗ 31 (v2 del 22/10 tarde, SNAP2 `038329f`; xhigh del 22/10: filas 379 · = 14 · ≈ 89 · ≠ 24 · − 184 · + 37 · ✗ 31; refresco de la mañana: filas 378 · = 14 · ≈ 89 · ≠ 23 · − 184 · + 37 · ✗ 31; 21/10: filas 374 · = 13 · ≈ 83 · ≠ 24 · − 189 · + 34 · ✗ 31)
 
@@ -1175,8 +1175,9 @@ Capturas v2: Next `evidencias/v2/30/HIRE-01-9-next-1440-history.jpg` (la tarjeta
 
 ## HIRE-06 · Conversación de candidatura y no leídos — v1.8 `S-MOD-MKT-05, D-TEC-05c, D-TEC-05d, D-TEC-05g, S-CON-06b, C-EMP-31, C-REC-08` ↔ Next — (ausente; chat OUT)
 
-**Estado global:** NO PORTAR (SCOPE OUT: «chat», `V1_SCOPE.md:65`; CX-35/36 SCOPE OUT). Se deja el inventario por si el
-owner cambia el alcance.
+**Estado global:** NO PORTAR (SCOPE OUT: «chat», `V1_SCOPE.md:93`; CX-35/36 SCOPE OUT). Se deja el inventario por si el
+owner cambia el alcance. F3 P13 (28/10): confirmado, sin cambios (no hay mensajería entre partes en Next; los «Avisos
+internos» de HIRE-07 no son un chat).
 
 | # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
 |---|---|---|---|---|---|---|---|
@@ -1200,32 +1201,38 @@ Capturas v2: v1.8 conectado `evidencias/v2/30/HIRE-01-1-v18c-1440.jpg`, `evidenc
 
 ## HIRE-07 · Avisos internos (notificaciones de contratación) — v1.8 `S-CON-11, C-TEC-08, C-TEC-29, C-EMP-07, C-EMP-23, C-REC-14` (y la campana de la demo, `S-COM-04`) ↔ Next — (ausente)
 
-**Estado global:** AUSENTE EN NEXT (v2: portable, «avisos in-app» es LATER en SCOPE-2). El contrato D-06 dice «An
-in-app notification centre is a separate, later decision» (`APPLICATIONS_STATE_MACHINE.md:76-77`). Email, SMS y push
-siguen OUT.
+**Estado global:** IGUAL salvo matices (F3 P13, 28/10: antes AUSENTE EN NEXT). Portado después de la v2 por v2-18
+(`20261023800000`, `/app/notices`, función `notifications`, BR-22, T-70…T-73) y v2-17 (`20261024400000…400200`, BR-26);
+P13 re-verifica las 8 filas en el navegador en español (`PKG P13 5-6`; `PKG notices`, `PKG outreach` en inglés): 7 cambian
+de símbolo. Email, SMS y push siguen OUT. Diferencias anotadas: el estado llega traducido (v1.8 lo pintaba en inglés
+crudo), la acción nombra su destino («Ver candidatura» / «Ver candidaturas» / «Ver oportunidad» en vez de «Ver
+oportunidades» para todo) y la organización sí es avisada de la candidatura nueva (#7).
 
 | # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
 |---|---|---|---|---|---|---|---|
-| 1 | Pantalla | Conectado: h2 «Avisos internos» + «Configura Urgente/AOG, movilización y silencio desde tu perfil. No se envían correos ni notificaciones push en esta beta.», que también ve la empresa, aunque no tiene perfil (runtime C-EMP-07) v2, conectado en ejecución: técnico 1 ve 3 «{modo}: {título}» y «Actualización de candidatura · … · shortlisted/proposed/confirmed» con «Ver oportunidades»; la empresa, «… · accepted/withdrawn» y «· Nuevo» (`evidencias/v2/30/HIRE-07-1-v18c-1440.jpg`, `evidencias/v2/30/HIRE-07-1-emp-v18c-1440.jpg`) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar «Avisos internos» con texto por rol (backlog v2-18) |
-| 2 | Aviso por transición | Título «Actualización de candidatura», descripción «{oferta} · {estado}» con el **código en inglés** («… · shortlisted») (`app.mjs:135`) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar con la etiqueta traducida (backlog v2-18) |
-| 3 | Aviso de distribución | «{modo}: {título}» (ORG-06) | — | − | P2 | — (v2: desbloqueado, alcance LATER) (outreach) | Ver ORG-06 (backlog v2-17) |
-| 4 | No leído | «{título} · Nuevo» | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar «· Nuevo» (backlog v2-18) |
-| 5 | Acción | «Ver oportunidades» en **todos** los avisos, también en los de candidatura, que llevan a Candidaturas → `notification.read` sin esperar + navegación | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar con el texto según el destino (backlog v2-18) |
-| 6 | Vacío | «No tienes avisos.» | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar (backlog v2-18) |
-| 7 | Avisos que no existen | No se avisa a la empresa al recibir una candidatura ni un mensaje: solo el contador `unread` (hallazgo B #7) | — | ✗ | — | — | Al portar, avisar de la candidatura nueva |
-| 8 | Demo | `commit` con destinatarios → `notifications` con `readBy`; campana «Ver notificaciones» → pantalla «ACTIVIDAD · Notificaciones.» («Actividad dentro de esta demo. Los mensajes externos siguen simulados.» + «Marcar todas como leídas»). No se llega por URL: `#notifications` no está en la lista de pestañas del `hashchange` y abre Inicio (`src/LegacyApp.jsx:45,87`; `evidencias/xhigh/30/HIRE-07-8-v18-1440-bell.jpg`). Fuera de este alcance: diff del shell | — | − | P3 | — (v2: desbloqueado, alcance LATER) (avisos in-app); email, SMS y push siguen OUT | Portar la campana y «Marcar todas como leídas» (backlog v2-18) |
+| 1 | Pantalla | Conectado: h2 «Avisos internos» + «Configura Urgente/AOG, movilización y silencio desde tu perfil. No se envían correos ni notificaciones push en esta beta.», que también ve la empresa, aunque no tiene perfil (runtime C-EMP-07) v2, conectado en ejecución: técnico 1 ve 3 «{modo}: {título}» y «Actualización de candidatura · … · shortlisted/proposed/confirmed» con «Ver oportunidades»; la empresa, «… · accepted/withdrawn» y «· Nuevo» (`evidencias/v2/30/HIRE-07-1-v18c-1440.jpg`, `evidencias/v2/30/HIRE-07-1-emp-v18c-1440.jpg`) | `/app/notices` para toda cuenta: eyebrow «Actividad», h1 «Avisos internos», intro por rol: técnico «Los cambios de tus candidaturas y de las necesidades a las que te has presentado. No se envían correos ni notificaciones push.», organización «Los cambios de las candidaturas a las necesidades de tu organización. …» (`noticesIntroKey`, `src/features/notices/view.ts`); el profesional ve además «Los avisos Urgente y AOG siguen tus preferencias…» + «Configurar avisos» (`notices/page.tsx`). Runtime F3: `PKG P13 5-5b` (técnico, es); `PKG notices a` (organización, en) | ≈ (F3: antes −) | P2 | — | Hecho (v2-18); P13 lo verifica |
+| 2 | Aviso por transición | Título «Actualización de candidatura», descripción «{oferta} · {estado}» con el **código en inglés** («… · shortlisted») (`app.mjs:135`) | Título «Actualización de candidatura», descripción «{título} · {org o seudónimo} · {estado traducido}» («Preseleccionada», «Confirmada»…, `domain.applicationStatus.*`), escrita por el trigger `notify_application_event` en la misma transacción (`20261023800000`, T-70, T-72). Runtime F3: `PKG P13 5b` (sin «shortlisted» crudo); `PKG notices c` | ≈ (F3: antes −) | P2 | — | Hecho (v2-18): etiqueta traducida |
+| 3 | Aviso de distribución | «{modo}: {título}» + «{base} · {categoría} · consulta las condiciones y decide si deseas presentar candidatura.» (`server/app.mjs:102`; ORG-06) | «AOG: {título}» / «Urgente: {título}» + «{org} · Consulta las condiciones y decide si quieres presentar candidatura.» (es `outreach.notice.*`; `requirement_outreach`, `20261024400200`). Sin «{base} · {categoría}» (como ORG-06 #11). Runtime F3: `PKG P13 5b`; `PKG outreach d` | ≈ (F3: antes −) | P2 | — | Hecho (v2-17, ORG-06) |
+| 4 | No leído | «{título} · Nuevo» | Chip «Nuevo» junto al título y borde acentuado mientras `read_at` es nulo; la campana y la entrada «Avisos» del menú llevan el contador «n sin leer» (99+). Runtime F3: `PKG P13 5b/5e` | ≈ (F3: antes −) | P3 | — | Hecho (v2-18) |
+| 5 | Acción | «Ver oportunidades» en **todos** los avisos, también en los de candidatura, que llevan a Candidaturas → `notification.read` sin esperar + navegación | La acción nombra su destino: «Ver candidatura» (técnico → su tarjeta en Mis candidaturas), «Ver candidaturas» (organización → las candidaturas de esa necesidad, en la tarjeta) y «Ver oportunidad» (distribución → la oportunidad); marca leído en el servidor y redirige (`noticeHref`, `NoticeButtons.tsx`; T-73). Runtime F3: `PKG P13 5d`; `PKG notices b/d`, `PKG outreach d` | ≈ (F3: antes −) | P3 | — | Hecho (v2-18): texto según el destino |
+| 6 | Vacío | «No tienes avisos.» | «No tienes avisos.» + «Aquí aparecerá cada cambio de una candidatura en cuanto ocurra.» (es `notices.emptyTitle/emptyDescription`), sin botón «Marcar todas…». Runtime F3: `PKG P13 6` (cuenta con 0 avisos, en: «You have no notices.») | = (F3: antes −) | P3 | — | Hecho (v2-18) |
+| 7 | Avisos que no existen | No se avisa a la empresa al recibir una candidatura ni un mensaje: solo el contador `unread` (hallazgo B #7) | Hecho al portar: «Nueva candidatura · {título} · {seudónimo}» para los admin/manager de la organización (T-70/T-71; `PKG notices a`). Sin mensajes (chat OUT) | + (F3: antes ✗) | — | — | Hecho (v2-18): la organización sí es avisada de la candidatura nueva |
+| 8 | Demo | `commit` con destinatarios → `notifications` con `readBy`; campana «Ver notificaciones» → pantalla «ACTIVIDAD · Notificaciones.» («Actividad dentro de esta demo. Los mensajes externos siguen simulados.» + «Marcar todas como leídas»). No se llega por URL: `#notifications` no está en la lista de pestañas del `hashchange` y abre Inicio (`src/LegacyApp.jsx:45,87`; `evidencias/xhigh/30/HIRE-07-8-v18-1440-bell.jpg`). Fuera de este alcance: diff del shell | Campana en la cabecera (icono `bell` de la demo) con el contador y el nombre accesible «Avisos: n sin leer» (o «Avisos» a 0), enlace a `/app/notices`, alcanzable por URL; «Marcar todas como leídas» → «Todos tus avisos están leídos.» (`mark_notifications_read`, `NoticeBell.tsx`). Sin la pantalla «ACTIVIDAD · Notificaciones.» de la demo ni su «Leída/Nueva» por fila: el eyebrow «Actividad» y el chip «Nuevo» la sustituyen. Runtime F3: `PKG P13 5b/5e` | ≈ (F3: antes −) | P3 | — | Hecho (v2-18) |
 
 Capturas: v1.8 `evidencias/shots/connected/C-TEC-08-notifications-empty-1440.png`, `evidencias/shots/connected/C-TEC-29-notifications-1440.png`,
 `evidencias/shots/connected/C-EMP-23-notifications-1440.png`, `evidencias/shots/connected/C-REC-14-notifications-1440.png`,
 `evidencias/shots/demo/D-EMP-08-notificaciones-1440.png`. Next: no aplica.
 Capturas xhigh (22/10, Next del árbol vivo = copia congelada; v1.8 demo en ejecución): v1.8 `evidencias/xhigh/30/HIRE-07-8-v18-1440-bell.jpg`, `evidencias/xhigh/30/HIRE-07-8-v18-1440.jpg` (`#notifications` abre Inicio).
-Capturas v2: v1.8 conectado `evidencias/v2/30/HIRE-07-1-v18c-1440.jpg`, `evidencias/v2/30/HIRE-07-1-emp-v18c-1440.jpg`. Next: no aplica.
+Capturas v2: v1.8 conectado `evidencias/v2/30/HIRE-07-1-v18c-1440.jpg`, `evidencias/v2/30/HIRE-07-1-emp-v18c-1440.jpg`.
+Capturas F3 P13 (28/10, es, `next start`): Next `docs/audit/evidence/parity/P13/P13-notices-after-{1440,390}.jpg`.
 
 ---
 
 ## HIRE-08 · Comisiones, ledger, borradores de factura y planes — v1.8 `S-CON-08, C-EMP-06, C-EMP-21, C-REC-13, S-SUB-MKT-04, S-EMP-07 (Modelo comercial), S-CON-13a (libro), S-COM-03 (planes)` ↔ Next — (ausente)
 
-**Estado global:** NO PORTAR. `V1_SCOPE.md:65` deja fuera pagos, facturación y comisiones (OUT), y OD-7 sigue abierta.
+**Estado global:** NO PORTAR. `V1_SCOPE.md:93` deja fuera pagos, facturación y comisiones (OUT), y OD-7 sigue abierta.
+F3 P13 (28/10): confirmado, sin cambios (ningún «€», comisión, plan ni libro en Next; `PKG P12 1b` lo comprueba en la
+administración).
 - El contrato D-06 lo repite: «No money: no commission, fee or invoice (OD-7, OUT). The prototype's fee fields are not
   ported.» (`APPLICATIONS_STATE_MACHINE.md:75`).
 - Y el modelo recruiter: «No commercial terms (fees, commissions) are modelled» (`RECRUITER_MODEL.md:36`).
