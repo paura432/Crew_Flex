@@ -1067,8 +1067,8 @@ ok("21 Golf's pending B1.1 is in the queue", (await golfCard.count()) === 1, "")
 await responsiveShots("22-verifications");
 await golfCard.locator("button[value=rejected]").click();
 ok(
-  "21b rejecting without a reason is refused before any request",
-  /Give a reason to reject/.test(await golfCard.innerText()),
+  "21b rejecting without a reason is refused before any request (T-170: evidence or reason for every decision)",
+  /Give the evidence or the reason of the review/.test(await golfCard.innerText()),
   "",
 );
 await golfCard.locator("textarea[name=note]").fill("Smoke: checked against the authority register");
@@ -6052,6 +6052,235 @@ await logout();
         p11Resumed.every(Boolean) &&
         p11English,
       `${p11Withdrawn} ${p11Closed} ${p11Archived} ${p11ClientGone} ${p11WindowGone} ${p11TypeBack} ${p11Resumed} ${p11English}`,
+    );
+  }
+}
+
+// PKG P12 (admin parity, F3 — ADM-01 #1/#5, ADM-02 #1-#3/#6-#11/#13/#17, ADM-03 #9/#10; migration 20261027300000,
+// T-170): in Spanish, the platform admin lands on «Administración» with the v1.8 figures (counts, no money), the
+// invitation panel and the audit; the review queue shows Golf's declared restrictions with v1.8's «Resuelve las
+// restricciones con el titular antes de revisar el perfil.»; a verification without evidence is refused in the browser
+// and by the API (400 VALIDATION_ERROR); with evidence it is verified, the evidence is readable by the platform admin
+// only (RLS) and never reaches Golf's own review note; the audit lists the decision. Negatives: an organization
+// manager gets HTTP 404 on every admin route and reads no evidence row; Golf (professional) cannot review (FORBIDDEN);
+// anon is 401. Setup through the local API (Golf declares a restriction). Restore: Golf's B1.1 pending again (BR-2.8),
+// the restriction removed, the admin back in English, cookie gone.
+{
+  const GOLF = "golf@crewflex.test";
+  const ADMIN = "platform.admin@crewflex.test";
+  const p12Restriction =
+    "Sin certificación CRS en motores; tareas de motor solo bajo supervisión de un B1 (P12).";
+  const p12Main = async () => (await page.locator("main").innerText()).replace(/\s+/g, " ");
+  const p12Overflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  const p12Shot = (name) =>
+    page.screenshot({
+      path: `docs/audit/evidence/parity/P12/P12-${name}.jpg`,
+      type: "jpeg",
+      quality: 70,
+      fullPage: false,
+    });
+  const p12Golf = async () => (await asSeedUser(GOLF, "professional-profile")).data.profile;
+  const p12SetRestriction = async (value) => {
+    const now = await p12Golf();
+    const body = { ...now, generalRestrictions: value, expectedUpdatedAt: now.updatedAt };
+    delete body.updatedAt;
+    return (await asSeedUser(GOLF, "professional-profile", { method: "PATCH", body })).ok === true;
+  };
+  const p12GolfB11 = async () =>
+    (await asSeedUser(GOLF, "professional-qualifications")).data.qualifications.find(
+      (q) => q.type.code === "B1.1",
+    );
+  const p12Original = (await p12Golf()).generalRestrictions ?? null;
+  try {
+    ok(
+      "PKG P12 0 setup: Golf's B1.1 pending and a general restriction declared through the local API",
+      (await ensureGolfPending()) && (await p12SetRestriction(p12Restriction)),
+      "",
+    );
+    await login(ADMIN);
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    await page.goto(`${BASE}/app`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P12 1 «Administración» in Spanish");
+    const p12Home = await p12Main();
+    const p12Nav = await page
+      .locator("nav a")
+      .evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+    ok(
+      "PKG P12 1b ADM-01 #1/#5, ADM-02 #1-#3/#6-#11/#13/#17: `/app` lands on /app/admin; «Control operativo · datos del servidor», «Tu plataforma, en cifras.», the five counts and «Demanda por licencia» without «€»; «Invitar»; «Revisión de organizaciones», «Auditoría»; the menu links verifications, organizations, representations and audit",
+      new URL(page.url()).pathname === "/app/admin" &&
+        /Administración/.test(p12Home) &&
+        /Control operativo · datos del servidor/i.test(p12Home) &&
+        /Tu plataforma, en cifras\./.test(p12Home) &&
+        /Técnicos registrados/i.test(p12Home) &&
+        /Organizaciones/i.test(p12Home) &&
+        /Necesidades activas/i.test(p12Home) &&
+        /trabajando ahora/i.test(p12Home) &&
+        /AOG con vacantes/i.test(p12Home) &&
+        /Demanda por licencia/.test(p12Home) &&
+        !/€/.test(p12Home) &&
+        /Invitar/.test(p12Home) &&
+        /Auditoría/.test(p12Home) &&
+        [
+          "/app/admin/verifications",
+          "/app/admin/organizations",
+          "/app/admin/representations",
+          "/app/admin/audit",
+        ].every((h) => p12Nav.includes(h)),
+      p12Home.slice(0, 200),
+    );
+    await page.goto(`${BASE}/app/admin/verifications`);
+    await page.waitForLoadState("networkidle");
+    const p12Card = page
+      .locator("main li")
+      .filter({ hasText: "Technician Golf" })
+      .filter({ hasText: "B1.1" });
+    const p12CardText = (await p12Card.innerText()).replace(/\s+/g, " ");
+    ok(
+      "PKG P12 2 ADM-03 #9: Golf's pending B1.1 shows «Restricciones declaradas», the declared text and «Resuelve las restricciones con el titular antes de revisar el perfil.»; «Evidencia o motivo» is required for both decisions",
+      (await p12Card.count()) === 1 &&
+        /Restricciones declaradas/.test(p12CardText) &&
+        p12CardText.includes(p12Restriction) &&
+        /Resuelve las restricciones con el titular antes de revisar el perfil\./.test(
+          p12CardText,
+        ) &&
+        /Evidencia o motivo/.test(p12CardText) &&
+        /Obligatorio\. Al verificar queda como evidencia para la plataforma/.test(p12CardText),
+      p12CardText.slice(0, 300),
+    );
+    await p12Shot("verifications-restrictions-after-1440");
+    const p12Widths = {};
+    for (const width of [1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: 1100 });
+      await page.waitForTimeout(250);
+      p12Widths[width] = await p12Overflow();
+      if (width === 390) await p12Shot("verifications-restrictions-after-390");
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    ok(
+      "PKG P12 2b no horizontal overflow at 1024 / 768 / 390 / 360",
+      Object.values(p12Widths).every((o) => !o),
+      JSON.stringify(p12Widths),
+    );
+    await p12Card.locator("button[value=verified]").click();
+    await page.waitForTimeout(300);
+    const p12Before = await p12GolfB11();
+    const p12ApiNoNote = await asSeedUser(ADMIN, "qualification-reviews", {
+      method: "POST",
+      body: {
+        qualificationId: p12Before.id,
+        decision: "verified",
+        expectedUpdatedAt: p12Before.updatedAt,
+      },
+    });
+    ok(
+      "PKG P12 3 ADM-03 #10: «Verificar» without evidence is refused before any request («Indica la evidencia o el motivo de la revisión.»); the API refuses it too (400 VALIDATION_ERROR); B1.1 still pending",
+      /Indica la evidencia o el motivo de la revisión\./.test(await p12Card.innerText()) &&
+        p12ApiNoNote.ok === false &&
+        p12ApiNoNote.error?.code === "VALIDATION_ERROR" &&
+        (await p12GolfB11()).verificationStatus === "pending",
+      p12ApiNoNote.error?.code ?? "",
+    );
+    await p12Card
+      .locator("textarea[name=note]")
+      .fill("P12: comprobado en el registro de la autoridad");
+    await p12Card.locator("button[value=verified]").click();
+    await page.waitForSelector(
+      "[role=status]:has-text('Verificada. La cualificación ya cuenta para el matching.')",
+      {
+        timeout: 15000,
+      },
+    );
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p12AfterText = await p12Main();
+    const [p12Evidence] = await seedRest(
+      ADMIN,
+      "qualification_reviews?select=decision,note&order=created_at.desc&limit=1",
+    );
+    const p12GolfEvidence = await seedRest(GOLF, "qualification_reviews?select=note");
+    const p12GolfOwn = await p12GolfB11();
+    ok(
+      "PKG P12 4 verified with evidence: the card left the queue, «Últimas decisiones» lists «Verificada» with «Sí»; the evidence row is readable by the platform admin, not by Golf (RLS: 0 rows), and Golf's own review note stays empty (T-170)",
+      (await p12Card.count()) === 0 &&
+        /Últimas decisiones[\s\S]*Verificada/.test(p12AfterText) &&
+        p12Evidence?.decision === "verified" &&
+        p12Evidence?.note === "P12: comprobado en el registro de la autoridad" &&
+        Array.isArray(p12GolfEvidence) &&
+        p12GolfEvidence.length === 0 &&
+        p12GolfOwn.verificationStatus === "verified" &&
+        (p12GolfOwn.reviewNote ?? null) === null,
+      `${JSON.stringify(p12Evidence)} golf=${JSON.stringify(p12GolfEvidence)} own=${p12GolfOwn.verificationStatus}/${p12GolfOwn.reviewNote}`,
+    );
+    await page.goto(`${BASE}/app/admin/audit`);
+    await page.waitForLoadState("networkidle");
+    const p12Audit = await p12Main();
+    await expectSpanish("PKG P12 5 «Auditoría» in Spanish");
+    ok(
+      "PKG P12 5b ADM-02 #17: the audit lists «qualification.reviewed» newest first with the actor's id and «technician_qualification», no free text",
+      /Auditoría/.test(p12Audit) &&
+        /qualification\.reviewed/.test(p12Audit) &&
+        /technician_qualification/.test(p12Audit) &&
+        !/comprobado en el registro/.test(p12Audit),
+      p12Audit.slice(0, 200),
+    );
+    await logout();
+    // Negatives: an organization manager, the professional and anon.
+    await login("manager.mro@crewflex.test");
+    const p12Denied = [];
+    for (const path of [
+      "/app/admin",
+      "/app/admin/verifications",
+      "/app/admin/organizations",
+      "/app/admin/audit",
+    ]) {
+      expectedErrorUrls.add(`${BASE}${path}`);
+      const response = await page.goto(`${BASE}${path}`);
+      p12Denied.push(response?.status());
+    }
+    const p12ManagerEvidence = await seedRest(
+      "manager.mro@crewflex.test",
+      "qualification_reviews?select=note",
+    );
+    const p12GolfReview = await asSeedUser(GOLF, "qualification-reviews", {
+      method: "POST",
+      body: {
+        qualificationId: p12GolfOwn.id,
+        decision: "verified",
+        note: "self",
+        expectedUpdatedAt: p12GolfOwn.updatedAt,
+      },
+    });
+    const p12Anon = await fetch(new URL("/functions/v1/qualification-reviews", supabaseUrl), {
+      headers: { apikey: publishableKey },
+    });
+    ok(
+      "PKG P12 6 negatives: manager.mro gets HTTP 404 on /app/admin, verifications, organizations and audit and reads 0 evidence rows; Golf POST qualification-reviews → FORBIDDEN; anon → 401",
+      p12Denied.every((s) => s === 404) &&
+        Array.isArray(p12ManagerEvidence) &&
+        p12ManagerEvidence.length === 0 &&
+        p12GolfReview.error?.code === "FORBIDDEN" &&
+        p12Anon.status === 401,
+      `${JSON.stringify(p12Denied)} ${p12GolfReview.error?.code} anon=${p12Anon.status}`,
+    );
+    await logout();
+  } finally {
+    const p12Pending = await ensureGolfPending();
+    const p12Restored = await p12SetRestriction(p12Original);
+    const p12English =
+      (await asSeedUser(ADMIN, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P12 7 restore: Golf's B1.1 pending again, the restriction removed, the admin in English",
+      p12Pending && p12Restored && p12English,
+      `${p12Pending} ${p12Restored} ${p12English}`,
     );
   }
 }
