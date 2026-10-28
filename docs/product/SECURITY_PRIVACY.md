@@ -206,22 +206,23 @@ with one: «Resuelve primero los compromisos aceptados o confirmados.» Nothing 
 
 `scripts/local/t22-auth-matrix.mjs` (throw-away local clones, one flag each; synthetic users deleted):
 
-| Case                                                             | Default (today) | `require_current_password`              | `secure_password_change`         |
-| ---------------------------------------------------------------- | --------------- | --------------------------------------- | -------------------------------- |
-| Ordinary session < 24 h, new password only (`PUT /auth/v1/user`) | **200 (gap)**   | 400 `current_password_required`         | **200** (recent sessions exempt) |
-| Wrong / correct `current_password`                               | —               | 400 `current_password_invalid` / 200    | —                                |
-| Session > 24 h                                                   | **200**         | 400                                     | 400 `reauthentication_needed`    |
-| Legitimate recovery link, no current password                    | 200             | **200** (`session.IsRecovery()` exempt) | 200                              |
-| Other sessions after a change                                    | revoked         | revoked                                 | revoked                          |
+| Case                                                             | Default (today)                                                            | `require_current_password`              | `secure_password_change`         |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------- | -------------------------------- |
+| Ordinary session < 24 h, new password only (`PUT /auth/v1/user`) | **200 (gap)**                                                              | 400 `current_password_required`         | **200** (recent sessions exempt) |
+| Wrong / correct `current_password`                               | —                                                                          | 400 `current_password_invalid` / 200    | —                                |
+| Session > 24 h                                                   | **200**                                                                    | 400                                     | 400 `reauthentication_needed`    |
+| Legitimate recovery link, no current password                    | 200                                                                        | **200** (`session.IsRecovery()` exempt) | 200                              |
+| Other sessions after a change                                    | refresh tokens revoked; an issued access token lives ≤ `jwt_exp` (P14b-S1) | idem                                    | idem                             |
 
 Source check (supabase/auth `internal/api/user.go`): the current-password check is skipped only for
 `session.IsRecovery()`; reauthentication applies only when the session is older than 24 h. A recovery link
 verified with `token_hash` carries `amr` `otp`, a PKCE `code` link carries `recovery` — the app gate accepts both.
 
 **Limits (review of `5d22175`):** GoTrue's `IsRecovery()` also covers sessions opened by magic link or e-mail
-OTP and has **no time limit** (the AMR survives refresh). Mitigation in the app: after a reset every session
-ends, the recovery one included (`signOut({ scope: "global" })`, V1.8 A:165), so no long-lived recovery session
-remains. Residual: a session opened by magic link / e-mail OTP keeps the exemption — the app never offers those
+OTP and has **no time limit** (the AMR survives refresh). Mitigation in the app: after a reset the refresh tokens of every session
+are revoked, the recovery one included (`signOut({ scope: "global" })`, V1.8 A:165), so no long-lived recovery session
+remains; an access token already issued to another browser stays valid until `jwt_exp` (3600 s locally; production
+unread) — measured 2026-10-28 (P14b-S1, below). Residual: a session opened by magic link / e-mail OTP keeps the exemption — the app never offers those
 sign-ins, but GoTrue's `/otp` is reachable while the e-mail provider is on. Users without a password and MFA
 (AAL2) rules are out of this matrix. **Also an owner check:** production must keep secure e-mail change
 (`double_confirm_changes`) on, otherwise a stolen session takes the account through an e-mail change.
@@ -232,6 +233,18 @@ and would force a nonce e-mail on old sessions; optional. Recovery keeps working
 «change password» screen outside recovery, so no UI change is needed. Local CLI 2.120 cannot set the flag in
 `config.toml` (only `secure_password_change`): local parity is the clone test above. **Production Auth is
 not modified without owner authorization.**
+
+**Residual P14b-S1 (measured 2026-10-28, `PKG P14b 5`; security review: confirmed, Medium; NEEDS_DECISION, owner):** after
+`updatePasswordAction` → `signOut({ scope: "global" })` GoTrue revokes every refresh token (a second browser gets 400
+`refresh_token_not_found`), but its already-issued access token is a stateless JWT valid until `jwt_exp` (3600 s locally;
+production value unread): that browser still got 200 on `/app/settings`. GoTrue's session-bound endpoints (`PUT /auth/v1/user`,
+`/logout`, refresh) do reject the stale JWT (`session_not_found`), so an intruder cannot change the password or e-mail nor
+extend the session, but keeps ≤ `jwt_exp` of read/write under RLS through pages, Edge Functions (incl. `DELETE /account`) and
+direct PostgREST; `getClaims()` verifies offline (ES256 keys; auth-js only falls back to `getUser()` for symmetric keys). V1.8
+deleted sessions at once. Proposal (not applied): `jwt_expiry` 600 s locally (`supabase/config.toml:167`) and `jwt_exp` 600 in
+the production Auth PATCH (`docs/qa/ROLLOUT_PLAN_V18_LOOP.md` §0b, owner-decision item); per-request `getUser()`/`session_id`
+checks rejected (cost, no PostgREST/Storage coverage); documenting only would leave the UI promise «se cerrarán todas tus
+sesiones» false.
 
 **Redirect allowlist (S-4):** `scripts/local/redirect-allowlist-check.mjs` 6/6 — external, `null`,
 look-alike (`localhost:3001.evil…`, `localhost:3001@evil…`) targets fall back to `site_url`; `next=//…` is

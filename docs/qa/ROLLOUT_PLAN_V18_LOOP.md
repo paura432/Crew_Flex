@@ -48,6 +48,12 @@ confirmation link falls back to `site_url` = localhost; recovery asks `${origin}
 | `password_min_length`   | 6                       | 12                                                                                    | Q-01; the branch asks 12 (`PASSWORD_MIN`). Today's frontend asks 10: a 10–11 character password gets «Elige una contraseña más segura.» until the branch ships                                    |
 | `password_hibp_enabled` | false                   | true                                                                                  | Advisor WARN `auth_leaked_password_protection`; a paid-plan feature — if the API refuses it, leave false and record                                                                               |
 
+**Owner-decision item, NOT in the PATCH above and not applied (P14b-S1, security review 2026-10-28, Medium):** read `jwt_exp`
+first (unread on 2026-10-26; the read-only `GET config/auth` below) and decide whether to set it to 600 s together with local
+`supabase/config.toml:167` (`jwt_expiry`): after a password reset an already-issued access token keeps working for `jwt_exp`
+seconds although every refresh token is revoked (`docs/product/SECURITY_PRIVACY.md` §T22 residual). Nothing is applied by this
+plan without the owner.
+
 Not in this step (owner decisions): custom SMTP — the built-in sender only reaches the organization's team addresses,
 2 e-mails per hour, so real users get no confirmation or recovery mail until it exists (OD-8); the branch's
 `supabase/templates/confirmation.html` (§3 step 3).
@@ -63,7 +69,7 @@ curl -sS -X PATCH https://api.supabase.com/v1/projects/sbjkzrkmcekokkqiuvvh/conf
 
 Rollback: the same PATCH with the «Before» column —
 `{"site_url":"http://localhost:3000","uri_allow_list":"","password_min_length":6,"password_hibp_enabled":false}`.
-Checks after: (1) `GET config/auth` shows the four values (read-only); (2) «¿Olvidaste tu contraseña?» for an existing
+Checks after: (0) before anything, `GET config/auth` (read-only) records `jwt_exp` too, for the P14b-S1 decision; (1) `GET config/auth` shows the four values (read-only); (2) «¿Olvidaste tu contraseña?» for an existing
 account whose address is a team member's → the link opens `https://crew-flex.vercel.app/auth/confirm?…` and ends on
 `/reset-password`; (3) a sign-up with a team-member address → the link confirms and lands on `crew-flex.vercel.app`;
 (4) a 10-character password is refused. (2)–(4) create mail or users in production: one approval each, cleanup by
