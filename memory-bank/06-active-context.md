@@ -1,87 +1,38 @@
 # 06 · Active context
 
-_Last updated 2026-10-28 10:50 CET (F3: P02–P13 + P14a + P14b integrated locally; P14c in progress). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-28 CET (F3 complete: P02–P14 integrated locally; next step waits for the owner). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
-Owner 2026-10-26: F3 «paridad funcional completa» — P02…P14 of the v1.8 parity loop, LOCAL only (commits and local
-migrations authorised; no push, PR, deploy, remote write, production credential). Canonical metric = the 1 587-row
-inventory imported in F3.0 as the 18-v18-inventory directory next to the matrix (`recount.py`, parity = (= + ≈) /
-(= + ≈ + ≠ + −), decision-held rows stay in the denominator); per-package acceptance in `17-parity-matrix-v18.md`.
-Packages run one at a time (the local stack is shared), each in its own worktree and branch, then an independent review
-and the integrator's gate (`tmp/f2/gate.sh`, git-ignored) before a fast-forward here. SCOPE-2 + DEFAULTS stand; sensitive
-open decisions stay NEEDS_DECISION; every subagent: Fable, medium (owner 2026-10-27).
-Owner 2026-10-27: continue F3 autonomously P05→P14 (local only; F4/F5 not authorised); gates do NOT reset the DB —
-`tmp/f2/gate.sh` runs `sb-local.sh migration up` (`RESET=1` forces a reset).
-F2 done (P01 matrix `71edd7b`). F3 so far: F3.0 inventory `a073683`; P02 passport (gate `3220560`, review fix `b13e6a6`);
-P03 calendar (merge `9ee9d8e`, gate `5ffe68e`); P04 opportunities fast-forwarded at `eb21de2` — review: no blockers,
-fixed «{n} días» (one `requirementDays` in `src/domain`); then `f3/p03-fixes` merged (PKG P03 restores delta's locale
-in `finally`); partial coverage is labelled «D-06 Q6 ↔ SCOPE-2» everywhere (was «D-08 · Q6»; Q6 belongs to D-06);
-full gate on `e8b5843` green but smoke 322/323 (a test bug in `PKG P04 10`, fixed `bb37569`), then smoke 323/323.
-P05 applications (2026-10-27): WIP of the cut session reused; `64c9199` feat (T-165 «{n} jornadas», empty `?status=`),
-`2109926` smoke `PKG P05` 0…13, `e23c650` docs (matrix §P05: 22 VERIFIED_LOCAL · 4 OUT · 3 NEEDS_DECISION P05-19 OD-5/T-52,
-P05-20 D-07 P3 + D-10, P05-28 D-06 Q6 ↔ SCOPE-2; P01-26 verified); gate green (check 1170/195, E2E 48/48, race 19/19,
-smoke 344/344; earlier runs: 2 real fixes, 3 load flakes); review no blockers, docs fix `e649831`, fast-forwarded.
-P06 wallet (2026-10-27): re-verification only (no app code/migration; gaps closed by wallet-extras T-100…T-103, N-13,
-T-163); `PKG P06` 17 steps; matrix §P06 17 VERIFIED_LOCAL · 3 NEEDS_DECISION (D-10/OD-3, D-07 P3 + D-10) · 1 BLOCKED
-(D-10 deploy) · 1 OUT; gate (no reset) check 1170/195, E2E 48/48, race 19/19, smoke 361/361; review no blockers,
-merge `3cfcda9`, wording fix `48ed1ee`.
-P07 logbook (2026-10-27): re-verification only (ported 22/10, M14/N-12); citations fixed to BR-17 / T-19…T-22; `PKG P07`
-16 steps; matrix §P07 15 VERIFIED_LOCAL · 1 OUT · 1 BLOCKED (M-3 deploy); gate first run green (smoke 377/377);
-review no blockers, merge `c2f8d6a`, review fixes `79e149d`.
-P08 tools (2026-10-27): re-verification only (ported by `558654f`/`88d9a6d`/`44045db` after the 22/10 snapshot); T-166
-records those defaults; `PKG P08` 12 steps; 16 ✗ (v1.8 bugs «fix on port») → ≠/≈ — DENOMINATOR 1 246 → 1 262, reviewed
-row by row (≠ only lowers the ratio); matrix §P08 19 VERIFIED_LOCAL · 1 IMPLEMENTED_UNVERIFIED · 1 PARTIAL (editorial)
-· 1 NEEDS_DECISION (fuel D-11) · 2 BLOCKED (NEW-01/AB-37 offline; deploy) · 1 OUT; smoke 389/389 first run; merge
-`d4eed6a`, review fixes `a7ed382`.
-P09 org dashboard (2026-10-27): only gap = v1.8 «Resumen» hero (`OrganizationHero.tsx`, T-167); `PKG P09` 11 steps;
-smoke 400/400 first run; review no blockers; merge `2d1ea51`, fixes `8920b9d` (mark from 981 px as v1.8; ORG-07 #3 ops
-e-mail is demo-only ✗, not D-07 → denominator 1 261); matrix §P09 NEEDS_DECISION P09-13 (OD-5/T-52), BLOCKED P09-17
-(OD-4/D-09 invitations), P09-20 (deploy).
-P10 needs/matching (2026-10-27): NEW LOCAL migration `20261027100000` (builder RPC overloads write the six v1.8 profile
-rules; INVOKER create → BEFORE INSERT trigger via tx-local setting; DEFINER edit + audit), «Perfil técnico» form, T-168,
-`coverageDays` (≠ `requirementDays` on purpose, BR-23); smoke 409/409; security + parity reviews no blockers; merge
-`d045565`, fixes `e399356` (one T-83 predicate in src/domain, T-85 residual documented, anon/platform-admin/INSERT
-negatives); check 0 (1184/196) + build 0 after the fix. Held: D-06 Q6 ↔ SCOPE-2, T-33 (OD-7) rate filter; open for the
-matching owner: v1.8 requires the type rating on a DECLARED aircraft (`business.js:142`), ours checks them apart.
-P11 recruiter (2026-10-27): NEW LOCAL migration `20261027200000` (`app_private.requirement_cards` appends the
-represented client's NAME, as recorded, T-169; never the contact); pack copy names the recipient on both sides, «Red
-recruiter» eyebrow; smoke 420/420; security + code reviews no blockers; merge `b9f7d48`, fixes `938d56e` (cleanup of
-`Cliente P11`/`P11 recruiter` rows, restore captured org type, doc refs); check 0 (1185/197) + build 0 on the merge.
-Held: export «Preparar presentación para cliente» (D-07 P3 + D-10).
-P12 admin (2026-10-28): NEW LOCAL migration `20261027300000` (`qualification_reviews` evidence table, platform admin only,
-no write grant; `review_qualification` requires evidence for BOTH decisions, the owner reads only a rejection's reason,
-T-170); the queue shows the owner's declared restrictions with v1.8's sentence as a WARNING (v1.8 refuses a _profile_
-review, `server/app.mjs:189`; blocking = new rule → owner); `PKG P12` 11 checks; security + code reviews no blockers,
-fixes `3781d80` (E2E stale call needed a note: 400 before 409); gate run 2 green (smoke 431/431); merge `d5c42dc`,
-check 0 (1186/197) + build 0 on the merge. Matrix §P12 10 VERIFIED_LOCAL · 5 OUT · 3 BLOCKED (OD-3 ×2, D-10).
-P13 notices/messaging (2026-10-28): re-verification only (v2-18, N-10, S-16, v2-16, N-13, N-14 ported after 22/10); `PKG P13`
-18 checks; gate green twice (smoke 449/449); review no blockers, fixes `4f93ee7` (23 rows change symbol; HIRE-07 #7 ✗→+);
-merge `1ba9534`, check 0 + build 0. Matrix §P13 18 VERIFIED_LOCAL · 3 OUT (chat, OD-7, demo) · 2 BLOCKED (D-07 P3 + D-10; deploy).
-P14 split in three sequential sub-packages (≈330 rows). P14a shell (2026-10-28): re-verification only (SH-01…SH-08,
-SHOT-08/09, TEC-09, TOOL-09); `PKG P14a` 15 checks; gate green twice (smoke 464/464); review no blockers, fixes `96d3df5`
-(SH-06 #14 ✗→≠ as a corrected v1.8 defect, SH-08 #6 stays ✗; 24 rows change symbol); merge `5f26cb9`, check 0 + build 0.
-Five optional P3 shell proposals in the «Cierre P14a» (none required by v1.8 connected).
-P14b access/account (2026-10-28): re-verification only, no auth code/config; `PKG P14b` 22 checks (throwaway account:
-sign-up → Mailpit confirmation → recovery → reset → settings → close); security review CONFIRMED P14b-S1 (Medium): after
-a password reset refresh tokens die but an issued ES256 access token keeps RLS/page/function access ≤ `jwt_expiry`
-(3600 s local, production unread) — proposal `jwt_expiry` 600 s + §0b, NOT applied (owner); SECURITY_PRIVACY corrected;
-seven invitation-flag rows held by OD-8 (held 148 → 155); forged `?code=` confirmation shows a false «Correo confirmado»
-banner without session (P14b-S5, low); merge `94f11b7`, check 0 + build 0. Unmapped inventory sections A11Y-01…06 and
-I18N-01…05 (file 50) belong to no P02–P14 package: ask the owner after P14c.
-Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
-After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime
-container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the functions’ `.env`) into a worktree.
+Owner 2026-10-26/27: F3 «paridad funcional completa» — P02…P14 of the v1.8 parity loop, LOCAL only (commits and local
+migrations authorised; no push, PR, deploy, remote write, production credential; F4/F5 not authorised). **Done
+2026-10-28**: every package in its own worktree/branch with a `PKG Pxx` smoke block, independent review(s) and
+`tmp/f2/gate.sh` (git-ignored; no reset by default, `RESET=1` forces one), merged here; final merge `4e37b88`, check 0
+(1187/197) + build 0. Summary, per-file parity and the owner list: `17-parity-matrix-v18.md` «Cierre F3» (matrix 377 rows:
+297 VERIFIED_LOCAL · 4 IMPLEMENTED_UNVERIFIED · 3 PARTIAL · 20 NEEDS_DECISION · 21 BLOCKED · 32 OUT). Metric = the 1 587-row
+inventory (`18-v18-inventory/recount.py`, (= + ≈) / (= + ≈ + ≠ + −), decision-held rows stay in the denominator).
+New local migrations in F3: `20261027100000` (P10 builder profile rules, T-168), `20261027200000` (P11 client name on
+cards, T-169), `20261027300000` (P12 qualification review evidence, T-170). P05–P09, P13, P14a–c were re-verification
+(P05 T-165, P09 hero T-167, P14c «CrewFlex» in three catalog strings). Per-package detail: the matrix sections and git log.
+Findings for the owner: **P14b-S1** (security review confirmed, Medium) — after a password reset refresh tokens die but an
+issued ES256 access token keeps page/RLS/function access ≤ `jwt_expiry` (3600 s local, production unread); proposal
+600 s locally + production in §0b, NOT applied; SECURITY_PRIVACY corrected. P14b-S5 (low): a forged `/auth/confirm?code=`
+shows «Correo confirmado» without a session. T-170: v1.8 refuses a _profile_ review with restrictions, ours only warns.
+P10: v1.8 requires the type rating on a declared aircraft (`business.js:142`), ours checks them apart (matching owner).
+Unmapped inventory sections `A11Y-01…06` and `I18N-01…05` (file 50) belong to no package: a new package needs the owner.
+Gotchas: Docker Desktop can drop mid-session (`HEALTH=000` → restart, re-run); after ANY local reset set the flags via
+STDIN to `db-owner-sql.sh` and restart `functions serve`; copy `.env.local`, `.env.e2e` and the functions' `.env` into a
+new worktree; the smoke step-17 console 409 is a load flake (re-run once); prettier turns `X-*` into `X-_` in prose.
 
 ## State
 
-| Item         | State                                                                                                                           |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories       |
-| Local `main` | = `origin/main` `51c835a`                                                                                                       |
-| Branch       | `feat/v18-html-parity` = this commit on `94f11b7`: 62 migrations (42 not applied remotely), 23 functions; deployed nowhere      |
-| Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)            |
-| Parity       | inventory `recount.py` after P14b: 1 023 / 1 265 = 80,9 % (155 decision-held, 114 ✗, 208 Next-only); 2026-10-22 baseline 56,1 % |
+| Item         | State                                                                                                                         |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories     |
+| Local `main` | = `origin/main` `51c835a`                                                                                                     |
+| Branch       | `feat/v18-html-parity` = this commit on `4e37b88`: 62 migrations (42 not applied remotely), 23 functions; deployed nowhere    |
+| Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)          |
+| Parity       | inventory `recount.py` after F3: 1 049 / 1 265 = 82,9 % (155 decision-held, 114 ✗, 208 Next-only); 2026-10-22 baseline 56,1 % |
 
 ## Risks
 
@@ -103,5 +54,6 @@ other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-
 
 ## Next step (one)
 
-P14c visual + meta (`VIS-*`, `META-*`) runs in worktree `f3-p14c` / branch `f3/p14c-visual` from `94f11b7`; review and
-merge it, then close F3 (final recount, matrix summary) and ask the owner about A11Y/I18N. Never push or deploy.
+Waits for the owner: choose among (a) a package to re-verify `A11Y-*`/`I18N-*`, (b) the P14b-S1 `jwt_expiry` decision,
+(c) F4/F5 (not authorised). Worktrees `.claude/worktrees/f3-p12…f3-p14c` can be removed once the owner is done reviewing.
+Never push or deploy without the owner.

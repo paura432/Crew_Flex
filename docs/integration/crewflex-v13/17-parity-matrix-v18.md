@@ -1065,3 +1065,28 @@ defecto; revisión visual). Sin decisión nueva (T-171 no hace falta): el único
 `PKG P14c` (0…7, 13 comprobaciones), este commit (matriz §P14c, inventario, cabeceras, capturas).
 Gate run 1 sobre `ec2f7ab` + estas ediciones de docs (`gate.sh … full`, sin reset): `migration up` 0, 62 migraciones, flags, `functions serve` nuevo, HEALTH 200; `pnpm check` 0 (Vitest 1187 / 38 omitidos, Deno 197), build 0, `git diff --check` 0, E2E 48/48, race 19/19, cleanup 0, ui-smoke 499/499 (las 13 de `PKG P14c`), cwd + BUILD_ID comprobados, load 3-12; sin flakes ni re-runs. Antes, dos runs del bloque solo (`gate.sh … smoke` con la copia recortada): 12/13 (una expectativa mal escrita: la etiqueta del dock se medía sobre el acceso actual, que es `ok`, no `muted`; corregida para muestrear otro acceso) y 13/13 (load 36 al arrancar). Las capturas citadas son las del run del bloque solo (13/13), no las re-renderizadas por el run completo (descartadas con `git checkout -- docs/audit/evidence`).
 Revisión independiente sin bloqueantes; correcciones en el commit de revisión: VIS-02 #3 =→≈ (28 cambios; `=` 77 → 76, `≈` 123 → 124, paridad sin cambio), etiqueta del paso 6 del smoke (el dock está `lg:hidden` a 1440), el desbordamiento medido es a 1024/768/390/360 (no a 1000) y 12 apariciones de los grises del lateral; solo texto, sin nuevo gate.
+
+## Cierre F3 (28/10)
+
+Paquetes P02…P14 integrados en local en `feat/v18-html-parity` (P14 en tres subpaquetes: P14a shell, P14b acceso y cuenta,
+P14c sistema visual y meta), cada uno con su worktree, su bloque `PKG` del smoke, revisión independiente y gate; fusión final
+`4e37b88` con `pnpm check` 0 (Vitest 1187 / 38 omitidos, Deno 197) y build 0. Matriz: 377 filas — 297 VERIFIED_LOCAL · 4
+IMPLEMENTED_UNVERIFIED · 3 PARTIAL · 20 NEEDS_DECISION · 21 BLOCKED · 32 OUT_OF_SCOPE. Migraciones nuevas de F3: `20261027100000`
+(P10), `20261027200000` (P11), `20261027300000` (P12); 62 en total, 42 sin aplicar en remoto; nada desplegado.
+
+Inventario (`recount.py` sobre los cinco ficheros; denominador = + ≈ + ≠ + −, las filas retenidas por decisión siguen dentro):
+
+| Fichero                          | Paridad                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `10-shell-auth-account-admin.md` | 172 / 218 = 78,9 %                                                                                |
+| `20-technician.md`               | 256 / 267 = 95,9 %                                                                                |
+| `30-company-hiring.md`           | 259 / 309 = 83,8 %                                                                                |
+| `40-tools-learning.md`           | 162 / 233 = 69,5 %                                                                                |
+| `50-visual-meta-a11y.md`         | 200 / 238 = 84,0 %                                                                                |
+| **Total**                        | **1 049 / 1 265 = 82,9 %** (155 retenidas por decisión, 114 ✗, 208 solo Next; base 22/10: 56,1 %) |
+
+Sin mapear a ningún paquete: `A11Y-01…06` e `I18N-01…05` (`50-visual-meta-a11y.md`) siguen con la verificación v2 del 22/10 y
+cuentan en el total; re-verificarlas sería un paquete nuevo (decisión del owner). Pendiente del owner: P14b-S1 (`jwt_expiry` 600 s
+local y en producción, §0b), OD-8 y el flag `invitation_signup`, texto legal del alta, OD-3, D-07 P3 + D-10, D-11, OD-5/T-52,
+NEW-01 (service worker), si las restricciones declaradas bloquean la revisión (T-170), CSP en modo enforce (CX-09) y todo push o
+despliegue.
