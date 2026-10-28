@@ -1,6 +1,6 @@
 # 50 · Diff de sistema visual, meta/PWA, accesibilidad, i18n y capturas — v1.8 ↔ Next
 
-**F3 (26/10, tras P02, P03 y P04 — SHOT-03, SHOT-02 y SHOT-10 re-verificadas; `recount.py`):** filas 306 · = 66 · ≈ 93 · ≠ 51 · − 28 · + 49 · ✗ 19 → paridad 159/238 = 66,8 %, 12 filas retenidas por una decisión abierta. Las líneas siguientes son el estado histórico del 22/10.
+**F3 (28/10, P14a — SHOT-08 y SHOT-09 re-verificadas, 1 fila cambia de símbolo `(F3: antes X)`; `recount.py`):** filas 306 · = 71 · ≈ 103 · ≠ 41 · − 23 · + 49 · ✗ 19 → paridad 174/238 = 73,1 %, 9 filas retenidas por una decisión abierta (antes de P14a, `recount.py` sobre `887d4a2`: = 70 · ≈ 103 · ≠ 41 · − 24 → 173/238 = 72,7 %, 9 retenidas; 26/10, tras P02, P03 y P04 — SHOT-03, SHOT-02 y SHOT-10: = 66 · ≈ 93 · ≠ 51 · − 28 · + 49 · ✗ 19 → 159/238 = 66,8 %, 12 retenidas). Las líneas siguientes son el estado histórico del 22/10.
 
 Filas 306 · = 62 · ≈ 87 · ≠ 59 · − 30 · + 49 · ✗ 19 · Sev. P1 0 · P2 33 · P3 75 · sin sev. 198 (v2, 22/10 tarde, Next `821c24f`; xhigh: 282 · = 56 · ≈ 81 · ≠ 53 · − 32 · + 41 · ✗ 19 · P1 3 · P2 30 · P3 71 · sin sev. 178; refresco de la mañana: 274 · = 55 · ≈ 77 · ≠ 51 · − 32 · + 40 · ✗ 19; 21/10: 269 · = 48 · ≈ 77 · ≠ 55 · − 39 · + 30 · ✗ 20)
 
@@ -962,13 +962,14 @@ Capturas: `evidencias/shots/demo/D-EMP-02-nueva-necesidad-1440.png`; Next `v18-c
 
 | # | Elemento | v1.8 (`evidencias/shots/connected/C-ANON-01-login-1440.png`, `-390.png`) | Next (`local-21-login-es.jpg`, lote 13) | Diff | Sev. | Bloqueo | Acción |
 |---|---|---|---|---|---|---|---|
-| 1 | Composición | shell con sidebar («BETA LOCAL»: «Acceder a mi cuenta», «Herramientas»), breadcrumb «CrewFlex / Acceder a mi cuenta», «Ver demo» y banda verde; 2 columnas (mensaje + tarjeta) (v2: medido en el conectado, `evidencias/v2/50/SHOT-08-1-v18c-1440.jpg`, `-390.jpg`) | tarjeta de unos 448px centrada sobre canvas con marca CF «Crew Flex» y ES/EN | ≠ | P3 | — | mantener |
-| 2 | Mensaje | «BETA POR INVITACIÓN» / «Tu siguiente etapa empieza aquí.» / «Tu perfil y tu disponibilidad, bajo tu control. Las herramientas se pueden utilizar sin abrir una cuenta.» + aviso ámbar «Pruebas locales…» | «Iniciar sesión» / «Accede a tu espacio de Crew Flex.» | ≠ | P3 | — | — |
+| 1 | Composición | shell con sidebar («BETA LOCAL»: «Acceder a mi cuenta», «Herramientas»), breadcrumb «CrewFlex / Acceder a mi cuenta», «Ver demo» y banda verde; 2 columnas (mensaje + tarjeta) (v2: medido en el conectado, `evidencias/v2/50/SHOT-08-1-v18c-1440.jpg`, `-390.jpg`) | tarjeta de 448 px centrada sobre `canvas`, con la marca v1.8 (isotipo del avión + «CrewFlex» + «AVIATION», T-140) enlazando a `/` y ES/EN (`src/app/(auth)/layout.tsx:6-19`); sin lateral ni banda. F3 P14a: sin cambio de forma; el cierre de sesión aterriza aquí con «Sesión cerrada.» (`PKG P14a 6`) | ≠ | P3 | — | mantener |
+| 2 | Mensaje | «BETA POR INVITACIÓN» / «Tu siguiente etapa empieza aquí.» / «Tu perfil y tu disponibilidad, bajo tu control. Las herramientas se pueden utilizar sin abrir una cuenta.» + aviso ámbar «Pruebas locales…» | «Iniciar sesión» / «Accede a tu espacio de CrewFlex.» (es:125-126); desde T-145, bajo los enlaces, la frase de v1.8 «Las herramientas se pueden utilizar sin abrir una cuenta.» + «Abrir herramientas» → `/tools` (`login/page.tsx:54-60`, es:2549-2550; `PKG shell-visual 12`). Sin «BETA POR INVITACIÓN» ni el aviso ámbar (beta local) | ≠ | P3 | — | — |
 | 3 | Botón | **teal** `.tb-button.primary` «Iniciar sesión» | **naranja** a todo el ancho «Iniciar sesión» | ≠ | P3 | — | mantener |
 | 4 | Enlaces | «Tengo una invitación» y «He olvidado mi contraseña» (teal, subrayados) | «¿Has olvidado tu contraseña?» y «¿Sin cuenta? Crea una» (azul, negrita) | ≠ | P3 | — | registro abierto frente a invitación: ver el diff de auth |
 | 5 | Campos | «Email» y «Contraseña» | «Correo electrónico» y «Contraseña» | ≈ | — | — | — |
 
 Capturas: `evidencias/shots/connected/C-ANON-01-login-1440.png`, `C-ANON-01-login-390.png`; Next `docs/audit/evidence/local-21-login-es.jpg` (lote 13), `deployed-390-login.jpg` (2026-10-09, anterior). xhigh: `evidencias/xhigh/50/SHOT-08-next-390.jpg` (el modo conectado de v1.8 no está levantado). v2: `evidencias/v2/50/SHOT-08-1-v18c-1440.jpg`, `SHOT-08-1-v18c-390.jpg` (conectado medido).
+F3 (P14a, 28/10): filas re-verificadas sobre el código y en `PKG P14a 6`; sin captura nueva del login (AUTH-01 y la captura del acceso se revisan en P14b).
 
 ---
 
@@ -978,11 +979,12 @@ Capturas: `evidencias/shots/connected/C-ANON-01-login-1440.png`, `C-ANON-01-logi
 
 | # | Elemento | v1.8 (`D-GEN-04-menu-movil-390.png`, `D-GEN-03-vista-movil-preview-1440.png`) | Next (`local-23-overview-nav-390.jpg`, lote 14) | Diff | Sev. | Bloqueo | Acción |
 |---|---|---|---|---|---|---|---|
-| 1 | Apertura | drawer de 265px desde la izquierda, sobre el contenido oscurecido; X para cerrar; 11 entradas con scroll interno + «Datos y alcance» y la persona | panel navy bajo la barra con las entradas en filas que envuelven (Mi espacio · Pasaporte / Cualificaciones · Disponibilidad / Documentos / Herramientas · Configuración), sin títulos de sección v2: el desplegable suma «Oportunidades» y «Mis candidaturas» (`evidencias/v2/50/SHOT-09-1-next-390.jpg`) | ≠ | P3 | — | mantener |
-| 2 | Dock | visible bajo el drawer (Inicio, Ofertas, Calendario, Candidaturas, Herramientas) | no | − | P2 | — (v2: default v1.8, C-12) | portar (VIS-06 #11) |
+| 1 | Apertura | drawer de 265px desde la izquierda, sobre el contenido oscurecido; X para cerrar; 11 entradas con scroll interno + «Datos y alcance» y la persona | panel navy bajo la barra (isotipo, campana, «Cerrar sesión», «Menú») con las entradas en filas que envuelven, sin títulos de sección; F3 P14a: «Mi espacio · Mi pasaporte · Cualificaciones · Disponibilidad · Oportunidades · Mis candidaturas · Documentos · Logbook» y «Avisos · Herramientas · Configuración», 11 entradas, sin desbordamiento (`PKG P14a 2`; `docs/audit/evidence/parity/P14a/P14a-menu-after-390.jpg`); v2: `evidencias/v2/50/SHOT-09-1-next-390.jpg` | ≠ | P3 | — | mantener |
+| 2 | Dock | visible bajo el drawer (Inicio, Ofertas, Calendario, Candidaturas, Herramientas) | dock fijo abajo `<lg` con «Inicio · Ofertas · Calendario · Candidaturas · Herramientas» (T-141, `44045db`), visible también con el desplegable abierto; empresa «Inicio · Ofertas · Candidatos · Candidaturas · Herramientas», admin «Administración · Herramientas» (`PKG P14a 2b/7/9`, `PKG shell-visual 7`; `docs/audit/evidence/parity/P14a/P14a-shell-after-390.jpg`, `P14a-org-dock-after-390.jpg`) | = (F3: antes −) | — | — (T-141, default v1.8 C-12) | — (VIS-06 #11 en P14c) |
 | 3 | Vista móvil simulada | columna de 520px sobre navy, sin dock | no | ✗ | — | DEMO-ONLY | — |
 
 Capturas: `evidencias/shots/demo/D-GEN-04-menu-movil-390.png`, `evidencias/shots/demo/D-GEN-03-vista-movil-preview-1440.png`, `evidencias/shots/connected/C-EMP-30-mobile-menu-390-390.png`; Next `docs/audit/evidence/local-23-overview-nav-390.jpg` (lote 14). xhigh: `evidencias/xhigh/50/SHOT-09-menu-next-390.jpg`, `SHOT-09-menu-v18-390.jpg`, `SHOT-09-menu-abierto-foco-next-390.jpg`, `SHOT-09-menu-abierto-foco-v18-390.jpg`. v2: `evidencias/v2/50/SHOT-09-1-next-390.jpg`.
+F3 (P14a, 28/10): Next `docs/audit/evidence/parity/P14a/P14a-shell-after-390.jpg` (dock), `P14a-menu-after-390.jpg` (desplegable abierto), `P14a-org-dock-after-390.jpg`.
 
 ---
 
