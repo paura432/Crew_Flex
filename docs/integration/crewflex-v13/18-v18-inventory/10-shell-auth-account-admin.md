@@ -1,7 +1,8 @@
 # 10 · Diff v1.8 ↔ Next — Shell y navegación, acceso, cuenta y administración
 
-Filas 317 · = 29 · ≈ 102 · ≠ 37 · − 47 · + 58 · ✗ 44 · Sev. P0 2 · P1 12 · P2 29 · P3 66 · sin severidad 208
-(F3 P12, 27/10: ADM-01…03 re-verificadas, 20 filas cambian de símbolo `(F3: antes X)`; v2, 22/10 por la tarde: = 29 · ≈ 82 ·
+Filas 317 · = 29 · ≈ 105 · ≠ 36 · − 45 · + 58 · ✗ 44 · Sev. P0 2 · P1 12 · P2 29 · P3 66 · sin severidad 208
+(F3 P13, 28/10: ACC-03 re-verificada, 3 filas cambian de símbolo `(F3: antes X)`; F3 P12, 27/10: ADM-01…03 re-verificadas,
+20 filas cambian de símbolo: = 29 · ≈ 102 · ≠ 37 · − 47 · + 58 · ✗ 44; v2, 22/10 por la tarde: = 29 · ≈ 82 ·
 ≠ 38 · − 66 · + 58 · ✗ 44 · P0 2 · P1 14 · P2 33 · P3 77 · sin severidad 191; xhigh: filas 314 · = 26 · ≈ 79 · ≠ 38 · − 72 · + 57 · ✗ 42 · P0 2 · P1 18 · P2 34 ·
 P3 76; refresco de la mañana: filas 312; 21/10: filas 301)
 
@@ -1017,19 +1018,21 @@ Capturas: Next `docs/audit/evidence/local-14-settings-en-1440.jpg` (`108a244`).
 
 ## ACC-03 · Privacidad (demo) y preferencias de contacto — v1.8 `S-TEC-08, D-TEC-08` ↔ Next `N-PRO-02` (visibilidad)
 
-**Estado global:** PARCIAL. Solo se recoge la correspondencia de la página demo «Privacidad». El detalle (visibilidad y
-preferencias AOG) pertenece al diff de pasaporte y disponibilidad.
+**Estado global:** IGUAL salvo matices (F3 P13, 28/10: antes PARCIAL). Solo se recoge la correspondencia de la página demo
+«Privacidad»; el detalle está en TEC-07 (`20-technician.md`). Las 4 opciones (S-16), los bloqueos (v2-16) y las preferencias
+de avisos (N-10) se portaron después de la v2 y P13 los re-verifica (`PKG P13 1b/2/4b`); 3 filas cambian de símbolo.
 
 | # | Elemento | v1.8 (literal «…» / comportamiento) | Next (literal «…» / comportamiento, `archivo:línea`) | Diff | Sev. | Bloqueo | Acción |
 |---|---|---|---|---|---|---|---|
-| 1 | Página | kicker «CONTROL DE DATOS», `h1` «Tú eliges quién te ve.», «Los expedientes anónimos no permiten descargar archivos identificativos.» (`Professional2.jsx:229-266`; en ejecución v2, `evidencias/v2/10/V18-privacy-v18-1440.jpg`) | Sin página: la visibilidad es un campo de Mi pasaporte (`ProfileForm.tsx:150-178`) | ≈ | P3 | — | Mantener |
-| 2 | Visibilidad | 4 opciones: «Privado» («Fuera de la búsqueda; puedes presentar candidaturas.»), «Anónimo», «Empresas verificadas» («Perfil anónimo para organizaciones verificadas.»), «Abierto»; guardado instantáneo con el toast «Perfil profesional guardado» (en ejecución v2) | 3: privado, anónimo, abierto (C-7) | ≠ | P2 | — (v2: default v1.8, OD-5) | Portar «Empresas verificadas» cuando exista la revisión de organizaciones (ADM-03 #7) |
-| 3 | «Bloquear a mi empresa actual» | Casilla con el nombre de la empresa actual (en ejecución v2). En el conectado, el bloqueo existe por organización: el técnico 2 bloquea a «QA Talent Recruiting», que no lo ve en su directorio | — | − | P2 | — (v2: default v1.8) | Portar con el pasaporte y el directorio (`20-technician.md`, `30-company-hiring.md`) |
-| 4 | Alertas urgentes, contacto AOG, AOG en silencio, horas de silencio | 3 casillas + «Inicio del silencio» / «Fin del silencio» (22:00-07:00) (en ejecución v2) | — | − | P2 | — (v2: desbloqueado, alcance NEXT «AOG opt-in» y LATER «outreach») | Portar con los avisos (SH-06 #12) |
+| 1 | Página | kicker «CONTROL DE DATOS», `h1` «Tú eliges quién te ve.», «Los expedientes anónimos no permiten descargar archivos identificativos.» (`Professional2.jsx:229-266`; en ejecución v2, `evidencias/v2/10/V18-privacy-v18-1440.jpg`) | Sin página: la visibilidad y los bloqueos son el panel «05 · Visibilidad en la red» de Mi pasaporte (`ProfileForm.tsx:610-672`); las preferencias de avisos y «Tus datos», en Configuración | ≈ | P3 | — | Mantener |
+| 2 | Visibilidad | 4 opciones: «Privado» («Fuera de la búsqueda; puedes presentar candidaturas.»), «Anónimo», «Empresas verificadas» («Perfil anónimo para organizaciones verificadas.»), «Abierto»; guardado instantáneo con el toast «Perfil profesional guardado» (en ejecución v2) | 4 con los mismos títulos y el mismo orden (`src/domain/professional.ts:13`; `20261023500000`); «Empresas verificadas» = organizaciones con la revisión registrada por la plataforma (T-50, BR-8); se guarda con «Guardar pasaporte», sin toast instantáneo. Runtime F3: `PKG P13 4b` | ≈ (F3: antes ≠) | P2 | — (F3: antes OD-5 → default v1.8 S-16/T-50) | Hecho (S-16, ADM-03 #7); P13 lo verifica |
+| 3 | «Bloquear a mi empresa actual» | Casilla con el nombre de la empresa actual (en ejecución v2). En el conectado, el bloqueo existe por organización: el técnico 2 bloquea a «QA Talent Recruiting», que no lo ve en su directorio | «Organizaciones bloqueadas»: una casilla por organización de la red en el pasaporte, como el conectado (`ProfileForm.tsx:648-671`; `20261024800000`, T-160); la bloqueada no lo ve en el directorio ni en el pool, y sus necesidades salen de «Oportunidades». Runtime F3: `PKG P13 4b`; `PKG v2-16` | ≈ (F3: antes −) | P2 | — | Hecho (v2-16, TEC-07 #11); P13 lo verifica |
+| 4 | Alertas urgentes, contacto AOG, AOG en silencio, horas de silencio | 3 casillas + «Inicio del silencio» / «Fin del silencio» (22:00-07:00) (en ejecución v2) | 2 casillas («Quiero avisos internos de trabajos urgentes», «Quiero avisos internos AOG») + «Silencio desde/hasta (opcional)» sin valor por defecto, en «Avisos de oportunidades» de Configuración (`NoticePreferencesForm.tsx`; `20261024400100`); sin «AOG en silencio» (como el conectado). Runtime F3: `PKG P13 1b/2/2b` | ≈ (F3: antes −) | P2 | — | Hecho (N-10, TEC-07 #12-#17); P13 lo verifica |
 | 5 | Nota | «La activación de demo respeta estas preferencias. No se envían mensajes externos. …» | — | ✗ | — | DEMO-ONLY | — |
 
 Capturas: v1.8 `evidencias/shots/demo/D-TEC-08-privacidad-1440.png`. Next `docs/audit/evidence/local-10-passport-1440.jpg`.
 Capturas v2: v1.8 demo `evidencias/v2/10/V18-privacy-v18-1440.jpg`.
+Capturas F3 P13 (28/10, es): `docs/audit/evidence/parity/P13/P13-passport-visibility-after-1440.jpg`, `P13-settings-after-{1440,390}.jpg`.
 
 ---
 
