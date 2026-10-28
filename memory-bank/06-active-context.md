@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-28 10:50 CET (F3: P02–P13 + P14a integrated locally; P14b in progress). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-28 10:50 CET (F3: P02–P13 + P14a + P14b integrated locally; P14c in progress). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -62,6 +62,13 @@ P14 split in three sequential sub-packages (≈330 rows). P14a shell (2026-10-28
 SHOT-08/09, TEC-09, TOOL-09); `PKG P14a` 15 checks; gate green twice (smoke 464/464); review no blockers, fixes `96d3df5`
 (SH-06 #14 ✗→≠ as a corrected v1.8 defect, SH-08 #6 stays ✗; 24 rows change symbol); merge `5f26cb9`, check 0 + build 0.
 Five optional P3 shell proposals in the «Cierre P14a» (none required by v1.8 connected).
+P14b access/account (2026-10-28): re-verification only, no auth code/config; `PKG P14b` 22 checks (throwaway account:
+sign-up → Mailpit confirmation → recovery → reset → settings → close); security review CONFIRMED P14b-S1 (Medium): after
+a password reset refresh tokens die but an issued ES256 access token keeps RLS/page/function access ≤ `jwt_expiry`
+(3600 s local, production unread) — proposal `jwt_expiry` 600 s + §0b, NOT applied (owner); SECURITY_PRIVACY corrected;
+seven invitation-flag rows held by OD-8 (held 148 → 155); forged `?code=` confirmation shows a false «Correo confirmado»
+banner without session (P14b-S5, low); merge `94f11b7`, check 0 + build 0. Unmapped inventory sections A11Y-01…06 and
+I18N-01…05 (file 50) belong to no P02–P14 package: ask the owner after P14c.
 Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
 After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime
 container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the functions’ `.env`) into a worktree.
@@ -72,9 +79,9 @@ container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the fun
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories       |
 | Local `main` | = `origin/main` `51c835a`                                                                                                       |
-| Branch       | `feat/v18-html-parity` = this commit on `5f26cb9`: 62 migrations (42 not applied remotely), 23 functions; deployed nowhere      |
+| Branch       | `feat/v18-html-parity` = this commit on `94f11b7`: 62 migrations (42 not applied remotely), 23 functions; deployed nowhere      |
 | Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)            |
-| Parity       | inventory `recount.py` after P14a: 1 006 / 1 263 = 79,7 % (148 decision-held, 116 ✗, 208 Next-only); 2026-10-22 baseline 56,1 % |
+| Parity       | inventory `recount.py` after P14b: 1 023 / 1 265 = 80,9 % (155 decision-held, 114 ✗, 208 Next-only); 2026-10-22 baseline 56,1 % |
 
 ## Risks
 
@@ -92,10 +99,9 @@ container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the fun
 ## Blocked on the owner
 
 §0 H1 push of `352182c`; §0b Auth PATCH; §0c Crew_Flex-only read token then revoke the current one; custom SMTP; every
-other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-decision-pack.md` §2; the T-xx sign-offs; whether declared restrictions block a qualification review (T-170).
+other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-decision-pack.md` §2; the T-xx sign-offs; whether declared restrictions block a qualification review (T-170); P14b-S1 `jwt_expiry` 600 s (local + production §0b).
 
 ## Next step (one)
 
-P14b access + account (AUTH-01…AUTH-06, ACC-01, ACC-02; no auth/security code change — proposals only) runs in worktree
-`f3-p14b` / branch `f3/p14b-access` from `5f26cb9`; review and merge it, then P14c visual + meta (`VIS-*`, `META-*`) from
-the merged head. Never push or deploy.
+P14c visual + meta (`VIS-*`, `META-*`) runs in worktree `f3-p14c` / branch `f3/p14c-visual` from `94f11b7`; review and
+merge it, then close F3 (final recount, matrix summary) and ask the owner about A11Y/I18N. Never push or deploy.
