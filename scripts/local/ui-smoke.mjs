@@ -7517,13 +7517,14 @@ await logout();
       await p14bShot("confirmed-after-1440");
     }
     ok(
-      "PKG P14b 3 AUTH-02 #12, AUTH-01 #12, AUTH-03 #2-#4/#7: the sign-up answers «Revisa tu bandeja de entrada» + «Hemos enviado un enlace de confirmación a {email}. Confírmalo y después inicia sesión.»; signing in before confirming is refused with «Confirma tu correo antes de iniciar sesión.»; the e-mail's link (/auth/confirm?next=/app) lands on /login?confirmed=1 with «Correo confirmado. Ya puedes iniciar sesión.» and no session",
+      "PKG P14b 3 AUTH-02 #12, AUTH-01 #12, AUTH-03 #2-#4/#7: the sign-up answers «Revisa tu bandeja de entrada» + «Hemos enviado un enlace de confirmación a {email}. Confírmalo y después inicia sesión.»; signing in before confirming is refused with «Confirma tu correo antes de iniciar sesión.»; the e-mail's link (/auth/confirm?next=/app) lands on /login?confirmed=1 with «Correo confirmado. Ya puedes iniciar sesión.» and no session (/app/settings still 307)",
       p14bInbox.join(" ") ===
         `Revisa tu bandeja de entrada Hemos enviado un enlace de confirmación a ${P14B_EMAIL}. Confírmalo y después inicia sesión.` &&
         p14bUnconfirmed.join() === "Confirma tu correo antes de iniciar sesión." &&
         /\/login\?confirmed=1$/.test(p14bConfirmed.url) &&
         p14bConfirmed.status.join() === "Correo confirmado. Ya puedes iniciar sesión." &&
-        (await page.locator("main form #email").count()) === 1,
+        (await page.locator("main form #email").count()) === 1 &&
+        (await page.request.get(`${BASE}/app/settings`, { maxRedirects: 0 })).status() === 307,
       `${JSON.stringify(p14bInbox)} ${JSON.stringify(p14bUnconfirmed)} ${JSON.stringify(p14bConfirmed)}`,
     );
 
@@ -7535,6 +7536,9 @@ await logout();
       ["forged-signup", `${BASE}/auth/confirm?token_hash=x&type=signup&next=/app`],
       ["forged-recovery", `${BASE}/auth/confirm?token_hash=x&type=recovery&next=/reset-password`],
       ["empty", `${BASE}/auth/confirm`],
+      // Reported, not endorsed (P14b-S5): a forged PKCE code is never exchanged in the sign-up branch and only
+      // shows the «Correo confirmado…» banner; the assertion is that no session exists afterwards.
+      ["forged-code", `${BASE}/auth/confirm?code=p14b-forged&next=/app`],
     ]) {
       if (!url) continue;
       await page.goto(url);
@@ -7545,6 +7549,8 @@ await logout();
       p14bBad[name] = {
         url: `${new URL(page.url()).pathname}${new URL(page.url()).search}`,
         alert: await p14bAlerts(),
+        status: await p14bStatus(),
+        session: (await page.request.get(`${BASE}/app/settings`, { maxRedirects: 0 })).status(),
       };
     }
     await page.goto(`${BASE}/reset-password`);
@@ -7556,7 +7562,7 @@ await logout();
       link: await page.locator("main a[href='/forgot-password']").allInnerTexts(),
     };
     ok(
-      "PKG P14b 3b AUTH-03 #5, AUTH-04 #9/#10, AUTH-06 #11: the reused confirmation link, a forged sign-up token and an empty /auth/confirm land on /login?confirmError=1 with «Enlace caducado, utilizado o no válido. Inicia sesión; si tu correo no está confirmado, regístrate de nuevo para recibir otro enlace.»; a forged recovery token lands on /forgot-password?expired=1 with «Ese enlace ha caducado o ya se ha usado. Solicita uno nuevo.»; /reset-password without a recovery session shows «Elige una contraseña nueva» + «Esta página necesita un enlace de restablecimiento válido.» and «Solicitar un enlace nuevo», no fields",
+      "PKG P14b 3b AUTH-03 #5, AUTH-04 #9/#10, AUTH-06 #11: the reused confirmation link, a forged sign-up token and an empty /auth/confirm land on /login?confirmError=1 with «Enlace caducado, utilizado o no válido. Inicia sesión; si tu correo no está confirmado, regístrate de nuevo para recibir otro enlace.»; a forged recovery token lands on /forgot-password?expired=1 with «Ese enlace ha caducado o ya se ha usado. Solicita uno nuevo.»; a forged ?code= (reported, P14b-S5) lands on /login?confirmed=1 showing «Correo confirmado…» without opening a session (/app/settings 307); /reset-password without a recovery session shows «Elige una contraseña nueva» + «Esta página necesita un enlace de restablecimiento válido.» and «Solicitar un enlace nuevo», no fields",
       ["reused", "forged-signup", "empty"].every(
         (k) =>
           p14bBad[k]?.url === "/login?confirmError=1" &&
@@ -7566,6 +7572,9 @@ await logout();
         p14bBad["forged-recovery"]?.url === "/forgot-password?expired=1" &&
         p14bBad["forged-recovery"].alert.join() ===
           "Ese enlace ha caducado o ya se ha usado. Solicita uno nuevo." &&
+        p14bBad["forged-code"]?.url === "/login?confirmed=1" &&
+        p14bBad["forged-code"].status.join() === "Correo confirmado. Ya puedes iniciar sesión." &&
+        p14bBad["forged-code"].session === 307 &&
         p14bNoSession.h1 === "Elige una contraseña nueva" &&
         p14bNoSession.alert.join() ===
           "Esta página necesita un enlace de restablecimiento válido. Solicitar un enlace nuevo" &&
@@ -7708,12 +7717,16 @@ await logout();
           method: "POST",
           headers: { apikey: publishableKey, "Content-Type": "application/json" },
           body: JSON.stringify({ refresh_token: p14bBSession.refresh_token }),
-        }).then(async (r) => ({ status: r.status, ...(await r.json().catch(() => ({}))) }))
-      : { status: "no session cookie" };
+        }).then(async (r) => {
+          // Status and error code only: the body is never printed (security review).
+          const body = await r.json().catch(() => ({}));
+          return { status: r.status, error_code: body.error_code ?? null };
+        })
+      : { status: "no session cookie", error_code: null };
     await p14bCtxB.close();
     p14bCtxB = null;
     ok(
-      "PKG P14b 5 AUTH-04 #8/#11-#17, AUTH-01 #17: the recovery e-mail's link (/auth/confirm?next=/reset-password) opens «Elige una contraseña nueva» / «Al guardarla se cerrarán todas tus sesiones, también esta.» with «Contraseña nueva» (minLength 12, hint «Al menos 12 caracteres.») and «Repite la contraseña nueva» (both maxLength 72, new-password), button «Guardar contraseña», no overflow at the four widths; a mismatch → «Revisa los campos marcados.» + «Las contraseñas no coinciden.»; the current password → «Elige una contraseña distinta de la actual.»; the new one → /login?reset=1 «Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.»; the second browser (signed in on /app/professional) can no longer refresh its session (Auth answers 400 to its refresh token) — its still-valid JWT is reported in the detail, not asserted (jwt_expiry 1 h)",
+      "PKG P14b 5 AUTH-04 #8/#11-#17, AUTH-01 #17: the recovery e-mail's link (/auth/confirm?next=/reset-password) opens «Elige una contraseña nueva» / «Al guardarla se cerrarán todas tus sesiones, también esta.» with «Contraseña nueva» (minLength 12, hint «Al menos 12 caracteres.») and «Repite la contraseña nueva» (both maxLength 72, new-password), button «Guardar contraseña», no overflow at the four widths; a mismatch → «Revisa los campos marcados.» + «Las contraseñas no coinciden.»; the current password → «Elige una contraseña distinta de la actual.»; the new one → /login?reset=1 «Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.»; the second browser (signed in on /app/professional) can no longer refresh its session (Auth answers 400 refresh_token_not_found to its refresh token) — its still-valid JWT is reported in the detail, not asserted (jwt_expiry 1 h)",
       p14bResetForm?.h1 === "Elige una contraseña nueva" &&
         p14bResetForm.lead === "Al guardarla se cerrarán todas tus sesiones, también esta." &&
         p14bResetForm.labels.join(" | ") === "Contraseña nueva | Repite la contraseña nueva" &&
@@ -7731,7 +7744,8 @@ await logout();
         p14bAfterReset.status.join() ===
           "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña." &&
         p14bBefore === "/app/professional" &&
-        p14bBRefresh.status === 400,
+        p14bBRefresh.status === 400 &&
+        p14bBRefresh.error_code === "refresh_token_not_found",
       `${JSON.stringify(p14bResetForm)} ${JSON.stringify(p14bResetWidths)} ${JSON.stringify(p14bMismatch)} ${JSON.stringify(p14bSame)} ${JSON.stringify(p14bAfterReset)} B:${p14bBefore} → page ${p14bBAfter} · refresh ${JSON.stringify(p14bBRefresh)}`,
     );
 
@@ -7777,7 +7791,7 @@ await logout();
       };
     });
     ok(
-      "PKG P14b 6b ACC-01 #1/#2/#4/#5, ACC-02 #3, AUTH-06 #9, SH-07 #6: the old password is refused («El correo o la contraseña no son correctos.»), the new one lands on the `next` page /app/settings: «Configuración» / «Tu cuenta y cómo ves CrewFlex. …», header «CrewFlex / Configuración», the «Cuenta» entry in the menu; panels «Idioma / Language» (radios «Español ES» checked · «English EN»), «Avisos de oportunidades», «Cuenta» (Nombre=P14b Acceso · Correo electrónico=<the address> · Tipo de cuenta=Profesional; no «Organización», «Rol» nor «Rol de plataforma») and «Tus datos»; the Supabase session cookies and crewflex-locale are readable from document.cookie",
+      "PKG P14b 6b ACC-01 #1/#2/#4/#5, ACC-02 #3, AUTH-06 #9, SH-07 #6: the old password is refused («El correo o la contraseña no son correctos.»), the new one lands on the `next` page /app/settings: «Configuración» / «Tu cuenta y cómo ves CrewFlex. …», header «CrewFlex / Configuración», «Configuración» under the «Cuenta» menu; panels «Idioma / Language» (radios «Español ES» checked · «English EN»), «Avisos de oportunidades», «Cuenta» (Nombre=P14b Acceso · Correo electrónico=<the address> · Tipo de cuenta=Profesional; no «Organización», «Rol» nor «Rol de plataforma») and «Tus datos»; the Supabase session cookies and crewflex-locale are readable from document.cookie",
       p14bOld.join() === "El correo o la contraseña no son correctos." &&
         p14bSettings.h1 === "Configuración" &&
         /^Tu cuenta y cómo ves CrewFlex\./.test(p14bSettings.lead) &&
@@ -7909,7 +7923,9 @@ await logout();
         method: "POST",
         headers: { apikey: publishableKey, "Content-Type": "application/json" },
         body: JSON.stringify({ email: P14B_EMAIL, password: p14bPassword }),
-      }).then((r) => r.json());
+      })
+        .then((r) => r.json())
+        .catch(() => ({}));
       if (auth.access_token) {
         const closed = await fetch(new URL("/functions/v1/account", supabaseUrl), {
           method: "DELETE",
@@ -7919,7 +7935,9 @@ await logout();
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ confirm: "CERRAR" }),
-        }).then((r) => r.json());
+        })
+          .then((r) => r.json())
+          .catch(() => ({}));
         p14bGone = closed.ok === true;
       }
     }
