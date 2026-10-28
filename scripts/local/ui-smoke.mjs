@@ -7172,6 +7172,766 @@ await logout();
   }
 }
 
+// PKG P14b (access and account parity, F3 — AUTH-01 #4-#9/#11/#12/#15-#17, AUTH-02 #2/#5/#6/#9-#13/#17, AUTH-03 #1-#5/#7,
+// AUTH-04 #1-#5/#9-#18, AUTH-05 #8/#9/#11, AUTH-06 #7-#9/#11, ACC-01 #1/#2/#4/#5/#9-#11, ACC-02 #2-#5, SH-07 #5/#6/#8,
+// SH-08 #4; re-verification of the account package `83fc371` (T-40 flag, T-41 confirmation, N-13 export, N-14 close,
+// 12 h session), `4ff9852` (no enumeration at sign-up) and T-145; no new code): Spanish anonymous pages through the
+// ES/EN switch of the auth layout (cookie only): the login, sign-up and recovery literals, the empty submit, a wrong
+// password (same answer for an unknown address), the 11-character password refused before Auth, the security headers;
+// then one throwaway professional account created through the local sign-up: «Revisa tu bandeja de entrada», the
+// login refused before the confirmation, the Mailpit link → «Correo confirmado…», the same link reused and two forged
+// links → their own notices, the recovery e-mail → the reset form (mismatch, same password, new password), every
+// session closed by the reset (second browser context), the old password refused, `next` honoured and an external
+// `next` ignored, «Configuración» (account facts, language persisted on the profile, cookies readable from JS),
+// «Cerrar sesión» → «Sesión cerrada.» and the protected route back to 307, «Cerrar cuenta» (wrong word refused) →
+// «Cuenta cerrada.». No seed account is written: the seed logins are two refused attempts; the throwaway account is
+// closed at the end (or through the API in `finally`), the locale cookie cleared.
+{
+  const MAILPIT = process.env.MAILPIT_URL ?? "http://127.0.0.1:56324";
+  const P14B_EMAIL = `p14b-${Date.now()}@crewflex.test`;
+  const P14B_PW1 = `${PW}-p14b-uno`;
+  const P14B_PW2 = `${PW}-p14b-dos`;
+  let p14bCreated = false;
+  let p14bClosed = false;
+  let p14bPassword = P14B_PW1;
+  let p14bCtxB = null;
+  const p14bShot = (name) =>
+    page.screenshot({
+      path: `docs/audit/evidence/parity/P14b/P14b-${name}.jpg`,
+      type: "jpeg",
+      quality: 70,
+      fullPage: false,
+    });
+  const p14bOverflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  /** Overflow at the four widths (SH-05 #11 for the access pages); the 390 capture. */
+  const p14bWidths = async (name) => {
+    const out = {};
+    for (const width of [1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: 1100 });
+      await page.waitForTimeout(250);
+      out[width] = await p14bOverflow();
+      if (width === 390) await p14bShot(`${name}-after-390`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    return out;
+  };
+  const p14bAlerts = async () =>
+    (await page.locator("main [role=alert]").allInnerTexts()).map((t) => t.trim());
+  const p14bStatus = async () =>
+    (await page.locator("main [role=status]").allInnerTexts()).map((t) =>
+      t.replace(/\s+/g, " ").trim(),
+    );
+  const p14bGoEs = async (path) => {
+    await page.goto(`${BASE}${path}`);
+    await page.waitForLoadState("networkidle");
+    if ((await page.evaluate(() => document.documentElement.lang)) !== "es") {
+      await page.locator("[role=radio][lang=es]").first().click();
+      await page.waitForFunction(() => document.documentElement.lang === "es", null, {
+        timeout: 15000,
+      });
+      await page.waitForLoadState("networkidle");
+    }
+  };
+  /** The newest Mailpit message for the throwaway address whose link matches `where`. */
+  const p14bMailLink = async (where) => {
+    for (let i = 0; i < 24; i++) {
+      await page.waitForTimeout(500);
+      const found = await fetch(
+        `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${P14B_EMAIL}"`)}`,
+      ).then(
+        (r) => (r.ok ? r.json() : null),
+        () => null,
+      );
+      for (const m of found?.messages ?? []) {
+        const message = await fetch(`${MAILPIT}/api/v1/message/${m.ID}`).then((r) => r.json());
+        const link = /href="([^"]+)"/.exec(message.HTML ?? "")?.[1]?.replaceAll("&amp;", "&");
+        if (link && where.test(decodeURIComponent(link))) return link;
+      }
+    }
+    return null;
+  };
+  const p14bSignIn = async (email, password) => {
+    await page.fill("#email", email);
+    await page.fill("#password", password);
+    await page.click("main form button[type=submit]");
+  };
+  try {
+    // 0) Anonymous, before any page: the security headers of /login (AUTH-06 #7/#8) and the guard with `next`
+    //    (SH-07 #5) on two account routes.
+    const p14bHead = await page.request.get(`${BASE}/login`, { maxRedirects: 0 });
+    const p14bHeaders = p14bHead.headers();
+    const p14bRedirects = {};
+    for (const path of ["/app/settings", "/app/professional/profile?tab=visibility"]) {
+      const r = await page.request.get(`${BASE}${path}`, { maxRedirects: 0 });
+      p14bRedirects[path] = `${r.status()} ${r.headers().location ?? ""}`;
+    }
+    ok(
+      "PKG P14b 0 AUTH-06 #7/#8, SH-07 #5: /login answers 200 with Content-Security-Policy-Report-Only (default-src 'self', script nonce + strict-dynamic, frame-ancestors 'none'; no enforcing header), X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy camera/microphone/geolocation and no X-Powered-By; anonymous /app/settings and /app/professional/profile?tab=visibility answer 307 to /login?next=<path+query>",
+      p14bHead.status() === 200 &&
+        /default-src 'self'/.test(p14bHeaders["content-security-policy-report-only"] ?? "") &&
+        /script-src 'self' 'nonce-[^']+' 'strict-dynamic'/.test(
+          p14bHeaders["content-security-policy-report-only"] ?? "",
+        ) &&
+        /frame-ancestors 'none'/.test(p14bHeaders["content-security-policy-report-only"] ?? "") &&
+        p14bHeaders["content-security-policy"] === undefined &&
+        p14bHeaders["x-content-type-options"] === "nosniff" &&
+        p14bHeaders["x-frame-options"] === "DENY" &&
+        p14bHeaders["referrer-policy"] === "strict-origin-when-cross-origin" &&
+        p14bHeaders["permissions-policy"] === "camera=(), microphone=(), geolocation=()" &&
+        p14bHeaders["x-powered-by"] === undefined &&
+        /^307 .*\/login\?next=%2Fapp%2Fsettings$/.test(p14bRedirects["/app/settings"]) &&
+        /^307 .*\/login\?next=%2Fapp%2Fprofessional%2Fprofile%3Ftab%3Dvisibility$/.test(
+          p14bRedirects["/app/professional/profile?tab=visibility"],
+        ),
+      `${p14bHead.status()} csp-ro=${(p14bHeaders["content-security-policy-report-only"] ?? "").slice(0, 80)} xfo=${p14bHeaders["x-frame-options"]} rp=${p14bHeaders["referrer-policy"]} ${JSON.stringify(p14bRedirects)}`,
+    );
+
+    // 1) The login in Spanish (AUTH-01 #1/#2/#4-#6/#8-#10, SH-01 #13): literals, links and the card.
+    await p14bGoEs("/login");
+    await expectSpanish("PKG P14b 1 «Iniciar sesión» in Spanish");
+    const p14bLogin = await page.evaluate(() => {
+      const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+      const main = document.querySelector("main");
+      const pw = document.querySelector("#password");
+      return {
+        h1: text(main.querySelector("h1")),
+        lead: text(main.querySelector("h1 + p")),
+        emailLabel: text(main.querySelector("label[for=email]")),
+        emailType: document.querySelector("#email")?.getAttribute("type"),
+        emailAuto: document.querySelector("#email")?.getAttribute("autocomplete"),
+        passwordLabel: text(main.querySelector("label[for=password]")),
+        passwordAuto: pw?.getAttribute("autocomplete"),
+        passwordMin: pw?.getAttribute("minlength"),
+        noValidate: main.querySelector("form")?.hasAttribute("novalidate"),
+        submit: text(main.querySelector("form button[type=submit]")),
+        links: [...main.querySelectorAll("a")].map((a) => `${text(a)}→${a.getAttribute("href")}`),
+        tail: [...main.querySelectorAll(":scope > p")].map(text),
+        brand: text(document.querySelector("a[href='/']")).replace(/\s+/g, ""),
+        plane: !!document.querySelector("a[href='/'] svg path"),
+        switcher: [...document.querySelectorAll("[role=radiogroup] [role=radio]")].map(
+          (b) => `${b.textContent.trim()}:${b.getAttribute("aria-checked")}`,
+        ),
+        title: document.title,
+      };
+    });
+    ok(
+      "PKG P14b 1b AUTH-01 #1/#2/#4-#6/#8-#10, SH-01 #13: the card reads «Iniciar sesión» / «Accede a tu espacio de CrewFlex.», «Correo electrónico» (type=email, autocomplete email), «Contraseña» (current-password, no minLength at sign-in), form noValidate, button «Iniciar sesión», links «¿Has olvidado tu contraseña?» → /forgot-password, «Crea una» → /register after «¿Sin cuenta?» (flag `invitation_signup` off in this environment), «Abrir herramientas» → /tools after «Las herramientas se pueden utilizar sin abrir una cuenta.»; the brand (plane + «CrewFlex AVIATION») links to / and the ES/EN switch marks ES; title «Iniciar sesión · CrewFlex»",
+      p14bLogin.h1 === "Iniciar sesión" &&
+        p14bLogin.lead === "Accede a tu espacio de CrewFlex." &&
+        p14bLogin.emailLabel === "Correo electrónico" &&
+        p14bLogin.emailType === "email" &&
+        p14bLogin.emailAuto === "email" &&
+        p14bLogin.passwordLabel === "Contraseña" &&
+        p14bLogin.passwordAuto === "current-password" &&
+        p14bLogin.passwordMin === null &&
+        p14bLogin.noValidate === true &&
+        p14bLogin.submit === "Iniciar sesión" &&
+        p14bLogin.links.join(" | ") ===
+          "¿Has olvidado tu contraseña?→/forgot-password | Crea una→/register | Abrir herramientas→/tools" &&
+        p14bLogin.tail.join(" | ") ===
+          "Accede a tu espacio de CrewFlex. | ¿Has olvidado tu contraseña? | ¿Sin cuenta? Crea una | Las herramientas se pueden utilizar sin abrir una cuenta. Abrir herramientas" &&
+        p14bLogin.brand === "CrewFlexAVIATION" &&
+        p14bLogin.plane &&
+        p14bLogin.switcher.join() === "es:true,en:false" &&
+        p14bLogin.title === "Iniciar sesión · CrewFlex",
+      JSON.stringify(p14bLogin),
+    );
+    await p14bShot("login-after-1440");
+    const p14bLoginWidths = await p14bWidths("login");
+    ok(
+      "PKG P14b 1c no horizontal overflow at 1024 / 768 / 390 / 360 on /login",
+      Object.values(p14bLoginWidths).every((o) => o === false),
+      JSON.stringify(p14bLoginWidths),
+    );
+
+    // 1d) The empty submit: the catalogue messages, not the browser's (AUTH-01 #7).
+    await page.click("main form button[type=submit]");
+    await page.waitForSelector("main [role=alert]:has-text('Revisa los campos marcados.')", {
+      timeout: 15000,
+    });
+    const p14bEmpty = {
+      alert: await p14bAlerts(),
+      email: (await page.locator("#email-error").allInnerTexts()).join(),
+      password: (await page.locator("#password-error").allInnerTexts()).join(),
+      invalid: await page.evaluate(() =>
+        ["#email", "#password"].map((s) => document.querySelector(s)?.getAttribute("aria-invalid")),
+      ),
+    };
+    ok(
+      "PKG P14b 1d AUTH-01 #7: the empty submit shows «Revisa los campos marcados.» and the field errors «Introduce un correo electrónico válido» / «Introduce tu contraseña» (aria-invalid on both)",
+      p14bEmpty.alert.includes("Revisa los campos marcados.") &&
+        p14bEmpty.email === "Introduce un correo electrónico válido" &&
+        p14bEmpty.password === "Introduce tu contraseña" &&
+        p14bEmpty.invalid.join() === "true,true",
+      JSON.stringify(p14bEmpty),
+    );
+
+    // 1e) A wrong password for a seed account and an unknown address: the same answer, the e-mail kept, the
+    //     password never echoed (AUTH-01 #11/#16; no enumeration).
+    const p14bWrong = {};
+    for (const email of ["delta@crewflex.test", "p14b.nobody@example.test"]) {
+      await p14bGoEs("/login");
+      await p14bSignIn(email, `${PW}-wrong`);
+      await page.waitForSelector("main [role=alert]:has-text('no son correctos')", {
+        timeout: 20000,
+      });
+      p14bWrong[email] = {
+        alert: await p14bAlerts(),
+        email: await page.inputValue("#email"),
+        password: await page.inputValue("#password"),
+        url: new URL(page.url()).pathname,
+      };
+    }
+    ok(
+      "PKG P14b 1e AUTH-01 #11/#16: a wrong password for delta and for an unknown address both answer «El correo o la contraseña no son correctos.», the e-mail stays in the field, the password is cleared and the page stays on /login (no account enumeration)",
+      Object.entries(p14bWrong).every(
+        ([email, r]) =>
+          r.alert.join() === "El correo o la contraseña no son correctos." &&
+          r.email === email &&
+          r.password === "" &&
+          r.url === "/login",
+      ),
+      JSON.stringify(p14bWrong),
+    );
+
+    // 2) The sign-up in Spanish with the flag off (AUTH-02 #2/#3/#5/#6/#9-#11/#17): the open form as it is.
+    await p14bGoEs("/register");
+    await expectSpanish("PKG P14b 2 «Crear cuenta» in Spanish");
+    const p14bRegister = await page.evaluate(() => {
+      const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+      const main = document.querySelector("main");
+      const pw = document.querySelector("#password");
+      return {
+        h1: text(main.querySelector("h1")),
+        lead: text(main.querySelector("h1 + p")),
+        legend: text(main.querySelector("fieldset legend")),
+        types: [...main.querySelectorAll("input[name=accountType]")].map(
+          (i) => `${i.value}:${i.checked}`,
+        ),
+        typeLabels: [...main.querySelectorAll("fieldset label")].map((l) =>
+          [...l.querySelectorAll("span")].map(text).join(" "),
+        ),
+        labels: [...main.querySelectorAll("label[for]")].map((l) => text(l)),
+        hints: [...main.querySelectorAll("p[id$='-hint']")].map(text),
+        orgTypes: [...main.querySelectorAll("#organizationType option")].map(text),
+        passwordMin: pw?.getAttribute("minlength"),
+        passwordMax: pw?.getAttribute("maxlength"),
+        passwordAuto: pw?.getAttribute("autocomplete"),
+        noValidate: main.querySelector("form")?.hasAttribute("novalidate"),
+        invitationCode: !!document.querySelector("#invitationCode, #invite"),
+        checkbox: main.querySelectorAll("input[type=checkbox]").length,
+        submit: text(main.querySelector("form button[type=submit]")),
+        tail: [...main.querySelectorAll(":scope > p")].map(text),
+        links: [...main.querySelectorAll("a")].map((a) => `${text(a)}→${a.getAttribute("href")}`),
+        title: document.title,
+      };
+    });
+    ok(
+      "PKG P14b 2b AUTH-02 #2/#3/#5/#6/#9-#11/#17: «Crear cuenta» / «Tu perfil es privado por defecto. Tú decides qué se ve y cuándo.»; «Me registro como» with «Organización» (MRO, aerolínea, operador; checked) and «Profesional» (Técnico / ingeniero); «Tu nombre», «Correo electrónico», «Contraseña» (minLength 12, maxLength 72, new-password, hint «Al menos 12 caracteres.»), «Nombre de la organización», «Tipo de organización» (MRO · Aerolínea · Operador · Agencia de personal · Otra), «País (código ISO)» with «p. ej. ES»; form noValidate; no invitation code nor conditions checkbox (flag off); button «Crear cuenta»; «¿Ya estás registrado? Inicia sesión» → /login; title «Crear cuenta · CrewFlex»",
+      p14bRegister.h1 === "Crear cuenta" &&
+        p14bRegister.lead === "Tu perfil es privado por defecto. Tú decides qué se ve y cuándo." &&
+        p14bRegister.legend === "Me registro como" &&
+        p14bRegister.types.join() === "organization:true,professional:false" &&
+        p14bRegister.typeLabels.join(" | ") ===
+          "Organización MRO, aerolínea, operador | Profesional Técnico / ingeniero" &&
+        p14bRegister.labels.join(" | ") ===
+          "Tu nombre | Correo electrónico | Contraseña | Nombre de la organización | Tipo de organización | País (código ISO)" &&
+        p14bRegister.hints.join(" | ") === "Al menos 12 caracteres. | p. ej. ES" &&
+        p14bRegister.orgTypes.join(" · ") ===
+          "MRO · Aerolínea · Operador · Agencia de personal · Otra" &&
+        p14bRegister.passwordMin === "12" &&
+        p14bRegister.passwordMax === "72" &&
+        p14bRegister.passwordAuto === "new-password" &&
+        p14bRegister.noValidate === true &&
+        !p14bRegister.invitationCode &&
+        p14bRegister.checkbox === 0 &&
+        p14bRegister.submit === "Crear cuenta" &&
+        p14bRegister.tail.join(" | ") ===
+          "Tu perfil es privado por defecto. Tú decides qué se ve y cuándo. | ¿Ya estás registrado? Inicia sesión" &&
+        p14bRegister.links.join() === "Inicia sesión→/login" &&
+        p14bRegister.title === "Crear cuenta · CrewFlex",
+      JSON.stringify(p14bRegister),
+    );
+    await p14bShot("register-after-1440");
+    const p14bRegisterWidths = await p14bWidths("register");
+    ok(
+      "PKG P14b 2c no horizontal overflow at 1024 / 768 / 390 / 360 on /register",
+      Object.values(p14bRegisterWidths).every((o) => o === false),
+      JSON.stringify(p14bRegisterWidths),
+    );
+
+    // 2d) 11 characters: refused by the server action with the catalogue message, the name and e-mail kept, no
+    //     «Revisa tu bandeja» (Auth was not called) (AUTH-02 #6).
+    await page.check("input[name=accountType][value=professional]");
+    await page.fill("#displayName", "P14b Acceso");
+    await page.fill("#email", P14B_EMAIL);
+    await page.fill("#password", "a".repeat(11));
+    await page.click("main form button[type=submit]");
+    await page.waitForSelector("main [role=alert]:has-text('Revisa los campos marcados.')", {
+      timeout: 20000,
+    });
+    const p14bShort = {
+      alert: await p14bAlerts(),
+      password: (await page.locator("#password-error").allInnerTexts()).join(),
+      name: await page.inputValue("#displayName"),
+      email: await page.inputValue("#email"),
+      pw: await page.inputValue("#password"),
+      status: await p14bStatus(),
+      type: await page.inputValue("input[name=accountType]:checked"),
+    };
+    ok(
+      "PKG P14b 2d AUTH-02 #6: an 11-character password answers «Revisa los campos marcados.» + «Usa al menos 12 caracteres», keeps the name, e-mail and «Profesional», clears the password and shows no «Revisa tu bandeja de entrada»",
+      p14bShort.alert.join() === "Revisa los campos marcados." &&
+        p14bShort.password === "Usa al menos 12 caracteres" &&
+        p14bShort.name === "P14b Acceso" &&
+        p14bShort.email === P14B_EMAIL &&
+        p14bShort.pw === "" &&
+        p14bShort.status.length === 0 &&
+        p14bShort.type === "professional",
+      JSON.stringify(p14bShort),
+    );
+
+    // 3) The throwaway account: sign-up → «Revisa tu bandeja de entrada» (AUTH-02 #12), the login refused before
+    //    the confirmation (AUTH-01 #12, AUTH-03 #7), the Mailpit link → «Correo confirmado…» (AUTH-03 #2-#4).
+    await page.fill("#password", P14B_PW1);
+    await page.click("main form button[type=submit]");
+    await page.waitForSelector("main [role=status]:has-text('Revisa tu bandeja de entrada')", {
+      timeout: 20000,
+    });
+    p14bCreated = true;
+    const p14bInbox = await p14bStatus();
+    await p14bGoEs("/login");
+    await p14bSignIn(P14B_EMAIL, P14B_PW1);
+    await page.waitForSelector("main [role=alert]", { timeout: 20000 });
+    const p14bUnconfirmed = await p14bAlerts();
+    const p14bConfirmLink = await p14bMailLink(/auth\/confirm\?next=\/app/);
+    let p14bConfirmed = { url: "no e-mail in Mailpit", status: [] };
+    if (p14bConfirmLink) {
+      await page.goto(p14bConfirmLink);
+      await page.waitForURL((u) => u.pathname === "/login", { timeout: 20000 });
+      await page.waitForLoadState("networkidle");
+      p14bConfirmed = { url: page.url(), status: await p14bStatus() };
+      await p14bShot("confirmed-after-1440");
+    }
+    ok(
+      "PKG P14b 3 AUTH-02 #12, AUTH-01 #12, AUTH-03 #2-#4/#7: the sign-up answers «Revisa tu bandeja de entrada» + «Hemos enviado un enlace de confirmación a {email}. Confírmalo y después inicia sesión.»; signing in before confirming is refused with «Confirma tu correo antes de iniciar sesión.»; the e-mail's link (/auth/confirm?next=/app) lands on /login?confirmed=1 with «Correo confirmado. Ya puedes iniciar sesión.» and no session",
+      p14bInbox.join(" ") ===
+        `Revisa tu bandeja de entrada Hemos enviado un enlace de confirmación a ${P14B_EMAIL}. Confírmalo y después inicia sesión.` &&
+        p14bUnconfirmed.join() === "Confirma tu correo antes de iniciar sesión." &&
+        /\/login\?confirmed=1$/.test(p14bConfirmed.url) &&
+        p14bConfirmed.status.join() === "Correo confirmado. Ya puedes iniciar sesión." &&
+        (await page.locator("main form #email").count()) === 1,
+      `${JSON.stringify(p14bInbox)} ${JSON.stringify(p14bUnconfirmed)} ${JSON.stringify(p14bConfirmed)}`,
+    );
+
+    // 3b) The same link again and two forged ones: each kind lands on its own notice (AUTH-03 #5, AUTH-04 #9/#10,
+    //     AUTH-06 #11): a sign-up link never reaches the reset form, a recovery one never the login banner.
+    const p14bBad = {};
+    for (const [name, url] of [
+      ["reused", p14bConfirmLink],
+      ["forged-signup", `${BASE}/auth/confirm?token_hash=x&type=signup&next=/app`],
+      ["forged-recovery", `${BASE}/auth/confirm?token_hash=x&type=recovery&next=/reset-password`],
+      ["empty", `${BASE}/auth/confirm`],
+    ]) {
+      if (!url) continue;
+      await page.goto(url);
+      await page.waitForURL((u) => u.pathname === "/login" || u.pathname === "/forgot-password", {
+        timeout: 20000,
+      });
+      await page.waitForLoadState("networkidle");
+      p14bBad[name] = {
+        url: `${new URL(page.url()).pathname}${new URL(page.url()).search}`,
+        alert: await p14bAlerts(),
+      };
+    }
+    await page.goto(`${BASE}/reset-password`);
+    await page.waitForLoadState("networkidle");
+    const p14bNoSession = {
+      h1: (await page.locator("main h1").allInnerTexts()).join(),
+      alert: await p14bAlerts(),
+      inputs: await page.locator("main input").count(),
+      link: await page.locator("main a[href='/forgot-password']").allInnerTexts(),
+    };
+    ok(
+      "PKG P14b 3b AUTH-03 #5, AUTH-04 #9/#10, AUTH-06 #11: the reused confirmation link, a forged sign-up token and an empty /auth/confirm land on /login?confirmError=1 with «Enlace caducado, utilizado o no válido. Inicia sesión; si tu correo no está confirmado, regístrate de nuevo para recibir otro enlace.»; a forged recovery token lands on /forgot-password?expired=1 with «Ese enlace ha caducado o ya se ha usado. Solicita uno nuevo.»; /reset-password without a recovery session shows «Elige una contraseña nueva» + «Esta página necesita un enlace de restablecimiento válido.» and «Solicitar un enlace nuevo», no fields",
+      ["reused", "forged-signup", "empty"].every(
+        (k) =>
+          p14bBad[k]?.url === "/login?confirmError=1" &&
+          p14bBad[k].alert.join() ===
+            "Enlace caducado, utilizado o no válido. Inicia sesión; si tu correo no está confirmado, regístrate de nuevo para recibir otro enlace.",
+      ) &&
+        p14bBad["forged-recovery"]?.url === "/forgot-password?expired=1" &&
+        p14bBad["forged-recovery"].alert.join() ===
+          "Ese enlace ha caducado o ya se ha usado. Solicita uno nuevo." &&
+        p14bNoSession.h1 === "Elige una contraseña nueva" &&
+        p14bNoSession.alert.join() ===
+          "Esta página necesita un enlace de restablecimiento válido. Solicitar un enlace nuevo" &&
+        p14bNoSession.inputs === 0 &&
+        p14bNoSession.link.join() === "Solicitar un enlace nuevo",
+      `${JSON.stringify(p14bBad)} ${JSON.stringify(p14bNoSession)}`,
+    );
+
+    // 4) Recovery in Spanish (AUTH-04 #1-#5): the request page, the uniform answer for an unknown and for the
+    //    throwaway address.
+    await p14bGoEs("/forgot-password");
+    await expectSpanish("PKG P14b 4 «Restablece tu contraseña» in Spanish");
+    const p14bForgot = await page.evaluate(() => {
+      const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+      const main = document.querySelector("main");
+      return {
+        h1: text(main.querySelector("h1")),
+        lead: text(main.querySelector("h1 + p")),
+        label: text(main.querySelector("label[for=email]")),
+        submit: text(main.querySelector("form button[type=submit]")),
+        links: [...main.querySelectorAll("a")].map((a) => `${text(a)}→${a.getAttribute("href")}`),
+        title: document.title,
+      };
+    });
+    await p14bShot("forgot-after-1440");
+    const p14bForgotWidths = await p14bWidths("forgot");
+    const p14bSent = {};
+    for (const email of ["p14b.nobody@example.test", P14B_EMAIL]) {
+      await p14bGoEs("/forgot-password");
+      await page.fill("#email", email);
+      await page.click("main form button[type=submit]");
+      await page.waitForSelector("main [role=status]:has-text('Revisa tu correo')", {
+        timeout: 20000,
+      });
+      p14bSent[email] = (await p14bStatus()).join(" ").replace(email, "{email}");
+    }
+    ok(
+      "PKG P14b 4b AUTH-04 #1-#5, SH-05 #11: «Restablece tu contraseña» / «Indica el correo de tu cuenta. Si existe, te enviaremos un enlace para elegir una contraseña nueva.», «Correo electrónico», button «Enviar enlace», «Volver a iniciar sesión» → /login, title «Restablecer contraseña · CrewFlex»; no overflow at 1024 / 768 / 390 / 360; an unknown address and the throwaway one get the same «Revisa tu correo» + «Si existe una cuenta con {email}, recibirás un enlace para elegir una contraseña nueva. Caduca en una hora.»",
+      p14bForgot.h1 === "Restablece tu contraseña" &&
+        p14bForgot.lead ===
+          "Indica el correo de tu cuenta. Si existe, te enviaremos un enlace para elegir una contraseña nueva." &&
+        p14bForgot.label === "Correo electrónico" &&
+        p14bForgot.submit === "Enviar enlace" &&
+        p14bForgot.links.join() === "Volver a iniciar sesión→/login" &&
+        p14bForgot.title === "Restablecer contraseña · CrewFlex" &&
+        Object.values(p14bForgotWidths).every((o) => o === false) &&
+        new Set(Object.values(p14bSent)).size === 1 &&
+        Object.values(p14bSent)[0] ===
+          "Revisa tu correo Si existe una cuenta con {email}, recibirás un enlace para elegir una contraseña nueva. Caduca en una hora.",
+      `${JSON.stringify(p14bForgot)} ${JSON.stringify(p14bForgotWidths)} ${JSON.stringify(p14bSent)}`,
+    );
+
+    // 5) A second browser signs the throwaway in (it will lose its session at the reset, AUTH-04 #16).
+    p14bCtxB = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const p14bPageB = await p14bCtxB.newPage();
+    await p14bPageB.goto(`${BASE}/login`);
+    await p14bPageB.fill("#email", P14B_EMAIL);
+    await p14bPageB.fill("#password", P14B_PW1);
+    await p14bPageB.click("main form button[type=submit]");
+    await p14bPageB.waitForURL((u) => u.pathname.startsWith("/app/"), { timeout: 30000 });
+    const p14bBefore = new URL(p14bPageB.url()).pathname;
+
+    // 5b) The recovery link opens the reset form in the browser that asked (AUTH-04 #8/#11-#14): mismatch, the
+    //     same password (AUTH-04 #15), then the new one → /login?reset=1 (AUTH-04 #16/#17, AUTH-01 #17).
+    const p14bResetLink = await p14bMailLink(/next=\/reset-password/);
+    let p14bResetForm = null;
+    let p14bResetWidths = {};
+    let p14bMismatch = [];
+    let p14bSame = [];
+    let p14bAfterReset = null;
+    if (p14bResetLink) {
+      await page.goto(p14bResetLink);
+      await page.waitForURL((u) => u.pathname === "/reset-password", { timeout: 20000 });
+      await page.waitForLoadState("networkidle");
+      p14bResetForm = await page.evaluate(() => {
+        const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+        const main = document.querySelector("main");
+        const pw = document.querySelector("#password");
+        const confirm = document.querySelector("#confirm");
+        return {
+          h1: text(main.querySelector("h1")),
+          lead: text(main.querySelector("h1 + p")),
+          labels: [...main.querySelectorAll("label[for]")].map(text),
+          hints: [...main.querySelectorAll("p[id$='-hint']")].map(text),
+          min: [pw?.getAttribute("minlength"), confirm?.getAttribute("minlength")],
+          max: [pw?.getAttribute("maxlength"), confirm?.getAttribute("maxlength")],
+          auto: [pw?.getAttribute("autocomplete"), confirm?.getAttribute("autocomplete")],
+          submit: text(main.querySelector("form button[type=submit]")),
+          lang: document.documentElement.lang,
+        };
+      });
+      await p14bShot("reset-after-1440");
+      p14bResetWidths = await p14bWidths("reset");
+      await page.fill("#password", P14B_PW2);
+      await page.fill("#confirm", `${P14B_PW2}x`);
+      await page.click("main form button[type=submit]");
+      await page.waitForSelector("#confirm-error", { timeout: 20000 });
+      p14bMismatch = [
+        ...(await p14bAlerts()),
+        ...(await page.locator("#confirm-error").allInnerTexts()),
+      ];
+      await page.fill("#password", P14B_PW1);
+      await page.fill("#confirm", P14B_PW1);
+      await page.click("main form button[type=submit]");
+      await page.waitForSelector("main [role=alert]:has-text('distinta de la actual')", {
+        timeout: 20000,
+      });
+      p14bSame = await p14bAlerts();
+      await page.fill("#password", P14B_PW2);
+      await page.fill("#confirm", P14B_PW2);
+      await page.click("main form button[type=submit]");
+      await page.waitForURL((u) => u.pathname === "/login", { timeout: 30000 });
+      await page.waitForLoadState("networkidle");
+      p14bPassword = P14B_PW2;
+      p14bAfterReset = { url: page.url(), status: await p14bStatus() };
+    }
+    // The second browser after the reset: Auth revoked its refresh token (`signOut({ scope: "global" })`);
+    // its access token is a stateless JWT that stays valid until `jwt_expiry` (1 h) — measured, not hidden:
+    // the page answer is reported in the detail, the assertion is the provider's refusal to refresh.
+    const p14bB = await p14bPageB.request.get(`${BASE}/app/settings`, { maxRedirects: 0 });
+    const p14bBAfter = `${p14bB.status()} ${p14bB.headers().location ?? ""}`;
+    const p14bBChunks = (await p14bCtxB.cookies())
+      .filter((c) => /^sb-.*-auth-token(\.\d+)?$/.test(c.name))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => c.value)
+      .join("");
+    const p14bBSession = (() => {
+      try {
+        return JSON.parse(
+          p14bBChunks.startsWith("base64-")
+            ? Buffer.from(p14bBChunks.slice(7), "base64url").toString("utf8")
+            : decodeURIComponent(p14bBChunks),
+        );
+      } catch {
+        return null;
+      }
+    })();
+    const p14bBRefresh = p14bBSession?.refresh_token
+      ? await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+          method: "POST",
+          headers: { apikey: publishableKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: p14bBSession.refresh_token }),
+        }).then(async (r) => ({ status: r.status, ...(await r.json().catch(() => ({}))) }))
+      : { status: "no session cookie" };
+    await p14bCtxB.close();
+    p14bCtxB = null;
+    ok(
+      "PKG P14b 5 AUTH-04 #8/#11-#17, AUTH-01 #17: the recovery e-mail's link (/auth/confirm?next=/reset-password) opens «Elige una contraseña nueva» / «Al guardarla se cerrarán todas tus sesiones, también esta.» with «Contraseña nueva» (minLength 12, hint «Al menos 12 caracteres.») and «Repite la contraseña nueva» (both maxLength 72, new-password), button «Guardar contraseña», no overflow at the four widths; a mismatch → «Revisa los campos marcados.» + «Las contraseñas no coinciden.»; the current password → «Elige una contraseña distinta de la actual.»; the new one → /login?reset=1 «Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.»; the second browser (signed in on /app/professional) can no longer refresh its session (Auth answers 400 to its refresh token) — its still-valid JWT is reported in the detail, not asserted (jwt_expiry 1 h)",
+      p14bResetForm?.h1 === "Elige una contraseña nueva" &&
+        p14bResetForm.lead === "Al guardarla se cerrarán todas tus sesiones, también esta." &&
+        p14bResetForm.labels.join(" | ") === "Contraseña nueva | Repite la contraseña nueva" &&
+        p14bResetForm.hints.join() === "Al menos 12 caracteres." &&
+        p14bResetForm.min.join() === "12," &&
+        p14bResetForm.max.join() === "72,72" &&
+        p14bResetForm.auto.join() === "new-password,new-password" &&
+        p14bResetForm.submit === "Guardar contraseña" &&
+        p14bResetForm.lang === "es" &&
+        Object.values(p14bResetWidths).every((o) => o === false) &&
+        p14bMismatch.join(" | ") ===
+          "Revisa los campos marcados. | Las contraseñas no coinciden." &&
+        p14bSame.join() === "Elige una contraseña distinta de la actual." &&
+        /\/login\?reset=1$/.test(p14bAfterReset?.url ?? "") &&
+        p14bAfterReset.status.join() ===
+          "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña." &&
+        p14bBefore === "/app/professional" &&
+        p14bBRefresh.status === 400,
+      `${JSON.stringify(p14bResetForm)} ${JSON.stringify(p14bResetWidths)} ${JSON.stringify(p14bMismatch)} ${JSON.stringify(p14bSame)} ${JSON.stringify(p14bAfterReset)} B:${p14bBefore} → page ${p14bBAfter} · refresh ${JSON.stringify(p14bBRefresh)}`,
+    );
+
+    // 6) The old password is refused; the new one honours `next` (SH-07 #6, AUTH-01 #15) → «Configuración» in
+    //    Spanish (ACC-01 #1/#2/#4/#5, ACC-02 #3), cookies readable from JS (AUTH-06 #9).
+    await p14bGoEs("/login?next=%2Fapp%2Fsettings");
+    await p14bSignIn(P14B_EMAIL, P14B_PW1);
+    await page.waitForSelector("main [role=alert]:has-text('no son correctos')", {
+      timeout: 20000,
+    });
+    const p14bOld = await p14bAlerts();
+    await p14bSignIn(P14B_EMAIL, P14B_PW2);
+    await page.waitForURL((u) => u.pathname === "/app/settings", { timeout: 30000 });
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P14b 6 «Configuración» in Spanish");
+    const p14bSettings = await page.evaluate(() => {
+      const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+      const main = document.querySelector("main");
+      const panels = [...main.querySelectorAll("section, article")]
+        .map((s) => text(s.querySelector("h2")))
+        .filter(Boolean);
+      return {
+        h1: text(main.querySelector("h1")),
+        lead: text(main.querySelector("h1 + p")),
+        panels,
+        facts: [...main.querySelectorAll("dl > div")].map(
+          (d) => `${text(d.querySelector("dt"))}=${text(d.querySelector("dd"))}`,
+        ),
+        radios: [...main.querySelectorAll("[role=radio]")].map(
+          (r) =>
+            `${[...r.querySelectorAll("span")].map(text).join(" ")}:${r.getAttribute("aria-checked")}`,
+        ),
+        cookies: document.cookie
+          .split(";")
+          .map((c) => c.trim().split("=")[0])
+          .filter(Boolean),
+        crumb: [...document.querySelectorAll("header nav ol > li")].map(text).join(" "),
+        menu: [...document.querySelectorAll("aside nav[aria-label='Cuenta'] a")].map((a) =>
+          text(a)
+            .replace(/\d+.*$/, "")
+            .trim(),
+        ),
+      };
+    });
+    ok(
+      "PKG P14b 6b ACC-01 #1/#2/#4/#5, ACC-02 #3, AUTH-06 #9, SH-07 #6: the old password is refused («El correo o la contraseña no son correctos.»), the new one lands on the `next` page /app/settings: «Configuración» / «Tu cuenta y cómo ves CrewFlex. …», header «CrewFlex / Configuración», the «Cuenta» entry in the menu; panels «Idioma / Language» (radios «Español ES» checked · «English EN»), «Avisos de oportunidades», «Cuenta» (Nombre=P14b Acceso · Correo electrónico=<the address> · Tipo de cuenta=Profesional; no «Organización», «Rol» nor «Rol de plataforma») and «Tus datos»; the Supabase session cookies and crewflex-locale are readable from document.cookie",
+      p14bOld.join() === "El correo o la contraseña no son correctos." &&
+        p14bSettings.h1 === "Configuración" &&
+        /^Tu cuenta y cómo ves CrewFlex\./.test(p14bSettings.lead) &&
+        p14bSettings.crumb === "CrewFlex / Configuración" &&
+        p14bSettings.menu.includes("Configuración") &&
+        p14bSettings.panels.join(" | ") ===
+          "Idioma / Language | Avisos de oportunidades | Cuenta | Tus datos" &&
+        p14bSettings.facts.join(" | ") ===
+          `Nombre=P14b Acceso | Correo electrónico=${P14B_EMAIL} | Tipo de cuenta=Profesional` &&
+        p14bSettings.radios.join(" · ") === "Español es:true · English en:false" &&
+        p14bSettings.cookies.some((c) => /^sb-.*-auth-token/.test(c)) &&
+        p14bSettings.cookies.includes("crewflex-locale"),
+      `${JSON.stringify(p14bOld)} ${JSON.stringify(p14bSettings)}`,
+    );
+    await p14bShot("settings-after-1440");
+    const p14bSettingsWidths = await p14bWidths("settings");
+    ok(
+      "PKG P14b 6c no horizontal overflow at 1024 / 768 / 390 / 360 on «Configuración»",
+      Object.values(p14bSettingsWidths).every((o) => o === false),
+      JSON.stringify(p14bSettingsWidths),
+    );
+
+    // 6d) The language follows the account (ACC-02 #4/#5): EN → «Language updated.», persisted on the profile
+    //     (survives a cleared cookie), then back to ES → «Idioma actualizado.».
+    await page.locator("main [role=radio][lang=en]").click();
+    await page.waitForSelector("main [role=status]:has-text('Language updated.')", {
+      timeout: 15000,
+    });
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p14bEnglish = {
+      lang: await page.evaluate(() => document.documentElement.lang),
+      h1: (await page.locator("main h1").allInnerTexts()).join(),
+      cookie: (await ctx.cookies()).find((c) => c.name === "crewflex-locale")?.value ?? null,
+    };
+    await page.locator("main [role=radio][lang=es]").click();
+    await page.waitForSelector("main [role=status]:has-text('Idioma actualizado.')", {
+      timeout: 15000,
+    });
+    const p14bEsCookie =
+      (await ctx.cookies()).find((c) => c.name === "crewflex-locale")?.value ?? null;
+    ok(
+      "PKG P14b 6d ACC-02 #4/#5: «English» → «Language updated.» in the new language; with the locale cookie cleared the reload is still English («Settings») because the preference lives on the profile (no cookie needed); «Español» → «Idioma actualizado.» and the cookie is written again as es",
+      p14bEnglish.lang === "en" &&
+        p14bEnglish.h1 === "Settings" &&
+        p14bEnglish.cookie === null &&
+        p14bEsCookie === "es",
+      `${JSON.stringify(p14bEnglish)} → cookie ${p14bEsCookie}`,
+    );
+
+    // 7) «Cerrar sesión» from the sidebar → «Sesión cerrada.» and the guard is back (AUTH-05 #8/#9).
+    await page
+      .locator("aside form:has(button:has-text('Cerrar sesión'))")
+      .last()
+      .evaluate((f) => f.requestSubmit());
+    await page.waitForURL((u) => u.pathname === "/login", { timeout: 20000 });
+    await page.waitForLoadState("networkidle");
+    const p14bSignedOut = { url: page.url(), status: await p14bStatus() };
+    const p14bGuard = await page.request.get(`${BASE}/app/settings`, { maxRedirects: 0 });
+    ok(
+      "PKG P14b 7 AUTH-05 #8/#9: «Cerrar sesión» ends on /login?signedOut=1 with «Sesión cerrada.» (role=status) and /app/settings answers 307 to the login again (the session cookies are gone)",
+      /\/login\?signedOut=1$/.test(p14bSignedOut.url) &&
+        p14bSignedOut.status.join() === "Sesión cerrada." &&
+        p14bGuard.status() === 307 &&
+        /\/login\?next=%2Fapp%2Fsettings$/.test(p14bGuard.headers().location ?? ""),
+      `${JSON.stringify(p14bSignedOut)} ${p14bGuard.status()} ${p14bGuard.headers().location}`,
+    );
+
+    // 8) An external `next` is ignored (SH-07 #6); «Cerrar cuenta» (ACC-01 #9-#11): the v1.8 texts, a wrong word
+    //    refused, then «Cuenta cerrada.».
+    await p14bGoEs("/login?next=//evil.example/x");
+    await p14bSignIn(P14B_EMAIL, P14B_PW2);
+    await page.waitForURL((u) => u.pathname.startsWith("/app/"), { timeout: 30000 });
+    const p14bLanding = `${new URL(page.url()).host}${new URL(page.url()).pathname}`;
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("main summary", { hasText: "Cerrar cuenta" }).click();
+    const p14bClose = await page.evaluate(() => {
+      const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+      const details = document.querySelector("main details");
+      return {
+        open: details?.open,
+        summary: text(details?.querySelector("summary")),
+        paragraphs: [...(details?.querySelectorAll("form p") ?? [])].map(text),
+        label: text(details?.querySelector("label[for=confirm]")),
+        submit: text(details?.querySelector("form button[type=submit]")),
+        exportLink: text(document.querySelector("main a[href='/app/settings/export']")),
+      };
+    });
+    await page.fill("#confirm", "CLOSE");
+    await page.click("main details form button[type=submit]");
+    await page.waitForSelector("#confirm-error", { timeout: 20000 });
+    const p14bWrongWord = (await page.locator("#confirm-error").allInnerTexts()).join();
+    const p14bStillIn = (
+      await page.request.get(`${BASE}/app/settings`, { maxRedirects: 0 })
+    ).status();
+    await page.fill("#confirm", "CERRAR");
+    await page.click("main details form button[type=submit]");
+    await page.waitForURL((u) => u.pathname === "/login", { timeout: 30000 });
+    await page.waitForLoadState("networkidle");
+    const p14bClosedNotice = await p14bStatus();
+    p14bClosed = /closed=1/.test(page.url());
+    ok(
+      "PKG P14b 8 SH-07 #6, ACC-01 #7/#9-#11: signing in from /login?next=//evil.example/x lands on this host's /app/professional; «Tus datos» offers «Exportar mis datos y archivos» and the closed disclosure «Cerrar cuenta» opens with the v1.8 text «Elimina credenciales, perfil y archivos. Los registros de compromisos y auditoría se conservan sin el perfil para resolver el historial operativo.», «Escribe CERRAR» and «Cerrar mi cuenta»; «CLOSE» is refused with «Escribe CERRAR para confirmar.» and the session stays (200); «CERRAR» → /login?closed=1 «Cuenta cerrada.»",
+      p14bLanding === `${new URL(BASE).host}/app/professional` &&
+        p14bClose.open === true &&
+        p14bClose.summary === "Cerrar cuenta" &&
+        p14bClose.paragraphs[0] ===
+          "Elimina credenciales, perfil y archivos. Los registros de compromisos y auditoría se conservan sin el perfil para resolver el historial operativo." &&
+        p14bClose.label === "Escribe CERRAR" &&
+        p14bClose.submit === "Cerrar mi cuenta" &&
+        p14bClose.exportLink === "Exportar mis datos y archivos" &&
+        p14bWrongWord === "Escribe CERRAR para confirmar." &&
+        p14bStillIn === 200 &&
+        p14bClosed &&
+        p14bClosedNotice.join() === "Cuenta cerrada.",
+      `${p14bLanding} ${JSON.stringify(p14bClose)} «${p14bWrongWord}» ${p14bStillIn} ${page.url()} ${JSON.stringify(p14bClosedNotice)}`,
+    );
+  } finally {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    if (p14bCtxB) await p14bCtxB.close().catch(() => {});
+    if (/\/app/.test(page.url())) await logout().catch(() => {});
+    // The throwaway account must not survive this run: if the UI closure did not happen, close it through the
+    // local API with its own password (never a seed account).
+    let p14bGone = p14bClosed || !p14bCreated;
+    if (!p14bGone) {
+      const auth = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: { apikey: publishableKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: P14B_EMAIL, password: p14bPassword }),
+      }).then((r) => r.json());
+      if (auth.access_token) {
+        const closed = await fetch(new URL("/functions/v1/account", supabaseUrl), {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${auth.access_token}`,
+            apikey: publishableKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ confirm: "CERRAR" }),
+        }).then((r) => r.json());
+        p14bGone = closed.ok === true;
+      }
+    }
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P14b 9 restore: the throwaway account is closed (UI or API), no seed account was written, locale cookie cleared",
+      p14bGone,
+      `${P14B_EMAIL} created=${p14bCreated} closedByUi=${p14bClosed}`,
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
