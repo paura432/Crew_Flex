@@ -6728,7 +6728,7 @@ await logout();
         .ok === true;
     await ctx.clearCookies({ name: "crewflex-locale" });
     ok(
-      "PKG P13 8 restore: Delta's notice preferences as before, the application withdrawn, the window deleted, the need closed, Delta in English",
+      "PKG P13 8 restore: Delta's notice preference values as before (the row may now exist), the application withdrawn, the window deleted, the need closed, Delta in English",
       p13PrefsBack && p13Withdrawn && p13WindowGone && p13NeedClosed && p13English,
       `${p13PrefsBack} ${p13Withdrawn} ${p13WindowGone} ${p13NeedClosed} ${p13English}`,
     );
