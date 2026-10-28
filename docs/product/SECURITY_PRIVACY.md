@@ -221,7 +221,7 @@ verified with `token_hash` carries `amr` `otp`, a PKCE `code` link carries `reco
 **Limits (review of `5d22175`):** GoTrue's `IsRecovery()` also covers sessions opened by magic link or e-mail
 OTP and has **no time limit** (the AMR survives refresh). Mitigation in the app: after a reset the refresh tokens of every session
 are revoked, the recovery one included (`signOut({ scope: "global" })`, V1.8 A:165), so no long-lived recovery session
-remains; an access token already issued to another browser stays valid until `jwt_exp` (3600 s locally; production
+remains; an access token already issued to another browser stays valid until `jwt_exp` (600 s locally since 2026-10-28; production
 unread) — measured 2026-10-28 (P14b-S1, below). Residual: a session opened by magic link / e-mail OTP keeps the exemption — the app never offers those
 sign-ins, but GoTrue's `/otp` is reachable while the e-mail provider is on. Users without a password and MFA
 (AAL2) rules are out of this matrix. **Also an owner check:** production must keep secure e-mail change
@@ -234,15 +234,15 @@ and would force a nonce e-mail on old sessions; optional. Recovery keeps working
 `config.toml` (only `secure_password_change`): local parity is the clone test above. **Production Auth is
 not modified without owner authorization.**
 
-**Residual P14b-S1 (measured 2026-10-28, `PKG P14b 5`; security review: confirmed, Medium; NEEDS_DECISION, owner):** after
+**Residual P14b-S1 (measured 2026-10-28, `PKG P14b 5`; security review: confirmed, Medium; LOCAL: mitigated with `jwt_expiry = 600`; production: owner):** after
 `updatePasswordAction` → `signOut({ scope: "global" })` GoTrue revokes every refresh token (a second browser gets 400
-`refresh_token_not_found`), but its already-issued access token is a stateless JWT valid until `jwt_exp` (3600 s locally;
+`refresh_token_not_found`), but its already-issued access token is a stateless JWT valid until `jwt_exp` (3600 s locally when measured, 600 s locally since 2026-10-28;
 production value unread): that browser still got 200 on `/app/settings`. GoTrue's session-bound endpoints (`PUT /auth/v1/user`,
 `/logout`, refresh) do reject the stale JWT (`session_not_found`), so an intruder cannot change the password or e-mail nor
 extend the session, but keeps ≤ `jwt_exp` of read/write under RLS through pages, Edge Functions (incl. `DELETE /account`) and
 direct PostgREST; `getClaims()` verifies offline (ES256 keys; auth-js only falls back to `getUser()` for symmetric keys). V1.8
-deleted sessions at once. Proposal (not applied): `jwt_expiry` 600 s locally (`supabase/config.toml:167`) and `jwt_exp` 600 in
-the production Auth PATCH (`docs/qa/ROLLOUT_PLAN_V18_LOOP.md` §0b, owner-decision item); per-request `getUser()`/`session_id`
+deleted sessions at once. Applied locally on 2026-10-28: `jwt_expiry = 600` (`supabase/config.toml`, measured `GOTRUE_JWT_EXP=600`), so the window is ≤ 10 min;
+production `jwt_exp` 600 stays an owner-decision item in the Auth PATCH (`docs/qa/ROLLOUT_PLAN_V18_LOOP.md` §0b); per-request `getUser()`/`session_id`
 checks rejected (cost, no PostgREST/Storage coverage); documenting only would leave the UI promise «se cerrarán todas tus
 sesiones» false.
 

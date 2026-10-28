@@ -49,8 +49,8 @@ confirmation link falls back to `site_url` = localhost; recovery asks `${origin}
 | `password_hibp_enabled` | false                   | true                                                                                  | Advisor WARN `auth_leaked_password_protection`; a paid-plan feature — if the API refuses it, leave false and record                                                                               |
 
 **Owner-decision item, NOT in the PATCH above and not applied (P14b-S1, security review 2026-10-28, Medium):** read `jwt_exp`
-first (unread on 2026-10-26; the read-only `GET config/auth` below) and decide whether to set it to 600 s together with local
-`supabase/config.toml:167` (`jwt_expiry`): after a password reset an already-issued access token keeps working for `jwt_exp`
+first (unread on 2026-10-26; the read-only `GET config/auth` below) and decide whether to set it to 600 s, as local `supabase/config.toml` (`jwt_expiry = 600`, applied locally on 2026-10-28)
+already is: after a password reset an already-issued access token keeps working for `jwt_exp`
 seconds although every refresh token is revoked (`docs/product/SECURITY_PRIVACY.md` §T22 residual). Nothing is applied by this
 plan without the owner.
 
