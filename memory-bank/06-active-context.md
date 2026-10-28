@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-28 CET (F3 P02–P14 + P15 a11y/i18n integrated locally; next step waits for the owner). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-28 CET (F3 P02–P14 + P15 a11y/i18n + local P14b-S1 fix integrated; next step waits for the owner). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -15,8 +15,8 @@ New local migrations in F3: `20261027100000` (P10 builder profile rules, T-168),
 cards, T-169), `20261027300000` (P12 qualification review evidence, T-170). P05–P09, P13, P14a–c were re-verification
 (P05 T-165, P09 hero T-167, P14c «CrewFlex» in three catalog strings). Per-package detail: the matrix sections and git log.
 Findings for the owner: **P14b-S1** (security review confirmed, Medium) — after a password reset refresh tokens die but an
-issued ES256 access token keeps page/RLS/function access ≤ `jwt_expiry` (3600 s local, production unread); proposal
-600 s locally + production in §0b, NOT applied; SECURITY_PRIVACY corrected. P14b-S5 (low): a forged `/auth/confirm?code=`
+issued ES256 access token keeps page/RLS/function access ≤ `jwt_expiry`; owner «continúa» → LOCAL `jwt_expiry`
+600 applied (merge `2beec2d`, gate green); production `jwt_exp` (unread) stays an owner item in §0b. P14b-S5 (low): a forged `/auth/confirm?code=`
 shows «Correo confirmado» without a session. T-170: v1.8 refuses a _profile_ review with restrictions, ours only warns.
 P10: v1.8 requires the type rating on a declared aircraft (`business.js:142`), ours checks them apart (matching owner).
 P15 (owner «continúa», 2026-10-28) re-verified the formerly unmapped `A11Y-01…06` / `I18N-01…05`: five small a11y/i18n fixes
@@ -32,7 +32,7 @@ P15 (owner «continúa», 2026-10-28) re-verified the formerly unmapped `A11Y-01
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories      |
 | Local `main` | = `origin/main` `51c835a`                                                                                                      |
-| Branch       | `feat/v18-html-parity` = this commit on `60ab042`: 62 migrations (42 not applied remotely), 23 functions; deployed nowhere     |
+| Branch       | `feat/v18-html-parity` = this commit on `2beec2d`: 62 migrations (42 not applied remotely), 23 functions; deployed nowhere     |
 | Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)           |
 | Parity       | inventory `recount.py` after P15: 1 050 / 1 266 = 82,9 % (155 decision-held, 113 ✗, 209 Next-only); 2026-10-22 baseline 56,1 % |
 
@@ -52,10 +52,10 @@ P15 (owner «continúa», 2026-10-28) re-verified the formerly unmapped `A11Y-01
 ## Blocked on the owner
 
 §0 H1 push of `352182c`; §0b Auth PATCH; §0c Crew_Flex-only read token then revoke the current one; custom SMTP; every
-other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-decision-pack.md` §2; the T-xx sign-offs; whether declared restrictions block a qualification review (T-170); P14b-S1 `jwt_expiry` 600 s (local + production §0b).
+other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-decision-pack.md` §2; the T-xx sign-offs; whether declared restrictions block a qualification review (T-170); P14b-S1 production `jwt_exp` 600 s (§0b; local done).
 
 ## Next step (one)
 
-Waits for the owner: (a) the P14b-S1 `jwt_expiry` decision (local + production §0b), (b) the other owner items above,
-(c) F4/F5 (not authorised). Worktrees `.claude/worktrees/f3-p12…f3-p15` can be removed once the owner is done
-reviewing. Never push or deploy without the owner.
+Waits for the owner: the production items (§0, §0b incl. `jwt_exp`, deploys), the open decisions above, and F4/F5 (not
+authorised). Worktrees `.claude/worktrees/f3-p12…f3-p15` and `p14b-s1` can be removed once the owner is done reviewing.
+Never push or deploy without the owner.
