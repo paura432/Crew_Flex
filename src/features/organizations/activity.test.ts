@@ -19,4 +19,13 @@ describe("organization activity labels (ORG-07 #12)", () => {
     expect(activityLabelKey("document.uploaded")).toBeNull();
     expect(activityLabelKey("requirement.created")).toBe("activity.actions.requirement_created");
   });
+
+  it("archiving a need and changing its client are the organization's own acts (P15, I18N-05)", () => {
+    // Both audit rows carry the organization id (`20261023600100:350`, `20261024500100:122`), so the trail
+    // showed their raw codes («requirement.archived»).
+    expect(activityLabelKey("requirement.archived")).toBe("activity.actions.requirement_archived");
+    expect(activityLabelKey("requirement.client_changed")).toBe(
+      "activity.actions.requirement_client_changed",
+    );
+  });
 });

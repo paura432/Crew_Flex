@@ -1332,6 +1332,8 @@
           "requirement_created": "Necesidad creada",
           "requirement_updated": "Necesidad editada",
           "requirement_status_changed": "Estado de una necesidad cambiado",
+          "requirement_archived": "Necesidad archivada",
+          "requirement_client_changed": "Cliente de una necesidad cambiado",
           "application_shortlisted": "Candidatura preseleccionada",
           "application_proposed": "Propuesta enviada",
           "application_rejected": "Candidatura rechazada",

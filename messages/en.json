@@ -1332,6 +1332,8 @@
           "requirement_created": "Requirement created",
           "requirement_updated": "Requirement edited",
           "requirement_status_changed": "Requirement status changed",
+          "requirement_archived": "Requirement archived",
+          "requirement_client_changed": "Requirement client changed",
           "application_shortlisted": "Application shortlisted",
           "application_proposed": "Proposal sent",
           "application_rejected": "Application rejected",
