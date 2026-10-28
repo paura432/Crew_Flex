@@ -7950,6 +7950,646 @@ await logout();
   }
 }
 
+// PKG P14c (visual system and meta parity, F3 — VIS-01 #2/#3/#5/#6/#7/#8/#9/#12, VIS-02 #1/#2/#3/#6/#17, VIS-03 #1/#2/#4/#5/#9,
+// VIS-04 #1/#2/#3, VIS-05 #4/#5/#6, VIS-06 #2/#3/#4/#5/#11/#14, VIS-07 #1/#22, VIS-08 #1/#2/#3/#4/#5, VIS-09 #1/#3/#4/#6,
+// META-01 #1-#5, META-02 #1-#3, META-03 #1-#5; re-verification of shell-visual T-140…T-148 `44045db`, W3-01/W3-02/W3-06,
+// X-20 and the product name fix of this package; no other code): in Spanish, the document and the shell MEASURE the
+// design tokens — `@theme` custom properties on :root and the computed colours, sizes, radii, fonts and spacing of the
+// sidebar, the active entry, the brand mark, the header, the footer, panels, chips, the primary button, a field and the
+// focus ring equal the token values of `globals.css`; Inter is the font actually loaded (v1.8 never loaded it); every
+// menu page is titled «{entrada} · CrewFlex» with `lang=es`; the favicon is the navy square with the orange plane and
+// there is no manifest, theme-color, apple icon or service worker (NEW-01 / AB-37 open); the shell switches at `lg`
+// (sidebar + white header at 1024, navy bar + «Menú» + five-shortcut dock at 1000/390) without horizontal overflow at
+// 1024/768/390/360; reduced motion leaves zero running animations; print has no stylesheet of its own and there is no
+// dark scheme (both documented). Negatives: no colour measured on the shell is outside the token set, no font or asset
+// comes from another origin, no service worker is registered. Nothing is written except Delta's language, restored
+// in `finally` (API + cookie); media emulation and the viewport are restored too.
+{
+  const DELTA = "delta@crewflex.test";
+  const p14cShot = (name) =>
+    page.screenshot({
+      path: `docs/audit/evidence/parity/P14c/P14c-${name}.jpg`,
+      type: "jpeg",
+      quality: 70,
+      fullPage: false,
+    });
+  /** `#rrggbb` → the `rgb(r, g, b)` string `getComputedStyle` returns. */
+  const p14cRgb = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+  };
+  // The token values of `src/app/globals.css` (DESIGN_SYSTEM.md «Tokens»); the smoke reads the same ones from :root.
+  const P14C_TOKENS = {
+    navy: "#0c2137",
+    "navy-700": "#203b54",
+    ink: "#172c44",
+    muted: "#5b6f84",
+    line: "#dce4ed",
+    canvas: "#f5f7fa",
+    accent: "#ff982f",
+    "accent-hover": "#ffa747",
+    blue: "#18558f",
+    ok: "#16745d",
+    "ok-bg": "#e7f5ee",
+    warn: "#aa5916",
+    danger: "#ad3b44",
+    tool: "#057f7d",
+    "tool-hero": "#112e40",
+  };
+  const p14cOverflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  /** The measurable visual facts of the signed-in shell on the current page. */
+  const p14cShell = () =>
+    page.evaluate((hexes) => {
+      const cs = (el) => (el ? getComputedStyle(el) : null);
+      const pick = (el, props) => {
+        const s = cs(el);
+        if (!s) return null;
+        const out = {};
+        for (const p of props) out[p] = s[p];
+        return out;
+      };
+      const rect = (el) => {
+        const r = el?.getBoundingClientRect();
+        return r ? { w: Math.round(r.width), h: Math.round(r.height) } : null;
+      };
+      const visible = (el) => !!el && el.getClientRects().length > 0;
+      const root = getComputedStyle(document.documentElement);
+      const tokens = Object.fromEntries(
+        Object.keys(hexes).map((k) => [k, root.getPropertyValue(`--color-${k}`).trim()]),
+      );
+      const aside = document.querySelector("aside");
+      const active = aside?.querySelector("nav[aria-label] a[aria-current='page']");
+      const inactive = aside?.querySelector("nav[aria-label] a:not([aria-current])");
+      const mark = aside?.querySelector("a[href='/app'] span[aria-hidden]");
+      const sectionLabel = [...(aside?.querySelectorAll("p.uppercase") ?? [])].find(visible);
+      const header = document.querySelector("header");
+      const crumb = header?.querySelector("nav ol");
+      const footer = document.querySelector("footer");
+      const h1 = document.querySelector("main h1");
+      const panel = document.querySelector("main section.rounded-xl.border-line");
+      const dock = document.querySelector(
+        "nav[aria-label='Accesos rápidos'], nav[aria-label='Quick access']",
+      );
+      const dockLinks = dock ? [...dock.querySelectorAll("a")] : [];
+      const dockCurrent = dockLinks.find((a) => a.getAttribute("aria-current") === "page");
+      const menuButton = aside?.querySelector("button[aria-expanded]");
+      // Every colour painted on the shell's surfaces and text (sidebar, entries, header, footer, dock).
+      const palette = [
+        cs(document.documentElement)?.backgroundColor,
+        cs(document.documentElement)?.color,
+        cs(aside)?.backgroundColor,
+        cs(active)?.backgroundColor,
+        cs(active)?.color,
+        cs(active?.querySelector("svg"))?.color,
+        cs(mark)?.backgroundColor,
+        cs(mark)?.color,
+        visible(header) ? cs(header)?.backgroundColor : null,
+        visible(header) ? cs(header)?.borderBottomColor : null,
+        visible(header) ? cs(crumb)?.color : null,
+        cs(footer)?.color,
+        cs(footer)?.borderTopColor,
+        cs(panel)?.backgroundColor,
+        cs(panel)?.borderColor,
+        visible(dock) ? cs(dock)?.borderTopColor : null,
+        visible(dock) ? cs(dockLinks[0])?.color : null,
+        visible(dock) ? cs(dockCurrent)?.backgroundColor : null,
+        visible(dock) ? cs(dockCurrent)?.color : null,
+      ].filter(Boolean);
+      return {
+        tokens,
+        lang: document.documentElement.lang,
+        title: document.title,
+        html: pick(document.documentElement, ["backgroundColor", "color"]),
+        body: pick(document.body, ["fontFamily", "fontSize", "lineHeight"]),
+        fontsLoaded: [...document.fonts]
+          .filter((f) => f.status === "loaded")
+          .map((f) => f.family.replace(/"/g, "")),
+        aside: { ...pick(aside, ["backgroundColor", "color", "position"]), ...rect(aside) },
+        active: {
+          ...pick(active, ["backgroundColor", "color", "borderRadius", "fontSize"]),
+          icon: {
+            ...pick(active?.querySelector("svg"), ["color", "strokeWidth"]),
+            ...rect(active?.querySelector("svg")),
+          },
+        },
+        inactive: pick(inactive, ["color"]),
+        mark: {
+          ...pick(mark, ["backgroundColor", "color", "borderRadius"]),
+          ...rect(mark),
+          svg: rect(mark?.querySelector("svg")),
+        },
+        sectionLabel: pick(sectionLabel, ["fontSize", "letterSpacing", "color", "textTransform"]),
+        header: visible(header)
+          ? {
+              ...pick(header, ["backgroundColor", "borderBottomColor"]),
+              ...rect(header),
+              crumb: pick(crumb, ["fontSize", "color"]),
+            }
+          : null,
+        footer: {
+          ...pick(footer, ["fontSize", "color", "letterSpacing", "borderTopColor"]),
+          visible: visible(footer),
+        },
+        h1: pick(h1, ["fontSize", "fontWeight", "letterSpacing"]),
+        panel: pick(panel, ["backgroundColor", "borderColor", "borderRadius"]),
+        menuButton: visible(menuButton),
+        dock: visible(dock)
+          ? {
+              ...pick(dock, ["position", "bottom"]),
+              ...rect(dock),
+              links: dockLinks.length,
+              // A shortcut that is not the current one: the muted label (the current one is ok on ok-bg).
+              label: pick(dockLinks.find((a) => a !== dockCurrent) ?? dockLinks[0], [
+                "fontSize",
+                "color",
+              ]),
+              icon: rect(dockLinks[0]?.querySelector("svg")),
+              current: dockCurrent
+                ? {
+                    text: dockCurrent.textContent.trim(),
+                    ...pick(dockCurrent, ["backgroundColor", "color", "fontWeight"]),
+                  }
+                : null,
+              minTarget: Math.min(...dockLinks.map((a) => a.getBoundingClientRect().height)),
+            }
+          : null,
+        palette: [...new Set(palette)],
+      };
+    }, P14C_TOKENS);
+  const p14cTokenRgb = Object.fromEntries(
+    Object.entries(P14C_TOKENS).map(([k, v]) => [k, p14cRgb(v)]),
+  );
+  const p14cAllowed = new Set([
+    ...Object.values(p14cTokenRgb),
+    "rgb(255, 255, 255)",
+    "rgba(255, 255, 255, 0.95)", // dock surface (`bg-white/95`)
+    p14cRgb("#c4d3e1"), // sidebar text (v1.8 `.sidebar` color #c4d3e1)
+    p14cRgb("#91aac1"), // sidebar section titles and «AVIATION» (v1.8 `.sidebar-label`-like)
+  ]);
+  try {
+    // 0) The anonymous document in Spanish (META-01 #1-#4, META-02 #1, META-03 #1-#4, VIS-08 #4/#5, VIS-09 #1/#6):
+    //    lang, charset, viewport, description, title, favicon, no manifest / theme-color / apple icon / service worker;
+    //    the primary button and a field measured on /login; assets only from this origin.
+    const p14cAnonCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await p14cAnonCtx.addCookies([{ name: "crewflex-locale", value: "es", url: BASE }]);
+    const p14cAnon = await p14cAnonCtx.newPage();
+    await p14cAnon.goto(`${BASE}/login`);
+    await p14cAnon.waitForLoadState("networkidle");
+    const p14cDoc = await p14cAnon.evaluate(async () => {
+      await document.fonts.ready;
+      const meta = (n) =>
+        document.querySelector(`meta[name='${n}']`)?.getAttribute("content") ?? null;
+      const pick = (el, props) => {
+        const s = el ? getComputedStyle(el) : null;
+        return s ? Object.fromEntries(props.map((p) => [p, s[p]])) : null;
+      };
+      const button = document.querySelector("form button[type=submit]");
+      const field = document.querySelector("#email");
+      const sw =
+        "serviceWorker" in navigator
+          ? (await navigator.serviceWorker.getRegistrations()).length
+          : -1;
+      return {
+        lang: document.documentElement.lang,
+        title: document.title,
+        charset: document.characterSet,
+        viewport: meta("viewport"),
+        description: meta("description"),
+        themeColor: meta("theme-color"),
+        icons: [...document.querySelectorAll("link[rel~='icon']")].map((l) => ({
+          href: l.getAttribute("href"),
+          type: l.getAttribute("type"),
+          rel: l.getAttribute("rel"),
+        })),
+        manifest: document.querySelectorAll("link[rel='manifest']").length,
+        appleIcon: document.querySelectorAll("link[rel='apple-touch-icon']").length,
+        sw,
+        bodyFont: getComputedStyle(document.body).fontFamily,
+        fontsLoaded: [...document.fonts]
+          .filter((f) => f.status === "loaded")
+          .map((f) => f.family.replace(/"/g, "")),
+        foreign: [
+          ...new Set(
+            performance
+              .getEntriesByType("resource")
+              .map((r) => new URL(r.name).origin)
+              .filter((o) => o !== location.origin),
+          ),
+        ],
+        button: {
+          ...pick(button, [
+            "backgroundColor",
+            "color",
+            "borderRadius",
+            "minHeight",
+            "fontSize",
+            "fontWeight",
+          ]),
+          h: Math.round(button?.getBoundingClientRect().height ?? 0),
+        },
+        field: pick(field, [
+          "borderColor",
+          "borderRadius",
+          "minHeight",
+          "fontSize",
+          "backgroundColor",
+        ]),
+      };
+    });
+    const p14cAssets = {};
+    for (const path of [
+      "/icon.svg",
+      "/sw.js",
+      "/manifest.webmanifest",
+      "/favicon.ico",
+      "/apple-icon.png",
+    ]) {
+      const r = await p14cAnon.request.get(`${BASE}${path}`, { maxRedirects: 0 });
+      p14cAssets[path] = {
+        status: r.status(),
+        type: r.headers()["content-type"] ?? "",
+        body: path === "/icon.svg" ? await r.text() : "",
+      };
+    }
+    await p14cAnonCtx.close();
+    ok(
+      "PKG P14c 0 META-01 #1-#4, META-02 #1, META-03 #1-#4, VIS-08 #4/#5: /login (es) renders <html lang=es>, UTF-8, viewport «width=device-width, initial-scale=1, viewport-fit=cover», the Spanish description, title «Iniciar sesión · CrewFlex», one `rel=icon` → /icon.svg (image/svg+xml) that answers 200 as the navy square (#0c2137) with the orange plane (#ff982f, the sidebar's path); no manifest, theme-color or apple-touch-icon; /sw.js, /manifest.webmanifest, /favicon.ico and /apple-icon.png answer 404 and no service worker is registered",
+      p14cDoc.lang === "es" &&
+        p14cDoc.charset === "UTF-8" &&
+        p14cDoc.viewport === "width=device-width, initial-scale=1, viewport-fit=cover" &&
+        p14cDoc.description ===
+          "Convierte cualificaciones, disponibilidad y demanda operativa en capacidad técnica movilizable." &&
+        p14cDoc.title === "Iniciar sesión · CrewFlex" &&
+        p14cDoc.icons.length === 1 &&
+        /^\/icon\.svg/.test(p14cDoc.icons[0].href) &&
+        p14cDoc.icons[0].type === "image/svg+xml" &&
+        p14cDoc.themeColor === null &&
+        p14cDoc.manifest === 0 &&
+        p14cDoc.appleIcon === 0 &&
+        p14cAssets["/icon.svg"].status === 200 &&
+        /image\/svg\+xml/.test(p14cAssets["/icon.svg"].type) &&
+        p14cAssets["/icon.svg"].body.includes(
+          '<rect width="64" height="64" rx="14" fill="#0c2137"/>',
+        ) &&
+        p14cAssets["/icon.svg"].body.includes('stroke="#ff982f"') &&
+        p14cAssets["/icon.svg"].body.includes("M17.8 19.2 16 11l3.5-3.5") &&
+        ["/sw.js", "/manifest.webmanifest", "/favicon.ico", "/apple-icon.png"].every(
+          (p) => p14cAssets[p].status === 404,
+        ) &&
+        p14cDoc.sw === 0,
+      `${JSON.stringify({ ...p14cDoc, button: undefined, field: undefined, bodyFont: undefined, fontsLoaded: undefined, foreign: undefined })} ${JSON.stringify(Object.fromEntries(Object.entries(p14cAssets).map(([k, v]) => [k, v.status])))}`,
+    );
+    ok(
+      "PKG P14c 0b VIS-03 #1/#2, VIS-09 #1/#6, VIS-04 #1, META-01 #5: Inter is declared on body AND loaded (document.fonts), every resource comes from this origin; «Iniciar sesión» is the primary button — accent background, ink text, 8 px radius, 40 px, 14 px semibold —; the «Correo electrónico» field has the line border, 8 px radius, 40 px and 15 px text",
+      /Inter/.test(p14cDoc.bodyFont) &&
+        p14cDoc.fontsLoaded.some((f) => /Inter/.test(f)) &&
+        p14cDoc.foreign.length === 0 &&
+        p14cDoc.button.backgroundColor === p14cTokenRgb.accent &&
+        p14cDoc.button.color === p14cTokenRgb.ink &&
+        p14cDoc.button.borderRadius === "8px" &&
+        p14cDoc.button.minHeight === "40px" &&
+        p14cDoc.button.h === 40 &&
+        p14cDoc.button.fontSize === "14px" &&
+        p14cDoc.button.fontWeight === "600" &&
+        p14cDoc.field.borderColor === p14cTokenRgb.line &&
+        p14cDoc.field.borderRadius === "8px" &&
+        p14cDoc.field.minHeight === "40px" &&
+        p14cDoc.field.fontSize === "15px" &&
+        p14cDoc.field.backgroundColor === "rgb(255, 255, 255)",
+      `${p14cDoc.bodyFont.slice(0, 60)} loaded=${p14cDoc.fontsLoaded.join("|")} foreign=${p14cDoc.foreign.join(",")} ${JSON.stringify(p14cDoc.button)} ${JSON.stringify(p14cDoc.field)}`,
+    );
+
+    // 1) Delta (professional) in Spanish on «Mi espacio»: the tokens and the shell at 1440 (VIS-01, VIS-02, VIS-03,
+    //    VIS-04, VIS-06 #3/#4/#5/#14, VIS-07 #1, VIS-08 #1/#2, VIS-09 #4).
+    await login(DELTA);
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P14c 1 «Mi espacio» in Spanish");
+    const p14cDesk = await p14cShell();
+    ok(
+      "PKG P14c 1b VIS-01 #2/#3/#5/#6/#7/#8/#9/#12/#17, VIS-02 #17: :root exposes the @theme tokens with the values of globals.css (navy #0c2137, navy-700 #203b54, ink #172c44, muted #5b6f84, line #dce4ed, canvas #f5f7fa, accent #ff982f, accent-hover #ffa747, blue #18558f, ok #16745d, ok-bg #e7f5ee, warn #aa5916, danger #ad3b44, tool #057f7d, tool-hero #112e40); the document paints canvas and ink; no `dark:` scheme",
+      Object.entries(P14C_TOKENS).every(([k, v]) => p14cDesk.tokens[k] === v) &&
+        p14cDesk.html.backgroundColor === p14cTokenRgb.canvas &&
+        p14cDesk.html.color === p14cTokenRgb.ink,
+      JSON.stringify({ tokens: p14cDesk.tokens, html: p14cDesk.html }),
+    );
+    ok(
+      "PKG P14c 1c VIS-02 #1/#2, VIS-03 #1/#2/#4/#5, VIS-06 #3/#4/#5/#14, VIS-07 #1, VIS-08 #1/#2: at 1440 the sidebar is sticky, 256 px, navy, text #c4d3e1; the active entry is navy-700 with white text, 8 px radius, 14 px, its 18 px icon in accent; section titles 11 px, .16em, #91aac1, uppercase; the brand mark is a 36 px accent square, 10 px radius, navy 20 px plane; body Inter 15 px / 24 px, the h1 30 px bold tight; the white header is ≥ 72 px with the line border and a 12 px muted crumb; the footer 12 px muted on the line border; the panel white, line border, 12 px radius",
+      p14cDesk.aside.position === "sticky" &&
+        p14cDesk.aside.w === 256 &&
+        p14cDesk.aside.backgroundColor === p14cTokenRgb.navy &&
+        p14cDesk.aside.color === p14cRgb("#c4d3e1") &&
+        p14cDesk.active.backgroundColor === p14cTokenRgb["navy-700"] &&
+        p14cDesk.active.color === "rgb(255, 255, 255)" &&
+        p14cDesk.active.borderRadius === "8px" &&
+        p14cDesk.active.fontSize === "14px" &&
+        p14cDesk.active.icon.color === p14cTokenRgb.accent &&
+        p14cDesk.active.icon.w === 18 &&
+        p14cDesk.active.icon.h === 18 &&
+        p14cDesk.inactive.color === p14cRgb("#c4d3e1") &&
+        p14cDesk.sectionLabel.fontSize === "11px" &&
+        p14cDesk.sectionLabel.letterSpacing === "1.76px" &&
+        p14cDesk.sectionLabel.color === p14cRgb("#91aac1") &&
+        p14cDesk.sectionLabel.textTransform === "uppercase" &&
+        p14cDesk.mark.backgroundColor === p14cTokenRgb.accent &&
+        p14cDesk.mark.color === p14cTokenRgb.navy &&
+        p14cDesk.mark.borderRadius === "10px" &&
+        p14cDesk.mark.w === 36 &&
+        p14cDesk.mark.h === 36 &&
+        p14cDesk.mark.svg.w === 20 &&
+        /Inter/.test(p14cDesk.body.fontFamily) &&
+        p14cDesk.fontsLoaded.some((f) => /Inter/.test(f)) &&
+        p14cDesk.body.fontSize === "15px" &&
+        p14cDesk.body.lineHeight === "24px" &&
+        p14cDesk.h1.fontSize === "30px" &&
+        p14cDesk.h1.fontWeight === "700" &&
+        p14cDesk.h1.letterSpacing === "-0.75px" &&
+        p14cDesk.header !== null &&
+        p14cDesk.header.h >= 72 &&
+        p14cDesk.header.backgroundColor === "rgb(255, 255, 255)" &&
+        p14cDesk.header.borderBottomColor === p14cTokenRgb.line &&
+        p14cDesk.header.crumb.fontSize === "12px" &&
+        p14cDesk.header.crumb.color === p14cTokenRgb.muted &&
+        p14cDesk.footer.visible &&
+        p14cDesk.footer.fontSize === "12px" &&
+        p14cDesk.footer.color === p14cTokenRgb.muted &&
+        p14cDesk.footer.borderTopColor === p14cTokenRgb.line &&
+        p14cDesk.panel.backgroundColor === "rgb(255, 255, 255)" &&
+        p14cDesk.panel.borderColor === p14cTokenRgb.line &&
+        p14cDesk.panel.borderRadius === "12px" &&
+        p14cDesk.dock === null &&
+        !p14cDesk.menuButton,
+      JSON.stringify({
+        ...p14cDesk,
+        tokens: undefined,
+        palette: undefined,
+        fontsLoaded: undefined,
+      }),
+    );
+    ok(
+      "PKG P14c 1d VIS-01 #19 (negative): every colour painted on the shell at 1440 (document, sidebar, active entry and its icon, brand mark, header, crumb, footer, panel) is a token value, white or one of the two documented sidebar greys (#c4d3e1, #91aac1) — nothing else",
+      p14cDesk.palette.length >= 8 && p14cDesk.palette.every((c) => p14cAllowed.has(c)),
+      p14cDesk.palette.filter((c) => !p14cAllowed.has(c)).join(", ") ||
+        `${p14cDesk.palette.length} colours, all tokens`,
+    );
+    await p14cShot("shell-after-1440");
+
+    // 2) The focus ring (VIS-01 #9 as a token; v1.8 `outline:3px solid #e88b26; outline-offset:3px`): Tab reaches the
+    //    skip link; its ring is the 3 px accent outline 2 px out plus the 2 px navy box-shadow of `globals.css`.
+    await page.keyboard.press("Tab");
+    const p14cFocus = await page.evaluate(() => {
+      const el = document.activeElement;
+      const s = getComputedStyle(el);
+      return {
+        text: el?.textContent?.trim(),
+        outlineColor: s.outlineColor,
+        outlineWidth: s.outlineWidth,
+        outlineStyle: s.outlineStyle,
+        outlineOffset: s.outlineOffset,
+        boxShadow: s.boxShadow,
+      };
+    });
+    await p14cShot("focus-after-1440");
+    ok(
+      "PKG P14c 2 focus ring (globals.css :focus-visible; v1.8 3 px #e88b26 offset 3 px): the focused skip link shows a 3 px solid accent outline, 2 px offset, over a 2 px navy box-shadow",
+      p14cFocus.text === "Saltar al contenido" &&
+        p14cFocus.outlineColor === p14cTokenRgb.accent &&
+        p14cFocus.outlineWidth === "3px" &&
+        p14cFocus.outlineStyle === "solid" &&
+        p14cFocus.outlineOffset === "2px" &&
+        p14cFocus.boxShadow === `${p14cTokenRgb.navy} 0px 0px 0px 2px`,
+      JSON.stringify(p14cFocus),
+    );
+
+    // 3) Chips (VIS-02 #6, VIS-04 #3, VIS-03 #10) on «Cualificaciones», and the tools palette on «Herramientas»
+    //    (VIS-01 #17, VIS-02 #4/#5): teal only there.
+    await page.goto(`${BASE}/app/professional/qualifications`);
+    await page.waitForLoadState("networkidle");
+    const p14cChips = await page.evaluate(() => {
+      const chips = [...document.querySelectorAll("main span.rounded-md.font-bold")];
+      const s = chips[0] ? getComputedStyle(chips[0]) : null;
+      return {
+        count: chips.length,
+        fontSize: s?.fontSize,
+        fontWeight: s?.fontWeight,
+        borderRadius: s?.borderRadius,
+        borderWidth: s?.borderWidth,
+        textTransform: s?.textTransform,
+        uppercaseText: chips.filter((c) => /^[A-ZÁÉÍÓÚÑ ]{4,}$/.test(c.textContent.trim())).length,
+      };
+    });
+    await page.goto(`${BASE}/app/tools`);
+    await page.waitForLoadState("networkidle");
+    const p14cTools = await page.evaluate(() => {
+      const hero = document.querySelector("main [class*='bg-tool-hero']");
+      const accentInMain = [...document.querySelectorAll("main *")].filter(
+        (el) => getComputedStyle(el).backgroundColor === "rgb(255, 152, 47)",
+      ).length;
+      return {
+        title: document.title,
+        hero: hero ? getComputedStyle(hero).backgroundColor : null,
+        heroRadius: hero ? getComputedStyle(hero).borderRadius : null,
+        accentInMain,
+      };
+    });
+    await p14cShot("tools-after-1440");
+    ok(
+      "PKG P14c 3 VIS-02 #4/#5/#6, VIS-03 #10, VIS-04 #3, VIS-01 #17: the status chips on «Cualificaciones» are 12 px bold, 6 px radius, 1 px border, sentence case (no all-caps chip); «Herramientas · CrewFlex» paints its hero in tool-hero #112e40 with the v1.8 18 px radius and no accent-orange surface in its content (teal workbench only under /app/tools)",
+      p14cChips.count > 0 &&
+        p14cChips.fontSize === "12px" &&
+        p14cChips.fontWeight === "700" &&
+        p14cChips.borderRadius === "6px" &&
+        p14cChips.borderWidth === "1px" &&
+        p14cChips.textTransform === "none" &&
+        p14cChips.uppercaseText === 0 &&
+        p14cTools.title === "Herramientas · CrewFlex" &&
+        p14cTools.hero === p14cTokenRgb["tool-hero"] &&
+        p14cTools.heroRadius === "18px" &&
+        p14cTools.accentInMain === 0,
+      `${JSON.stringify(p14cChips)} ${JSON.stringify(p14cTools)}`,
+    );
+
+    // 4) One <title> per screen with its menu label and lang=es (META-02 #2/#3, META-01 #1).
+    const p14cTitles = {};
+    for (const [path, expected] of [
+      ["/app/professional", "Mi espacio"],
+      ["/app/professional/profile", "Mi pasaporte"],
+      ["/app/professional/qualifications", "Cualificaciones"],
+      ["/app/professional/availability", "Disponibilidad"],
+      ["/app/professional/opportunities", "Oportunidades"],
+      ["/app/professional/applications", "Mis candidaturas"],
+      ["/app/professional/documents", "Documentos"],
+      ["/app/professional/logbook", "Logbook"],
+      ["/app/notices", "Avisos"],
+      ["/app/settings", "Configuración"],
+    ]) {
+      await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      const got = await page.evaluate(() => ({
+        title: document.title,
+        lang: document.documentElement.lang,
+      }));
+      p14cTitles[path] = {
+        ...got,
+        pass: got.title === `${expected} · CrewFlex` && got.lang === "es",
+      };
+    }
+    ok(
+      "PKG P14c 4 META-02 #1/#2/#3, META-01 #1: the ten professional and account pages are titled «{entrada del menú} · CrewFlex» (Mi espacio, Mi pasaporte, Cualificaciones, Disponibilidad, Oportunidades, Mis candidaturas, Documentos, Logbook, Avisos, Configuración) with <html lang=es>",
+      Object.values(p14cTitles).every((t) => t.pass),
+      Object.entries(p14cTitles)
+        .filter(([, t]) => !t.pass)
+        .map(([p, t]) => `${p}: ${t.title} (${t.lang})`)
+        .join(" | ") || "10/10",
+    );
+
+    // 5) The breakpoint (VIS-06 #2/#3/#11/#14, VIS-07 #22, META-01 #3): at 1024 the sidebar + header; at 1000 the navy
+    //    bar with «Menú» and the fixed dock (five 11 px labels, 20 px icons, ≥ 48 px targets, the current one ok on
+    //    ok-bg); no overflow at 1024 / 768 / 390 / 360.
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    const p14cAt = {};
+    for (const width of [1024, 1000, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.waitForTimeout(250);
+      const shell = await p14cShell();
+      p14cAt[width] = {
+        overflow: await p14cOverflow(),
+        asideW: shell.aside.w,
+        asidePosition: shell.aside.position,
+        header: shell.header !== null,
+        menu: shell.menuButton,
+        dock: shell.dock,
+        footer: shell.footer.visible,
+        palette: shell.palette,
+      };
+      if (width === 390) await p14cShot("shell-after-390");
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const p14cDock = p14cAt[390].dock;
+    ok(
+      "PKG P14c 5 VIS-06 #2/#3/#11/#14, VIS-07 #22, VIS-04 #8: at 1024 the sticky 256 px sidebar and the white header, no «Menú», no dock; at 1000 and below the sidebar is the full-width navy bar with «Menú», the header is gone and the dock is fixed at bottom 0 with five shortcuts — 11 px muted labels, 20 px icons, targets ≥ 48 px, the current «Inicio» semibold ok on ok-bg —; the footer stays; no horizontal overflow at 1024 / 768 / 390 / 360",
+      !p14cAt[1024].overflow &&
+        p14cAt[1024].asideW === 256 &&
+        p14cAt[1024].asidePosition === "sticky" &&
+        p14cAt[1024].header &&
+        !p14cAt[1024].menu &&
+        p14cAt[1024].dock === null &&
+        [1000, 768, 390, 360].every(
+          (w) =>
+            p14cAt[w].asideW === w &&
+            !p14cAt[w].header &&
+            p14cAt[w].menu &&
+            p14cAt[w].dock !== null &&
+            p14cAt[w].dock.links === 5 &&
+            p14cAt[w].footer,
+        ) &&
+        [768, 390, 360].every((w) => !p14cAt[w].overflow) &&
+        p14cDock.position === "fixed" &&
+        p14cDock.bottom === "0px" &&
+        p14cDock.label.fontSize === "11px" &&
+        p14cDock.label.color === p14cTokenRgb.muted &&
+        p14cDock.icon.w === 20 &&
+        p14cDock.icon.h === 20 &&
+        p14cDock.minTarget >= 48 &&
+        p14cDock.current?.text === "Inicio" &&
+        p14cDock.current.backgroundColor === p14cTokenRgb["ok-bg"] &&
+        p14cDock.current.color === p14cTokenRgb.ok &&
+        p14cDock.current.fontWeight === "600",
+      JSON.stringify(
+        Object.fromEntries(
+          Object.entries(p14cAt).map(([w, a]) => [
+            w,
+            {
+              ...a,
+              palette: undefined,
+              dock: a.dock
+                ? { links: a.dock.links, h: a.dock.h, current: a.dock.current?.text }
+                : null,
+            },
+          ]),
+        ),
+      ) + ` dock390=${JSON.stringify(p14cDock)}`,
+    );
+    ok(
+      "PKG P14c 5b VIS-01 #19 (negative, below lg): the colours painted on the navy bar, the dock and its current shortcut at 1000 / 768 / 390 / 360 are token values (muted, ok, ok-bg, line, white/95) or the documented sidebar greys — nothing else",
+      [1000, 768, 390, 360].every((w) => p14cAt[w].palette.every((c) => p14cAllowed.has(c))),
+      [1000, 768, 390, 360]
+        .flatMap((w) =>
+          p14cAt[w].palette.filter((c) => !p14cAllowed.has(c)).map((c) => `${w}:${c}`),
+        )
+        .join(", ") || "all tokens",
+    );
+
+    // 6) Media (VIS-05 #4/#5/#6): reduced motion → zero running animations; print → no print stylesheet (the
+    //    sidebar is still displayed: documented ≠); dark scheme → the document keeps canvas (no dark mode, =).
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    const p14cReduce = await page.evaluate(() => ({
+      running: document.getAnimations().length,
+      named: [...document.querySelectorAll("*")].filter(
+        (el) => getComputedStyle(el).animationName !== "none",
+      ).length,
+      matches: matchMedia("(prefers-reduced-motion: reduce)").matches,
+    }));
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+    const p14cMotion = await page.evaluate(() => ({ running: document.getAnimations().length }));
+    await page.emulateMedia({ media: "print" });
+    const p14cPrint = await page.evaluate(() => ({
+      aside: getComputedStyle(document.querySelector("aside")).display,
+      dock: getComputedStyle(document.querySelector("nav[aria-label='Accesos rápidos']")).display,
+      matches: matchMedia("print").matches,
+    }));
+    await page.emulateMedia({ media: "screen", colorScheme: "dark" });
+    const p14cDark = await page.evaluate(() => ({
+      matches: matchMedia("(prefers-color-scheme: dark)").matches,
+      html: getComputedStyle(document.documentElement).backgroundColor,
+      aside: getComputedStyle(document.querySelector("aside")).backgroundColor,
+    }));
+    await page.emulateMedia({ media: null, colorScheme: null, reducedMotion: null });
+    ok(
+      "PKG P14c 6 VIS-05 #4/#5/#6, VIS-02 #17: with prefers-reduced-motion emulated «Mi espacio» runs zero animations and no element computes an animation-name; without it, still zero running on the loaded page (the only `animate-pulse` is the loading skeleton, under motion-safe); under print media the sidebar stays displayed (the dock is lg:hidden at 1440) (no print stylesheet, documented ≠); under a dark scheme the document keeps canvas and the sidebar navy (no dark mode, =)",
+      p14cReduce.matches &&
+        p14cReduce.running === 0 &&
+        p14cReduce.named === 0 &&
+        p14cMotion.running === 0 &&
+        p14cPrint.matches &&
+        p14cPrint.aside !== "none" &&
+        p14cPrint.dock === "none" &&
+        p14cDark.matches &&
+        p14cDark.html === p14cTokenRgb.canvas &&
+        p14cDark.aside === p14cTokenRgb.navy,
+      `${JSON.stringify(p14cReduce)} ${JSON.stringify(p14cMotion)} ${JSON.stringify(p14cPrint)} ${JSON.stringify(p14cDark)}`,
+    );
+    await logout();
+  } finally {
+    await page
+      .emulateMedia({ media: null, colorScheme: null, reducedMotion: null })
+      .catch(() => {});
+    await page.setViewportSize({ width: 1440, height: 900 });
+    if (/\/app/.test(page.url())) await logout().catch(() => {});
+    const p14cEnglish =
+      (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P14c 7 restore: Delta in English, locale cookie cleared, media emulation and viewport reset",
+      p14cEnglish,
+      String(p14cEnglish),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
