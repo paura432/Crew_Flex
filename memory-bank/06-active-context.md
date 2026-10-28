@@ -56,6 +56,7 @@ other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-
 
 ## Next step (one)
 
-Waits for the owner: the production items (§0, §0b incl. `jwt_exp`, deploys), the open decisions above, and F4/F5 (not
-authorised). Worktrees `.claude/worktrees/f3-p12…f3-p15` and `p14b-s1` can be removed once the owner is done reviewing.
-Never push or deploy without the owner.
+Owner 2026-10-28 chose «preparar producción (solo lectura)»: preflight done and recorded in `ROLLOUT_PLAN_V18_LOOP.md` §0a
+(production = release 1, `jwt_exp` 3600). Next is an owner «sí» per write step, in the plan's order: H1 (`git push origin
+352182c:main`), §0b Auth PATCH (+ `jwt_exp` 600 if decided), then release 2 resolution and §3 steps 1–5. Never write
+remotely without that per-step approval.

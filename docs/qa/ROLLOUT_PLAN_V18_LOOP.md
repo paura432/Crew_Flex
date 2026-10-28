@@ -32,6 +32,31 @@
   the dependencies later needs a revert of the revert (git will not merge `dc1b421` twice).
 - If release 2 is pushed first, cherry-pick `ef4d9b7` (same fix on the branch) instead.
 
+## 0a. Read-only preflight — 2026-10-28 (nothing written)
+
+Read with `git ls-remote` and Management API GETs (owner's scoped token, never printed; non-secret fields only):
+
+- `origin/main` = `51c835a` (unchanged since 2026-10-20) → step H1 is still a fast-forward to `352182c`.
+- Project `sbjkzrkmcekokkqiuvvh`: `ACTIVE_HEALTHY`, eu-central-1, Postgres 17.11. **15 migrations** (last
+  `20261019150100`) and **8 functions** (`capacity-evaluate` v3, `health` v2, `matching-evaluate` v3,
+  `professional-availability` v3, `professional-profile` v1, `professional-qualifications` v1, `user-preferences` v1,
+  `work-requirements` v2; all `verify_jwt` false — the functions check the JWT themselves) = release 1, as in §0.
+- `config/auth`: `site_url` `http://localhost:3000`, `uri_allow_list` empty, `password_min_length` 6,
+  `password_hibp_enabled` false, `mailer_autoconfirm` false, `mailer_otp_exp` 3600, **`jwt_exp` 3600** (first read; local
+  is 600 since P14b-S1), `sessions_timebox` 0 (no 12 h cap), `refresh_token_rotation_enabled` true (reuse interval 10 s),
+  `security_update_password_require_current_password` false and `…_require_reauthentication` false (T22),
+  `mailer_secure_email_change_enabled` true, built-in SMTP (`rate_limit_email_sent` 2), sign-up enabled.
+- PostgREST: schemas `public, graphql_public`, `max_rows` 1000.
+- `advisors/security`: 13 — `auth_leaked_password_protection` (WARN; §0b `password_hibp_enabled`);
+  `rls_enabled_no_policy` on `feature_flags` (INFO, by design: no API role reads it); 11
+  `authenticated_security_definer_function_executable` (WARN): `audit_qualification_verified`, `audit_requirement_created`,
+  `handle_new_user` are trigger functions that migration 39 (`20261026100000`, REVOKE only) closes; the other 8
+  (`can_view_member`, `has_org_role`, `is_org_member`, `is_platform_admin`, `own_qualification_reviews`,
+  `review_qualification`, `get_requirement_candidate_pool`, `get_requirement_external_pool_summary`) are meant to be
+  callable by `authenticated` (RLS helpers and RPCs with their own authorization checks, S-10).
+- Frontend `https://crew-flex.vercel.app`: `/` 200, `/login` 200, `/tools` 404 (public tools arrive with this branch,
+  T-145), CSP report-only header present.
+
 ## 0b. Production Auth settings — independent of any release, before any real sign-up
 
 Read 2026-10-26 (Management API `GET config/auth`, non-secret fields): `site_url` = `http://localhost:3000`,
@@ -48,8 +73,8 @@ confirmation link falls back to `site_url` = localhost; recovery asks `${origin}
 | `password_min_length`   | 6                       | 12                                                                                    | Q-01; the branch asks 12 (`PASSWORD_MIN`). Today's frontend asks 10: a 10–11 character password gets «Elige una contraseña más segura.» until the branch ships                                    |
 | `password_hibp_enabled` | false                   | true                                                                                  | Advisor WARN `auth_leaked_password_protection`; a paid-plan feature — if the API refuses it, leave false and record                                                                               |
 
-**Owner-decision item, NOT in the PATCH above and not applied (P14b-S1, security review 2026-10-28, Medium):** read `jwt_exp`
-first (unread on 2026-10-26; the read-only `GET config/auth` below) and decide whether to set it to 600 s, as local `supabase/config.toml` (`jwt_expiry = 600`, applied locally on 2026-10-28)
+**Owner-decision item, NOT in the PATCH above and not applied (P14b-S1, security review 2026-10-28, Medium):** `jwt_exp`
+reads 3600 (§0a, 2026-10-28) and decide whether to set it to 600 s, as local `supabase/config.toml` (`jwt_expiry = 600`, applied locally on 2026-10-28)
 already is: after a password reset an already-issued access token keeps working for `jwt_exp`
 seconds although every refresh token is revoked (`docs/product/SECURITY_PRIVACY.md` §T22 residual). Nothing is applied by this
 plan without the owner.
@@ -153,10 +178,10 @@ Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M0
 | 41  | `20261027200000_requirement_cards_client`                                  | P11 recruiter (card names the client, T-169) |
 | 42  | `20261027300000_qualification_review_evidence`                             | P12 admin (review evidence table, T-170)     |
 
-**Edge Functions** (22 directories): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
+**Edge Functions** (23 directories, `health` included): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
 **changed since release 1** — `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-profile`, `professional-qualifications`, `professional-availability`, `user-preferences` (every one of them parses the new schema/statuses and
 accepts new parameters; the deployed versions answer 500/400 on them); **release-2 functions still undeployed** —
-`professional-documents`, `documents-maintenance`, `qualification-reviews` (wallet + OD-3 review, both behind flags). The directory package (merged `47b467e`) added
+`professional-documents`, `documents-maintenance`, `qualification-reviews` (wallet + OD-3 review, both behind flags; since P12 `qualification-reviews` requires a note for every decision and returns the owner's restrictions — deploy it no earlier than migration 42). The directory package (merged `47b467e`) added
 `20261024700000` and `candidate-directory`. The professional-block package (v2-16, `20261024800000`) changes no
 function code but the shared `APPLICATION_CONFLICTS` (CFA16): deploy `applications` **no later than** that migration
 (the new function on the old SQL never sees CFA16, harmless; an older `applications` on the new SQL answers 500 instead
@@ -179,7 +204,7 @@ of 409 `ORGANIZATION_BLOCKED`); `opportunities` changes only a comment and needs
 | 0    | Preflight read-only: remote `main` SHA, `migration list --linked`, deployed function versions; `git merge-base --is-ancestor` of the release SHA; `supabase db push --dry-run` and compare the list with §1 (exactly the files above, same order)                                                        | know the starting point; `db push` cannot skip files                                                                                            |
 | 1    | `supabase db push` (all pending files, file order as in §1) — the enum-value files (`20261022130000`, `20261024400000`) commit before their users; `20261024500000`/`500100` sort before the already-applied-locally `600000` → a reset in file order is what we verified locally                        | the functions of step 2 parse the new statuses/columns; new functions on the old schema are NOT supported                                       |
 | 2    | Deploy **by name, never bare**, with `--use-api --project-ref sbjkzrkmcekokkqiuvvh`: every directory of §1 except `health` (the 7 changed release-1 functions, the 11 new ones, and the 3 release-2 ones only if their flags/secrets are wanted)                                                         | old `work-requirements`/`matching-evaluate`/`applications`… answer 500 on `paused`/new columns and 400 on the new parameters the frontend sends |
-| 3    | Owner Auth settings (§2.3): e-mail confirmation ON, redirect URLs `/auth/confirm**` and `/register**`, confirmation template `supabase/templates/confirmation.html`, `otp_expiry` 1 h, session timebox 12 h (decision), minimum password 12                                                              | the account package assumes them; the app refuses < 12 already                                                                                  |
+| 3    | Owner Auth settings (§2.3): e-mail confirmation ON, redirect URLs `/auth/confirm**` and `/register**`, confirmation template `supabase/templates/confirmation.html`, `otp_expiry` 1 h, session timebox 12 h (decision), minimum password 12, `jwt_exp` 600 (P14b-S1, decision; reads 3600 in §0a)        | the account package assumes them; the app refuses < 12 already                                                                                  |
 | 4    | `git push origin <release-sha>:main`                                                                                                                                                                                                                                                                     | frontend last: it calls routes that must exist                                                                                                  |
 | 5    | Owner checks signed in: dashboards render (both account types, the recruiter space for an agency), Oportunidades/Mis candidaturas render (empty while OD-3 is off), requirement pause/resume/close/archive, notices bell, no CSP report in DevTools; Storage CORS answers the app origin (wallet viewer) | smoke of the critical paths                                                                                                                     |
 
@@ -192,7 +217,9 @@ new functions on the old schema are NOT supported — hence step 1 before 2.
 
 ## 4. Local evidence to attach to each approval
 
-At `c093523` (2026-10-23, local Docker DB reset in file order): `pnpm check` 0 (Vitest 1123, Deno 188) · `pnpm build` 0 (Next 16.4.0
+Latest at `db0a232` (2026-10-28, merged as `2beec2d`; local DB migrated without reset, 62 migrations): `pnpm check` 0 (Vitest 1196,
+Deno 197) · `pnpm build` 0 · local E2E 48/48 · race 19/19 · `ui-smoke` 514/514 on `next start` (blocks up to `PKG P15`).
+Earlier, at `c093523` (2026-10-23, local Docker DB reset in file order): `pnpm check` 0 (Vitest 1123, Deno 188) · `pnpm build` 0 (Next 16.4.0
 stops once with its security-advisory nudge; the retry passes — see §6) · local E2E 48/48 · `scripts/local/db-race-check.sh all`
 19/19 · `scripts/local/ui-smoke.mjs` **259/259** on `next build && next start` (every merged package block) · PGlite RLS suites
 (15 files). Record the numbers of the release SHA in `memory-bank/01-current-state.md` before step 1.
