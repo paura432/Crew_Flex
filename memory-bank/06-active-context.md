@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-27 11:30 CET (F3: P02–P11 integrated locally; P12 in progress). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-28 10:50 CET (F3: P02–P12 integrated locally; P13 next). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -49,6 +49,12 @@ represented client's NAME, as recorded, T-169; never the contact); pack copy nam
 recruiter» eyebrow; smoke 420/420; security + code reviews no blockers; merge `b9f7d48`, fixes `938d56e` (cleanup of
 `Cliente P11`/`P11 recruiter` rows, restore captured org type, doc refs); check 0 (1185/197) + build 0 on the merge.
 Held: export «Preparar presentación para cliente» (D-07 P3 + D-10).
+P12 admin (2026-10-28): NEW LOCAL migration `20261027300000` (`qualification_reviews` evidence table, platform admin only,
+no write grant; `review_qualification` requires evidence for BOTH decisions, the owner reads only a rejection's reason,
+T-170); the queue shows the owner's declared restrictions with v1.8's sentence as a WARNING (v1.8 refuses a _profile_
+review, `server/app.mjs:189`; blocking = new rule → owner); `PKG P12` 11 checks; security + code reviews no blockers,
+fixes `3781d80` (E2E stale call needed a note: 400 before 409); gate run 2 green (smoke 431/431); merge `d5c42dc`,
+check 0 (1186/197) + build 0 on the merge. Matrix §P12 10 VERIFIED_LOCAL · 5 OUT · 3 BLOCKED (OD-3 ×2, D-10).
 Docker Desktop can drop mid-session: a gate with `RESET_EXIT=2` / `HEALTH=000` means no socket — restart it, re-run.
 After ANY local reset: flags via STDIN to `db-owner-sql.sh`, restart `functions serve` (wait for the NEW edge_runtime
 container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the functions’ `.env`) into a worktree.
@@ -59,9 +65,9 @@ container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the fun
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | Production   | frontend `origin/main` `51c835a` on the release-1 backend; X-01 live; Next 16.4.0 + zod 4.6.5 with 3 published advisories    |
 | Local `main` | = `origin/main` `51c835a`                                                                                                    |
-| Branch       | `feat/v18-html-parity` = this commit on `938d56e`: 61 migrations (41 not applied remotely), 23 functions; deployed nowhere   |
+| Branch       | `feat/v18-html-parity` = this commit on `d5c42dc`: 62 migrations (42 not applied remotely), 23 functions; deployed nowhere   |
 | Hotfix       | `hotfix/x01-deps` = `352182c` (X-01 + Next 16.4.3 + zod 4.6.7 on `51c835a`, verified), waits for the owner (step H1)         |
-| Parity       | inventory `recount.py` after P11: 943 / 1 262 = 74,7 % (155 decision-held, 119 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
+| Parity       | inventory `recount.py` after P12: 963 / 1 262 = 76,3 % (150 decision-held, 119 ✗, 206 Next-only); 2026-10-22 baseline 56,1 % |
 
 ## Risks
 
@@ -79,9 +85,9 @@ container); copy the git-ignored env files (`.env.local`, `.env.e2e` and the fun
 ## Blocked on the owner
 
 §0 H1 push of `352182c`; §0b Auth PATCH; §0c Crew_Flex-only read token then revoke the current one; custom SMTP; every
-other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-decision-pack.md` §2; the T-xx sign-offs.
+other push/deploy; STG option (F5); D-07 P3 + scanner; OD-3; Q6 vs SCOPE-2; `14-decision-pack.md` §2; the T-xx sign-offs; whether declared restrictions block a qualification review (T-170).
 
 ## Next step (one)
 
-P12 Admin (ADM-01…03) in worktree `f3-p12`, branch `f3/p12-admin` from `b9f7d48` (integrate by merge); then P13 Notices,
-P14 Shell. Never push or deploy.
+P13 Notices and messaging (HIRE-06, HIRE-07, HIRE-08 SCOPE OUT, TEC-07, ACC-03) in worktree `f3-p13`, branch `f3/p13-notices`
+from `d5c42dc` (integrate by merge); then P14 Shell. Never push or deploy.
