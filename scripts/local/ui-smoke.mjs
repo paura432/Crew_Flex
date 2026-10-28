@@ -8791,7 +8791,6 @@ await logout();
         min: Math.min(...live.map((r) => r.ratio)),
         fails: live.filter((r) => r.ratio < (r.large ? 3 : 4.5)),
         disabledBelow: rows.filter((r) => r.disabled && r.ratio < 4.5).length,
-        pair: (text) => live.find((r) => r.text.startsWith(text)),
         rows: live,
       };
     });
@@ -8833,10 +8832,11 @@ await logout();
     );
   const p15Small = (targets) => targets.filter((t) => (t.w < 44 || t.h < 44) && !t.exception);
   let p15Touch = null;
+  let p15AnonCtx = null;
   try {
     // 0) Anonymous /login in Spanish: landmarks of a single-block page, the ES/EN radiogroup and `<html lang>`,
     //    the failed submit's alert (A11Y-01 #3/#4, A11Y-03 #2, A11Y-04 #1/#3, I18N-01 #2/#4, I18N-05).
-    const p15AnonCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    p15AnonCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     await p15AnonCtx.addCookies([{ name: "crewflex-locale", value: "es", url: BASE }]);
     const p15Anon = await p15AnonCtx.newPage();
     await p15Anon.goto(`${BASE}/login`);
@@ -8887,6 +8887,7 @@ await logout();
       })),
     }));
     await p15AnonCtx.close();
+    p15AnonCtx = null;
     ok(
       "PKG P15 0 A11Y-01 #3/#4, A11Y-04 #1, I18N-01 #2/#4, I18N-05: /login (es) is one `main`, no `nav`, no skip link (single-block page, documented ≈), one h1 «Iniciar sesión», every field labelled, every control named; the first Tab lands on the brand link to /; the ES/EN `radiogroup` has 2 radios and one Tab stop; EN → <html lang=en>, title «Sign in · CrewFlex», cookie en, EN marked and no Spanish UI word on the page; ES again → lang es; no English UI word on the Spanish page",
       p15LoginEs.lang === "es" &&
@@ -9290,6 +9291,7 @@ await logout();
     await logout();
   } finally {
     if (p15Touch) await p15Touch.close().catch(() => {});
+    if (p15AnonCtx) await p15AnonCtx.close().catch(() => {});
     await page.setViewportSize({ width: 1440, height: 900 });
     if (/\/app/.test(page.url())) await logout().catch(() => {});
     const p15Restored = await Promise.all(

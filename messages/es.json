@@ -1334,6 +1334,8 @@
           "requirement_status_changed": "Estado de una necesidad cambiado",
           "requirement_archived": "Necesidad archivada",
           "requirement_client_changed": "Cliente de una necesidad cambiado",
+          "client_added": "Cliente representado añadido",
+          "client_revoked": "Representación de un cliente revocada",
           "application_shortlisted": "Candidatura preseleccionada",
           "application_proposed": "Propuesta enviada",
           "application_rejected": "Candidatura rechazada",

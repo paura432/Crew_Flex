@@ -1122,12 +1122,12 @@ solo, 15/15). Ninguna migración ni función nueva; los cambios viven solo en lo
 Cierre P15 (28/10): 19 filas — 13 VERIFIED_LOCAL · 1 IMPLEMENTED_UNVERIFIED (paradas del `input type=date`, sin re-medir) · 1 PARTIAL (cobertura de cadenas 24,8 %) ·
 2 NEEDS_DECISION (consentimiento D-07 P3 / D-10; idioma por defecto C-5) · 1 OUT_OF_SCOPE · 1 BLOCKED (despliegue). Cinco huecos cerrados en dos commits (`0e73260` a11y, `334c576`
 i18n: 11 + 4 ficheros, un test nuevo y tres ampliados), ninguna migración ni función. Inventario: 142 filas tocadas en `50-visual-meta-a11y.md` (54 de `A11Y-*`, 88 de `I18N-*`, una nueva
-I18N-05 #11); 8 cambian de símbolo `(F3: antes X)` — A11Y-01 #5 (=→≈, el breadcrumb es ya un `nav`), A11Y-02 #2 (=→+, diálogos con el anillo doble), A11Y-05 #11 (≈→+, títulos y marca a 44 px),
-A11Y-06 #3 (✗→+, pie 4,83), A11Y-06 #10 (−→+, dock 5,18), I18N-03 #5 (−→≈, pie sin versión), I18N-03 #8 (−→≈, breadcrumb), I18N-05 #7 (≠→=, «CrewFlex»); las 8 filas de A11Y-06 no tocadas
-(#5, #7, #8, #11, #12, #14, #16, #18) se releyeron contra el código sin cambio. Ninguna fila cambia a `≠` ni a `✗`. `recount.py`: `50-visual-meta-a11y.md` 307 filas · = 75 · ≈ 126 · ≠ 32 · − 2 ·
+I18N-05 #11); 8 cambian de símbolo `(F3: antes X)` — A11Y-01 #5 (=→≈, el breadcrumb es ya un `nav`), A11Y-02 #2 (=→≠, diálogos con el anillo doble), A11Y-05 #11 (≈→≠, títulos y marca a 44 px),
+A11Y-06 #3 (✗→≠, pie 4,83), A11Y-06 #10 (−→≠, dock 5,18), I18N-03 #5 (−→≈, pie sin versión), I18N-03 #8 (−→≈, breadcrumb), I18N-05 #7 (≠→=, «CrewFlex»); las 8 filas de A11Y-06 no tocadas
+(#5, #7, #8, #11, #12, #14, #16, #18) se releyeron contra el código sin cambio. Las cuatro filas que v1.8 también tiene y Next hace mejor son `≠` (revisión: no `+`, que es «solo Next»; precedentes TOOL-09 #28, SH-06 #14) y siguen en el denominador. `recount.py`: `50-visual-meta-a11y.md` 307 filas · = 75 · ≈ 126 · ≠ 36 · − 2 ·
 
-- 54 · ✗ 18 → 201 / 235 = 85,5 % (antes = 76 · ≈ 124 · ≠ 33 · − 5 · + 49 · ✗ 19 → 200 / 238 = 84,0 %), retenidas 9 → 9; los otros cuatro ficheros sin cambio; total **1 050 / 1 262 = 83,2 %**
-  (antes 1 049 / 1 265 = 82,9 %), retenidas por decisión 155 (sin cambio), ✗ 113 (antes 114), Next-only 213 (antes 208). Las 2 `−` que quedan en el fichero 50: toast (VIS-09 #9) y service worker
+- 50 · ✗ 18 → 201 / 239 = 84,1 % (antes = 76 · ≈ 124 · ≠ 33 · − 5 · + 49 · ✗ 19 → 200 / 238 = 84,0 %), retenidas 9 → 9; los otros cuatro ficheros sin cambio; total **1 050 / 1 266 = 82,9 %**
+  (antes 1 049 / 1 265 = 82,9 %), retenidas por decisión 155 (sin cambio), ✗ 113 (antes 114), Next-only 209 (antes 208). Las 2 `−` que quedan en el fichero 50: toast (VIS-09 #9) y service worker
   (META-03 #1). Propuestas (ninguna implementada, todas P3): **P15-P1** — Escape desde dentro del desplegable «Menú» cierra y devuelve el foco a «Menú» (se absorbe en P14c-P2 si se decide
   el cajón); **P15-P2** — enlace de salto también en `(auth)` y la portada (hoy páginas de un bloque, v1.8 lo ofrecía en todos los shells); **P15-P3** — contorno en
   `::-webkit-calendar-picker-indicator:focus-visible` (A11Y-02 #7); **P15-P4** — mover el foco al `role=alert` o al primer campo inválido tras un envío fallido (hoy queda en `body`; el
@@ -1154,8 +1154,8 @@ Inventario (`recount.py` sobre los cinco ficheros; denominador = + ≈ + ≠ + �
 | `20-technician.md`               | 256 / 267 = 95,9 %                                                                                                                     |
 | `30-company-hiring.md`           | 259 / 309 = 83,8 %                                                                                                                     |
 | `40-tools-learning.md`           | 162 / 233 = 69,5 %                                                                                                                     |
-| `50-visual-meta-a11y.md`         | 201 / 235 = 85,5 % (P15; antes 200 / 238 = 84,0 %)                                                                                     |
-| **Total**                        | **1 050 / 1 262 = 83,2 %** (155 retenidas por decisión, 113 ✗, 213 solo Next; base 22/10: 56,1 %; antes de P15 1 049 / 1 265 = 82,9 %) |
+| `50-visual-meta-a11y.md`         | 201 / 239 = 84,1 % (P15; antes 200 / 238 = 84,0 %)                                                                                     |
+| **Total**                        | **1 050 / 1 266 = 82,9 %** (155 retenidas por decisión, 113 ✗, 209 solo Next; base 22/10: 56,1 %; antes de P15 1 049 / 1 265 = 82,9 %) |
 
 `A11Y-01…06` e `I18N-01…05` (`50-visual-meta-a11y.md`), sin paquete hasta ahora, quedan re-verificadas y medidas por P15 (§P15:
 cinco huecos cerrados, 8 cambios de símbolo, propuestas P15-P1…P5). Pendiente del owner: P14b-S1 (`jwt_expiry` 600 s

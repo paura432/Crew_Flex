@@ -106,7 +106,7 @@ in metrics use tabular figures.
 - **Tables** on ≥ md; stacked lists on mobile. No accidental horizontal scroll.
 - Focus ring: 2 px navy ring + 3 px accent outline (offset 2 px), ≥ 3:1 on every surface. `:focus-visible` also sets
   `--tw-ring-shadow` to the navy ring so a `shadow-*` utility (which rewrites `box-shadow`) keeps it; a control with its
-  own `ring-*` (today in the mini calendar) adds `focus-visible:ring-navy` (P15). Landmarks of one kind carry distinct
+  own `ring-*` (today in the mini calendar) adds `focus-visible:ring-navy` (P15). Known residuals (P15 review): the daily challenge's pressed option keeps its 1 px teal `ring-[#07877e]` when focused, and a hovered + focused calendar day mixes in `hover:ring-navy/30`. Landmarks of one kind carry distinct
   names: the dock is «Accesos rápidos», the dashboard quick links «Accesos directos».
 
 ## Responsive

@@ -12,6 +12,8 @@ export const ACTIVITY_ACTIONS = [
   "requirement.archived",
   "requirement.client_changed",
   "requirement.outreach_distributed",
+  "client.added",
+  "client.revoked",
   "application.shortlisted",
   "application.proposed",
   "application.rejected",

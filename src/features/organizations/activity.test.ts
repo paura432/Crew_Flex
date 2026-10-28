@@ -28,4 +28,10 @@ describe("organization activity labels (ORG-07 #12)", () => {
       "activity.actions.requirement_client_changed",
     );
   });
+
+  it("an agency's represented-client acts carry its organization id too (P15 review)", () => {
+    // `20261024500000:135,178` write the agency's id for «client.added» and «client.revoked».
+    expect(activityLabelKey("client.added")).toBe("activity.actions.client_added");
+    expect(activityLabelKey("client.revoked")).toBe("activity.actions.client_revoked");
+  });
 });
