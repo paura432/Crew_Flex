@@ -149,7 +149,7 @@ export function KnowledgeTool() {
         </>
       )}
 
-      <details className="border-t border-[#dce5e8] pt-4 text-xs text-[#5f7788]">
+      <details className="border-t border-[#dce5e8] pt-4 text-xs text-muted">
         <summary className="flex cursor-pointer items-center font-bold text-[#226969] pointer-coarse:min-h-11">
           {t("sourcesTitle")}
         </summary>

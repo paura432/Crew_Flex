@@ -137,7 +137,7 @@ export default async function MyApplicationsPage({
                       {r.status === "open" ? (
                         <Link
                           href={`/app/professional/opportunities/${r.id}`}
-                          className="text-blue hover:underline"
+                          className="inline-flex items-center text-blue hover:underline pointer-coarse:min-h-11"
                         >
                           {r.title}
                         </Link>

@@ -164,7 +164,10 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
         <NavDrawer
           label={t("menu")}
           brand={
-            <Link href="/app" className="flex items-center pointer-coarse:min-h-11">
+            <Link
+              href="/app"
+              className="flex items-center pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+            >
               {/* Below 420 px the mark alone (the name stays for assistive tech) leaves room for the bell. */}
               <Brand onDark compact />
             </Link>

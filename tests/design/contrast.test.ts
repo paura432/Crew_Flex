@@ -63,6 +63,29 @@ describe("tools privacy note (X-10)", () => {
   });
 });
 
+describe("tools disclosures (P15, A11Y-06)", () => {
+  it("the 12 px `<details>` text (references, sources, external links) reads ≥ 4.5:1 on canvas and white", () => {
+    // v1.8 `.tb-references{color:#5f7788}` sat on a white panel (4.9:1); here the knowledge sources sit
+    // on canvas, where that grey measured 4.37:1. The token `muted` passes on both surfaces.
+    const dir = "src/features/tools/components";
+    const blocks = readdirSync(join(root, dir))
+      .filter((name) => name.endsWith(".tsx"))
+      .flatMap((name) =>
+        [...read(`${dir}/${name}`).matchAll(/<details className="([^"]*\btext-xs\b[^"]*)"/g)].map(
+          (m) => `${name}: ${m[1]}`,
+        ),
+      );
+    expect(blocks.length).toBeGreaterThanOrEqual(3);
+    for (const block of blocks) {
+      const hex = /text-\[(#[0-9a-f]{6})\]/i.exec(block)?.[1];
+      const color = hex ?? (block.includes("text-muted") ? token("--color-muted") : "");
+      expect(color, block).not.toBe("");
+      expect(contrast(color, token("--color-canvas")), block).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(color, "#ffffff"), block).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
 describe("buttons (X-01)", () => {
   it("white «Iniciar sesión» on the navy landing (was bg-white under text-white, 1:1)", () => {
     expect(contrast("#ffffff", token("--color-navy"))).toBeGreaterThanOrEqual(4.5);
