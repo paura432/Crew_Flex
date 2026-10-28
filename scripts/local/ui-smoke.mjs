@@ -6113,7 +6113,7 @@ await logout();
       .locator("nav a")
       .evaluateAll((as) => as.map((a) => a.getAttribute("href")));
     ok(
-      "PKG P12 1b ADM-01 #1/#5, ADM-02 #1-#3/#6-#11/#13/#17: `/app` lands on /app/admin; «Control operativo · datos del servidor», «Tu plataforma, en cifras.», the five counts and «Demanda por licencia» without «€»; «Invitar»; «Revisión de organizaciones», «Auditoría»; the menu links verifications, organizations, representations and audit",
+      "PKG P12 1b ADM-01 #1/#5, ADM-02 #1-#3/#6-#11/#13/#17: `/app` lands on /app/admin; «Control operativo · datos del servidor», «Tu plataforma, en cifras.», the five counts and «Demanda por licencia» without «€»; «Invitar», «Auditoría»; the menu links verifications, organizations, representations and audit",
       new URL(page.url()).pathname === "/app/admin" &&
         /Administración/.test(p12Home) &&
         /Control operativo · datos del servidor/i.test(p12Home) &&
@@ -6180,7 +6180,7 @@ await logout();
       },
     });
     ok(
-      "PKG P12 3 ADM-03 #10: «Verificar» without evidence is refused before any request («Indica la evidencia o el motivo de la revisión.»); the API refuses it too (400 VALIDATION_ERROR); B1.1 still pending",
+      "PKG P12 3 ADM-03 #10: «Verificar» without evidence shows «Indica la evidencia o el motivo de la revisión.» in the card; the API refuses it too (400 VALIDATION_ERROR); B1.1 still pending",
       /Indica la evidencia o el motivo de la revisión\./.test(await p12Card.innerText()) &&
         p12ApiNoNote.ok === false &&
         p12ApiNoNote.error?.code === "VALIDATION_ERROR" &&
@@ -6207,7 +6207,7 @@ await logout();
     const p12GolfEvidence = await seedRest(GOLF, "qualification_reviews?select=note");
     const p12GolfOwn = await p12GolfB11();
     ok(
-      "PKG P12 4 verified with evidence: the card left the queue, «Últimas decisiones» lists «Verificada» with «Sí»; the evidence row is readable by the platform admin, not by Golf (RLS: 0 rows), and Golf's own review note stays empty (T-170)",
+      "PKG P12 4 verified with evidence: the card left the queue, «Últimas decisiones» lists «Verificada»; the evidence row is readable by the platform admin, not by Golf (RLS: 0 rows), and Golf's own review note stays empty (T-170)",
       (await p12Card.count()) === 0 &&
         /Últimas decisiones[\s\S]*Verificada/.test(p12AfterText) &&
         p12Evidence?.decision === "verified" &&

@@ -314,6 +314,7 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
       body: {
         qualificationId: item!.id,
         decision: "verified",
+        note: "E2E: stale version",
         expectedUpdatedAt: "2020-01-01T00:00:00.000Z",
       },
     });

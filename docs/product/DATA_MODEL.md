@@ -162,7 +162,9 @@ Organization role is independent from `platform_role`.
 `id`, `qualification_id` → `technician_qualifications` (cascade), `reviewed_by` → `profiles` (set null), `decision`
 (`verified` · `rejected`), `note` (evidence, 1–500, v1.8 «Evidencia / observaciones de la revisión», required for both
 decisions), `qualification_version` (the `updated_at` the reviewer saw), `created_at`. RLS select platform admin only; no
-write grant (written by `review_qualification`). The professional never reads it (P12, T-170).
+write grant (written by `review_qualification`). The professional never reads it (P12, T-170). The evidence lives
+as long as the declaration: removing it (BR-2.8) or closing the account deletes the row (cascade, like
+`organization_reviews`); only the free-text-less `qualification.reviewed` audit event remains.
 
 ### `qualification_types`
 

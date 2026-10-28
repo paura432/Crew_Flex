@@ -93,6 +93,12 @@ restriction texts, the minimum rate and the selected logbook entries — the own
 withdrawal, rejection, cancellation and account closure delete it; only the applicant's own insert writes one.
 Residuals (free text, cross-requirement linkability): `SECURITY_PRIVACY.md`. Proof: `tests/db/pack-view.test.ts`.
 
+**Package P12 admin (LOCAL `20261027300000`, T-170), extends S-5/S-6/S-10:** `review_qualification` requires evidence
+for both decisions and writes it to `qualification_reviews` (RLS select platform admin only, no write grant for any API
+role, anon no privilege); the owner's `review_note` carries only a rejection's reason, never a verification's evidence;
+the evidence row lives as long as the declaration (cascade, like `organization_reviews`); audit metadata stays ids and
+`note_provided`. Proof: `tests/db/rls.test.ts` «P12 / T-170…».
+
 **RLS does not protect a SECURITY DEFINER function.** Inside one, the function body is the only
 authorization. Review every DEFINER for S-10 and test the "other organization" and "other user" cases.
 
@@ -108,7 +114,7 @@ authorization. Review every DEFINER for S-10 and test the "other organization" a
 | ------------------------------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Qualifications, expiry, verification | `technician_qualifications`                                        | owner · own-org admin/manager (OD-4) · platform admin · external pool minimised                                                                                                                                  |
 | Availability                         | `availability_windows`                                             | same as above; external pool only overlapping windows                                                                                                                                                            |
-| Review reason                        | `review_note`                                                      | owner (`own_qualification_reviews`) · platform admin                                                                                                                                                             |
+| Review reason / evidence             | `review_note` (rejection reason) · `qualification_reviews` (LOCAL) | owner (`own_qualification_reviews`, reason only) · platform admin (evidence)                                                                                                                                     |
 | Contact data, employer, rate, blocks | `technician_private_details` + `_organization_blocks` (LOCAL)      | **owner only** (not the own organization, not platform admins); only `save_professional_passport` writes; no function returns them to others (D-07) but the rate in a pack copy                                  |
 | Passport declarations (LOCAL)        | `technician_profiles` v1.8 columns, `technician_type_ratings`      | like qualifications; organizations via `get_requirement_candidate_passports` and the candidate rows' `candidate_declarations` (pool and applicant rows, minimised to the requirement, T-85; no restriction text) |
 | Applications (D-06, LOCAL ONLY)      | `applications`, `application_proposals`, `application_events`      | technician: own rows · organization admin/manager: only via `get_requirement_applications` (pool rules) · platform admin: read · nobody writes directly (RPCs only)                                              |

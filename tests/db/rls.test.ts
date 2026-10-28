@@ -2085,6 +2085,18 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
           [id],
         ),
       ).toMatch(/permission denied/);
+      for (const write of [
+        "update public.qualification_reviews set note = 'forged'",
+        "delete from public.qualification_reviews",
+      ]) {
+        expect(await queryError(tx, write)).toMatch(/permission denied/);
+      }
+      // anon holds no privilege on the table at all.
+      const anon = await tx.query<{ any_privilege: boolean }>(
+        `select bool_or(has_table_privilege('anon', 'public.qualification_reviews', p)) as any_privilege
+         from unnest(array['select', 'insert', 'update', 'delete']) as p`,
+      );
+      expect(anon.rows[0]?.any_privilege).toBe(false);
       // The owner's column carries no verification evidence (only a rejection's reason, BR-2.6)…
       await tx.exec("reset role");
       const own = await tx.query<{ review_note: string | null }>(
@@ -2134,7 +2146,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     });
   });
 
-  it("pending → rejected needs a reason; the owner reads the reason; a decided row cannot be decided again", async () => {
+  it("pending → rejected needs evidence (the reason); the owner reads the reason; a decided row cannot be decided again", async () => {
     await asUser(db, SEED.platformAdmin, async (tx) => {
       await golfPending(tx);
       const id = await golfB11(tx);
