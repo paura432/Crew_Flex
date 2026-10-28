@@ -5307,7 +5307,8 @@ await logout();
         /Cómo cerrar una cobertura Publica fechas y requisitos\. Compara candidatos elegibles\. Revisa el Candidate Pack y propone\. El técnico acepta y confirmas la asignación\./.test(
           p9Home,
         ) &&
-        (await page.locator("main nav[aria-label='Accesos rápidos'] a").allInnerTexts())
+        // P15: the guide's quick links are «Accesos directos» (the dock keeps v1.8's «Accesos rápidos»).
+        (await page.locator("main nav[aria-label='Accesos directos'] a").allInnerTexts())
           .map((s) => s.replace(/\s+/g, " "))
           .join("|") ===
           "Constructor Necesidades estructuradas|Candidate Packs Expedientes y seguimiento" &&
@@ -5402,7 +5403,9 @@ await logout();
       /El técnico adecuado\. Las fechas adecuadas\./.test(p9MemberHome) &&
         !/Explorar candidatos/.test(p9MemberHome) &&
         p9MemberLabels.join("|") === "necesidades abiertas" &&
-        !/Red profesional|Nueva necesidad|Accesos rápidos|Constructor/.test(p9MemberHome) &&
+        !/Red profesional|Nueva necesidad|Accesos (rápidos|directos)|Constructor/.test(
+          p9MemberHome,
+        ) &&
         /Cómo cerrar una cobertura/.test(p9MemberHome) &&
         /Solo el administrador de la organización puede cambiar estos datos\./.test(p9MemberOrg) &&
         p9MemberForm === 0 &&
