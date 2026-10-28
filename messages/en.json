@@ -419,7 +419,7 @@
       "qualification": "Invalid qualification."
     },
     "review": {
-      "reasonRequired": "Give a reason to reject (the professional will read it).",
+      "evidenceRequired": "Give the evidence or the reason of the review.",
       "noteMax": "Use at most 500 characters"
     },
     "organizationReview": {
@@ -1563,8 +1563,10 @@
       "expires": "Expires",
       "notGiven": "Not given",
       "noExpiry": "No expiry",
-      "note": "Reason or reference",
-      "noteHint": "Required to reject. Visible to the professional; do not include personal data.",
+      "note": "Evidence or reason",
+      "noteHint": "Required. When verifying it stays as evidence for the platform; when rejecting, the professional reads the reason. Do not include personal data.",
+      "restrictionsTitle": "Declared restrictions",
+      "restrictionsHint": "Resolve the restrictions with the holder before reviewing the profile.",
       "verify": "Verify",
       "reject": "Reject",
       "verifiedDone": "Verified. The qualification now counts for matching.",

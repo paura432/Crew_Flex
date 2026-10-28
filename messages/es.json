@@ -419,7 +419,7 @@
       "qualification": "Cualificación no válida."
     },
     "review": {
-      "reasonRequired": "Indica un motivo para rechazar (el profesional lo leerá).",
+      "evidenceRequired": "Indica la evidencia o el motivo de la revisión.",
       "noteMax": "Usa como máximo 500 caracteres"
     },
     "organizationReview": {
@@ -1563,8 +1563,10 @@
       "expires": "Caducidad",
       "notGiven": "No indicada",
       "noExpiry": "Sin caducidad",
-      "note": "Motivo o referencia",
-      "noteHint": "Obligatorio para rechazar. Lo verá el profesional; no incluyas datos personales.",
+      "note": "Evidencia o motivo",
+      "noteHint": "Obligatorio. Al verificar queda como evidencia para la plataforma; al rechazar, el profesional leerá el motivo. No incluyas datos personales.",
+      "restrictionsTitle": "Restricciones declaradas",
+      "restrictionsHint": "Resuelve las restricciones con el titular antes de revisar el perfil.",
       "verify": "Verificar",
       "reject": "Rechazar",
       "verifiedDone": "Verificada. La cualificación ya cuenta para el matching.",

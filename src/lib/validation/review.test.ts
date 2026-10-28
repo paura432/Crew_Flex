@@ -5,19 +5,7 @@ const id = "6f1c2a52-7b8e-4c1e-9a3f-0d2b5e8c4a11";
 const v = "2026-10-15T10:30:00.000Z"; // the version the reviewer looked at
 
 describe("reviewQualificationInput", () => {
-  it("accepts a verification without a note and trims notes", () => {
-    expect(
-      reviewQualificationInput.parse({
-        qualificationId: id,
-        decision: "verified",
-        expectedUpdatedAt: v,
-      }),
-    ).toEqual({
-      qualificationId: id,
-      decision: "verified",
-      expectedUpdatedAt: v,
-      note: null,
-    });
+  it("trims the evidence note", () => {
     expect(
       reviewQualificationInput.parse({
         qualificationId: id,
@@ -27,18 +15,18 @@ describe("reviewQualificationInput", () => {
       }).note,
     ).toBe("ok");
   });
-  it("requires a reason to reject", () => {
-    const result = reviewQualificationInput.safeParse({
-      qualificationId: id,
-      decision: "rejected",
-      expectedUpdatedAt: v,
-      note: "  ",
-    });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]).toMatchObject({
-      path: ["note"],
-      message: "v.review.reasonRequired",
-    });
+  it("requires evidence for every decision (v1.8, T-170): a verification without a note and a blank reason are refused", () => {
+    for (const body of [
+      { qualificationId: id, decision: "verified", expectedUpdatedAt: v },
+      { qualificationId: id, decision: "rejected", expectedUpdatedAt: v, note: "  " },
+    ]) {
+      const result = reviewQualificationInput.safeParse(body);
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]).toMatchObject({
+        path: ["note"],
+        message: "v.review.evidenceRequired",
+      });
+    }
   });
   it("rejects pending as a decision, unknown fields and reviewer identity in the payload", () => {
     expect(

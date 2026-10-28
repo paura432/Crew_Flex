@@ -100,7 +100,7 @@ memory bank. Procedure (owner, dashboard «Account → Access Tokens»):
 
 Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M08/M09 (`15-autonomous-migration-backlog.md`
 §6.3 has each package's commits, gates and technical defaults T-01…T-148; `08-product-decisions.md` the defaults;
-`BUSINESS_RULES.md` BR-1…BR-29). **40 migrations** not applied anywhere but the local Docker DB, in file order:
+`BUSINESS_RULES.md` BR-1…BR-29). **42 migrations** not applied anywhere but the local Docker DB, in file order:
 
 | #   | File (apply in this order — `db push` applies pending files in file order) | Package                                      |
 | --- | -------------------------------------------------------------------------- | -------------------------------------------- |
@@ -145,6 +145,7 @@ Fifteen implementation packages of the v2 diff on top of X-01…X-22, M05/M07/M0
 | 39  | `20261026100000_revoke_trigger_function_execute`                           | F1b security (REVOKE only)                   |
 | 40  | `20261027100000_requirement_profile_rules_builder`                         | P10 needs and matching (builder rules)       |
 | 41  | `20261027200000_requirement_cards_client`                                  | P11 recruiter (card names the client, T-169) |
+| 42  | `20261027300000_qualification_review_evidence`                             | P12 admin (review evidence table, T-170)     |
 
 **Edge Functions** (22 directories): **new, never deployed** — `account`, `applications`, `invitations`, `notice-preferences`, `notifications`, `opportunities`, `organization-profile`, `organization-reviews`, `professional-logbook`, `represented-clients`, `requirement-outreach`;
 **changed since release 1** — `work-requirements`, `capacity-evaluate`, `matching-evaluate`, `professional-profile`, `professional-qualifications`, `professional-availability`, `user-preferences` (every one of them parses the new schema/statuses and

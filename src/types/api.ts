@@ -339,7 +339,13 @@ export interface PreferencesResponse {
 /** Platform-admin review queue (`qualification-reviews`, phase 6). Minimal data: no e-mail, no documents. */
 export interface ReviewQueueItem {
   id: string;
-  professional: { id: string; displayName: string; baseLocation: string | null };
+  professional: {
+    id: string;
+    displayName: string;
+    baseLocation: string | null;
+    /** Declared general restrictions (N-02), shown to the reviewer as v1.8 did (ADM-03 #9); null when none. */
+    restrictions: string | null;
+  };
   type: { code: string; name: string; category: QualificationCategory };
   issuedAt: string | null;
   expiresAt: string | null;

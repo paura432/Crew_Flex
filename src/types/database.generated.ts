@@ -1,5 +1,5 @@
 // Generated with `pnpm db:types:local` (scripts/local/db-types.sh) from the LOCAL stack, schema =
-// migrations up to 20261024700000. Do not edit by hand.
+// migrations up to 20261027300000. Do not edit by hand.
 // Domain types live in src/domain; row-shaped helpers in src/types/database.ts.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -766,6 +766,52 @@ export type Database = {
         };
         Relationships: [];
       };
+      qualification_reviews: {
+        Row: {
+          created_at: string;
+          decision: Database["public"]["Enums"]["verification_status"];
+          id: string;
+          note: string;
+          qualification_id: string;
+          qualification_version: string;
+          reviewed_by: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          decision: Database["public"]["Enums"]["verification_status"];
+          id?: string;
+          note: string;
+          qualification_id: string;
+          qualification_version: string;
+          reviewed_by?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          decision?: Database["public"]["Enums"]["verification_status"];
+          id?: string;
+          note?: string;
+          qualification_id?: string;
+          qualification_version?: string;
+          reviewed_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "qualification_reviews_qualification_id_fkey";
+            columns: ["qualification_id"];
+            isOneToOne: false;
+            referencedRelation: "technician_qualifications";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "qualification_reviews_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       qualification_types: {
         Row: {
           category: Database["public"]["Enums"]["qualification_category"];
@@ -1523,6 +1569,33 @@ export type Database = {
               p_urgency: Database["public"]["Enums"]["requirement_urgency"];
             };
             Returns: string;
+          }
+        | {
+            Args: {
+              p_aircraft: string[];
+              p_category: string;
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_engines: string[];
+              p_headcount: number;
+              p_location: string;
+              p_min_years: number;
+              p_on_behalf_of_client_id: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_required_skills: string[];
+              p_requires_type_rating: boolean;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: string;
           };
       create_work_requirement_idempotent:
         | {
@@ -1579,6 +1652,37 @@ export type Database = {
               p_on_behalf_of_client_id: string;
               p_organization_id: string;
               p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              id: string;
+              replayed: boolean;
+            }[];
+          }
+        | {
+            Args: {
+              p_aircraft: string[];
+              p_category: string;
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_engines: string[];
+              p_headcount: number;
+              p_idempotency_key: string;
+              p_location: string;
+              p_min_years: number;
+              p_on_behalf_of_client_id: string;
+              p_organization_id: string;
+              p_qualifications: Json;
+              p_required_skills: string[];
+              p_requires_type_rating: boolean;
               p_shift: Database["public"]["Enums"]["shift_type"];
               p_shifts: Json;
               p_starts_at: string;
@@ -2176,6 +2280,38 @@ export type Database = {
               p_location: string;
               p_on_behalf_of_client_id: string;
               p_qualifications: Json;
+              p_shift: Database["public"]["Enums"]["shift_type"];
+              p_shifts: Json;
+              p_starts_at: string;
+              p_status: Database["public"]["Enums"]["requirement_status"];
+              p_time_zone: string;
+              p_title: string;
+              p_urgency: Database["public"]["Enums"]["requirement_urgency"];
+            };
+            Returns: {
+              changed: string[];
+              id: string;
+              updated_at: string;
+            }[];
+          }
+        | {
+            Args: {
+              p_aircraft: string[];
+              p_category: string;
+              p_conditions: Json;
+              p_country: string;
+              p_description: string;
+              p_ends_at: string;
+              p_engines: string[];
+              p_expected_updated_at: string;
+              p_headcount: number;
+              p_id: string;
+              p_location: string;
+              p_min_years: number;
+              p_on_behalf_of_client_id: string;
+              p_qualifications: Json;
+              p_required_skills: string[];
+              p_requires_type_rating: boolean;
               p_shift: Database["public"]["Enums"]["shift_type"];
               p_shifts: Json;
               p_starts_at: string;
