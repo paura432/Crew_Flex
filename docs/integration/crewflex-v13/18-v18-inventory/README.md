@@ -46,6 +46,7 @@ python3 recount.py 10-*.md 20-*.md 30-*.md 40-*.md 50-*.md
 | P12 Admin                  | ADM-01…ADM-03                                                             |
 | P13 Notices and messaging  | HIRE-06, HIRE-07, HIRE-08 (SCOPE OUT), TEC-07, ACC-03                     |
 | P14 Shell                  | SH-01…SH-08, AUTH-01…AUTH-06, ACC-01, ACC-02, VIS-*, META-*, SHOT-08, SHOT-09, TEC-09, TOOL-09 |
+| P15 Accessibility and i18n | A11Y-01…A11Y-06, I18N-01…I18N-05                                          |
 
 ## Updating a row
 
