@@ -164,7 +164,10 @@ site_url = "http://localhost:3000"
 # Local only (not pushed): the dev server runs on 3001 (docs/qa/LOCAL_ENVIRONMENT.md).
 additional_redirect_urls = ["http://127.0.0.1:3000", "http://localhost:3001/**", "http://127.0.0.1:3001/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
-jwt_expiry = 3600
+# 600 (P14b-S1, 2026-10-28): after a password reset the refresh tokens die at once but an access token already
+# issued keeps working until it expires (stateless ES256 JWT); 10 min bounds that window. Local only — production
+# `jwt_exp` is an owner decision (docs/qa/ROLLOUT_PLAN_V18_LOOP.md §0b).
+jwt_expiry = 600
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.

@@ -7695,7 +7695,7 @@ await logout();
       p14bAfterReset = { url: page.url(), status: await p14bStatus() };
     }
     // The second browser after the reset: Auth revoked its refresh token (`signOut({ scope: "global" })`);
-    // its access token is a stateless JWT that stays valid until `jwt_expiry` (1 h) — measured, not hidden:
+    // its access token is a stateless JWT that stays valid until `jwt_expiry` (600 s locally since P14b-S1; was 1 h) — measured, not hidden:
     // the page answer is reported in the detail, the assertion is the provider's refusal to refresh.
     const p14bB = await p14bPageB.request.get(`${BASE}/app/settings`, { maxRedirects: 0 });
     const p14bBAfter = `${p14bB.status()} ${p14bB.headers().location ?? ""}`;
@@ -7729,7 +7729,7 @@ await logout();
     await p14bCtxB.close();
     p14bCtxB = null;
     ok(
-      "PKG P14b 5 AUTH-04 #8/#11-#17, AUTH-01 #17: the recovery e-mail's link (/auth/confirm?next=/reset-password) opens «Elige una contraseña nueva» / «Al guardarla se cerrarán todas tus sesiones, también esta.» with «Contraseña nueva» (minLength 12, hint «Al menos 12 caracteres.») and «Repite la contraseña nueva» (both maxLength 72, new-password), button «Guardar contraseña», no overflow at the four widths; a mismatch → «Revisa los campos marcados.» + «Las contraseñas no coinciden.»; the current password → «Elige una contraseña distinta de la actual.»; the new one → /login?reset=1 «Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.»; the second browser (signed in on /app/professional) can no longer refresh its session (Auth answers 400 refresh_token_not_found to its refresh token) — its still-valid JWT is reported in the detail, not asserted (jwt_expiry 1 h)",
+      "PKG P14b 5 AUTH-04 #8/#11-#17, AUTH-01 #17: the recovery e-mail's link (/auth/confirm?next=/reset-password) opens «Elige una contraseña nueva» / «Al guardarla se cerrarán todas tus sesiones, también esta.» with «Contraseña nueva» (minLength 12, hint «Al menos 12 caracteres.») and «Repite la contraseña nueva» (both maxLength 72, new-password), button «Guardar contraseña», no overflow at the four widths; a mismatch → «Revisa los campos marcados.» + «Las contraseñas no coinciden.»; the current password → «Elige una contraseña distinta de la actual.»; the new one → /login?reset=1 «Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.»; the second browser (signed in on /app/professional) can no longer refresh its session (Auth answers 400 refresh_token_not_found to its refresh token) — its still-valid JWT is reported in the detail, not asserted (jwt_expiry 600 s locally)",
       p14bResetForm?.h1 === "Elige una contraseña nueva" &&
         p14bResetForm.lead === "Al guardarla se cerrarán todas tus sesiones, también esta." &&
         p14bResetForm.labels.join(" | ") === "Contraseña nueva | Repite la contraseña nueva" &&
