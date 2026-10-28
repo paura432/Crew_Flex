@@ -89,6 +89,9 @@
     outline: 3px solid var(--color-accent);
     outline-offset: 2px;
     box-shadow: 0 0 0 2px var(--color-navy);
+    /* A `shadow-*` utility replaces `box-shadow` with Tailwind's composed shadows, which include this ring
+       variable: the navy ring survives on a shadowed control (P15: the pressed tools toggle lost it). */
+    --tw-ring-shadow: 0 0 0 2px var(--color-navy);
   }
   /* A flex <summary> (centred for 44 px touch targets) loses the native disclosure triangle (X-07):
      draw it back, pointing down while the <details> is open. The empty alternative text keeps the

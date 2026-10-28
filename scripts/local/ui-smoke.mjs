@@ -5307,7 +5307,8 @@ await logout();
         /Cómo cerrar una cobertura Publica fechas y requisitos\. Compara candidatos elegibles\. Revisa el Candidate Pack y propone\. El técnico acepta y confirmas la asignación\./.test(
           p9Home,
         ) &&
-        (await page.locator("main nav[aria-label='Accesos rápidos'] a").allInnerTexts())
+        // P15: the guide's quick links are «Accesos directos» (the dock keeps v1.8's «Accesos rápidos»).
+        (await page.locator("main nav[aria-label='Accesos directos'] a").allInnerTexts())
           .map((s) => s.replace(/\s+/g, " "))
           .join("|") ===
           "Constructor Necesidades estructuradas|Candidate Packs Expedientes y seguimiento" &&
@@ -5402,7 +5403,9 @@ await logout();
       /El técnico adecuado\. Las fechas adecuadas\./.test(p9MemberHome) &&
         !/Explorar candidatos/.test(p9MemberHome) &&
         p9MemberLabels.join("|") === "necesidades abiertas" &&
-        !/Red profesional|Nueva necesidad|Accesos rápidos|Constructor/.test(p9MemberHome) &&
+        !/Red profesional|Nueva necesidad|Accesos (rápidos|directos)|Constructor/.test(
+          p9MemberHome,
+        ) &&
         /Cómo cerrar una cobertura/.test(p9MemberHome) &&
         /Solo el administrador de la organización puede cambiar estos datos\./.test(p9MemberOrg) &&
         p9MemberForm === 0 &&
@@ -8586,6 +8589,723 @@ await logout();
       "PKG P14c 7 restore: Delta in English, locale cookie cleared, media emulation and viewport reset",
       p14cEnglish,
       String(p14cEnglish),
+    );
+  }
+}
+
+// PKG P15 (accessibility and i18n parity, F3 — A11Y-01 #1-#7, A11Y-02 #1/#2/#4/#5, A11Y-03 #2/#3/#5, A11Y-04 #1/#3/#5,
+// A11Y-05 #1/#2/#8/#11/#12/#13, A11Y-06 #1/#2/#4/#13/#15/#20, I18N-01 #2/#3/#4, I18N-03 #1/#3/#5, I18N-04 #1/#3,
+// I18N-05; re-verification of the a11y and i18n rows of the 22/10 inventory after F3, plus the four small gaps closed
+// by this package — the navy ring under `shadow-*`/`ring-*` utilities, «Accesos directos» for the dashboard quick
+// links, the 44 px application title link and brand mark, `muted` for the 12 px tools disclosures — and the activity
+// labels): in Spanish the pages MEASURE their landmarks (one `main#main`, named `nav`s, one visible
+// `aria-current="page"`), the skip link reaching `main`, the native `<dialog>` (modal, labelled, focus inside, Escape
+// returns focus), the double focus ring computed after the 150 ms transition on today's mini-calendar day and on the
+// pressed tools toggle, the `role=status` / `role=alert` live regions on save and on a failed submit, the touch
+// targets of three pages under touch emulation at 390 (≥ 44 px, the documented exceptions apart), the WCAG ratios of
+// every visible text computed from the live colours (≥ 4.5:1, 3:1 for large text), `<html lang>` following the ES/EN
+// switch, no English UI word on Spanish pages and no Spanish UI word on English ones, an ICU plural rendered for 1
+// («1 oportunidad») and n («N necesidades»), and unique landmark names on the organization dashboard. Negatives: no
+// skip link outside `/app` (documented ≈), a blurred control has no outline, no raw audit code in the activity trail.
+// Nothing is written except Delta's and admin.mro's language, restored in `finally` (API + cookie); the touch and
+// anonymous contexts are closed and the viewport reset.
+{
+  const DELTA = "delta@crewflex.test";
+  const MRO = "admin.mro@crewflex.test";
+  const p15Shot = (name, target = page) =>
+    target.screenshot({
+      path: `docs/audit/evidence/parity/P15/P15-${name}.jpg`,
+      type: "jpeg",
+      quality: 70,
+      fullPage: false,
+    });
+  const p15Rgb = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`;
+  };
+  const P15_NAVY = p15Rgb("#0c2137");
+  const P15_ACCENT = p15Rgb("#ff982f");
+  // Words that only exist in the Spanish catalog: seeing them on an English page = untranslated text
+  // («Idioma / Language» is bilingual by design, I18N_STRATEGY §5, so «Idioma» is not one).
+  const P15_ES_SENTINELS =
+    /\b(Cerrar sesión|Configuración|Disponibilidad|Cualificaciones|Mi espacio|Avisos|Herramientas|Guardar|Mis candidaturas|Oportunidades|Necesidades|Saltar al contenido)\b/;
+  /** Landmarks, names and ARIA facts of the current page (A11Y-01, A11Y-04). */
+  const p15Landmarks = (target = page) =>
+    target.evaluate(() => {
+      const vis = (el) => el.getClientRects().length > 0;
+      const name = (n) =>
+        n.getAttribute("aria-label") ??
+        document.getElementById(n.getAttribute("aria-labelledby") ?? "")?.textContent.trim() ??
+        null;
+      const navs = [...document.querySelectorAll("nav")];
+      return {
+        lang: document.documentElement.lang,
+        title: document.title,
+        mains: [...document.querySelectorAll("main")].map((m) => m.id),
+        navs: navs.map(name),
+        visibleNavs: navs.filter(vis).map(name),
+        header: [...document.querySelectorAll("body header")].filter(
+          (h) => vis(h) && !h.closest("main, section, article, aside"),
+        ).length,
+        footer: document.querySelectorAll("footer").length,
+        aside: document.querySelectorAll("aside").length,
+        h1: [...document.querySelectorAll("h1")].map((h) => h.textContent.trim()),
+        skip: document.querySelector("a[href='#main']")?.textContent.trim() ?? null,
+        currentPage: [...document.querySelectorAll("[aria-current='page']")]
+          .filter(vis)
+          .map((e) => e.textContent.trim()),
+        unlabelledInputs: [
+          ...document.querySelectorAll("input:not([type=hidden]), select, textarea"),
+        ].filter(
+          (i) =>
+            vis(i) &&
+            !(i.labels && i.labels.length) &&
+            !i.getAttribute("aria-label") &&
+            !i.getAttribute("aria-labelledby"),
+        ).length,
+        unnamedControls: [...document.querySelectorAll("button, a[href]")].filter(
+          (b) =>
+            vis(b) &&
+            !(
+              b.textContent.trim() ||
+              b.getAttribute("aria-label") ||
+              b.getAttribute("aria-labelledby") ||
+              b.getAttribute("title")
+            ),
+        ).length,
+        danglingDescribedBy: [...document.querySelectorAll("[aria-describedby]")].filter(
+          (e) =>
+            !e
+              .getAttribute("aria-describedby")
+              .split(/\s+/)
+              .every((id) => document.getElementById(id)),
+        ).length,
+        radiogroups: [...document.querySelectorAll("[role=radiogroup]")].map((g) => ({
+          radios: g.querySelectorAll("[role=radio]").length,
+          tabbable: [...g.querySelectorAll("[role=radio]")].filter((r) => r.tabIndex === 0).length,
+        })),
+      };
+    });
+  /** The focus ring of the active element, read after Button's 150 ms colour transition. */
+  const p15Ring = (target = page) =>
+    target.evaluate(async () => {
+      await new Promise((r) => setTimeout(r, 220));
+      const el = document.activeElement;
+      const s = getComputedStyle(el);
+      return {
+        name: (el.getAttribute("aria-label") ?? el.textContent.trim()).slice(0, 40),
+        focusVisible: el.matches(":focus-visible"),
+        outline: `${s.outlineWidth} ${s.outlineStyle} ${s.outlineColor}`,
+        offset: s.outlineOffset,
+        shadow: s.boxShadow,
+      };
+    });
+  const p15DoubleRing = (r) =>
+    r.focusVisible &&
+    r.outline === `3px solid ${P15_ACCENT}` &&
+    r.offset === "2px" &&
+    r.shadow.includes(`${P15_NAVY} 0px 0px 0px 2px`);
+  /** WCAG 2.x ratio of every visible text element against its composited background (A11Y-06). */
+  const p15Contrast = (target = page) =>
+    target.evaluate(() => {
+      const parse = (c) => {
+        const m = c.match(/rgba?\(([^)]+)\)/);
+        if (!m) return null;
+        const [r, g, b, a] = m[1].split(",").map(Number);
+        return { r, g, b, a: a === undefined || Number.isNaN(a) ? 1 : a };
+      };
+      const lum = ({ r, g, b }) => {
+        const f = (c) => {
+          c /= 255;
+          return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const ratio = (a, b) => {
+        const [h, l] = [lum(a), lum(b)].sort((x, y) => y - x);
+        return (h + 0.05) / (l + 0.05);
+      };
+      const blend = (fg, bg) => ({
+        r: fg.r * fg.a + bg.r * (1 - fg.a),
+        g: fg.g * fg.a + bg.g * (1 - fg.a),
+        b: fg.b * fg.a + bg.b * (1 - fg.a),
+        a: 1,
+      });
+      const hex = (c) =>
+        `#${[c.r, c.g, c.b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
+      // Background: the composited stack of ancestor backgrounds (gradients are skipped: reported apart).
+      const bgOf = (el) => {
+        const layers = [];
+        for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+          const s = getComputedStyle(n);
+          const c = parse(s.backgroundColor);
+          if (c && c.a > 0) layers.push(c);
+          if (s.backgroundImage !== "none") return null;
+        }
+        let out = parse(getComputedStyle(document.documentElement).backgroundColor) ?? {
+          r: 255,
+          g: 255,
+          b: 255,
+          a: 1,
+        };
+        for (const l of layers.reverse()) out = l.a < 1 ? blend(l, out) : l;
+        return out;
+      };
+      const opacityOf = (el) => {
+        let o = 1;
+        for (let n = el; n && n !== document.documentElement; n = n.parentElement)
+          o *= parseFloat(getComputedStyle(n).opacity);
+        return o;
+      };
+      const rows = [];
+      let gradients = 0;
+      for (const el of document.querySelectorAll("body *")) {
+        if (!el.getClientRects().length) continue;
+        if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+        const s = getComputedStyle(el);
+        if (s.visibility === "hidden") continue;
+        const fg = parse(s.color);
+        const bg = bgOf(el);
+        if (!fg || !bg) {
+          gradients += 1;
+          continue;
+        }
+        const op = opacityOf(el);
+        const fgE = op < 1 || fg.a < 1 ? blend({ ...fg, a: fg.a * op }, bg) : fg;
+        const size = parseFloat(s.fontSize);
+        const large = size >= 24 || (size >= 18.66 && parseInt(s.fontWeight) >= 700);
+        rows.push({
+          text: el.textContent.trim().slice(0, 40),
+          fg: hex(fgE),
+          bg: hex(bg),
+          ratio: Math.round(ratio(fgE, bg) * 100) / 100,
+          size,
+          large,
+          disabled: el.closest("[disabled], [aria-disabled='true']") !== null,
+        });
+      }
+      const live = rows.filter((r) => !r.disabled);
+      return {
+        n: live.length,
+        gradients,
+        min: Math.min(...live.map((r) => r.ratio)),
+        fails: live.filter((r) => r.ratio < (r.large ? 3 : 4.5)),
+        disabledBelow: rows.filter((r) => r.disabled && r.ratio < 4.5).length,
+        rows: live,
+      };
+    });
+  /** Interactive targets below 44 × 44 CSS px, with the documented exceptions named (A11Y-05). */
+  const p15Targets = (target) =>
+    target.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          "a[href], button, input:not([type=hidden]), select, textarea, summary, [role=radio], [role=button], [tabindex]:not([tabindex='-1'])",
+        ),
+      ]
+        .filter((el) => el.getClientRects().length > 0)
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          let { width: w, height: h } = r;
+          if ((el.type === "checkbox" || el.type === "radio") && el.labels?.[0]) {
+            const lr = el.labels[0].getBoundingClientRect();
+            w = Math.max(w, lr.width);
+            h = Math.max(h, lr.height);
+          }
+          const inSentence =
+            el.tagName === "A" &&
+            getComputedStyle(el).display === "inline" &&
+            el.parentElement.textContent.trim().length > el.textContent.trim().length + 2;
+          return {
+            tag: el.tagName.toLowerCase(),
+            name: (el.getAttribute("aria-label") ?? el.textContent.trim()).slice(0, 40),
+            w: Math.round(w * 10) / 10,
+            h: Math.round(h * 10) / 10,
+            exception: inSentence
+              ? "inline link in a sentence (WCAG 2.5.8)"
+              : el.getAttribute("href") === "#main"
+                ? "skip link (sr-only until focused)"
+                : /^\d{4}-\d\d-\d\d: /.test(el.getAttribute("aria-label") ?? "")
+                  ? "calendar day: 7 columns in 316 px (41.7 px wide, v1.8 42.3)"
+                  : null,
+          };
+        }),
+    );
+  const p15Small = (targets) => targets.filter((t) => (t.w < 44 || t.h < 44) && !t.exception);
+  let p15Touch = null;
+  let p15AnonCtx = null;
+  try {
+    // 0) Anonymous /login in Spanish: landmarks of a single-block page, the ES/EN radiogroup and `<html lang>`,
+    //    the failed submit's alert (A11Y-01 #3/#4, A11Y-03 #2, A11Y-04 #1/#3, I18N-01 #2/#4, I18N-05).
+    p15AnonCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await p15AnonCtx.addCookies([{ name: "crewflex-locale", value: "es", url: BASE }]);
+    const p15Anon = await p15AnonCtx.newPage();
+    await p15Anon.goto(`${BASE}/login`);
+    await p15Anon.waitForLoadState("networkidle");
+    const p15LoginEs = await p15Landmarks(p15Anon);
+    await p15Anon.keyboard.press("Tab");
+    const p15FirstTab = await p15Anon.evaluate(() => ({
+      text: document.activeElement.textContent.trim(),
+      href: document.activeElement.getAttribute("href"),
+    }));
+    const p15EsText = await p15Anon.locator("body").innerText();
+    await p15Anon.locator("[role=radio][lang=en]").first().click();
+    await p15Anon.waitForFunction(() => document.documentElement.lang === "en", null, {
+      timeout: 15000,
+    });
+    const p15LoginEn = {
+      lang: await p15Anon.evaluate(() => document.documentElement.lang),
+      title: await p15Anon.title(),
+      cookie: (await p15AnonCtx.cookies()).find((c) => c.name === "crewflex-locale")?.value,
+      esHits: [
+        ...new Set(
+          (await p15Anon.locator("body").innerText()).match(
+            new RegExp(P15_ES_SENTINELS.source, "g"),
+          ) ?? [],
+        ),
+      ],
+      checked: await p15Anon.evaluate(() =>
+        [...document.querySelectorAll("[role=radio]")].map(
+          (r) => `${r.getAttribute("lang")}:${r.getAttribute("aria-checked")}:${r.tabIndex}`,
+        ),
+      ),
+    };
+    await p15Anon.locator("[role=radio][lang=es]").first().click();
+    await p15Anon.waitForFunction(() => document.documentElement.lang === "es", null, {
+      timeout: 15000,
+    });
+    await p15Anon.click("button[type=submit]");
+    await p15Anon.waitForSelector("[role=alert]:has-text('Revisa los campos marcados.')", {
+      timeout: 15000,
+    });
+    const p15Alert = await p15Anon.evaluate(() => ({
+      alerts: [...document.querySelectorAll("[role=alert]")].map((e) => e.textContent.trim()),
+      invalid: [...document.querySelectorAll("[aria-invalid='true']")].map((i) => ({
+        id: i.id,
+        error: document
+          .getElementById(i.getAttribute("aria-describedby") ?? "")
+          ?.textContent.trim(),
+      })),
+    }));
+    await p15AnonCtx.close();
+    p15AnonCtx = null;
+    ok(
+      "PKG P15 0 A11Y-01 #3/#4, A11Y-04 #1, I18N-01 #2/#4, I18N-05: /login (es) is one `main`, no `nav`, no skip link (single-block page, documented ≈), one h1 «Iniciar sesión», every field labelled, every control named; the first Tab lands on the brand link to /; the ES/EN `radiogroup` has 2 radios and one Tab stop; EN → <html lang=en>, title «Sign in · CrewFlex», cookie en, EN marked and no Spanish UI word on the page; ES again → lang es; no English UI word on the Spanish page",
+      p15LoginEs.lang === "es" &&
+        p15LoginEs.mains.length === 1 &&
+        p15LoginEs.navs.length === 0 &&
+        p15LoginEs.skip === null &&
+        p15LoginEs.h1.length === 1 &&
+        p15LoginEs.h1[0] === "Iniciar sesión" &&
+        p15LoginEs.unlabelledInputs === 0 &&
+        p15LoginEs.unnamedControls === 0 &&
+        p15LoginEs.radiogroups.length === 1 &&
+        p15LoginEs.radiogroups[0].radios === 2 &&
+        p15LoginEs.radiogroups[0].tabbable === 1 &&
+        p15FirstTab.href === "/" &&
+        /CrewFlex/.test(p15FirstTab.text) &&
+        p15LoginEn.lang === "en" &&
+        p15LoginEn.title === "Sign in · CrewFlex" &&
+        p15LoginEn.cookie === "en" &&
+        p15LoginEn.esHits.length === 0 &&
+        p15LoginEn.checked.includes("en:true:0") &&
+        p15LoginEn.checked.includes("es:false:-1") &&
+        !EN_SENTINELS.test(p15EsText),
+      `${JSON.stringify({ ...p15LoginEs, radiogroups: undefined })} firstTab=${JSON.stringify(p15FirstTab)} en=${JSON.stringify(p15LoginEn)} enHits=${JSON.stringify(p15EsText.match(new RegExp(EN_SENTINELS.source, "g")))}`,
+    );
+    ok(
+      "PKG P15 0b A11Y-03 #2/#4, A11Y-04 #3: the empty sign-in shows one `role=alert` «Revisa los campos marcados.» and both fields carry aria-invalid with an aria-describedby that resolves to «Introduce un correo electrónico válido» / «Introduce tu contraseña»",
+      p15Alert.alerts.length === 1 &&
+        p15Alert.alerts[0] === "Revisa los campos marcados." &&
+        p15Alert.invalid.length === 2 &&
+        p15Alert.invalid.some(
+          (i) => i.id === "email" && i.error === "Introduce un correo electrónico válido",
+        ) &&
+        p15Alert.invalid.some((i) => i.id === "password" && i.error === "Introduce tu contraseña"),
+      JSON.stringify(p15Alert),
+    );
+
+    // 1) Delta in Spanish on «Mi espacio»: landmarks, names, one current entry, the skip link (A11Y-01 #1/#2/#4/#6,
+    //    A11Y-04 #3/#5, I18N-03 #1/#3).
+    await login(DELTA);
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P15 1 «Mi espacio» in Spanish");
+    const p15Home = await p15Landmarks();
+    await page.keyboard.press("Tab");
+    const p15Skip = await page.evaluate(() => {
+      const el = document.activeElement;
+      const r = el.getBoundingClientRect();
+      return {
+        text: el.textContent.trim(),
+        href: el.getAttribute("href"),
+        w: r.width,
+        h: r.height,
+      };
+    });
+    const p15SkipRing = await p15Ring();
+    await p15Shot("home-after-1440");
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(200);
+    await page.keyboard.press("Tab");
+    const p15AfterSkip = await page.evaluate(() => ({
+      hash: location.hash,
+      inMain: !!document.activeElement.closest("main#main"),
+      text: document.activeElement.textContent.trim().slice(0, 40),
+    }));
+    ok(
+      "PKG P15 1b A11Y-01 #1/#2/#4/#6, A11Y-04 #3/#5, I18N-03 #1/#3: «Mi espacio» (es) has one `main#main`, the `nav`s «Profesional», «Cuenta», «Ruta de navegación» (visible at 1440) and «Accesos rápidos» (the dock, hidden at 1440), one banner header, one footer, one aside, one h1; exactly one visible aria-current=page (the menu's «Mi espacio»); every visible field labelled, every control named, every aria-describedby resolves; the first Tab is «Saltar al contenido» (href #main, visible when focused, double ring), Enter → #main and the next Tab is inside `main`",
+      p15Home.lang === "es" &&
+        p15Home.mains.length === 1 &&
+        p15Home.mains[0] === "main" &&
+        ["Profesional", "Cuenta", "Ruta de navegación", "Accesos rápidos"].every((n) =>
+          p15Home.navs.includes(n),
+        ) &&
+        p15Home.navs.length === 4 &&
+        p15Home.visibleNavs.length === 3 &&
+        !p15Home.visibleNavs.includes("Accesos rápidos") &&
+        p15Home.header === 1 &&
+        p15Home.footer === 1 &&
+        p15Home.aside === 1 &&
+        p15Home.h1.length === 1 &&
+        p15Home.currentPage.length === 1 &&
+        p15Home.currentPage[0] === "Mi espacio" &&
+        p15Home.unlabelledInputs === 0 &&
+        p15Home.unnamedControls === 0 &&
+        p15Home.danglingDescribedBy === 0 &&
+        p15Skip.text === "Saltar al contenido" &&
+        p15Skip.href === "#main" &&
+        p15Skip.w > 100 &&
+        p15Skip.h >= 36 &&
+        p15DoubleRing(p15SkipRing) &&
+        p15AfterSkip.hash === "#main" &&
+        p15AfterSkip.inMain,
+      `${JSON.stringify({ ...p15Home, radiogroups: undefined })} skip=${JSON.stringify(p15Skip)} ring=${JSON.stringify(p15SkipRing)} after=${JSON.stringify(p15AfterSkip)}`,
+    );
+
+    // 2) The native modal «Estado de mi perfil» (A11Y-02 #2/#4; v1.8 modal: focus on «Cerrar ventana», Escape
+    //    closes and returns focus).
+    const p15Opener = page.locator("main button[aria-haspopup=dialog]").first();
+    const p15OpenerText = (await p15Opener.textContent()).trim();
+    await p15Opener.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForSelector("dialog[open]", { timeout: 10000 });
+    const p15Dialog = await page.evaluate(() => {
+      const d = document.querySelector("dialog[open]");
+      const title = document.getElementById(d.getAttribute("aria-labelledby") ?? "");
+      return {
+        modal: d.matches(":modal"),
+        title: title?.textContent.trim() ?? null,
+        focusInside: !!document.activeElement.closest("dialog[open]"),
+        active: document.activeElement.textContent.trim().slice(0, 40),
+        mainInert: document.querySelector("main").matches(":modal *") === false,
+      };
+    });
+    const p15DialogRing = await p15Ring();
+    await p15Shot("dialog-after-1440");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(250);
+    const p15Closed = await page.evaluate(() => ({
+      open: document.querySelectorAll("dialog[open]").length,
+      active: document.activeElement.textContent.trim(),
+    }));
+    ok(
+      "PKG P15 2 A11Y-02 #2/#4: Enter on «Estado de mi perfil ↗» opens a `:modal` <dialog> labelled by a non-empty title («Estado del perfil · N%»), focus lands inside on «Cerrar» with the double ring; Escape closes it and focus returns to the opener",
+      p15OpenerText.startsWith("Estado de mi perfil") &&
+        p15Dialog.modal &&
+        /^Estado del perfil · \d+%$/.test(p15Dialog.title ?? "") &&
+        p15Dialog.focusInside &&
+        p15Dialog.active === "Cerrar" &&
+        p15DoubleRing(p15DialogRing) &&
+        p15Closed.open === 0 &&
+        p15Closed.active === p15OpenerText,
+      `${JSON.stringify(p15Dialog)} ring=${JSON.stringify(p15DialogRing)} closed=${JSON.stringify(p15Closed)}`,
+    );
+
+    // 3) Focus rings on the two controls whose own utilities used to replace the navy ring (A11Y-02 #1, A11Y-06
+    //    #15): today's mini-calendar day (`ring-2 ring-accent`) and the pressed tools toggle (`shadow-sm`); the
+    //    negative: an unfocused control has no outline.
+    await page.keyboard.press("Tab"); // keyboard modality, so programmatic focus matches :focus-visible
+    await page.evaluate(() =>
+      document.querySelector("main ol button[aria-current='date']").focus(),
+    );
+    const p15TodayRing = await p15Ring();
+    await page.goto(`${BASE}/app/tools/knowledge`);
+    await page.waitForLoadState("networkidle");
+    await page.keyboard.press("Tab");
+    await page.evaluate(() =>
+      document.querySelector("main [role=group] button[aria-pressed='true']").focus(),
+    );
+    const p15PressedRing = await p15Ring();
+    await page.evaluate(() =>
+      document.querySelector("main [role=group] button[aria-pressed='false']").focus(),
+    );
+    const p15UnpressedRing = await p15Ring();
+    const p15Blurred = await page.evaluate(() => {
+      const el = document.activeElement;
+      el.blur();
+      const s = getComputedStyle(el);
+      return { outline: s.outlineStyle, shadow: s.boxShadow };
+    });
+    ok(
+      "PKG P15 3 A11Y-02 #1, A11Y-06 #15 (gap closed): with keyboard modality, today's mini-calendar day and the pressed tools toggle «Diccionario ES / EN» on /app/tools/knowledge show the 3 px accent outline (2 px offset) AND the 2 px navy ring in their computed box-shadow (the `ring-accent` and `shadow-sm` utilities used to drop the navy); the unpressed toggle too; once blurred the toggle has no outline",
+      p15DoubleRing(p15TodayRing) &&
+        /^\d{4}-\d\d-\d\d: /.test(p15TodayRing.name) &&
+        p15DoubleRing(p15PressedRing) &&
+        p15PressedRing.name === "Diccionario ES / EN" &&
+        p15DoubleRing(p15UnpressedRing) &&
+        p15Blurred.outline === "none" &&
+        !p15Blurred.shadow.includes(P15_NAVY),
+      `today=${JSON.stringify(p15TodayRing)} pressed=${JSON.stringify(p15PressedRing)} unpressed=${JSON.stringify(p15UnpressedRing)} blurred=${JSON.stringify(p15Blurred)}`,
+    );
+
+    // 4) Contrast computed from the live colours (A11Y-06 #1/#2/#4/#13/#20): «Mi espacio» and the knowledge tool.
+    const p15KnowledgeC = await p15Contrast();
+    const p15Sources = await page.evaluate(() => {
+      const d = [...document.querySelectorAll("main details")].find((x) =>
+        /Fuentes/.test(x.querySelector("summary")?.textContent ?? ""),
+      );
+      if (!d) return null;
+      d.open = true;
+      const p = d.querySelector("div p");
+      return {
+        summary: d.querySelector("summary").textContent.trim(),
+        text: p?.textContent.trim().slice(0, 40),
+        color: getComputedStyle(p).color,
+        size: getComputedStyle(p).fontSize,
+      };
+    });
+    const p15KnowledgeOpen = await p15Contrast();
+    const p15SourcesRow = p15KnowledgeOpen.rows.find((r) => r.text === p15Sources?.text);
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    const p15HomeC = await p15Contrast();
+    const p15Pair = (c, text) => c.rows.find((r) => r.text.startsWith(text));
+    const p15Sidebar = p15Pair(p15HomeC, "Mi espacio");
+    const p15Section = p15Pair(p15HomeC, "Profesional");
+    // The footer reads «CREWFLEX AVIATION» through `uppercase`; its DOM text is «CrewFlex AVIATION».
+    const p15Footer = p15Pair(p15HomeC, "CrewFlex AVIATION");
+    ok(
+      "PKG P15 4 A11Y-06 #1/#2/#4/#13/#20 (gap closed): every visible, enabled text on «Mi espacio» (≥ 100 measured) and on /app/tools/knowledge (≥ 150, «Fuentes y revisión editorial» opened) computes ≥ 4.5:1 against its composited background (3:1 for large text); the opened 12 px sources text is `muted` #5b6f84 on canvas ≥ 4.5:1 (was #5f7788, 4.37:1); the sidebar entry «Mi espacio» ≥ 10:1 on navy-700, the section title «Profesional» ≥ 6:1 on navy, the footer ≥ 4.5:1 on canvas; disabled past days (opacity 60, WCAG 1.4.3 exemption) are counted apart",
+      p15HomeC.n >= 100 &&
+        p15HomeC.fails.length === 0 &&
+        p15HomeC.min >= 4.5 &&
+        p15KnowledgeC.n >= 150 &&
+        p15KnowledgeC.fails.length === 0 &&
+        p15KnowledgeOpen.fails.length === 0 &&
+        p15Sources !== null &&
+        p15Sources.size === "12px" &&
+        p15Sources.color === "rgb(91, 111, 132)" &&
+        p15SourcesRow !== undefined &&
+        p15SourcesRow.bg === "#f5f7fa" &&
+        p15SourcesRow.ratio >= 4.5 &&
+        p15Sidebar?.ratio >= 10 &&
+        p15Section?.ratio >= 6 &&
+        p15Footer?.ratio >= 4.5,
+      `home n=${p15HomeC.n} min=${p15HomeC.min} fails=${JSON.stringify(p15HomeC.fails)} gradients=${p15HomeC.gradients} disabledBelow=${p15HomeC.disabledBelow} | knowledge n=${p15KnowledgeC.n} min=${p15KnowledgeC.min} fails=${JSON.stringify(p15KnowledgeC.fails)} sources=${JSON.stringify(p15Sources)} row=${JSON.stringify(p15SourcesRow)} | sidebar=${JSON.stringify(p15Sidebar)} section=${JSON.stringify(p15Section)} footer=${JSON.stringify(p15Footer)}`,
+    );
+
+    // 5) Live region on save and `<html lang>` on the language change (A11Y-03 #2, I18N-01 #2/#3); the English UI
+    //    carries no Spanish UI word (I18N-05, reverse leak).
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=en]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Language updated')", { timeout: 15000 });
+    const p15En = {
+      lang: await page.evaluate(() => document.documentElement.lang),
+      status: await page.locator("[role=status]").allInnerTexts(),
+      title: await page.title(),
+    };
+    const p15EnLeaks = {};
+    for (const path of ["/app/professional", "/app/professional/opportunities", "/app/settings"]) {
+      await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      p15EnLeaks[path] = [
+        ...new Set(
+          (await page.locator("body").innerText()).match(
+            new RegExp(P15_ES_SENTINELS.source, "g"),
+          ) ?? [],
+        ),
+      ];
+    }
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    const p15Es = {
+      lang: await page.evaluate(() => document.documentElement.lang),
+      status: await page.locator("[role=status]").allInnerTexts(),
+    };
+    ok(
+      "PKG P15 5 A11Y-03 #2, I18N-01 #2/#3, I18N-05: choosing «English» answers in a `role=status` «Language updated.» with <html lang=en> and title «Settings · CrewFlex»; «Mi espacio», «Oportunidades» and «Configuración» in English carry no Spanish UI word; «Español» answers «Idioma actualizado.» with lang es",
+      p15En.lang === "en" &&
+        p15En.status.some((t) => t.trim() === "Language updated.") &&
+        p15En.title === "Settings · CrewFlex" &&
+        Object.values(p15EnLeaks).every((hits) => hits.length === 0) &&
+        p15Es.lang === "es" &&
+        p15Es.status.some((t) => t.trim() === "Idioma actualizado."),
+      `${JSON.stringify(p15En)} leaks=${JSON.stringify(p15EnLeaks)} ${JSON.stringify(p15Es)}`,
+    );
+
+    // 6) ICU plural for one (I18N-04 #1/#3): the opportunities pager filtered to one title; Spanish sentinels on
+    //    the list pages (I18N-05).
+    await page.goto(`${BASE}/app/professional/opportunities`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P15 6 «Oportunidades» in Spanish");
+    const p15FirstTitle = await page.evaluate(
+      () => document.querySelector("main article h2 a")?.textContent.trim() ?? null,
+    );
+    await page.goto(
+      `${BASE}/app/professional/opportunities?q=${encodeURIComponent(p15FirstTitle ?? "")}`,
+    );
+    await page.waitForLoadState("networkidle");
+    const p15PagerOne = (await page.locator("[role=status]").allInnerTexts()).map((t) => t.trim());
+    await page.goto(`${BASE}/app/professional/applications`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P15 6b «Mis candidaturas» in Spanish");
+    ok(
+      "PKG P15 6c I18N-04 #1/#3: filtering «Oportunidades» by the first card's title renders the ICU `one` arm «1 oportunidad · página 1 de 1» in a `role=status`",
+      p15FirstTitle !== null && p15PagerOne.includes("1 oportunidad · página 1 de 1"),
+      `title=${JSON.stringify(p15FirstTitle)} status=${JSON.stringify(p15PagerOne)}`,
+    );
+
+    // 7) Touch targets under touch emulation at 390 with Delta's session (A11Y-05 #1/#2/#8/#11/#12/#13).
+    p15Touch = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    await p15Touch.addCookies(await ctx.cookies());
+    const p15Tp = await p15Touch.newPage();
+    const p15TouchAt = {};
+    for (const path of [
+      "/app/professional",
+      "/app/professional/applications",
+      "/app/tools/knowledge",
+    ]) {
+      await p15Tp.goto(`${BASE}${path}`);
+      await p15Tp.waitForLoadState("networkidle");
+      const targets = await p15Targets(p15Tp);
+      p15TouchAt[path] = {
+        n: targets.length,
+        coarse: await p15Tp.evaluate(() => matchMedia("(pointer: coarse)").matches),
+        small: p15Small(targets),
+        excepted: targets.filter((t) => t.exception && (t.w < 44 || t.h < 44)).length,
+        brand: targets.find((t) => t.tag === "a" && /CrewFlex/.test(t.name)),
+      };
+      if (path === "/app/professional") await p15Shot("touch-after-390", p15Tp);
+    }
+    // The open menu too.
+    await p15Tp.goto(`${BASE}/app/professional`);
+    await p15Tp.waitForLoadState("networkidle");
+    await p15Tp.locator("aside button[aria-expanded]").tap();
+    await p15Tp.waitForTimeout(200);
+    const p15MenuTargets = await p15Targets(p15Tp);
+    p15TouchAt.menu = {
+      n: p15MenuTargets.length,
+      expanded: await p15Tp.evaluate(() =>
+        document.querySelector("aside button[aria-expanded]").getAttribute("aria-expanded"),
+      ),
+      small: p15Small(p15MenuTargets),
+    };
+    ok(
+      "PKG P15 7 A11Y-05 #1/#2/#8/#11/#12/#13 (gap closed): under touch emulation (pointer: coarse) at 390 every visible interactive target on «Mi espacio», «Mis candidaturas», /app/tools/knowledge and in the open «Menú» (≥ 150 measured in all) is ≥ 44 × 44 px, the compact brand link included (36 px mark → 44 × 44); the only ones below are the documented exceptions: the sr-only skip link, links inside a sentence (WCAG 2.5.8) and the 41.7 px wide mini-calendar days (7 columns in 316 px, = v1.8)",
+      Object.values(p15TouchAt).every((a) => a.small.length === 0) &&
+        Object.values(p15TouchAt).reduce((s, a) => s + a.n, 0) >= 150 &&
+        ["/app/professional", "/app/professional/applications", "/app/tools/knowledge"].every(
+          (p) =>
+            p15TouchAt[p].coarse && p15TouchAt[p].brand?.w >= 44 && p15TouchAt[p].brand?.h >= 44,
+        ) &&
+        p15TouchAt.menu.expanded === "true",
+      JSON.stringify(
+        Object.fromEntries(
+          Object.entries(p15TouchAt).map(([k, a]) => [
+            k,
+            {
+              n: a.n,
+              coarse: a.coarse,
+              small: a.small,
+              excepted: a.excepted,
+              brand: a.brand,
+              expanded: a.expanded,
+            },
+          ]),
+        ),
+      ),
+    );
+    await p15Touch.close();
+    p15Touch = null;
+    await logout();
+
+    // 8) admin.mro in Spanish: unique landmark names on the dashboard at 390 (dock «Accesos rápidos» + quick links
+    //    «Accesos directos»), the ICU `other` arm on the requirements pager, no raw audit code in the activity trail
+    //    (A11Y-01 #4, I18N-04 #3, I18N-05; gaps closed).
+    await login(MRO);
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    await page.goto(`${BASE}/app/organization`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P15 8 «Resumen» in Spanish");
+    await page.setViewportSize({ width: 390, height: 1000 });
+    await page.waitForTimeout(250);
+    const p15Org390 = await p15Landmarks();
+    await p15Shot("org-after-390");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${BASE}/app/organization/requirements`);
+    await page.waitForLoadState("networkidle");
+    const p15PagerMany = (await page.locator("[role=status]").allInnerTexts()).map((t) => t.trim());
+    const p15Many = p15PagerMany
+      .map((t) => /^(\d+) necesidades · página 1 de \d+$/.exec(t))
+      .find(Boolean);
+    await page.goto(`${BASE}/app/organization/settings`);
+    await page.waitForLoadState("networkidle");
+    const p15Activity = await page.evaluate(() => {
+      const panel = [...document.querySelectorAll("main section")].find((s) =>
+        /Actividad de esta organización/.test(s.querySelector("h2, h3")?.textContent ?? ""),
+      );
+      const labels = [...(panel?.querySelectorAll("li span.font-medium") ?? [])].map((s) =>
+        s.textContent.trim(),
+      );
+      return {
+        rows: labels.length,
+        labels,
+        raw: labels.filter((l) => /^[a-z]+\.[a-z_]+$/.test(l)),
+      };
+    });
+    ok(
+      "PKG P15 8b A11Y-01 #4, I18N-04 #3, I18N-05 (gaps closed): at 390 the organization dashboard shows two visible `nav`s with distinct names — the dock «Accesos rápidos» and the guide's «Accesos directos» (was «Accesos rápidos» twice) — and every visible nav name is unique; «Necesidades» renders the ICU `other` arm «N necesidades · página 1 de …» with N ≥ 2; the organization's activity trail (≥ 1 row) shows no raw audit code such as «requirement.archived»",
+      p15Org390.visibleNavs.includes("Accesos rápidos") &&
+        p15Org390.visibleNavs.includes("Accesos directos") &&
+        new Set(p15Org390.visibleNavs).size === p15Org390.visibleNavs.length &&
+        p15Many !== undefined &&
+        Number(p15Many[1]) >= 2 &&
+        p15Activity.rows >= 1 &&
+        p15Activity.raw.length === 0,
+      `navs=${JSON.stringify(p15Org390.visibleNavs)} pager=${JSON.stringify(p15PagerMany)} activity=${JSON.stringify(p15Activity)}`,
+    );
+    await logout();
+  } finally {
+    if (p15Touch) await p15Touch.close().catch(() => {});
+    if (p15AnonCtx) await p15AnonCtx.close().catch(() => {});
+    await page.setViewportSize({ width: 1440, height: 900 });
+    if (/\/app/.test(page.url())) await logout().catch(() => {});
+    const p15Restored = await Promise.all(
+      [DELTA, MRO].map(
+        async (email) =>
+          (await asSeedUser(email, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+            .ok === true,
+      ),
+    );
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P15 9 restore: Delta and admin.mro in English, locale cookie cleared, touch and anonymous contexts closed, viewport reset",
+      p15Restored.every(Boolean),
+      String(p15Restored),
     );
   }
 }

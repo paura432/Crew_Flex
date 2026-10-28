@@ -95,7 +95,7 @@ export function AvailabilityMonth({
                   count: day.offers,
                 })}
                 onClick={() => onSelect(pressed ? null : day.date)}
-                className={`relative grid min-h-9 w-full place-items-center rounded-md border text-sm font-semibold tabular-nums enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11 ${day.assigned ? ASSIGNED_STYLE : DAY_STYLE[day.state]} ${pressed ? "ring-2 ring-navy" : isToday ? "ring-2 ring-accent" : ""}`}
+                className={`relative grid min-h-9 w-full place-items-center rounded-md border text-sm font-semibold tabular-nums enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11 ${day.assigned ? ASSIGNED_STYLE : DAY_STYLE[day.state]} ${pressed ? "ring-2 ring-navy" : isToday ? "ring-2 ring-accent focus-visible:ring-navy" : ""}`}
               >
                 {Number(day.date.slice(-2))}
                 {day.offers > 0 && (

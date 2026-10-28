@@ -48,7 +48,9 @@ AOG-only day uses `warn` (V1.8 orange, never the error red) — second audit 202
 
 Touch targets (second audit 2026-10-20, V1.8 `v12.css` min-height 44): buttons, form controls, nav links
 and compact controls are **44 px on a coarse pointer** (`pointer-coarse:min-h-11`); desktop keeps 40 px
-density. Checked by `ui-smoke` 25 on a touch-emulated 390 px screen.
+density. Linked list titles use `block` + `pointer-coarse:py-2.5` (one ≥ 15 px line) or `inline-flex` +
+`pointer-coarse:min-h-11`; the compact brand link of the navy bar adds `pointer-coarse:min-w-11`. Checked by `ui-smoke`
+25 and `PKG P15` on a touch-emulated 390 px screen; `tests/design/a11y.test.ts` holds the static side.
 
 Navigation below `lg`: sections fold behind a «Menu» disclosure (`NavDrawer`, V1.8 ≤ 760 px drawer), and the
 V1.8 bottom dock «Accesos rápidos» (`MobileDock`, T-141) keeps up to five shortcuts of the current workspace in
@@ -102,7 +104,10 @@ in metrics use tabular figures.
   (when any) → checklist of qualifications (✓/✗ + verification) with availability as its last row, on an aligned
   subgrid.
 - **Tables** on ≥ md; stacked lists on mobile. No accidental horizontal scroll.
-- Focus ring: 2 px navy ring + 3 px accent outline (offset 2 px), ≥ 3:1 on every surface.
+- Focus ring: 2 px navy ring + 3 px accent outline (offset 2 px), ≥ 3:1 on every surface. `:focus-visible` also sets
+  `--tw-ring-shadow` to the navy ring so a `shadow-*` utility (which rewrites `box-shadow`) keeps it; a control with its
+  own `ring-*` (today in the mini calendar) adds `focus-visible:ring-navy` (P15). Known residuals (P15 review): the daily challenge's pressed option keeps its 1 px teal `ring-[#07877e]` when focused, and a hovered + focused calendar day mixes in `hover:ring-navy/30`. Landmarks of one kind carry distinct
+  names: the dock is «Accesos rápidos», the dashboard quick links «Accesos directos».
 
 ## Responsive
 
