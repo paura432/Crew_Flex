@@ -107,6 +107,16 @@ describe("i18n catalogs (es/en)", () => {
     }
   });
 
+  it("names the product «CrewFlex» in one word, as v1.8 did (T-140; VIS-08 #3)", () => {
+    // The brand, the <title> template and the favicon say «CrewFlex»; a stray «Crew Flex» in a
+    // sentence (P14c found three) breaks the one name the user sees everywhere.
+    for (const [key, value] of [...Object.entries(flatEn), ...Object.entries(flatEs)]) {
+      expect(value, key).not.toMatch(/Crew Flex/);
+    }
+    expect(flatEs["common.appName"]).toBe("CrewFlex");
+    expect(flatEn["common.appName"]).toBe("CrewFlex");
+  });
+
   it("keeps aviation vocabulary untranslated in Spanish (glossary)", () => {
     // Codes and acronyms are never localized: they must not appear translated in es.json.
     for (const term of [
