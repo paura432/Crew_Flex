@@ -6735,6 +6735,443 @@ await logout();
   }
 }
 
+// PKG P14a (shell parity, F3 — SH-01 #12/#13, SH-02 #19/#21-#23/#25, SH-03 #1-#11/#13/#14/#16-#22/#24/#25/#27-#29/#31/#32,
+// SH-04 #1-#3/#6/#9-#11, SH-05 #1-#4/#6/#9-#11, SH-06 #10, SH-07 #3-#5/#9/#10/#14/#15, SHOT-09 #1/#2; re-verification of
+// shell-visual T-140…T-148 `44045db`, notices `cb13e1e`, logbook `ebb38c2`, hiring-polish `7d6fda7`, directory `2944b64`,
+// admin-org `302bff1`, recruiter `0db7ce6`, D-13 `d3b876f`; no new code): in Spanish, Delta's shell shows the v1.8 brand,
+// the «CrewFlex / {entrada}» header with the bell, the professional menu in the v1.8 order (with «Logbook» and «Avisos»),
+// the footer motto and the person line; below lg the «Menú» disclosure, the navy bar with the bell and «Cerrar sesión»,
+// and the five-shortcut dock that follows the workspace on shared pages; the skip link does not navigate; sign-out ends
+// on «Sesión cerrada.». Negatives: a professional has no organization or platform section and no «Ver como», gets a real
+// 404 on the platform pages and on an unknown /app path and is sent from /app/organization to /app/professional; an
+// organization-only account has no professional section, its dock is the company one and the technician pages tell it
+// where its applications are; a manager has no platform section; the platform admin lands on /app/admin with the four
+// views and a two-shortcut dock; anonymous requests are redirected to /login?next=… (also /app/tools) while /tools is
+// public with «Acceder a mi cuenta». Nothing is written except Delta's language, restored in `finally` (API + cookie).
+{
+  const DELTA = "delta@crewflex.test";
+  const p14Shot = (name) =>
+    page.screenshot({
+      path: `docs/audit/evidence/parity/P14a/P14a-${name}.jpg`,
+      type: "jpeg",
+      quality: 70,
+      fullPage: false,
+    });
+  const p14Overflow = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+  const p14Widths = async (name) => {
+    const out = {};
+    for (const width of [1024, 768, 390, 360]) {
+      await page.setViewportSize({ width, height: 1100 });
+      await page.waitForTimeout(250);
+      out[width] = await p14Overflow();
+      if (width === 390) await p14Shot(`${name}-after-390`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    return out;
+  };
+  /** The shell as the signed-in account sees it: sidebar sections, switcher, header, footer, person, dock. */
+  const p14Shell = () =>
+    page.evaluate(() => {
+      const visible = (el) => !!el && el.getClientRects().length > 0;
+      const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
+      // A menu entry's own label: without the unread badge (decorative count + sr-only reading).
+      const label = (a) => {
+        const clone = a.cloneNode(true);
+        clone.querySelectorAll("span").forEach((s) => s.remove());
+        return text(clone);
+      };
+      const aside = document.querySelector("aside");
+      const header = document.querySelector("header");
+      const footer = document.querySelector("footer");
+      const dock = document.querySelector(
+        "nav[aria-label='Accesos rápidos'], nav[aria-label='Quick access']",
+      );
+      const menuButton = aside.querySelector("button[aria-expanded]");
+      const switcher = aside.querySelector("nav[aria-labelledby]");
+      return {
+        sections: [...aside.querySelectorAll("nav[aria-label]")].map((nav) => ({
+          label: nav.getAttribute("aria-label"),
+          visible: visible(nav),
+          headingVisible: visible(nav.previousElementSibling),
+          items: [...nav.querySelectorAll("a")].map((a) => ({
+            href: a.getAttribute("href"),
+            text: label(a),
+            current: a.getAttribute("aria-current"),
+            icon: !!a.querySelector("svg path"),
+          })),
+        })),
+        switcher: switcher
+          ? [...switcher.querySelectorAll("a")].map((a) => ({
+              text: text(a),
+              current: a.getAttribute("aria-current"),
+            }))
+          : null,
+        brand: text(aside.querySelector("a[href='/app']")),
+        brandPlane: !!aside.querySelector("a[href='/app'] svg path"),
+        // The breadcrumb items joined as read («CrewFlex / Mi espacio»); the footer as rendered (CSS uppercase).
+        crumb: visible(header)
+          ? [...header.querySelectorAll("nav ol > li")].map(text).join(" ")
+          : null,
+        headerBell: visible(header) && !!header.querySelector("a[href='/app/notices'][aria-label]"),
+        barBells: [...aside.querySelectorAll("a[href='/app/notices'][aria-label]")].filter(visible)
+          .length,
+        bellLabels: [...document.querySelectorAll("a[href='/app/notices'][aria-label]")]
+          .filter(visible)
+          .map((b) => b.getAttribute("aria-label")),
+        footer: footer
+          ? [...footer.querySelectorAll("span")].filter(visible).map((s) => s.innerText.trim())
+          : [],
+        person: [...aside.querySelectorAll(":scope > div:last-child p")].filter(visible).map(text),
+        signOut: [...aside.querySelectorAll("form button")].filter(visible).map(text),
+        menuButton: visible(menuButton) ? menuButton.getAttribute("aria-expanded") : null,
+        dock:
+          dock && visible(dock)
+            ? [...dock.querySelectorAll("a")].map((a) => ({
+                text: text(a),
+                current: a.getAttribute("aria-current"),
+              }))
+            : null,
+        title: document.title,
+      };
+    });
+  const p14Menu = (shell) =>
+    shell.sections.map((s) => `${s.label}: ${s.items.map((i) => i.text).join(" · ")}`).join(" | ");
+  const p14Dock = (shell) => shell.dock?.map((d) => d.text).join(" · ") ?? "none";
+  const p14Current = (shell) => shell.dock?.find((d) => d.current === "page")?.text ?? "none";
+  try {
+    // 0) Anonymous: every /app path → /login?next=<path+query> (SH-07 #5), /app/tools included; /tools is public
+    //    with the v1.8 anonymous shell's «Acceder a mi cuenta» and no dock (SH-01 #13, SH-05 #3).
+    const p14AnonCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const p14Anon = await p14AnonCtx.newPage();
+    const p14Redirects = {};
+    for (const path of ["/app/professional", "/app/tools", "/app/notices?page=2"]) {
+      const r = await p14Anon.request.get(`${BASE}${path}`, { maxRedirects: 0 });
+      p14Redirects[path] = `${r.status()} ${r.headers().location ?? ""}`;
+    }
+    const p14ToolsResponse = await p14Anon.goto(`${BASE}/tools`);
+    await p14Anon.waitForLoadState("networkidle");
+    const p14PublicTools = await p14Anon.evaluate(() => ({
+      signIn: [...document.querySelectorAll("header a[href='/login']")].map((a) =>
+        a.textContent.trim(),
+      ),
+      dock: document.querySelectorAll(
+        "nav[aria-label='Quick access'], nav[aria-label='Accesos rápidos']",
+      ).length,
+      brand: document.querySelector("header a[href='/']")?.textContent.replace(/\s+/g, "") ?? "",
+      plane: !!document.querySelector("header a[href='/'] svg path"),
+    }));
+    await p14Anon.screenshot({
+      path: "docs/audit/evidence/parity/P14a/P14a-tools-public-after-1440.jpg",
+      type: "jpeg",
+      quality: 70,
+    });
+    await p14AnonCtx.close();
+    ok(
+      "PKG P14a 0 anon: /app/professional, /app/tools and /app/notices?page=2 answer 307 to /login?next=<path+query>; /tools answers 200 with the v1.8 brand and «Sign in to my account» (es «Acceder a mi cuenta») in its header and no dock",
+      /^307 .*\/login\?next=%2Fapp%2Fprofessional$/.test(p14Redirects["/app/professional"]) &&
+        /^307 .*\/login\?next=%2Fapp%2Ftools$/.test(p14Redirects["/app/tools"]) &&
+        /^307 .*\/login\?next=%2Fapp%2Fnotices%3Fpage%3D2$/.test(
+          p14Redirects["/app/notices?page=2"],
+        ) &&
+        p14ToolsResponse?.status() === 200 &&
+        p14PublicTools.signIn.join() === "Sign in to my account" &&
+        p14PublicTools.dock === 0 &&
+        p14PublicTools.brand === "CrewFlexAVIATION" &&
+        p14PublicTools.plane,
+      `${JSON.stringify(p14Redirects)} ${p14ToolsResponse?.status()} ${JSON.stringify(p14PublicTools)}`,
+    );
+
+    // 1) Delta (professional, no membership) in Spanish on «Mi espacio».
+    await login(DELTA);
+    await page.goto(`${BASE}/app/settings`);
+    await page.waitForLoadState("networkidle");
+    await page.locator("[role=radio][lang=es]").first().click();
+    await page.waitForSelector("[role=status]:has-text('Idioma actualizado')", { timeout: 15000 });
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    await expectSpanish("PKG P14a 1 «Mi espacio» in Spanish");
+    const p14Delta = await p14Shell();
+    ok(
+      "PKG P14a 1b SH-03 #1/#3-#11/#13/#14, SH-02 #21: Delta's sidebar has exactly «Profesional» (Mi espacio · Mi pasaporte · Cualificaciones · Disponibilidad · Oportunidades · Mis candidaturas · Documentos · Logbook) and «Cuenta» (Avisos · Herramientas · Configuración), headings visible, an icon on every entry, «Mi espacio» aria-current=page; no organization or platform section and no «Ver como»",
+      p14Menu(p14Delta) ===
+        "Profesional: Mi espacio · Mi pasaporte · Cualificaciones · Disponibilidad · Oportunidades · Mis candidaturas · Documentos · Logbook | Cuenta: Avisos · Herramientas · Configuración" &&
+        p14Delta.sections.every(
+          (s) => s.visible && s.headingVisible && s.items.every((i) => i.icon),
+        ) &&
+        p14Delta.sections
+          .flatMap((s) => s.items)
+          .filter((i) => i.current === "page")
+          .map((i) => i.text)
+          .join() === "Mi espacio" &&
+        p14Delta.switcher === null,
+      p14Menu(p14Delta),
+    );
+    ok(
+      "PKG P14a 1c SH-04 #1/#2/#3/#6/#9/#10/#11, SH-03 #32: at 1440 the header reads «CrewFlex / Mi espacio» with the bell (named «Avisos…», none in the sidebar), the brand is the plane + «CrewFlex AVIATION» linking to /app, the footer reads «CREWFLEX AVIATION» · «Cualificación · Disponibilidad · Confianza» (no version), the person line «Technician Delta» / «Profesional» with «Cerrar sesión», no «Menú» button, no dock, title «Mi espacio · CrewFlex»",
+      p14Delta.crumb === "CrewFlex / Mi espacio" &&
+        p14Delta.headerBell &&
+        p14Delta.barBells === 0 &&
+        p14Delta.bellLabels.length === 1 &&
+        p14Delta.bellLabels.every((l) => /^Avisos/.test(l)) &&
+        p14Delta.brand === "CrewFlexAVIATION" &&
+        p14Delta.brandPlane &&
+        p14Delta.footer.join(" · ") ===
+          "CREWFLEX AVIATION · Cualificación · Disponibilidad · Confianza" &&
+        p14Delta.person.join(" / ") === "Technician Delta / Profesional" &&
+        p14Delta.signOut.join() === "Cerrar sesión" &&
+        p14Delta.menuButton === null &&
+        p14Delta.dock === null &&
+        p14Delta.title === "Mi espacio · CrewFlex",
+      JSON.stringify({ ...p14Delta, sections: undefined }),
+    );
+    await p14Shot("shell-after-1440");
+    const p14DeltaWidths = await p14Widths("shell");
+    ok(
+      "PKG P14a 1d SH-05 #11: no horizontal overflow at 1024 / 768 / 390 / 360 on «Mi espacio»",
+      Object.values(p14DeltaWidths).every((o) => o === false),
+      JSON.stringify(p14DeltaWidths),
+    );
+
+    // 2) Below lg: the navy bar, the «Menú» disclosure and the dock (SH-05, SHOT-09).
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(250);
+    const p14Closed = await p14Shell();
+    await page.getByRole("button", { name: "Menú", exact: true }).click();
+    await page.waitForTimeout(250);
+    const p14Open = await p14Shell();
+    const p14OpenOverflow = await p14Overflow();
+    await p14Shot("menu-after-390");
+    ok(
+      "PKG P14a 2 SH-05 #4/#9/#11, SH-04 #2, SHOT-09 #1: at 390 the header crumb is gone, one bell and «Cerrar sesión»; «Menú» (aria-expanded=false, sections hidden) opens the same two sections (aria-expanded=true, section headings hidden) without horizontal overflow; the footer keeps «CREWFLEX AVIATION» and hides the motto",
+      p14Closed.crumb === null &&
+        p14Closed.barBells === 1 &&
+        p14Closed.signOut.join() === "Cerrar sesión" &&
+        p14Closed.menuButton === "false" &&
+        p14Closed.sections.every((s) => !s.visible) &&
+        p14Open.menuButton === "true" &&
+        p14Open.sections.every((s) => s.visible && !s.headingVisible) &&
+        p14Menu(p14Open) === p14Menu(p14Delta) &&
+        !p14OpenOverflow &&
+        p14Closed.footer.join() === "CREWFLEX AVIATION",
+      JSON.stringify({
+        crumb: p14Closed.crumb,
+        bells: p14Closed.barBells,
+        signOut: p14Closed.signOut,
+        menu: [p14Closed.menuButton, p14Open.menuButton],
+        footer: p14Closed.footer,
+        overflow: p14OpenOverflow,
+      }),
+    );
+    await page
+      .getByRole("navigation", { name: "Profesional", exact: true })
+      .getByRole("link", { name: "Disponibilidad", exact: true })
+      .click();
+    await page.waitForURL(/\/app\/professional\/availability$/, { timeout: 20000 });
+    await page.waitForLoadState("networkidle");
+    const p14Availability = await p14Shell();
+    await page.goto(`${BASE}/app/tools`);
+    await page.waitForLoadState("networkidle");
+    const p14ToolsShell = await p14Shell();
+    ok(
+      "PKG P14a 2b SH-05 #1/#6, SHOT-09 #2: the dock reads «Inicio · Ofertas · Calendario · Candidaturas · Herramientas» with «Inicio» current on Mi espacio; choosing «Disponibilidad» in the open menu closes it and the dock marks «Calendario»; on the shared «Herramientas» the technician's dock stays, «Herramientas» current",
+      p14Dock(p14Closed) === "Inicio · Ofertas · Calendario · Candidaturas · Herramientas" &&
+        p14Current(p14Closed) === "Inicio" &&
+        p14Availability.menuButton === "false" &&
+        p14Current(p14Availability) === "Calendario" &&
+        p14Dock(p14ToolsShell) === "Inicio · Ofertas · Calendario · Candidaturas · Herramientas" &&
+        p14Current(p14ToolsShell) === "Herramientas",
+      `${p14Dock(p14Closed)} / ${p14Current(p14Closed)} → ${p14Availability.menuButton} ${p14Current(p14Availability)} → ${p14Dock(p14ToolsShell)} / ${p14Current(p14ToolsShell)}`,
+    );
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // 3) The header names the entry the path belongs to, query included (SH-04 #1, SH-07 #2).
+    const p14Crumbs = {};
+    for (const path of [
+      "/app/notices",
+      "/app/professional/availability?month=2027-02",
+      "/app/settings",
+    ]) {
+      await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      p14Crumbs[path] = (await p14Shell()).crumb;
+    }
+    ok(
+      "PKG P14a 3 SH-04 #1, SH-07 #2: the header reads «CrewFlex / Avisos», «CrewFlex / Disponibilidad» (with ?month=) and «CrewFlex / Configuración»",
+      Object.values(p14Crumbs).join(" | ") ===
+        "CrewFlex / Avisos | CrewFlex / Disponibilidad | CrewFlex / Configuración",
+      JSON.stringify(p14Crumbs),
+    );
+
+    // 4) The skip link (SH-07 #9): v1.8 «Ir al contenido» navigated to Inicio; Next's stays on the page.
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    await page.keyboard.press("Tab");
+    const p14Skip = await page.evaluate(() => {
+      const a = document.activeElement;
+      return {
+        text: a?.textContent?.trim(),
+        href: a?.getAttribute("href"),
+        width: a?.getBoundingClientRect().width ?? 0,
+      };
+    });
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(300);
+    const p14AfterSkip = await page.evaluate(() => `${location.pathname}${location.hash}`);
+    ok(
+      "PKG P14a 4 SH-07 #9: Tab reaches «Saltar al contenido» (href #main, visible when focused); Enter stays on /app/professional#main",
+      p14Skip.text === "Saltar al contenido" &&
+        p14Skip.href === "#main" &&
+        p14Skip.width > 1 &&
+        p14AfterSkip === "/app/professional#main",
+      `${JSON.stringify(p14Skip)} → ${p14AfterSkip}`,
+    );
+
+    // 5) Negatives for a professional: platform pages and an unknown path are real 404s (X-11, T-147);
+    //    /app/organization redirects without membership (SH-07 #3).
+    const p14Denied = {};
+    for (const path of [
+      "/app/admin",
+      "/app/recruiter",
+      "/app/admin/verifications",
+      "/app/no-existe",
+    ]) {
+      expectedErrorUrls.add(`${BASE}${path}`);
+      const response = await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      p14Denied[path] = {
+        status: response?.status(),
+        title: await page.title(),
+        aside: await page.locator("aside").count(),
+        h1: (await page.locator("h1").allInnerTexts()).join(),
+      };
+      expectedErrorUrls.delete(`${BASE}${path}`);
+    }
+    await page.goto(`${BASE}/app/organization`);
+    await page.waitForLoadState("networkidle");
+    const p14OrgRedirect = new URL(page.url()).pathname;
+    ok(
+      "PKG P14a 5 SH-07 #3/#4/#14, SH-06 #10: as a professional, /app/admin, /app/recruiter, /app/admin/verifications and /app/no-existe answer HTTP 404 titled «CrewFlex» with the h1 «No encontrado» and no sidebar; /app/organization lands on /app/professional",
+      Object.values(p14Denied).every(
+        (d) =>
+          d.status === 404 && d.title === "CrewFlex" && d.aside === 0 && d.h1 === "No encontrado",
+      ) && p14OrgRedirect === "/app/professional",
+      `${JSON.stringify(p14Denied)} org→${p14OrgRedirect}`,
+    );
+
+    // 6) Sign out ends on the login page with the v1.8 notice (SH-04 #6).
+    await logout();
+    await page.waitForLoadState("networkidle");
+    const p14SignedOut = await page.locator("[role=status]").allInnerTexts();
+    ok(
+      "PKG P14a 6 SH-04 #6: «Cerrar sesión» ends on /login with the v1.8 notice «Sesión cerrada.»",
+      /\/login/.test(page.url()) && p14SignedOut.some((t) => t.trim() === "Sesión cerrada."),
+      `${page.url()} ${p14SignedOut.join(" | ")}`,
+    );
+
+    // 7) An organization-only account (admin.mro, en): the company menu and dock, no professional section,
+    //    and the technician pages name the organization's own place (SH-03 #17-#22, SH-05 #2, SH-07 #15).
+    await login("admin.mro@crewflex.test");
+    await page.goto(`${BASE}/app/organization`);
+    await page.waitForLoadState("networkidle");
+    const p14Org = await p14Shell();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(250);
+    const p14OrgMobile = await p14Shell();
+    await p14Shot("org-dock-after-390");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const p14OrgPages = {};
+    for (const path of ["/app/professional/applications", "/app/professional/opportunities"]) {
+      await page.goto(`${BASE}${path}`);
+      await page.waitForLoadState("networkidle");
+      p14OrgPages[path] = {
+        text: (await page.locator("main").innerText()).replace(/\s+/g, " "),
+        link: await page.locator("main a[href='/app/organization/applications']").count(),
+      };
+    }
+    ok(
+      "PKG P14a 7 SH-03 #2/#17-#22/#24/#27/#31, SH-05 #2, SH-07 #15: admin.mro (organization only) has «Demo MRO Madrid» (Dashboard · Requirements · Find candidates · Applications · Offers in the network · Workforce · Organization) and «Account» (Notices · Tools · Settings) — no professional or platform section, no «View as», no «New requirement» entry —, the person line «Admin Demo MRO» / «Organization · Admin», header «CrewFlex / Dashboard»; at 390 the dock reads «Home · Offers · Candidates · Applications · Tools»; «My applications» says it is for professionals and links the organization's «Applications», «Opportunities» says the account has no professional passport",
+      p14Menu(p14Org) ===
+        "Demo MRO Madrid: Dashboard · Requirements · Find candidates · Applications · Offers in the network · Workforce · Organization | Account: Notices · Tools · Settings" &&
+        p14Org.switcher === null &&
+        p14Org.person.join(" / ") === "Admin Demo MRO / Organization · Admin" &&
+        p14Org.crumb === "CrewFlex / Dashboard" &&
+        p14Dock(p14OrgMobile) === "Home · Offers · Candidates · Applications · Tools" &&
+        p14Current(p14OrgMobile) === "Home" &&
+        /«My applications» is for professionals/.test(
+          p14OrgPages["/app/professional/applications"].text,
+        ) &&
+        p14OrgPages["/app/professional/applications"].link === 1 &&
+        /no professional passport/.test(p14OrgPages["/app/professional/opportunities"].text),
+      `${p14Menu(p14Org)} · ${p14Org.person.join(" / ")} · ${p14Org.crumb} · ${p14Dock(p14OrgMobile)} · ${p14OrgPages["/app/professional/applications"].text.slice(0, 120)}`,
+    );
+
+    // 8) Professional + manager (manager.mro, en): three sections in order, the dock follows the workspace.
+    await logout();
+    await login("manager.mro@crewflex.test");
+    await page.goto(`${BASE}/app/organization`);
+    await page.waitForLoadState("networkidle");
+    const p14Manager = await p14Shell();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(250);
+    const p14ManagerOrgDock = p14Dock(await p14Shell());
+    await page.goto(`${BASE}/app/professional`);
+    await page.waitForLoadState("networkidle");
+    const p14ManagerProDock = p14Dock(await p14Shell());
+    await page.setViewportSize({ width: 1440, height: 900 });
+    ok(
+      "PKG P14a 8 SH-03 #28/#32, SH-05 #1/#2: manager.mro (professional + manager) has «Demo MRO Madrid» → «Professional» → «Account» in that order, no platform section nor «View as», the person line «Ops Manager Demo MRO» / «Professional · Manager»; at 390 the dock is the company one on Dashboard and the technician one on Overview",
+      p14Manager.sections.map((s) => s.label).join(" → ") ===
+        "Demo MRO Madrid → Professional → Account" &&
+        p14Manager.switcher === null &&
+        p14Manager.person.join(" / ") === "Ops Manager Demo MRO / Professional · Manager" &&
+        p14ManagerOrgDock === "Home · Offers · Candidates · Applications · Tools" &&
+        p14ManagerProDock === "Home · Offers · Calendar · Applications · Tools",
+      `${p14Manager.sections.map((s) => s.label).join(" → ")} · ${p14Manager.person.join(" / ")} · ${p14ManagerOrgDock} · ${p14ManagerProDock}`,
+    );
+
+    // 9) The platform admin (en): lands on /app/admin, «View as» with the four views, the admin dock (D-13, T-141).
+    await logout();
+    await login("platform.admin@crewflex.test");
+    const p14AdminLanding = new URL(page.url()).pathname;
+    const p14Admin = await p14Shell();
+    await p14Shot("admin-after-1440");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(250);
+    const p14AdminDock = await p14Shell();
+    await page.setViewportSize({ width: 1440, height: 900 });
+    ok(
+      "PKG P14a 9 SH-01 #12, SH-07 #10, SH-02 #19/#22/#23/#25, SH-03 #25, SH-05 #3: platform.admin lands on /app/admin; «View as» offers Technician · Company · Recruiter · Administration with «Administration» aria-current=page; the sidebar shows only «Platform» (Administration · Verifications · Organizations · Representations · Audit) and «Account»; the person line «Platform Admin» / «Professional · Platform admin», header «CrewFlex / Administration»; at 390 the dock reads «Administration · Tools»",
+      p14AdminLanding === "/app/admin" &&
+        p14Admin.switcher?.map((v) => v.text).join(" · ") ===
+          "Technician · Company · Recruiter · Administration" &&
+        p14Admin.switcher.find((v) => v.current === "page")?.text === "Administration" &&
+        p14Menu(p14Admin) ===
+          "Platform: Administration · Verifications · Organizations · Representations · Audit | Account: Notices · Tools · Settings" &&
+        p14Admin.person.join(" / ") === "Platform Admin / Professional · Platform admin" &&
+        p14Admin.crumb === "CrewFlex / Administration" &&
+        p14Dock(p14AdminDock) === "Administration · Tools" &&
+        p14Current(p14AdminDock) === "Administration",
+      `${p14AdminLanding} · ${p14Admin.switcher?.map((v) => `${v.text}${v.current ? `(${v.current})` : ""}`).join(" · ")} · ${p14Menu(p14Admin)} · ${p14Admin.person.join(" / ")} · ${p14Admin.crumb} · ${p14Dock(p14AdminDock)}`,
+    );
+    await logout();
+  } finally {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    if (/\/app/.test(page.url())) await logout().catch(() => {});
+    const p14English =
+      (await asSeedUser(DELTA, "user-preferences", { method: "PATCH", body: { locale: "en" } }))
+        .ok === true;
+    await ctx.clearCookies({ name: "crewflex-locale" });
+    ok(
+      "PKG P14a 10 restore: Delta in English, locale cookie cleared",
+      p14English,
+      String(p14English),
+    );
+  }
+}
+
 // PKG v2-16 (professional block, migration 20261024800000, T-160): a need of an organization Delta blocks in
 // the passport leaves «Opportunities» (page, API list and detail) and cannot be applied to (409
 // ORGANIZATION_BLOCKED, «This organization is blocked.»); unblocking restores it. The need is created through
