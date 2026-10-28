@@ -8558,7 +8558,7 @@ await logout();
     }));
     await page.emulateMedia({ media: null, colorScheme: null, reducedMotion: null });
     ok(
-      "PKG P14c 6 VIS-05 #4/#5/#6, VIS-02 #17: with prefers-reduced-motion emulated «Mi espacio» runs zero animations and no element computes an animation-name; without it, still zero running on the loaded page (the only `animate-pulse` is the loading skeleton, under motion-safe); under print media the sidebar and the dock stay displayed (no print stylesheet, documented ≠); under a dark scheme the document keeps canvas and the sidebar navy (no dark mode, =)",
+      "PKG P14c 6 VIS-05 #4/#5/#6, VIS-02 #17: with prefers-reduced-motion emulated «Mi espacio» runs zero animations and no element computes an animation-name; without it, still zero running on the loaded page (the only `animate-pulse` is the loading skeleton, under motion-safe); under print media the sidebar stays displayed (the dock is lg:hidden at 1440) (no print stylesheet, documented ≠); under a dark scheme the document keeps canvas and the sidebar navy (no dark mode, =)",
       p14cReduce.matches &&
         p14cReduce.running === 0 &&
         p14cReduce.named === 0 &&
