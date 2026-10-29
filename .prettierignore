@@ -9,3 +9,5 @@ tmp/
 .claude/worktrees/
 # Imported v1.8 inventory (F3): kept verbatim so a row edit stays a one-line diff and recount.py parses it
 docs/integration/crewflex-v13/18-v18-inventory/
+# v1.9.0 delta (29/10): same one-line rows as the v1.8 inventory, parsed by recount.py
+docs/integration/crewflex-v13/20-v190-delta/

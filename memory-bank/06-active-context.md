@@ -14,6 +14,11 @@ NOT pushed (pushing to `main` = production deploy, owner's call). **In progress*
 (Management API `database/query`): `platform_role = platform_admin`, organization «CrewFlex Operaciones» with an admin
 membership, one `audit_events` row; only if the account exists, is confirmed and is professional (D-13 «Ver como» needs both).
 
+Same day, read-only: delta diff of the colleague's `tmp/CrewFlex_v1.9.0.zip` (sha256 `e5847409…`, manifest 163/163) —
+`docs/integration/crewflex-v13/20-v190-delta/` (A shell 69 · B calendar/logbook/tools 80 · C Formación 169 rows; integrator
+corrections recorded per cell). Delta parity 51 / 271 = 18,8 % (without Formación 50 / 116 = 43,1 %); 51 rows portable without a
+decision; the v1.8 metric is unchanged until the owner decides whether v1.9.0 replaces v1.8 and whether Formación enters scope.
+
 Gotchas: Docker Desktop can drop mid-session (`HEALTH=000` → restart, re-run); after ANY local reset set the flags via
 STDIN to `db-owner-sql.sh` and restart `functions serve`; copy `.env.local`, `.env.e2e` and the functions' `.env` into a
 new worktree; the smoke step-17 console 409 (and once a 404 on sign-out) is a load flake (re-run once); prettier turns `X-*` into `X-_` in prose.
@@ -39,7 +44,7 @@ The smoke rewrites the P13…P15 captures under `docs/audit/evidence/parity/`: r
 
 ## Blocked on the owner
 
-Pushing ORG-04 #22 to `main` (deploy); `jwt_exp` 600; custom SMTP; OD-3 in production; D-07 P3 + scanner; Q6 vs SCOPE-2;
+Pushing ORG-04 #22 to `main` (deploy); v1.9.0 as the parity reference + Formación scope + D-11 for «Horas y UTC» (`20-v190-delta/README.md`); `jwt_exp` 600; custom SMTP; OD-3 in production; D-07 P3 + scanner; Q6 vs SCOPE-2;
 the `19-pending-audit.md` §3 decisions; `14-decision-pack.md` §2; the T-xx sign-offs; §0c Crew_Flex-only token, then revoke
 the current one.
 
