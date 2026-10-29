@@ -25,7 +25,8 @@ export type EdgeFunctionName =
   | "notice-preferences"
   | "requirement-outreach"
   | "represented-clients"
-  | "candidate-directory";
+  | "candidate-directory"
+  | "training";
 
 interface InvokeOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
