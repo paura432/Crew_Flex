@@ -1,6 +1,6 @@
 # 06 · Active context
 
-_Last updated 2026-10-29 CET (PR #1 merged by the owner → production = `574fd4f` + full backend; Auth §0b applied; ORG-04 #22 closed locally; owner admin account in progress). Keep under ~60 lines; replace, don't append history._
+_Last updated 2026-10-29 CET (v1.9 «Formación» on `feat/v19-training`, LOCAL: V19-01/02 + ponytail P0 + V19-04 calendar «F»/.ics; production unchanged = `574fd4f`). Keep under ~60 lines; replace, don't append history._
 
 ## Current task
 
@@ -10,22 +10,20 @@ v1.8 inventory). Technical decisions are delegated (ADR-003 `docs/architecture/A
 privacy policies stay with the owner (ADR-003 N-1…N-9, safe defaults in code). Authorised: local work, local commits, local DB,
 read-only remote queries. NOT authorised: push to `main`, PR/merge to staging, any deploy, remote migrations, remote users
 (the approved admin-account SQL for `crewflexaviation@gmail.com` is ON HOLD under this rule), production Auth or secrets.
-Branch `feat/v19-training` (from `4644630`): `628e1b5` ADR-003 + matrix. Batch V19-01 Foundation (schema, RLS, RPCs, function
-`training`, contracts, DB/race tests) runs in an isolated worktree, branch `v19/foundation`; next V19-02…05 (catalog/provider/
-admin UI, requests/messages, calendar «F» + ICS + notices, QA). Earlier today: audit `79f30ef`, PR #1 merged by the owner →
-production `574fd4f`, Auth §0b applied, ORG-04 #22 `2feb357`, v1.9.0 delta diff `4644630`.
-
-P0 + cleanup after the independent ponytail audit (branch `v19/p0-cleanup`, merged into `feat/v19-training`, LOCAL):
-training notices translate the status (`trainingStatusKey`); review queue `submittedAt` = new `submitted_at` (last
-submission, CHECK non-null while submitted) instead of `created_at`; `TrainingReviewItem` typed per kind (`courseStatus`);
-dead TG_OP branch, duplicate index, 5 unused domain helpers, edge reflow removed; `KEYED_OPS` in
-`src/lib/validation/training.ts`. Kept on purpose: the `transition_application` copy in 100400 (a CFA17 trigger would raise
-CFA06 first; the copy is byte-identical + CFA17), `p_exclude_request`, the api.ts reads, notice ids. Training migrations
-were edited in place (never applied outside local): `db reset` locally after pulling them.
+Branch `feat/v19-training` (from `4644630`, LOCAL, not pushed): `628e1b5` ADR-003 + matrix · `dbc4ac3` V19-01 backend
+(5 migrations `20261029100000…100400`, function `training`, DB/race tests) · `bcc7086` V19-02 UI · `77c8dc2` P0 + cleanup
+from the independent ponytail audit (review queue `submitted_at`, translated training notice status, typed
+`TrainingReviewItem`, dead code removed; training migrations edited in place → `db reset` locally after pulling) ·
+`8ac75b1` smoke expects the «Formación» nav entries · V19-04 calendar «F» marker (`trainingDays`, not blocking) and
+private `.ics` export (`/app/training/sessions.ics`, `src/features/training/ics.ts`): V19-029/030 VERIFIED_LOCAL.
+Matrix rows of V19-01/02 still say PENDIENTE: V19-05 reconciles every row with evidence.
 
 Gotchas: Docker Desktop can drop mid-session (`HEALTH=000` → restart, re-run); after ANY local reset set the flags via
 STDIN to `db-owner-sql.sh` and restart `functions serve`; copy `.env.local`, `.env.e2e` and the functions' `.env` into a
 new worktree; the smoke step-17 console 409 (and once a 404 on sign-out) is a load flake (re-run once); prettier turns `X-*` into `X-_` in prose.
+A tool-created worktree can set `extensions.relativeWorktrees` in `.git/config` (git 2.43 then refuses every command:
+make its two gitdir paths absolute, drop the line); a stale Kong port proxy gives `HEALTH=000` with the DB still up
+(`docker restart supabase_kong_crew-flex`).
 The smoke rewrites the P13…P15 captures under `docs/audit/evidence/parity/`: restore them unless the package is yours.
 
 ## State
@@ -53,6 +51,11 @@ the `19-pending-audit.md` §3 decisions; `14-decision-pack.md` §2; the T-xx sig
 the current one.
 
 ## Next step (one)
+
+V19-05: reconcile the 41 matrix rows against code + tests (browser-verify the V19-02 flows with two organizations),
+then the V19-038 fictitious demo scenario; independent ponytail audit before any new migration batch.
+
+## Previous next step (owner, on hold under the v1.9 mandate)
 
 The owner signs up `crewflexaviation@gmail.com` on https://crew-flex.vercel.app/register (professional, ≥ 12 characters) and
 confirms; then run the approved admin SQL and verify «Ver como» shows Técnico · Empresa · Recruiter · Administración.

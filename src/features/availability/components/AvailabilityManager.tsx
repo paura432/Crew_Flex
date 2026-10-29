@@ -70,10 +70,13 @@ export function AvailabilityManager({
   rotation,
   version,
   assignedDays = [],
+  trainingDays = [],
 }: {
   windows: AvailabilityWindow[];
   /** UTC days of confirmed assignments (D-06): marked and protected (BR-4.9, T-15). */
   assignedDays?: string[];
+  /** UTC days touched by a confirmed training session (v1.9 «F», V19-029): marked only, never blocked. */
+  trainingDays?: string[];
   /** Saved generator pattern (private), or null. */
   rotation: AvailabilityRotation | null;
   /** Calendar version from the last server render; a save from a stale one is refused (W5-03). */
@@ -83,6 +86,7 @@ export function AvailabilityManager({
   today: string;
 }) {
   const assigned = new Set(assignedDays);
+  const training = new Set(trainingDays);
   const t = useTranslations("availability");
   const tRoot = useTranslations();
   const locale = useLocale();
@@ -371,6 +375,7 @@ export function AvailabilityManager({
         </div>
         <p className="text-sm text-muted">{t("pickerHint")}</p>
         <p className="text-sm text-muted">{t("aogHint")}</p>
+        {training.size > 0 && <p className="text-sm text-muted">{t("trainingHint")}</p>}
         {/* Legend of the assignment mark + v1.8 «… protegidas también en el servidor» (BR-4.9). */}
         <p className="mb-4 text-sm text-muted">
           <span aria-hidden className="font-bold text-navy">
@@ -401,7 +406,7 @@ export function AvailabilityManager({
                 type="button"
                 disabled={pending || !canEditDay(day.date, today, assigned)}
                 onClick={() => onDayClick(day.date)}
-                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${isAssigned ? `, ${t("assigned")}. ${t("protectedDay")}` : ""}`}
+                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${isAssigned ? `, ${t("assigned")}. ${t("protectedDay")}` : ""}${training.has(day.date) ? `, ${t("trainingDay")}` : ""}`}
                 className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
               >
                 <span className="text-base font-bold tabular-nums">
@@ -412,6 +417,11 @@ export function AvailabilityManager({
                 {isAssigned && (
                   <span aria-hidden className="text-[11px] leading-none font-bold text-navy">
                     ●<span className="hidden sm:inline"> {t("assignedShort")}</span>
+                  </span>
+                )}
+                {training.has(day.date) && (
+                  <span aria-hidden className="text-[11px] leading-none font-bold text-blue">
+                    {t("trainingShort")}
                   </span>
                 )}
               </button>

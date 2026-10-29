@@ -1029,6 +1029,9 @@
     "protectedDay": "A confirmed assignment is protected.",
     "assignedHint": "Dates with a confirmed assignment are protected on the server too.",
     "assignedDay": "Assigned",
+    "trainingShort": "T",
+    "trainingDay": "Training confirmed for part of the day",
+    "trainingHint": "T marks training confirmed for part of the day; the session hours are in Training.",
     "mini": {
       "offers": "{date}: {state}. {count, plural, one {# opportunity} other {# opportunities}}",
       "offersPotential": "{date}: {state}. {count, plural, one {# possible opportunity} other {# possible opportunities}}, review your rest-day publishing",
@@ -2834,6 +2837,8 @@
       "title": "My requests",
       "description": "Inquiries and seat requests. Requesting or accepting does not book the seat: only the provider's confirmation does.",
       "toCatalog": "Open the catalog",
+      "exportIcs": "Export sessions (.ics)",
+      "icsFailed": "The sessions could not be exported. Try again.",
       "emptyTitle": "No requests yet",
       "emptyDescription": "Find a course in the catalog and send an inquiry or a seat request.",
       "favoritesTitle": "Saved courses",

@@ -7,6 +7,8 @@ import { listAvailability } from "@/features/availability/api";
 import { listMyApplications } from "@/features/applications/api";
 import { assignmentDays, parseMonth } from "@/features/availability/calendar";
 import { AvailabilityManager } from "@/features/availability/components/AvailabilityManager";
+import { getMySessions } from "@/features/training/api";
+import { isTrainingEnabled } from "@/server/feature-flags";
 import { requireSessionActor } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,7 +33,11 @@ export default async function ProfessionalAvailabilityPage({
       />
     );
   }
-  const [result, applications] = await Promise.all([listAvailability(), listMyApplications()]);
+  const [result, applications, sessions] = await Promise.all([
+    listAvailability(),
+    listMyApplications(),
+    isTrainingEnabled().then((on) => (on ? getMySessions() : null)),
+  ]);
   // Confirmed assignments are shown on their days (v1.8 «Asignado»); a failed read just omits them.
   const assigned = applications.ok
     ? [
@@ -42,6 +48,8 @@ export default async function ProfessionalAvailabilityPage({
         ),
       ]
     : [];
+  // v1.9 «F» (V19-029): days with a confirmed training session; marked, not protected. A failed read omits them.
+  const training = sessions?.ok ? [...assignmentDays(sessions.data.sessions)] : [];
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -55,6 +63,7 @@ export default async function ProfessionalAvailabilityPage({
           initialMonth={parseMonth(monthParam) ?? today.slice(0, 7)}
           today={today}
           assignedDays={assigned}
+          trainingDays={training}
         />
       ) : (
         <ApiErrorState error={result.error} requestId={result.requestId} />

@@ -53,8 +53,12 @@ export const getWorkspace = (organizationId: string) =>
   read<TrainingWorkspaceResponse>("workspace", { organizationId });
 export const getReviewQueue = (q: Partial<View<"review-queue">> = {}) =>
   read<TrainingReviewQueueResponse>("review-queue", q);
-export const getMySessions = (from: string, to: string) =>
-  read<TrainingSessionsResponse>("sessions", { from, to });
+/** The caller's confirmed sessions from 180 days back to 219 ahead (the RPC caps a read at 400 days). */
+export const getMySessions = (now = Date.now()) =>
+  read<TrainingSessionsResponse>("sessions", {
+    from: new Date(now - 180 * 86_400_000).toISOString(),
+    to: new Date(now + 219 * 86_400_000).toISOString(),
+  });
 
 // Writes (POST ops). Saves carry their own version; requests, transitions and messages need an Idempotency-Key.
 type Input<O extends TrainingWrite["op"]> = Extract<TrainingWrite, { op: O }>["input"];

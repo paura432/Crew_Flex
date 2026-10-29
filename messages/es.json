@@ -1029,6 +1029,9 @@
     "protectedDay": "Una asignación confirmada está protegida.",
     "assignedHint": "Las fechas con asignación confirmada están protegidas también en el servidor.",
     "assignedDay": "Asignado",
+    "trainingShort": "F",
+    "trainingDay": "Formación confirmada durante parte del día",
+    "trainingHint": "F indica formación confirmada en parte del día; las horas de las sesiones están en Formación.",
     "mini": {
       "offers": "{date}: {state}. {count, plural, one {# oportunidad} other {# oportunidades}}",
       "offersPotential": "{date}: {state}. {count, plural, one {# oportunidad posible} other {# oportunidades posibles}}, revisa la publicación de descanso",
@@ -2834,6 +2837,8 @@
       "title": "Mis solicitudes",
       "description": "Consultas y solicitudes de plaza. Solicitar o aceptar no reserva la plaza: solo la confirmación del proveedor.",
       "toCatalog": "Ver catálogo",
+      "exportIcs": "Exportar sesiones .ics",
+      "icsFailed": "No se han podido exportar las sesiones. Inténtalo de nuevo.",
       "emptyTitle": "Todavía no tienes solicitudes",
       "emptyDescription": "Busca un curso en el catálogo y envía una consulta o una solicitud de plaza.",
       "favoritesTitle": "Cursos guardados",

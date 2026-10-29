@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
-import { ButtonLink } from "@/components/ui/Button";
+import { buttonClass, ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { StateMessage } from "@/components/ui/StateMessage";
@@ -19,10 +19,19 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("trainingRequests") };
 }
 
-/** V19-021/023/025: the professional's requests, explicit acceptance of the current terms, withdraw and cancel; favourites. */
-export default async function TrainingRequestsPage() {
+/**
+ * V19-021/023/025: the professional's requests, explicit acceptance of the current terms, withdraw and cancel; favourites.
+ * V19-030: the confirmed sessions as a private .ics download (a plain link, no script).
+ */
+export default async function TrainingRequestsPage({
+  searchParams,
+}: PageProps<"/app/training/requests">) {
   if (!(await isTrainingEnabled())) notFound();
-  const [, t] = await Promise.all([requireSessionActor(), getTranslations("training.requests")]);
+  const [params, , t] = await Promise.all([
+    searchParams,
+    requireSessionActor(),
+    getTranslations("training.requests"),
+  ]);
   const [requests, favorites] = await Promise.all([getMyRequests(), getFavorites()]);
   return (
     <>
@@ -30,8 +39,23 @@ export default async function TrainingRequestsPage() {
         eyebrow={t("eyebrow")}
         title={t("title")}
         description={t("description")}
-        actions={<ButtonLink href={TRAINING_PATH}>{t("toCatalog")}</ButtonLink>}
+        actions={
+          <>
+            <a href={`${TRAINING_PATH}/sessions.ics`} download className={buttonClass()}>
+              {t("exportIcs")}
+            </a>
+            <ButtonLink href={TRAINING_PATH}>{t("toCatalog")}</ButtonLink>
+          </>
+        }
       />
+      {params.ics === "failed" && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-danger/30 bg-danger-bg px-4 py-3 text-sm text-danger"
+        >
+          {t("icsFailed")}
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <section className="space-y-4" aria-label={t("title")}>
           {!requests.ok ? (
