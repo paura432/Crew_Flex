@@ -187,9 +187,10 @@ async function poolRefs(tx: Transaction, admin: string, requirementId: string) {
 }
 
 describe("professional block (v2-16, 20261024800000)", () => {
-  it("CFA16 is the 16th APPLICATION_CONFLICTS entry", () => {
+  it("CFA16 is the 16th APPLICATION_CONFLICTS entry (CFA17 = the training overlap, ADR-003)", () => {
     expect(conflict("ORGANIZATION_BLOCKED")).toBe("CFA16");
-    expect(APPLICATION_CONFLICTS).toHaveLength(16);
+    expect(conflict("OVERLAPPING_TRAINING")).toBe("CFA17");
+    expect(APPLICATION_CONFLICTS).toHaveLength(17);
   });
 
   it("acceptance: Delta blocks Demo MRO Madrid → its needs leave «Oportunidades» (list, detail, rules), applying is CFA16, the pool still excludes Delta; another professional is unaffected; unblocking restores everything", async () => {
