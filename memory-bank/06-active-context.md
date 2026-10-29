@@ -4,20 +4,16 @@ _Last updated 2026-10-29 CET (PR #1 merged by the owner → production = `574fd4
 
 ## Current task
 
-Owner 2026-10-29: (1) read-only audit of the 216 pending parity rows — `docs/integration/crewflex-v13/19-pending-audit.md`
-(+ `19-pending-216.csv`, `docs/integration/crewflex-v13/18-v18-inventory/pending.py`), committed `79f30ef`; (2) PR #1 (draft,
-review only) — the owner merged it: `origin/main` = `574fd4f`; (3) Auth §0b applied with the owner's «sí» (HIBP refused, 402
-Pro plan); (4) ORG-04 #22 (rate and base hours on the needs list row) closed LOCALLY with the full gate green (check 0 — Vitest
-1196/38 —, build 0, E2E 48/48, race 0, smoke 515/515 incl. `PKG ORG-04 22`) → 1 051 / 1 266 = 83,0 %; committed on the branch,
-NOT pushed (pushing to `main` = production deploy, owner's call). **In progress**: the owner's admin account
-`crewflexaviation@gmail.com` — the owner signs up on production as a professional and confirms; then the approved SQL
-(Management API `database/query`): `platform_role = platform_admin`, organization «CrewFlex Operaciones» with an admin
-membership, one `audit_events` row; only if the account exists, is confirmed and is professional (D-13 «Ver como» needs both).
-
-Same day, read-only: delta diff of the colleague's `tmp/CrewFlex_v1.9.0.zip` (sha256 `e5847409…`, manifest 163/163) —
-`docs/integration/crewflex-v13/20-v190-delta/` (A shell 69 · B calendar/logbook/tools 80 · C Formación 169 rows; integrator
-corrections recorded per cell). Delta parity 51 / 271 = 18,8 % (without Formación 50 / 116 = 43,1 %); 51 rows portable without a
-decision; the v1.8 metric is unchanged until the owner decides whether v1.9.0 replaces v1.8 and whether Formación enters scope.
+Owner 2026-10-29 (spec «CrewFlex V1.9 — autonomous principal architect»): implement the v1.9 training module («Formación»)
+LOCALLY to 100 % of the 41-requirement matrix `docs/integration/crewflex-v19/V19_MATRIX.md` (own metric, never mixed with the
+v1.8 inventory). Technical decisions are delegated (ADR-003 `docs/architecture/ADR-003-training-module.md`); business, legal and
+privacy policies stay with the owner (ADR-003 N-1…N-9, safe defaults in code). Authorised: local work, local commits, local DB,
+read-only remote queries. NOT authorised: push to `main`, PR/merge to staging, any deploy, remote migrations, remote users
+(the approved admin-account SQL for `crewflexaviation@gmail.com` is ON HOLD under this rule), production Auth or secrets.
+Branch `feat/v19-training` (from `4644630`): `628e1b5` ADR-003 + matrix. Batch V19-01 Foundation (schema, RLS, RPCs, function
+`training`, contracts, DB/race tests) runs in an isolated worktree, branch `v19/foundation`; next V19-02…05 (catalog/provider/
+admin UI, requests/messages, calendar «F» + ICS + notices, QA). Earlier today: audit `79f30ef`, PR #1 merged by the owner →
+production `574fd4f`, Auth §0b applied, ORG-04 #22 `2feb357`, v1.9.0 delta diff `4644630`.
 
 Gotchas: Docker Desktop can drop mid-session (`HEALTH=000` → restart, re-run); after ANY local reset set the flags via
 STDIN to `db-owner-sql.sh` and restart `functions serve`; copy `.env.local`, `.env.e2e` and the functions' `.env` into a
