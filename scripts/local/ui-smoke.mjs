@@ -6910,9 +6910,9 @@ await logout();
     await expectSpanish("PKG P14a 1 «Mi espacio» in Spanish");
     const p14Delta = await p14Shell();
     ok(
-      "PKG P14a 1b SH-03 #1/#3-#11/#13/#14, SH-02 #21: Delta's sidebar has exactly «Profesional» (Mi espacio · Mi pasaporte · Cualificaciones · Disponibilidad · Oportunidades · Mis candidaturas · Documentos · Logbook) and «Cuenta» (Avisos · Herramientas · Configuración), headings visible, an icon on every entry, «Mi espacio» aria-current=page; no organization or platform section and no «Ver como»",
+      "PKG P14a 1b SH-03 #1/#3-#11/#13/#14, SH-02 #21: Delta's sidebar has exactly «Profesional» (Mi espacio · Mi pasaporte · Cualificaciones · Disponibilidad · Oportunidades · Mis candidaturas · Documentos · Logbook · Formación) and «Cuenta» (Avisos · Herramientas · Configuración), headings visible, an icon on every entry, «Mi espacio» aria-current=page; no organization or platform section and no «Ver como»",
       p14Menu(p14Delta) ===
-        "Profesional: Mi espacio · Mi pasaporte · Cualificaciones · Disponibilidad · Oportunidades · Mis candidaturas · Documentos · Logbook | Cuenta: Avisos · Herramientas · Configuración" &&
+        "Profesional: Mi espacio · Mi pasaporte · Cualificaciones · Disponibilidad · Oportunidades · Mis candidaturas · Documentos · Logbook · Formación | Cuenta: Avisos · Herramientas · Configuración" &&
         p14Delta.sections.every(
           (s) => s.visible && s.headingVisible && s.items.every((i) => i.icon),
         ) &&
@@ -7107,9 +7107,9 @@ await logout();
       };
     }
     ok(
-      "PKG P14a 7 SH-03 #2/#17-#22/#24/#27/#31, SH-05 #2, SH-07 #15: admin.mro (organization only) has «Demo MRO Madrid» (Dashboard · Requirements · Find candidates · Applications · Offers in the network · Workforce · Organization) and «Account» (Notices · Tools · Settings) — no professional or platform section, no «View as», no «New requirement» entry —, the person line «Admin Demo MRO» / «Organization · Admin», header «CrewFlex / Dashboard»; at 390 the dock reads «Home · Offers · Candidates · Applications · Tools»; «My applications» says it is for professionals and links the organization's «Applications», «Opportunities» says the account has no professional passport",
+      "PKG P14a 7 SH-03 #2/#17-#22/#24/#27/#31, SH-05 #2, SH-07 #15: admin.mro (organization only) has «Demo MRO Madrid» (Dashboard · Requirements · Find candidates · Applications · Offers in the network · Workforce · Training · Training provider · Organization) and «Account» (Notices · Tools · Settings) — no professional or platform section, no «View as», no «New requirement» entry —, the person line «Admin Demo MRO» / «Organization · Admin», header «CrewFlex / Dashboard»; at 390 the dock reads «Home · Offers · Candidates · Applications · Tools»; «My applications» says it is for professionals and links the organization's «Applications», «Opportunities» says the account has no professional passport",
       p14Menu(p14Org) ===
-        "Demo MRO Madrid: Dashboard · Requirements · Find candidates · Applications · Offers in the network · Workforce · Organization | Account: Notices · Tools · Settings" &&
+        "Demo MRO Madrid: Dashboard · Requirements · Find candidates · Applications · Offers in the network · Workforce · Training · Training provider · Organization | Account: Notices · Tools · Settings" &&
         p14Org.switcher === null &&
         p14Org.person.join(" / ") === "Admin Demo MRO / Organization · Admin" &&
         p14Org.crumb === "CrewFlex / Dashboard" &&
@@ -7158,13 +7158,13 @@ await logout();
     const p14AdminDock = await p14Shell();
     await page.setViewportSize({ width: 1440, height: 900 });
     ok(
-      "PKG P14a 9 SH-01 #12, SH-07 #10, SH-02 #19/#22/#23/#25, SH-03 #25, SH-05 #3: platform.admin lands on /app/admin; «View as» offers Technician · Company · Recruiter · Administration with «Administration» aria-current=page; the sidebar shows only «Platform» (Administration · Verifications · Organizations · Representations · Audit) and «Account»; the person line «Platform Admin» / «Professional · Platform admin», header «CrewFlex / Administration»; at 390 the dock reads «Administration · Tools»",
+      "PKG P14a 9 SH-01 #12, SH-07 #10, SH-02 #19/#22/#23/#25, SH-03 #25, SH-05 #3: platform.admin lands on /app/admin; «View as» offers Technician · Company · Recruiter · Administration with «Administration» aria-current=page; the sidebar shows only «Platform» (Administration · Verifications · Organizations · Representations · Audit · Training review) and «Account»; the person line «Platform Admin» / «Professional · Platform admin», header «CrewFlex / Administration»; at 390 the dock reads «Administration · Tools»",
       p14AdminLanding === "/app/admin" &&
         p14Admin.switcher?.map((v) => v.text).join(" · ") ===
           "Technician · Company · Recruiter · Administration" &&
         p14Admin.switcher.find((v) => v.current === "page")?.text === "Administration" &&
         p14Menu(p14Admin) ===
-          "Platform: Administration · Verifications · Organizations · Representations · Audit | Account: Notices · Tools · Settings" &&
+          "Platform: Administration · Verifications · Organizations · Representations · Audit · Training review | Account: Notices · Tools · Settings" &&
         p14Admin.person.join(" / ") === "Platform Admin / Professional · Platform admin" &&
         p14Admin.crumb === "CrewFlex / Administration" &&
         p14Dock(p14AdminDock) === "Administration · Tools" &&
