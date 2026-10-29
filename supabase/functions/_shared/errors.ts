@@ -144,9 +144,7 @@ export function fromDatabaseError(error: PostgrestLikeError): ApiError {
     case "PGRST116": // no rows for single()
       return new ApiError("NOT_FOUND");
     default:
-      if (error.message?.includes("row-level security")) {
-        return new ApiError("FORBIDDEN");
-      }
+      if (error.message?.includes("row-level security")) return new ApiError("FORBIDDEN");
       return new ApiError("INTERNAL_ERROR");
   }
 }

@@ -50,7 +50,7 @@ begin
     end if;
     update public.training_providers p
     set name = btrim(p_name), description = btrim(p_description), website = v_website,
-        status = 'pending', review_note = null, reviewed_at = null
+        status = 'pending', review_note = null, reviewed_at = null, submitted_at = now()
     where p.organization_id = p_organization_id;
   else
     insert into public.training_providers (organization_id, name, description, website)
@@ -176,7 +176,7 @@ begin
   if v_course.status not in ('draft', 'changes', 'rejected') then
     raise exception 'course status % → submitted is not allowed', v_course.status using errcode = '55000';
   end if;
-  update public.training_courses c set status = 'submitted' where c.id = p_id;
+  update public.training_courses c set status = 'submitted', submitted_at = now() where c.id = p_id;
   insert into public.audit_events (actor_profile_id, organization_id, action, entity_type, entity_id, metadata)
   values (v_uid, v_course.organization_id, 'training.course_submitted', 'training_course', p_id,
           jsonb_build_object('from', v_course.status, 'to', 'submitted'));
@@ -314,7 +314,7 @@ begin
      or (v_edition.deadline is not null and v_edition.deadline <= now()) then
     raise exception using errcode = '22023', message = 'the edition dates must be in the future';
   end if;
-  update public.training_editions e set status = 'submitted' where e.id = p_id;
+  update public.training_editions e set status = 'submitted', submitted_at = now() where e.id = p_id;
   insert into public.audit_events (actor_profile_id, organization_id, action, entity_type, entity_id, metadata)
   values (v_uid, v_edition.organization_id, 'training.edition_submitted', 'training_edition', p_id,
           jsonb_build_object('from', v_edition.status, 'to', 'submitted'));

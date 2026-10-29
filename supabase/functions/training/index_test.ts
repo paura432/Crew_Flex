@@ -5,6 +5,7 @@ import { TRAINING_CONFLICTS } from "../../../src/domain/training.ts";
 import { APPLICATION_CONFLICTS } from "../../../src/domain/applications.ts";
 import {
   editionInput,
+  KEYED_OPS,
   requestInput,
   reviewInput,
   trainingQuery,
@@ -15,7 +16,6 @@ import {
   courseArgs,
   editionArgs,
   handler,
-  KEYED_OPS,
   requestArgs,
   toSaved,
   toTransition,

@@ -29,6 +29,7 @@ import { TRAINING_REQUEST_STATUSES } from "../../../src/domain/training.ts";
 import {
   type CourseInput,
   type EditionInput,
+  KEYED_OPS,
   type RequestInput,
   type TrainingQuery,
   trainingQuery,
@@ -344,9 +345,6 @@ async function read(actor: Actor, query: TrainingQuery): Promise<unknown> {
       } satisfies TrainingSessionsResponse;
   }
 }
-
-/** Which writes need an `Idempotency-Key` (creates and transitions; saves carry their own version). */
-export const KEYED_OPS: readonly TrainingWrite["op"][] = ["request", "transition", "message"];
 
 async function write(
   actor: Actor,

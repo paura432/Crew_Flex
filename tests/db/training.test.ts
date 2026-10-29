@@ -598,6 +598,69 @@ describe("training: provider, courses, editions, review (V19-008…017)", () => 
     });
   });
 
+  it("review queue: submittedAt is the LAST submission (a resubmission moves it), never the creation; editions carry courseTitle/courseStatus", async () => {
+    await asUser(db, ADMIN_A, async (tx) => {
+      const OLD = "2026-01-01T00:00:00.000Z";
+      // now() is the transaction's: backdate creation and first submission so a resubmission is visible.
+      const backdate = (table: string, key: string, id: string) =>
+        tx.query(
+          `update public.${table} set created_at = $2, submitted_at = $2 where ${key} = $1`,
+          [id, OLD],
+        );
+      const queue = async () => {
+        await actAs(tx, PLATFORM_ADMIN);
+        const { rows } = await tx.query<{
+          item: { id: string; kind: string; submittedAt: string; item: Record<string, unknown> };
+        }>("select item from public.get_training_review_queue()");
+        return rows.map((r) => r.item);
+      };
+      const first = await saveProvider(tx, ADMIN_A, orgA);
+      await asOwner(tx);
+      await backdate("training_providers", "organization_id", orgA);
+      expect((await queue()).find((i) => i.id === orgA)!.submittedAt).toBe(OLD);
+      // A resubmission (save again → pending) moves it.
+      await asOwner(tx);
+      const { rows: p } = await tx.query<{ updated_at: Date }>(
+        "select updated_at from public.training_providers where organization_id = $1",
+        [orgA],
+      );
+      expect(first.status).toBe("pending");
+      await saveProvider(tx, ADMIN_A, orgA, p[0]!.updated_at);
+      expect((await queue()).find((i) => i.id === orgA)!.submittedAt).not.toBe(OLD);
+      await review(tx, PLATFORM_ADMIN, "provider", orgA, "reviewed");
+
+      // Course: submitted, changes requested, resubmitted: the queue shows the resubmission.
+      const course = await saveCourse(tx, ADMIN_A, orgA);
+      await submit(tx, ADMIN_A, "course", course.id);
+      await review(tx, PLATFORM_ADMIN, "course", course.id, "changes", "Completa el temario");
+      await asOwner(tx);
+      await backdate("training_courses", "id", course.id);
+      await submit(tx, ADMIN_A, "course", course.id);
+      const queued = (await queue()).find((i) => i.id === course.id)!;
+      expect(queued.kind).toBe("course");
+      expect(queued.item.createdAt).toBe(OLD);
+      expect(queued.submittedAt).not.toBe(OLD);
+      expect(Date.parse(queued.submittedAt)).toBeGreaterThan(Date.parse(OLD));
+      // The invariant is the table's: a submitted listing always has a submission time.
+      await asOwner(tx);
+      expect(
+        await sqlstate(tx, "update public.training_courses set submitted_at = null where id = $1", [
+          course.id,
+        ]),
+      ).toBe("23514");
+
+      // Edition: the queue names its course and the course's status (TrainingReviewItem contract).
+      await review(tx, PLATFORM_ADMIN, "course", course.id, "published");
+      const edition = await saveEdition(tx, ADMIN_A, course.id);
+      await submit(tx, ADMIN_A, "edition", edition.id);
+      const ed = (await queue()).find((i) => i.id === edition.id)!;
+      expect(ed.kind).toBe("edition");
+      expect(ed.item.courseTitle).toBe("Prueba Ñandú HF");
+      expect(ed.item.courseStatus).toBe("published");
+      expect(Date.parse(ed.submittedAt)).toBeGreaterThan(Date.parse(OLD));
+    });
+  });
+
   it("editions: sessions validated (overlap, 24 h, future, self-paced), IANA zone, money in cents; publish needs a published course", async () => {
     await asUser(db, ADMIN_A, async (tx) => {
       await saveProvider(tx, ADMIN_A, orgA);

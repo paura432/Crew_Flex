@@ -51,7 +51,6 @@ import type {
   TrainingProviderStatus,
   TrainingRequestKind,
   TrainingRequestStatus,
-  TrainingReviewKind,
   TrainingScope,
   TrainingSessionElement,
 } from "../domain/training.ts";
@@ -1085,16 +1084,27 @@ export interface TrainingWorkspaceResponse {
   courses: (TrainingCourse & { editions: TrainingEdition[] })[];
 }
 
-/** GET `training?view=review-queue` (platform admin): what awaits a decision, oldest first. */
-export interface TrainingReviewItem {
+/**
+ * GET `training?view=review-queue` (platform admin): what awaits a decision, oldest first.
+ * `submittedAt` = the last submission (a resubmission moves it), not the creation.
+ */
+export type TrainingReviewItem = {
   id: string;
-  kind: TrainingReviewKind;
   organizationId: string;
   organizationName: string;
   updatedAt: string;
   submittedAt: string;
-  item: Record<string, unknown>;
-}
+} & (
+  | {
+      kind: "provider";
+      item: Pick<TrainingProvider, "name" | "description" | "website" | "status">;
+    }
+  | { kind: "course"; item: TrainingCourse }
+  | {
+      kind: "edition";
+      item: TrainingEdition & { courseTitle: string; courseStatus: TrainingListingStatus };
+    }
+);
 
 export interface TrainingReviewQueueResponse {
   items: TrainingReviewItem[];

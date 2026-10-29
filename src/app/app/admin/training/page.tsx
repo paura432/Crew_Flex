@@ -57,9 +57,12 @@ export default async function TrainingReviewPage({
                   !/id$/i.test(k) &&
                   (typeof v === "string" || typeof v === "number" || typeof v === "boolean"),
               );
-              const title = String(
-                it.item.title ?? it.item.name ?? it.item.courseTitle ?? it.organizationName,
-              );
+              const title =
+                it.kind === "provider"
+                  ? it.item.name
+                  : it.kind === "course"
+                    ? it.item.title
+                    : it.item.courseTitle;
               const decisions =
                 it.kind === "provider" ? TRAINING_PROVIDER_DECISIONS : TRAINING_LISTING_DECISIONS;
               return (

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
+import en from "../../../messages/en.json";
+import es from "../../../messages/es.json";
+import { TRAINING_STATUS_LABEL_KEYS } from "@/domain/training";
 import type { Notice } from "@/types/api";
-import { noticeHref, noticesIntroKey, noticeTitleKey, unreadBadge } from "./view";
+import {
+  noticeHref,
+  noticesIntroKey,
+  noticeTitleKey,
+  trainingStatusKey,
+  unreadBadge,
+} from "./view";
 
 const APP = "00000000-0000-4000-8000-0000000000a1";
 const REQ = "00000000-0000-4000-8000-0000000000b1";
@@ -74,5 +83,17 @@ describe("notice view (v2-18)", () => {
 
   it("shows the unread count only when there is one, capped at 99+", () => {
     expect([null, 0, 1, 99, 100].map(unreadBadge)).toEqual([null, null, "1", "99", "99+"]);
+  });
+
+  it("names a training status from the catalog in both locales, never the raw code", () => {
+    expect(trainingStatusKey("confirmed")).toBe("confirmed");
+    expect(trainingStatusKey("no_show")).toBe("noShow");
+    expect(trainingStatusKey("bogus")).toBeNull();
+    expect(trainingStatusKey("toString")).toBeNull();
+    for (const key of Object.values(TRAINING_STATUS_LABEL_KEYS)) {
+      expect(en.training.status[key]).toBeTruthy();
+      expect(es.training.status[key]).toBeTruthy();
+    }
+    expect(es.training.status.confirmed).toBe("Plaza confirmada");
   });
 });

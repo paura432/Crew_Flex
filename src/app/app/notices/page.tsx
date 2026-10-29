@@ -10,7 +10,7 @@ import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { listNotices } from "@/features/notices/api";
 import { MarkAllReadButton, OpenNoticeButton } from "@/features/notices/components/NoticeButtons";
-import { noticesIntroKey, noticeTitleKey } from "@/features/notices/view";
+import { noticesIntroKey, noticeTitleKey, trainingStatusKey } from "@/features/notices/view";
 import {
   pageCount,
   pageOffset,
@@ -36,15 +36,17 @@ const href = (page: number) => `/app/notices${page > 1 ? `?page=${page}` : ""}`;
  * «Nuevo» until opened; each notice leads to the application. In-app only: no e-mail or push.
  */
 export default async function NoticesPage({ searchParams }: PageProps<"/app/notices">) {
-  const [{ page: pageParam }, actor, t, tDomain, tMatching, tOutreach, locale] = await Promise.all([
-    searchParams,
-    requireSessionActor(),
-    getTranslations("notices"),
-    getTranslations("domain"),
-    getTranslations("matching"),
-    getTranslations("outreach"),
-    getLocale() as Promise<Locale>,
-  ]);
+  const [{ page: pageParam }, actor, t, tDomain, tMatching, tOutreach, tTraining, locale] =
+    await Promise.all([
+      searchParams,
+      requireSessionActor(),
+      getTranslations("notices"),
+      getTranslations("domain"),
+      getTranslations("matching"),
+      getTranslations("outreach"),
+      getTranslations("training"),
+      getLocale() as Promise<Locale>,
+    ]);
   const page = parseRequirementsPage(pageParam);
   const result = await listNotices(pageOffset(page), REQUIREMENTS_PAGE_SIZE);
   const intro = noticesIntroKey({
@@ -93,13 +95,17 @@ export default async function NoticesPage({ searchParams }: PageProps<"/app/noti
       ? tOutreach(`notice.${key}`, { title: n.requirementTitle ?? "" })
       : t(`kind.${key}`);
   };
+  const trainingStatus = (status: string) => {
+    const key = trainingStatusKey(status);
+    return key ? tTraining(`status.${key}`) : null;
+  };
   const description = (n: Notice) =>
     (n.kind === "outreach"
       ? // The title names the need; the organization and v1.8's invitation to decide follow.
         [n.organizationName, tOutreach("notice.description")]
       : n.kind === "training"
-        ? // ADR-003: the course (or provider) and the status reached, as the database rendered them.
-          [n.training?.title, n.training?.status]
+        ? // ADR-003: the course (or provider) and the status reached, from the catalog.
+          [n.training?.title, n.training && trainingStatus(n.training.status)]
         : [
             n.requirementTitle,
             n.audience === "technician"

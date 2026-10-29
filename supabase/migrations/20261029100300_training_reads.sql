@@ -405,14 +405,14 @@ begin
   end if;
   return query
   with items as (
-    select p.organization_id as id, 'provider'::text as kind, p.organization_id, p.updated_at, p.created_at,
+    select p.organization_id as id, 'provider'::text as kind, p.organization_id, p.updated_at, p.submitted_at,
            jsonb_build_object('name', p.name, 'description', p.description, 'website', p.website, 'status', p.status) as body
     from public.training_providers p where p.status = 'pending'
     union all
-    select c.id, 'course', c.organization_id, c.updated_at, c.created_at, app_private.training_course_json(c.id, true)
+    select c.id, 'course', c.organization_id, c.updated_at, c.submitted_at, app_private.training_course_json(c.id, true)
     from public.training_courses c where c.status = 'submitted'
     union all
-    select e.id, 'edition', e.organization_id, e.updated_at, e.created_at,
+    select e.id, 'edition', e.organization_id, e.updated_at, e.submitted_at,
            app_private.training_edition_json(e.id, true)
              || jsonb_build_object('courseTitle', c.title, 'courseStatus', c.status)
     from public.training_editions e join public.training_courses c on c.id = e.course_id
@@ -420,7 +420,7 @@ begin
   )
   select jsonb_build_object('id', i.id, 'kind', i.kind, 'organizationId', i.organization_id,
                             'organizationName', o.name, 'updatedAt', app_private.training_iso(i.updated_at),
-                            'submittedAt', app_private.training_iso(i.created_at), 'item', i.body),
+                            'submittedAt', app_private.training_iso(i.submitted_at), 'item', i.body),
          (count(*) over ())::integer
   from items i
   join public.organizations o on o.id = i.organization_id

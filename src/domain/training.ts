@@ -169,10 +169,7 @@ export const availableTrainingTransitions = (
   );
 
 /** i18n keys of the statuses (v1.9 TRAINING_LABELS), under `training.status.*`. */
-export const TRAINING_STATUS_LABEL_KEYS: Record<
-  TrainingRequestStatus | TrainingListingStatus | TrainingProviderStatus | TrainingOutcome,
-  string
-> = {
+export const TRAINING_STATUS_LABEL_KEYS = {
   draft: "draft",
   submitted: "submitted",
   published: "published",
@@ -193,7 +190,10 @@ export const TRAINING_STATUS_LABEL_KEYS: Record<
   completed: "completed",
   attended: "attended",
   no_show: "noShow",
-};
+} as const satisfies Record<
+  TrainingRequestStatus | TrainingListingStatus | TrainingProviderStatus | TrainingOutcome,
+  string
+>;
 
 /**
  * Stable reasons the API returns with a 409 (`reason`), one per server check. The SQL raises them as
@@ -217,17 +217,6 @@ export const TRAINING_CONFLICTS = [
 export type TrainingConflict = (typeof TRAINING_CONFLICTS)[number];
 
 // --- Money (bigint cents; no float, no payment) -------------------------------------------------
-
-/** v1.9 `trainingPrice`: the total in integer cents, or null for «a consultar» (quote). */
-export function priceCents(
-  edition: { priceUnit: TrainingPriceUnit; priceCents: number | null },
-  units = 1,
-): number | null {
-  if (edition.priceUnit === "quote" || edition.priceCents === null) return null;
-  if (!Number.isInteger(units) || units < 1)
-    throw new RangeError("units must be a positive integer");
-  return edition.priceCents * (edition.priceUnit === "person" ? 1 : units);
-}
 
 /** Cents → "1234.56" (locale formatting is the UI's business). */
 export const centsToDecimal = (cents: number) =>
@@ -302,20 +291,3 @@ export function editionIssue(edition: EditionShape, nowMs: number): EditionIssue
     return "DATES_PAST";
   return null;
 }
-
-/** First start / last end of an edition (sessions, or the self-paced deadline), as ISO or null. */
-export const editionStart = (e: EditionShape) =>
-  e.sessions.length > 0
-    ? [...e.sessions].sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt))[0]!.startsAt
-    : e.deadline;
-export const editionEnd = (e: EditionShape) =>
-  e.sessions.length > 0
-    ? [...e.sessions].sort((a, b) => Date.parse(b.endsAt) - Date.parse(a.endsAt))[0]!.endsAt
-    : e.deadline;
-
-/** Hour-based overlap of two half-open instant ranges (V19-028; the SQL uses `&&` on tstzrange). */
-export const spansOverlap = (a: SessionInput, b: SessionInput) =>
-  Date.parse(a.startsAt) < Date.parse(b.endsAt) && Date.parse(b.startsAt) < Date.parse(a.endsAt);
-
-/** v1.9 catalog search: accents and case do not matter (the SQL folds the same way, `fold_text`). */
-export const foldText = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();

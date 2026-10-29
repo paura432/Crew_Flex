@@ -4,13 +4,8 @@ import {
   availableTrainingTransitions,
   centsToDecimal,
   decimalToCents,
-  editionEnd,
   editionIssue,
-  editionStart,
   findTrainingTransition,
-  foldText,
-  priceCents,
-  spansOverlap,
   TERMINAL_TRAINING_REQUEST_STATUSES,
   TRAINING_CONFLICTS,
   TRAINING_REQUEST_STATUSES,
@@ -88,15 +83,8 @@ describe("training request transitions (ADR-003, v1.9 training.mjs)", () => {
   });
 });
 
+// The total (per person / per unit / quote) is the SQL's (tests/db/training.test.ts, offers).
 describe("prices in integer cents (OD-7: no float, no payment)", () => {
-  it("per person ignores units; per engine/module multiplies; quote is null", () => {
-    expect(priceCents({ priceUnit: "person", priceCents: 20000 }, 3)).toBe(20000);
-    expect(priceCents({ priceUnit: "engine", priceCents: 25000 }, 2)).toBe(50000);
-    expect(priceCents({ priceUnit: "module", priceCents: 999 }, 3)).toBe(2997);
-    expect(priceCents({ priceUnit: "quote", priceCents: null })).toBeNull();
-    expect(() => priceCents({ priceUnit: "engine", priceCents: 100 }, 0)).toThrow(RangeError);
-  });
-
   it("converts decimals both ways without floating point surprises", () => {
     expect(decimalToCents("250")).toBe(25000);
     expect(decimalToCents("0,1")).toBe(10);
@@ -109,10 +97,8 @@ describe("prices in integer cents (OD-7: no float, no payment)", () => {
 });
 
 describe("edition validation (v1.9 normalizeEdition)", () => {
-  it("accepts a live edition with future sessions and reports its bounds", () => {
+  it("accepts a live edition with future sessions", () => {
     expect(editionIssue(onsite, NOW)).toBeNull();
-    expect(editionStart(onsite)).toBe("2026-11-20T08:00:00Z");
-    expect(editionEnd(onsite)).toBe("2026-11-20T16:00:00Z");
   });
 
   it("refuses sessions that end before they start, exceed 24 h or overlap", () => {
@@ -150,34 +136,13 @@ describe("edition validation (v1.9 normalizeEdition)", () => {
     expect(editionIssue({ ...onsite, sessions: [] }, NOW)).toBe("SESSIONS_REQUIRED");
     expect(editionIssue({ ...onsite, sessions: [], provisional: true }, NOW)).toBeNull();
     expect(editionIssue(onsite, Date.parse("2026-11-21T00:00:00Z"))).toBe("DATES_PAST");
-    expect(
-      editionStart({
-        ...onsite,
-        mode: "selfpaced",
-        sessions: [],
-        deadline: "2027-01-31T23:00:00Z",
-      }),
-    ).toBe("2027-01-31T23:00:00Z");
   });
 
-  it("overlaps are hour-based: adjacent ranges do not touch", () => {
-    expect(
-      spansOverlap(
-        session("2026-11-20T08:00Z", "2026-11-20T16:00Z"),
-        session("2026-11-20T16:00Z", "2026-11-20T18:00Z"),
-      ),
-    ).toBe(false);
-    expect(
-      spansOverlap(
-        session("2026-11-20T08:00Z", "2026-11-20T16:00Z"),
-        session("2026-11-20T15:59Z", "2026-11-20T18:00Z"),
-      ),
-    ).toBe(true);
-  });
-
-  it("folds accents and case like the catalog query", () => {
-    expect(foldText("FACTORES HUMANOS · Formación Aérea")).toBe(
-      "factores humanos · formacion aerea",
-    );
+  it("overlaps are hour-based: adjacent sessions do not touch", () => {
+    const a = session("2026-11-20T08:00:00Z", "2026-11-20T16:00:00Z");
+    const issue = (b: ReturnType<typeof session>) =>
+      editionIssue({ ...onsite, sessions: [a, b] }, NOW);
+    expect(issue(session("2026-11-20T16:00:00Z", "2026-11-20T18:00:00Z"))).toBeNull();
+    expect(issue(session("2026-11-20T15:59:00Z", "2026-11-20T18:00:00Z"))).toBe("SESSIONS_OVERLAP");
   });
 });

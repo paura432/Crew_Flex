@@ -9,7 +9,7 @@
 // the Storage objects of the deleted documents are removed with the caller's token (own folder, no row
 // points at them any more). Whatever Storage leaves behind is a due `owner_delete` tombstone that
 // documents-maintenance purges.
-import { type Actor, requireActor } from "../_shared/auth.ts";
+import { requireActor, type Actor } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { logEvent } from "../_shared/logger.ts";
@@ -42,10 +42,7 @@ export function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-type Result<T> = {
-  data: T | null;
-  error: { code?: string; message?: string } | null;
-};
+type Result<T> = { data: T | null; error: { code?: string; message?: string } | null };
 
 function rows<T = ExportRecord>(result: Result<unknown>): T[] {
   if (result.error) throw fromDatabaseError(result.error);
@@ -191,10 +188,7 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
   }
 
   const stored = rows<{ storage_path: string }>(documentRows);
-  const documents = stored.map((raw) => ({
-    ...toDocument(raw),
-    storagePath: raw.storage_path,
-  }));
+  const documents = stored.map((raw) => ({ ...toDocument(raw), storagePath: raw.storage_path }));
   const embed = filesToEmbed(documents);
   const exported = await Promise.all(
     documents.map(async ({ storagePath, ...document }) => {
@@ -232,9 +226,7 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
 export const handler = createHandler(FN, {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
-    return {
-      data: { export: await exportFor(actor) } satisfies AccountExportResponse,
-    };
+    return { data: { export: await exportFor(actor) } satisfies AccountExportResponse };
   },
 
   DELETE: async (ctx) => {
@@ -263,11 +255,7 @@ export const handler = createHandler(FN, {
       });
     }
     return {
-      data: {
-        closed: true,
-        filesRemoved,
-        filesPending,
-      } satisfies AccountCloseResponse,
+      data: { closed: true, filesRemoved, filesPending } satisfies AccountCloseResponse,
     };
   },
 });

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";
 import { idempotencyKeySchema } from "@/lib/validation/idempotency";
-import { trainingWrite } from "@/lib/validation/training";
+import { KEYED_OPS, trainingWrite } from "@/lib/validation/training";
 import type { ApiErrorBody, ApiErrorCode } from "@/types/api";
 import { write } from "./api";
 
@@ -18,8 +18,6 @@ export type TrainingActionResult =
       fieldErrors?: FieldErrors;
       requestId?: string;
     };
-
-const KEYED = new Set(["request", "transition", "message"]);
 
 /**
  * The one server action of the training module: validates the same `trainingWrite` union the Edge Function parses,
@@ -38,7 +36,7 @@ export async function trainingWriteAction(
       fieldErrors: toFieldErrors(parsed.error),
     };
   let idempotencyKey: string | undefined;
-  if (KEYED.has(parsed.data.op)) {
+  if (KEYED_OPS.includes(parsed.data.op)) {
     const k = idempotencyKeySchema.safeParse(key);
     if (!k.success)
       return {

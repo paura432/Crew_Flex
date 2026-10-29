@@ -87,6 +87,8 @@ create table public.training_providers (
   status public.training_provider_status not null default 'pending',
   review_note text check (review_note is null or char_length(review_note) between 1 and 2000),
   reviewed_at timestamptz,
+  -- The last save (= submission, → pending): the review queue's «submitted» (not created_at).
+  submitted_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -118,10 +120,12 @@ create table public.training_courses (
   search_text text generated always as (app_private.fold_text(
     title || ' ' || description || ' ' || coalesce(aircraft, '') || ' ' || coalesce(engine, '') || ' '
     || coalesce(category, '') || ' ' || language)) stored,
+  submitted_at timestamptz, -- the last → submitted (resubmissions included); null until first submitted
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint training_courses_scope_reference check (scope = 'general' or approval_ref is not null),
-  constraint training_courses_status check (status <> 'cancelled')
+  constraint training_courses_status check (status <> 'cancelled'),
+  constraint training_courses_submitted_at check (status <> 'submitted' or submitted_at is not null)
 );
 alter table public.training_courses enable row level security;
 create index training_courses_org_idx on public.training_courses (organization_id, status);
@@ -152,12 +156,14 @@ create table public.training_editions (
   review_note text check (review_note is null or char_length(review_note) between 1 and 2000),
   reviewed_at timestamptz,
   cancel_reason text check (cancel_reason is null or char_length(cancel_reason) between 1 and 2000),
+  submitted_at timestamptz, -- the last → submitted (resubmissions included); null until first submitted
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint training_editions_price_by_unit check ((price_unit = 'quote') = (price_cents is null)),
   constraint training_editions_selfpaced_deadline
     check (mode <> 'selfpaced' or provisional or deadline is not null),
-  constraint training_editions_cancel_reason check ((status = 'cancelled') = (cancel_reason is not null))
+  constraint training_editions_cancel_reason check ((status = 'cancelled') = (cancel_reason is not null)),
+  constraint training_editions_submitted_at check (status <> 'submitted' or submitted_at is not null)
 );
 alter table public.training_editions enable row level security;
 create index training_editions_course_idx on public.training_editions (course_id, status);
@@ -274,7 +280,7 @@ create table public.training_request_events (
   foreign key (request_id, offer_id) references public.training_offers (request_id, id) on delete cascade
 );
 alter table public.training_request_events enable row level security;
-create index training_request_events_request_idx on public.training_request_events (request_id, seq);
+-- (request_id, seq) lookups use the UNIQUE constraint's index.
 
 -- The private conversation of one request (V19-027). Sender = a profile id (the professional or a
 -- provider member); readers are the participants only. Immutable.
@@ -329,7 +335,8 @@ create trigger training_editions_guard before insert or update on public.trainin
 
 -- No two sessions of one edition overlap (v1.9 «Las sesiones de una edición no pueden solaparse»).
 -- Statement-level AFTER INSERT trigger (one event per transition table): the RPC inserts the whole set
--- in one statement under the edition lock. Rows are never updated (the set is replaced).
+-- in one statement under the edition lock. Rows are never updated (the set is replaced; UPDATE is
+-- refused by `training_sessions_immutable`).
 create function public.guard_training_sessions()
 returns trigger
 language plpgsql
@@ -337,9 +344,6 @@ security definer
 set search_path = ''
 as $$
 begin
-  if tg_op = 'UPDATE' then
-    raise exception 'training_sessions rows are replaced, never updated' using errcode = '55000';
-  end if;
   if exists (
     select 1
     from public.training_sessions a

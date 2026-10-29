@@ -1,7 +1,14 @@
 // What the «Avisos» page and the shell show for a notice: the copy key and the one place it leads to,
 // the page intro and the unread badge. Pure (the page, the server action and the tests share it). The link is
 // derived from the notice the server returned, never from the browser.
+import { TRAINING_STATUS_LABEL_KEYS } from "@/domain/training";
 import type { Notice } from "@/types/api";
+
+/** A training notice's status as its `training.status.*` key; null for one the catalog does not name. */
+export const trainingStatusKey = (status: string) =>
+  Object.hasOwn(TRAINING_STATUS_LABEL_KEYS, status)
+    ? TRAINING_STATUS_LABEL_KEYS[status as keyof typeof TRAINING_STATUS_LABEL_KEYS]
+    : null;
 
 /** v1.8 «Actualización de candidatura»; the organization also learns of a NEW application (HIRE-07 #7). */
 export function noticeTitleKey(

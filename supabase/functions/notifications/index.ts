@@ -137,17 +137,9 @@ export const handler = createHandler("notifications", {
     const actor = await requireActor(ctx);
     const query = parseQuery(ctx.url, listNoticesQuery);
     if (query.view === "count") {
-      return {
-        data: {
-          unread: await unreadCount(actor),
-        } satisfies NoticeCountResponse,
-      };
+      return { data: { unread: await unreadCount(actor) } satisfies NoticeCountResponse };
     }
-    let page = await readPage(actor, {
-      p_id: null,
-      p_offset: query.offset,
-      p_limit: query.limit,
-    });
+    let page = await readPage(actor, { p_id: null, p_offset: query.offset, p_limit: query.limit });
     // A page past the end has no row to carry the total: ask the first page for it.
     if (page.notices.length === 0 && query.offset > 0) {
       page = {
@@ -156,10 +148,7 @@ export const handler = createHandler("notifications", {
       };
     }
     return {
-      data: {
-        ...page,
-        unread: await unreadCount(actor),
-      } satisfies NoticeListResponse,
+      data: { ...page, unread: await unreadCount(actor) } satisfies NoticeListResponse,
     };
   },
 
@@ -176,11 +165,7 @@ export const handler = createHandler("notifications", {
       ? ((await readPage(actor, { p_id: input.id, p_offset: 0, p_limit: 1 })).notices[0] ?? null)
       : null;
     return {
-      data: {
-        marked,
-        unread: await unreadCount(actor),
-        notice,
-      } satisfies NoticeReadResponse,
+      data: { marked, unread: await unreadCount(actor), notice } satisfies NoticeReadResponse,
     };
   },
 });

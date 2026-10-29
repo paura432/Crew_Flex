@@ -273,3 +273,6 @@ export const trainingWrite = z.discriminatedUnion("op", [
   z.strictObject({ op: z.literal("message"), input: messageInput }),
 ]);
 export type TrainingWrite = z.infer<typeof trainingWrite>;
+
+/** Which writes need an `Idempotency-Key` (creates and transitions; saves carry their own version). */
+export const KEYED_OPS: readonly TrainingWrite["op"][] = ["request", "transition", "message"];

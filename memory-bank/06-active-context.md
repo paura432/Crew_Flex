@@ -15,6 +15,14 @@ Branch `feat/v19-training` (from `4644630`): `628e1b5` ADR-003 + matrix. Batch V
 admin UI, requests/messages, calendar «F» + ICS + notices, QA). Earlier today: audit `79f30ef`, PR #1 merged by the owner →
 production `574fd4f`, Auth §0b applied, ORG-04 #22 `2feb357`, v1.9.0 delta diff `4644630`.
 
+P0 + cleanup after the independent ponytail audit (branch `v19/p0-cleanup`, merged into `feat/v19-training`, LOCAL):
+training notices translate the status (`trainingStatusKey`); review queue `submittedAt` = new `submitted_at` (last
+submission, CHECK non-null while submitted) instead of `created_at`; `TrainingReviewItem` typed per kind (`courseStatus`);
+dead TG_OP branch, duplicate index, 5 unused domain helpers, edge reflow removed; `KEYED_OPS` in
+`src/lib/validation/training.ts`. Kept on purpose: the `transition_application` copy in 100400 (a CFA17 trigger would raise
+CFA06 first; the copy is byte-identical + CFA17), `p_exclude_request`, the api.ts reads, notice ids. Training migrations
+were edited in place (never applied outside local): `db reset` locally after pulling them.
+
 Gotchas: Docker Desktop can drop mid-session (`HEALTH=000` → restart, re-run); after ANY local reset set the flags via
 STDIN to `db-owner-sql.sh` and restart `functions serve`; copy `.env.local`, `.env.e2e` and the functions' `.env` into a
 new worktree; the smoke step-17 console 409 (and once a 404 on sign-out) is a load flake (re-run once); prettier turns `X-*` into `X-_` in prose.
