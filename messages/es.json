@@ -2694,5 +2694,66 @@
       "previous": "Anterior",
       "next": "Siguiente"
     }
+  },
+  "training": {
+    "status": {
+      "draft": "Borrador",
+      "submitted": "En revisión",
+      "published": "Publicado",
+      "changes": "Cambios solicitados",
+      "suspended": "Suspendido",
+      "rejected": "Rechazado",
+      "cancelled": "Cancelado",
+      "received": "Recibida",
+      "waitlisted": "Lista de espera",
+      "offered": "Condiciones enviadas",
+      "accepted": "Aceptada por el alumno",
+      "confirmed": "Plaza confirmada",
+      "withdrawn": "Retirada",
+      "finished": "Finalizada",
+      "closed": "Cerrada",
+      "pending": "Pendiente de revisión",
+      "reviewed": "Proveedor revisado",
+      "completed": "Completado según el proveedor",
+      "attended": "Asistencia declarada",
+      "noShow": "Ausencia declarada"
+    },
+    "kind": {
+      "inquiry": "Consulta",
+      "seat": "Solicitud de plaza"
+    },
+    "family": {
+      "type": "Tipo y diferencias",
+      "engines": "Motores y run-up",
+      "safety": "Recurrente y seguridad",
+      "specialties": "Inspección, NDT y estructuras",
+      "systems": "Sistemas y competencias",
+      "quality": "Calidad y aeronavegabilidad",
+      "language": "Idiomas técnicos",
+      "basic": "Formación básica y módulos",
+      "other": "Otra formación aeronáutica"
+    },
+    "mode": {
+      "onsite": "Presencial",
+      "live": "Online en directo",
+      "mixed": "Mixta",
+      "selfpaced": "Autoestudio"
+    },
+    "priceUnit": {
+      "person": "por persona",
+      "engine": "por motor",
+      "module": "por módulo",
+      "quote": "a consultar"
+    },
+    "scope": {
+      "general": "Alcance general",
+      "part147": "Part-147 (declaración del proveedor)",
+      "direct": "Aprobación directa (declaración del proveedor)"
+    },
+    "element": {
+      "theory": "Teoría",
+      "practical": "Práctica",
+      "assessment": "Evaluación"
+    }
   }
 }

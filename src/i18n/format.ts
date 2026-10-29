@@ -65,6 +65,18 @@ export const formatEuro = (locale: Locale, value: number) =>
     maximumFractionDigits: 2,
   }).format(value);
 
+/**
+ * Informative amounts stored as integer cents in any of the training currencies (ADR-003; OD-7: nothing is charged):
+ * «1.250 €» / «€1,250», two decimals only when the amount has cents.
+ */
+export const formatMoneyCents = (locale: Locale, cents: number, currency: string) =>
+  new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "currency",
+    currency,
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+
 /** Hours and other plain numbers with the locale's decimal mark («7,5» / «7.5»). */
 export const formatNumber = (locale: Locale, value: number) =>
   new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 2 }).format(value);

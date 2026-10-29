@@ -2694,5 +2694,66 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "training": {
+    "status": {
+      "draft": "Draft",
+      "submitted": "In review",
+      "published": "Published",
+      "changes": "Changes requested",
+      "suspended": "Suspended",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled",
+      "received": "Received",
+      "waitlisted": "Waiting list",
+      "offered": "Terms sent",
+      "accepted": "Accepted by the student",
+      "confirmed": "Seat confirmed",
+      "withdrawn": "Withdrawn",
+      "finished": "Finished",
+      "closed": "Closed",
+      "pending": "Pending review",
+      "reviewed": "Provider reviewed",
+      "completed": "Completed according to the provider",
+      "attended": "Attendance declared",
+      "noShow": "Absence declared"
+    },
+    "kind": {
+      "inquiry": "Inquiry",
+      "seat": "Seat request"
+    },
+    "family": {
+      "type": "Type and differences",
+      "engines": "Engines and run-up",
+      "safety": "Recurrent and safety",
+      "specialties": "Inspection, NDT and structures",
+      "systems": "Systems and skills",
+      "quality": "Quality and airworthiness",
+      "language": "Technical languages",
+      "basic": "Basic training and modules",
+      "other": "Other aviation training"
+    },
+    "mode": {
+      "onsite": "On site",
+      "live": "Live online",
+      "mixed": "Blended",
+      "selfpaced": "Self-paced"
+    },
+    "priceUnit": {
+      "person": "per person",
+      "engine": "per engine",
+      "module": "per module",
+      "quote": "on request"
+    },
+    "scope": {
+      "general": "General scope",
+      "part147": "Part-147 (provider's declaration)",
+      "direct": "Direct approval (provider's declaration)"
+    },
+    "element": {
+      "theory": "Theory",
+      "practical": "Practical",
+      "assessment": "Assessment"
+    }
   }
 }
