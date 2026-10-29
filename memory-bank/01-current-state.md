@@ -1,6 +1,6 @@
 # 01 · Current state
 
-**As of 2026-10-28: the production frontend is still `origin/main` = `51c835a`, on the release-1 backend; the local branch `feat/v18-html-parity` (`2beec2d` + this commit, 325 commits over main, 42 migrations not applied remotely, 15 functions not deployed) is deployed nowhere — see `docs/qa/ROLLOUT_PLAN_V18_LOOP.md`.** `main` was
+**As of 2026-10-28: the production frontend is still `origin/main` = `51c835a`, on the release-1 backend; the local branch `feat/v18-html-parity` (`0755ff7`, 327 commits over main, 62 migrations of which 47 are not in production — 42 over `main` plus `main`'s 5 wallet/close files never applied (re-counted 2026-10-29) —, 15 functions not deployed) is deployed nowhere — see `docs/qa/ROLLOUT_PLAN_V18_LOOP.md`.** `main` was
 pushed from this clone on 2026-10-20 17:32 +0200 (reflog of `origin/main`, previous value `65df3b9`); GitHub's commit
 status for `51c835a` is `Vercel: success` at 15:32:56 UTC (re-checked 2026-10-21, read-only `gh api`). The backend is
 unchanged: **15 migrations** and **8 Edge Functions** from release 1 (`65df3b9`). Read from the code, this mix gives a
