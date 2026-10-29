@@ -9,7 +9,7 @@
 // the Storage objects of the deleted documents are removed with the caller's token (own folder, no row
 // points at them any more). Whatever Storage leaves behind is a due `owner_delete` tombstone that
 // documents-maintenance purges.
-import { requireActor, type Actor } from "../_shared/auth.ts";
+import { type Actor, requireActor } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { logEvent } from "../_shared/logger.ts";
@@ -42,7 +42,10 @@ export function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-type Result<T> = { data: T | null; error: { code?: string; message?: string } | null };
+type Result<T> = {
+  data: T | null;
+  error: { code?: string; message?: string } | null;
+};
 
 function rows<T = ExportRecord>(result: Result<unknown>): T[] {
   if (result.error) throw fromDatabaseError(result.error);
@@ -56,36 +59,43 @@ function one<T = ExportRecord>(result: Result<unknown>): T | null {
 
 export async function exportFor(actor: Actor): Promise<AccountExport> {
   const db = actor.client;
-  const [profileResult, memberships, technician, created, documentRows] = await Promise.all([
-    db
-      .from("profiles")
-      .select("id, display_name, account_type, platform_role, preferred_locale, created_at")
-      .eq("id", actor.id)
-      .maybeSingle(),
-    db
-      .from("organization_members")
-      .select("role, created_at, organizations ( id, name, type, country )")
-      .eq("profile_id", actor.id),
-    db
-      .from("technician_profiles")
-      .select(
-        "base_location, mobility, years_experience, current_status, visibility, primary_category, categories, aircraft, engines, skills, english_level, own_tools, base_country, work_permits, general_restrictions, created_at, updated_at",
-      )
-      .eq("profile_id", actor.id)
-      .maybeSingle(),
-    db
-      .from("work_requirements")
-      .select(
-        "id, organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_at",
-      )
-      .eq("created_by", actor.id)
-      .order("created_at"),
-    db
-      .from("professional_documents")
-      .select(DOCUMENT_COLUMNS)
-      .eq("owner_id", actor.id)
-      .order("created_at"),
-  ]);
+  const [profileResult, memberships, technician, created, documentRows, training] =
+    await Promise.all([
+      db
+        .from("profiles")
+        .select("id, display_name, account_type, platform_role, preferred_locale, created_at")
+        .eq("id", actor.id)
+        .maybeSingle(),
+      db
+        .from("organization_members")
+        .select("role, created_at, organizations ( id, name, type, country )")
+        .eq("profile_id", actor.id),
+      db
+        .from("technician_profiles")
+        .select(
+          "base_location, mobility, years_experience, current_status, visibility, primary_category, categories, aircraft, engines, skills, english_level, own_tools, base_country, work_permits, general_restrictions, created_at, updated_at",
+        )
+        .eq("profile_id", actor.id)
+        .maybeSingle(),
+      db
+        .from("work_requirements")
+        .select(
+          "id, organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_at",
+        )
+        .eq("created_by", actor.id)
+        .order("created_at"),
+      db
+        .from("professional_documents")
+        .select(DOCUMENT_COLUMNS)
+        .eq("owner_id", actor.id)
+        .order("created_at"),
+      // Training (ADR-003, V19-037): own requests with offers, history and messages, and favourites.
+      db.rpc("export_my_training"),
+    ]);
+  const trainingExport = one<{ requests: ExportRecord[]; favorites: ExportRecord[] }>(training) ?? {
+    requests: [],
+    favorites: [],
+  };
   const profile = one<{
     id: string;
     display_name: string;
@@ -181,7 +191,10 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
   }
 
   const stored = rows<{ storage_path: string }>(documentRows);
-  const documents = stored.map((raw) => ({ ...toDocument(raw), storagePath: raw.storage_path }));
+  const documents = stored.map((raw) => ({
+    ...toDocument(raw),
+    storagePath: raw.storage_path,
+  }));
   const embed = filesToEmbed(documents);
   const exported = await Promise.all(
     documents.map(async ({ storagePath, ...document }) => {
@@ -210,6 +223,7 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
     memberships: rows(memberships),
     professional,
     requirementsCreated: rows(created),
+    training: trainingExport,
     documents: exported,
     filesOmitted: exported.filter((d) => d.contentBase64 === null).length,
   };
@@ -218,7 +232,9 @@ export async function exportFor(actor: Actor): Promise<AccountExport> {
 export const handler = createHandler(FN, {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
-    return { data: { export: await exportFor(actor) } satisfies AccountExportResponse };
+    return {
+      data: { export: await exportFor(actor) } satisfies AccountExportResponse,
+    };
   },
 
   DELETE: async (ctx) => {
@@ -247,7 +263,11 @@ export const handler = createHandler(FN, {
       });
     }
     return {
-      data: { closed: true, filesRemoved, filesPending } satisfies AccountCloseResponse,
+      data: {
+        closed: true,
+        filesRemoved,
+        filesPending,
+      } satisfies AccountCloseResponse,
     };
   },
 });

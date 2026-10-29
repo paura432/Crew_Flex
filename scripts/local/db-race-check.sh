@@ -3,7 +3,7 @@
 # LOCAL Docker stack only: talks to the container `supabase_db_crew-flex` with `docker exec psql`
 # (never a URL), after the same local-target check as scripts/local/sb-local.sh. Every scenario
 # restores the rows it changed, so the deterministic seed stays as it was.
-# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|outreach|recruiter|all]   (default: all)
+# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|outreach|recruiter|training|all]   (default: all)
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
 CONTAINER=supabase_db_crew-flex
@@ -586,6 +586,86 @@ outreach_flood() {
   race_cleanup "${needs[@]}"
 }
 
+# --- Training seats (ADR-003, migrations 20261029100100…100200): the edition row lock -----------------
+FOXTROT=00000000-0000-4000-8000-000000000023
+training_ready() {
+  [ "$(echo "select to_regclass('public.training_requests') is not null;" | psql_owner)" = t ] || {
+    fail "migration 20261029100100 is not applied to the local stack (training scenario not run)"; return 1; }
+  [ "$(echo "select public.is_feature_enabled('training');" | psql_owner)" = t ] || {
+    fail "the training flag is off locally (insert app_private.feature_flags('training', true) first)"; return 1; }
+}
+# Owner fixture: Demo Aero Services Lisbon as a reviewed provider (created when missing: `migration up` does
+# not re-seed), a published course with one published edition of capacity $1 and one future session;
+# prints "<course id>|<edition id>". Delta, Echo and Foxtrot are not members of that organization.
+training_edition() {
+  psql_owner <<SQL | tail -1
+with p as (
+  insert into public.training_providers (organization_id, name, description, status)
+  select id, 'Race provider', 'Race fixture', 'reviewed' from public.organizations where name = 'Demo Aero Services Lisbon'
+  on conflict (organization_id) do nothing),
+c as (
+  insert into public.training_courses (organization_id, title, family, description, language, certificate_info, issuer, status)
+  select id, 'Race training', 'safety', 'Race fixture', 'es', 'Certificado del proveedor', 'Demo', 'published'
+  from public.organizations where name = 'Demo Aero Services Lisbon' returning id, organization_id),
+e as (
+  insert into public.training_editions (course_id, organization_id, mode, capacity, currency, price_unit, price_cents, price_includes, policy, time_zone, status)
+  select c.id, c.organization_id, 'onsite', $1, 'EUR', 'person', 10000, 'IVA incluido', 'Sin cambios', 'Europe/Madrid', 'published' from c returning id),
+s as (
+  insert into public.training_sessions (edition_id, span)
+  select e.id, tstzrange(date_trunc('day', now()) + interval '40 days' + interval '8 hours',
+                         date_trunc('day', now()) + interval '40 days' + interval '16 hours', '[)') from e)
+select c.id || '|' || e.id from c, e;
+SQL
+}
+# Owner fixture: an `accepted` seat request of professional $3 on course $1 / edition $2 with offer v1;
+# prints "<request id>|<updated_at>".
+training_accepted() {
+  psql_owner <<SQL | tail -1
+with r as (
+  insert into public.training_requests (course_id, edition_id, organization_id, professional_id, kind, status, applicant_name, current_offer_id, accepted_offer_id)
+  select '$1', '$2', e.organization_id, '$3', 'seat', 'accepted', 'Race applicant', '$4', '$4'
+  from public.training_editions e where e.id = '$2' returning id, updated_at),
+o as (
+  insert into public.training_offers (id, request_id, version, terms, total_cents, currency, course_updated_at, edition_updated_at)
+  select '$4', r.id, 1, '{}'::jsonb, 10000, 'EUR', c.updated_at, e.updated_at
+  from r, public.training_courses c, public.training_editions e where c.id = '$1' and e.id = '$2'),
+ev as (
+  insert into public.training_request_events (request_id, seq, from_status, to_status, actor)
+  select r.id, 1, null, 'received', 'professional' from r)
+select r.id || '|' || to_char(r.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') from r;
+SQL
+}
+training_confirm_sql() { # "<request id>|<version>" → the confirmation statement
+  printf "select status from public.transition_training_request('%s', 'confirmed', '%s', gen_random_uuid());" "${1%%|*}" "${1##*|}"
+}
+training_capacity() {
+  echo "== training: three confirmations at once for an edition of capacity 2 — exactly two win"
+  training_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  local fixture course edition a b c
+  fixture="$(training_edition 2)"; course="${fixture%%|*}"; edition="${fixture##*|}"
+  a="$(training_accepted "$course" "$edition" "$DELTA" "$(new_uuid)")"
+  b="$(training_accepted "$course" "$edition" "$ECHO" "$(new_uuid)")"
+  c="$(training_accepted "$course" "$edition" "$FOXTROT" "$(new_uuid)")"
+  printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$(training_confirm_sql "$a")" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+  local pa=$!
+  sleep 0.4
+  local pids=()
+  for r in "$b" "$c"; do
+    printf '%s\n' "$(training_confirm_sql "$r")" | psql_as "$ADMIN_OTHER" >>"$OUT_B" &
+    pids+=($!)
+  done
+  wait "$pa" "${pids[@]}" || true
+  local confirmed refused audits
+  confirmed="$(echo "select count(*) from public.training_requests where edition_id = '$edition' and status = 'confirmed';" | psql_owner)"
+  refused="$(grep -c 'no seats left' "$OUT_B" || true)"
+  audits="$(echo "select count(*) from public.audit_events where action = 'training.request_confirmed' and metadata ->> 'edition_id' = '$edition';" | psql_owner)"
+  if [ "$confirmed" = 2 ] && [ "$refused" = 1 ] && [ "$audits" = 2 ]; then
+    pass "the edition lock serialised the three; two confirmed, the third got CAPACITY_REACHED; 2 audit rows"
+  else fail "confirmed=$confirmed refused=$refused audits=$audits"; cat "$OUT_A" "$OUT_B"; fi
+  echo "delete from public.training_courses where id = '$course'; delete from public.training_providers where name = 'Race provider';" | psql_owner >/dev/null
+}
+
 case "${1:-all}" in
   e3) e3; e3_simultaneous ;;
   idempotency) idempotency ;;
@@ -596,9 +676,10 @@ case "${1:-all}" in
   wallet-trash) wallet_trash ;;
   recruiter) recruiter ;;
   outreach) outreach_twice; outreach_flood ;;
+  training) training_capacity ;;
   all) e3; e3_simultaneous; idempotency; review; availability
        applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash
-       outreach_twice; outreach_flood; recruiter ;;
+       outreach_twice; outreach_flood; recruiter; training_capacity ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"

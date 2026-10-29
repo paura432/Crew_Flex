@@ -29,12 +29,32 @@ import type {
   Skill,
   TypeRating,
 } from "../domain/passport.ts";
-import type { NoticeAudience, NoticeKind, NoticeRequirementStatus } from "../domain/notices.ts";
+import type {
+  NoticeAudience,
+  NoticeKind,
+  NoticeRequirementStatus,
+  TrainingNoticeSubject,
+} from "../domain/notices.ts";
 import type { DirectoryConflict } from "../domain/directory.ts";
 import type { CandidateDeclarations, CandidatePool, MatchResult } from "../domain/matching.ts";
 import type { NoticePreferences, OutreachConflict, OutreachUrgency } from "../domain/outreach.ts";
 import type { ProfessionalProfile } from "../domain/professional.ts";
 import type { RecruiterConflict, RepresentationStatus } from "../domain/recruiter.ts";
+import type {
+  TrainingConflict,
+  TrainingCurrency,
+  TrainingFamily,
+  TrainingListingStatus,
+  TrainingMode,
+  TrainingOutcome,
+  TrainingPriceUnit,
+  TrainingProviderStatus,
+  TrainingRequestKind,
+  TrainingRequestStatus,
+  TrainingReviewKind,
+  TrainingScope,
+  TrainingSessionElement,
+} from "../domain/training.ts";
 import type { Locale } from "../i18n/config.ts";
 import type {
   QualificationCategory,
@@ -693,10 +713,11 @@ export interface Notice {
   audience: NoticeAudience;
   createdAt: string;
   readAt: string | null;
-  /** Null only for an `outreach` notice, which is about a requirement (v2-17). */
+  /** Null for an `outreach` notice (about a requirement, v2-17) and for a `training` one. */
   applicationId: string | null;
-  requirementId: string;
-  requirementTitle: string;
+  /** Null for a `training` notice (ADR-003). */
+  requirementId: string | null;
+  requirementTitle: string | null;
   /** Technician side only. */
   organizationName: string | null;
   /** `application`: the status the application reached (`received` = a new application). */
@@ -707,6 +728,21 @@ export interface Notice {
   candidate: { name: string | null; ref: string | null } | null;
   /** `outreach`: the urgency it was distributed for («Urgente» / «AOG»); null otherwise. */
   outreachUrgency: OutreachUrgency | null;
+  /** `training` (ADR-003, V19-031): what it is about and the status reached; null for other kinds. */
+  training: TrainingNotice | null;
+}
+
+/** A `training` notice: a request event (either side) or a review decision (provider side). */
+export interface TrainingNotice {
+  subject: TrainingNoticeSubject;
+  requestId: string | null;
+  courseId: string | null;
+  editionId: string | null;
+  organizationId: string | null;
+  /** The status reached (request, listing or provider status, by `subject`). */
+  status: string;
+  /** Course title, or the provider name for a provider review. */
+  title: string | null;
 }
 
 export interface NoticeListResponse {
@@ -773,6 +809,8 @@ export interface AccountExport {
     /** «Avisos de oportunidades» (PKG outreach, N-10); null while never saved. */
     noticePreferences: ExportRecord | null;
   } | null;
+  /** Own training requests (offers, history, messages) and favourites (`export_my_training`, V19-037). */
+  training: { requests: ExportRecord[]; favorites: ExportRecord[] };
   requirementsCreated: ExportRecord[];
   documents: ExportedDocument[];
   /** Documents listed without their bytes (over the size cap): download them from «Documentos». */
@@ -885,3 +923,252 @@ export interface DirectorySearchResponse {
   page: number;
   pageSize: number;
 }
+
+// --- Training «Formación» (ADR-003, LOCAL 20261029100000…100400; BR-30; V19-008…037) ---------------------------
+
+/** A live session as both sides read it (instants; shown in the edition's zone). */
+export interface TrainingSession {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  location: string | null;
+  element: TrainingSessionElement;
+}
+
+/** One edition / convocatoria. `remaining` = capacity − confirmed seats (the catalog shows it, as v1.9). */
+export interface TrainingEdition {
+  id: string;
+  courseId: string;
+  mode: TrainingMode;
+  provisional: boolean;
+  deadline: string | null;
+  capacity: number;
+  remaining: number;
+  city: string | null;
+  country: string | null;
+  currency: TrainingCurrency;
+  priceUnit: TrainingPriceUnit;
+  /** Per unit, integer cents; null for `quote`. */
+  priceCents: number | null;
+  priceIncludes: string;
+  policy: string;
+  timeZone: string;
+  status: TrainingListingStatus;
+  startsAt: string | null;
+  endsAt: string | null;
+  sessions: TrainingSession[];
+  createdAt: string;
+  updatedAt: string;
+  /** Provider / admin reads only. */
+  reviewNote?: string | null;
+  cancelReason?: string | null;
+  reviewedAt?: string | null;
+}
+
+export interface TrainingCourse {
+  id: string;
+  organizationId: string;
+  title: string;
+  family: TrainingFamily;
+  description: string;
+  aircraft: string | null;
+  engine: string | null;
+  category: string | null;
+  language: string;
+  prerequisites: string | null;
+  syllabus: string | null;
+  certificateInfo: string;
+  issuer: string;
+  scope: TrainingScope;
+  approvalRef: string | null;
+  status: TrainingListingStatus;
+  providerName: string;
+  providerStatus: TrainingProviderStatus;
+  createdAt: string;
+  updatedAt: string;
+  /** Provider / admin reads only. */
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
+}
+
+/** GET `training?view=catalog` (signed-in users; 12 per page). Only published editions are listed. */
+export interface TrainingCatalogResponse {
+  courses: (TrainingCourse & { editions: TrainingEdition[] })[];
+  total: number;
+}
+
+/** GET `training?view=course&id=`: the live course (or any state for its provider / admins). */
+export interface TrainingCourseResponse {
+  course: TrainingCourse & {
+    editions: TrainingEdition[];
+    provider: { name: string; description: string; website: string | null } | null;
+    favorite: boolean;
+    myRequests: {
+      id: string;
+      kind: TrainingRequestKind;
+      status: TrainingRequestStatus;
+      editionId: string | null;
+    }[];
+  };
+}
+
+export interface TrainingFavoritesResponse {
+  courses: TrainingCourse[];
+}
+
+/** An immutable offer version (R-08): the frozen terms the professional accepts. */
+export interface TrainingOffer {
+  id: string;
+  version: number;
+  terms: Record<string, unknown>;
+  totalCents: number | null;
+  currency: TrainingCurrency;
+  createdAt: string;
+}
+
+export interface TrainingRequestEvent {
+  from: TrainingRequestStatus | null;
+  to: TrainingRequestStatus;
+  actor: "professional" | "provider" | "system";
+  at: string;
+  offerVersion: number | null;
+}
+
+/** One request as both parties read it. No e-mail, no profile id of the other party (N-5). */
+export interface TrainingRequest {
+  id: string;
+  kind: TrainingRequestKind;
+  status: TrainingRequestStatus;
+  courseId: string;
+  editionId: string | null;
+  organizationId: string;
+  applicantName: string;
+  note: string | null;
+  units: number;
+  reason: string | null;
+  outcome: TrainingOutcome | null;
+  currentOffer: TrainingOffer | null;
+  acceptedOfferId: string | null;
+  history: TrainingRequestEvent[];
+  courseTitle: string;
+  providerName: string;
+  edition: TrainingEdition | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrainingRequestsResponse {
+  requests: TrainingRequest[];
+}
+
+/** GET `training?view=inbox&organizationId=` (admin/manager), paginated. */
+export interface TrainingInboxResponse {
+  requests: TrainingRequest[];
+  total: number;
+}
+
+export interface TrainingProvider {
+  organizationId: string;
+  name: string;
+  description: string;
+  website: string | null;
+  status: TrainingProviderStatus;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** GET `training?view=workspace&organizationId=`: the provider's own profile, courses and editions. */
+export interface TrainingWorkspaceResponse {
+  provider: TrainingProvider | null;
+  courses: (TrainingCourse & { editions: TrainingEdition[] })[];
+}
+
+/** GET `training?view=review-queue` (platform admin): what awaits a decision, oldest first. */
+export interface TrainingReviewItem {
+  id: string;
+  kind: TrainingReviewKind;
+  organizationId: string;
+  organizationName: string;
+  updatedAt: string;
+  submittedAt: string;
+  item: Record<string, unknown>;
+}
+
+export interface TrainingReviewQueueResponse {
+  items: TrainingReviewItem[];
+  total: number;
+}
+
+export interface TrainingMessage {
+  id: string;
+  senderSide: "professional" | "provider";
+  mine: boolean;
+  body: string;
+  createdAt: string;
+}
+
+export interface TrainingMessagesResponse {
+  messages: TrainingMessage[];
+}
+
+/** GET `training?view=sessions&from=&to=`: the caller's confirmed sessions (calendar «F», iCalendar). */
+export interface TrainingCommitment {
+  requestId: string;
+  editionId: string;
+  sessionId: string;
+  courseTitle: string;
+  providerName: string;
+  startsAt: string;
+  endsAt: string;
+  timeZone: string;
+  location: string | null;
+  element: TrainingSessionElement;
+  mode: TrainingMode;
+  city: string | null;
+  status: TrainingRequestStatus;
+}
+
+export interface TrainingSessionsResponse {
+  sessions: TrainingCommitment[];
+}
+
+/** POST `training` results, by `op`. Writes echo the row's new version (`updatedAt`). */
+export interface TrainingSavedResponse {
+  id: string;
+  status: string;
+  updatedAt: string;
+  /** `op: edition` only. */
+  sessionCount?: number;
+  /** `op: listing` cancel only. */
+  requestsCancelled?: number;
+}
+
+export interface TrainingFavoriteResponse {
+  courseId: string;
+  saved: boolean;
+}
+
+export interface TrainingRequestResponse {
+  request: TrainingRequest;
+  replayed: boolean;
+}
+
+export interface TrainingTransitionResponse {
+  transition: {
+    requestId: string;
+    status: TrainingRequestStatus;
+    updatedAt: string;
+    offerId: string | null;
+  };
+  replayed: boolean;
+}
+
+export interface TrainingMessageResponse {
+  id: string;
+  replayed: boolean;
+}
+
+/** `reason` of a 409 from the training RPCs (`TRAINING_CONFLICTS`). */
+export type TrainingConflictReason = TrainingConflict;

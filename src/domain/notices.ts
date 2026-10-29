@@ -5,9 +5,11 @@ import type { RequirementStatus } from "./work-requirement.ts";
 
 /**
  * `application`: an application reached a status · `requirement`: its requirement was paused/resumed/closed ·
- * `outreach`: «Distribuir aviso Urgente / AOG» chose the reader (v2-17, migration 20261024400200, BR-26).
+ * `outreach`: «Distribuir aviso Urgente / AOG» chose the reader (v2-17, migration 20261024400200, BR-26) ·
+ * `training`: a training request event for the other party, or a review decision for the provider's
+ * admins/managers (ADR-003, migration 20261029100400, BR-30).
  */
-export const NOTICE_KINDS = ["application", "requirement", "outreach"] as const;
+export const NOTICE_KINDS = ["application", "requirement", "outreach", "training"] as const;
 export type NoticeKind = (typeof NOTICE_KINDS)[number];
 
 /**
@@ -25,3 +27,7 @@ export const NOTICE_REQUIREMENT_STATUSES = [
   "closed",
 ] as const satisfies readonly RequirementStatus[];
 export type NoticeRequirementStatus = (typeof NOTICE_REQUIREMENT_STATUSES)[number];
+
+/** What a `training` notice is about (`get_my_notifications.training_subject`). */
+export const TRAINING_NOTICE_SUBJECTS = ["request", "course", "edition", "provider"] as const;
+export type TrainingNoticeSubject = (typeof TRAINING_NOTICE_SUBJECTS)[number];

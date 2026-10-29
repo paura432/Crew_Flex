@@ -11,6 +11,7 @@ import {
 import { DIRECTORY_CONFLICTS, type DirectoryConflict } from "../../../src/domain/directory.ts";
 import { OUTREACH_CONFLICTS, type OutreachConflict } from "../../../src/domain/outreach.ts";
 import { RECRUITER_CONFLICTS, type RecruiterConflict } from "../../../src/domain/recruiter.ts";
+import { TRAINING_CONFLICTS, type TrainingConflict } from "../../../src/domain/training.ts";
 
 /** Every `reason` a 409 can carry (one family per SQLSTATE prefix). */
 export type ConflictReason =
@@ -18,7 +19,8 @@ export type ConflictReason =
   | AvailabilityConflict
   | OutreachConflict
   | RecruiterConflict
-  | DirectoryConflict;
+  | DirectoryConflict
+  | TrainingConflict;
 
 const CONFLICT_FAMILIES: Record<string, readonly ConflictReason[]> = {
   A: APPLICATION_CONFLICTS,
@@ -26,6 +28,7 @@ const CONFLICT_FAMILIES: Record<string, readonly ConflictReason[]> = {
   O: OUTREACH_CONFLICTS,
   R: RECRUITER_CONFLICTS,
   D: DIRECTORY_CONFLICTS,
+  T: TRAINING_CONFLICTS,
 };
 
 export const ERROR_STATUS = {
@@ -93,11 +96,12 @@ interface PostgrestLikeError {
  * (20261022130300, 20261024100000; CFA14/CFA15 from the applications trigger of 20261023900200; CFA16 from
  * 20261024800000, the professional's block), `CFV01`… those of
  * `AVAILABILITY_CONFLICTS` (20261023300000), `CFO01`… those of `OUTREACH_CONFLICTS` (20261024400200), `CFR01`…
- * those of `RECRUITER_CONFLICTS` (20261024500100), `CFD01`… those of `DIRECTORY_CONFLICTS` (20261024700000).
+ * those of `RECRUITER_CONFLICTS` (20261024500100), `CFD01`… those of `DIRECTORY_CONFLICTS` (20261024700000), `CFT01`… those of `TRAINING_CONFLICTS`
+ * (20261029100200; CFA17 = the training overlap on an employment confirmation, 20261029100400).
  * Custom codes, never `40001` (PostgREST retries that one forever).
  */
 export function conflictReason(sqlstate: string | undefined): ConflictReason | undefined {
-  const match = /^CF([AVORD])(\d{2})$/.exec(sqlstate ?? "");
+  const match = /^CF([AVORDT])(\d{2})$/.exec(sqlstate ?? "");
   if (!match) return undefined;
   return CONFLICT_FAMILIES[match[1]!]?.[Number(match[2]) - 1];
 }
@@ -140,7 +144,9 @@ export function fromDatabaseError(error: PostgrestLikeError): ApiError {
     case "PGRST116": // no rows for single()
       return new ApiError("NOT_FOUND");
     default:
-      if (error.message?.includes("row-level security")) return new ApiError("FORBIDDEN");
+      if (error.message?.includes("row-level security")) {
+        return new ApiError("FORBIDDEN");
+      }
       return new ApiError("INTERNAL_ERROR");
   }
 }

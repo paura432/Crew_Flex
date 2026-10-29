@@ -19,6 +19,7 @@ const notice = (over: Partial<Notice>): Notice => ({
   requirementStatus: null,
   candidate: null,
   outreachUrgency: null,
+  training: null,
   ...over,
 });
 
