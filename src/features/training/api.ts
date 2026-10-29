@@ -31,7 +31,8 @@ const read = <T>(view: TrainingQuery["view"], params: Record<string, unknown> = 
     ),
   });
 
-const write = <T>(body: TrainingWrite, idempotencyKey?: string) =>
+/** Any write op (the generic server action validates `trainingWrite` first). */
+export const write = <T>(body: TrainingWrite, idempotencyKey?: string) =>
   invokeEdgeFunction<T>("training", {
     method: "POST",
     body,

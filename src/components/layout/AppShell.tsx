@@ -6,7 +6,11 @@ import { getUnreadNoticeCount } from "@/features/notices/api";
 import { NoticeBell } from "@/features/notices/components/NoticeBell";
 import { unreadBadge } from "@/features/notices/view";
 import { isStaffingAgency } from "@/domain/recruiter";
-import { canOpenQualificationReview, isDocumentWalletEnabled } from "@/server/feature-flags";
+import {
+  canOpenQualificationReview,
+  isDocumentWalletEnabled,
+  isTrainingEnabled,
+} from "@/server/feature-flags";
 import { primaryMembership, type SessionActor } from "@/server/session";
 import { accountSummaryKeys } from "./account-summary";
 import { Brand } from "./Brand";
@@ -18,15 +22,17 @@ import { switcherViews, type WorkspaceView } from "./views";
 import { ViewSections, ViewSwitcher, type NavSection } from "./ViewSwitcher";
 
 export async function AppShell({ actor, children }: { actor: SessionActor; children: ReactNode }) {
-  const [t, tNav, tDomain, tNotices, tShell, walletEnabled, unreadResult] = await Promise.all([
-    getTranslations("common"),
-    getTranslations("nav"),
-    getTranslations("domain"),
-    getTranslations("notices"),
-    getTranslations("shell"),
-    actor.profile.account_type === "professional" ? isDocumentWalletEnabled() : false,
-    getUnreadNoticeCount(),
-  ]);
+  const [t, tNav, tDomain, tNotices, tShell, walletEnabled, trainingEnabled, unreadResult] =
+    await Promise.all([
+      getTranslations("common"),
+      getTranslations("nav"),
+      getTranslations("domain"),
+      getTranslations("notices"),
+      getTranslations("shell"),
+      actor.profile.account_type === "professional" ? isDocumentWalletEnabled() : false,
+      isTrainingEnabled(),
+      getUnreadNoticeCount(),
+    ]);
   // v2-18: unknown when the service does not answer — no badge, the page says why. Layouts do not
   // re-render on navigation: the count is fresh on load and after any action (revalidatePath).
   const unread = unreadResult.ok ? unreadResult.data.unread : null;
@@ -45,6 +51,12 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/organization/applications", label: tNav("organizationApplications") },
     { href: "/app/organization/network", label: tNav("network") },
     { href: "/app/organization/workforce", label: tNav("workforce") },
+    // v1.9 «Formación» (V19-001/002, ADR-003): the catalog for every member; the provider workspace for admin/manager
+    // (the page and the RPCs re-check the role).
+    ...(trainingEnabled ? [{ href: "/app/training", label: tNav("training") }] : []),
+    ...(trainingEnabled && ["admin", "manager"].includes(primaryMembership(actor)?.role ?? "")
+      ? [{ href: "/app/organization/training", label: tNav("trainingProvider") }]
+      : []),
     // v1.8 «Organización» (SH-03 #22, OD-5 default): data and review state, every member reads it
     { href: "/app/organization/settings", label: tNav("organizationProfile") },
   ];
@@ -58,6 +70,8 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     { href: "/app/professional/applications", label: tNav("applications") },
     ...(walletEnabled ? [{ href: "/app/professional/documents", label: tNav("documents") }] : []),
     { href: "/app/professional/logbook", label: tNav("logbook") },
+    // v1.9 «Formación» (V19-001): the catalog and the professional's own requests.
+    ...(trainingEnabled ? [{ href: "/app/training", label: tNav("training") }] : []),
   ];
   const accountNav: NavItem[] = [
     // v1.8 connected «Avisos» for every account type (SH-03 #10), with the unread count.
@@ -83,6 +97,7 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
     // Agencies' represented clients awaiting the evidence (D-12 provisional, T-130).
     { href: "/app/admin/representations", label: tNav("representations") },
     { href: "/app/admin/audit", label: tNav("audit") },
+    ...(trainingEnabled ? [{ href: "/app/admin/training", label: tNav("trainingReview") }] : []),
   ];
 
   const sections: NavSection[] = [

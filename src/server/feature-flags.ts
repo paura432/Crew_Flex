@@ -26,10 +26,18 @@ export function canOpenQualificationReview(profile: { platform_role: string }): 
  * turns `/app/professional/documents` into a 404; the real barrier is the database (RPC, table and
  * Storage insert policies) and the Edge Function, which check the same flag on their own.
  */
-export async function isDocumentWalletEnabled(): Promise<boolean> {
+export const isDocumentWalletEnabled = () => isFeatureEnabled("document_wallet");
+
+/**
+ * Training «Formación» (ADR-003 decision 9): same mechanism as the wallet, row `app_private.feature_flags('training')`.
+ * Hides the navigation entries and turns every training page into a 404; the RPCs refuse on their own (0A000).
+ */
+export const isTrainingEnabled = () => isFeatureEnabled("training");
+
+async function isFeatureEnabled(name: "document_wallet" | "training"): Promise<boolean> {
   try {
     const supabase = await createServerSupabase();
-    const { data, error } = await supabase.rpc("is_feature_enabled", { p_name: "document_wallet" });
+    const { data, error } = await supabase.rpc("is_feature_enabled", { p_name: name });
     return !error && data === true;
   } catch {
     return false;
