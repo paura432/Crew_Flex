@@ -75,7 +75,13 @@ Deno.test(
   "strict inputs: identity, side or role never come from the body; received is not a target",
   () => {
     const at = "2031-01-01T10:00:00.000Z";
-    for (const extra of [{ userId: ID }, { technicianProfileId: ID }, { role: "admin" }]) {
+    for (const extra of [
+      { userId: ID },
+      { technicianProfileId: ID },
+      {
+        role: "admin",
+      },
+    ]) {
       const error = assertThrows(
         () => parseValue({ requirementId: ID, shareConsent: true, ...extra }, applyInput),
         ApiError,
@@ -83,11 +89,26 @@ Deno.test(
       assertEquals(error.code, "VALIDATION_ERROR");
     }
     for (const body of [
-      { applicationId: ID, to: "shortlisted", expectedUpdatedAt: at, actor: "organization" },
-      { applicationId: ID, to: "shortlisted", expectedUpdatedAt: at, organizationRole: "admin" },
+      {
+        applicationId: ID,
+        to: "shortlisted",
+        expectedUpdatedAt: at,
+        actor: "organization",
+      },
+      {
+        applicationId: ID,
+        to: "shortlisted",
+        expectedUpdatedAt: at,
+        organizationRole: "admin",
+      },
       { applicationId: ID, to: "received", expectedUpdatedAt: at },
       { applicationId: ID, to: "cancelled", expectedUpdatedAt: at },
-      { applicationId: ID, to: "accepted", expectedUpdatedAt: at, proposalId: ID },
+      {
+        applicationId: ID,
+        to: "accepted",
+        expectedUpdatedAt: at,
+        proposalId: ID,
+      },
     ]) {
       assertThrows(() => parseValue(body, transitionInput), ApiError);
     }
@@ -99,7 +120,10 @@ Deno.test(
   () => {
     for (const headers of [{}, { "Idempotency-Key": "not-a-uuid" }] as Record<string, string>[]) {
       const error = assertThrows(
-        () => idempotencyKey(new Request("http://fn", { headers }), { required: true }),
+        () =>
+          idempotencyKey(new Request("http://fn", { headers }), {
+            required: true,
+          }),
         ApiError,
       );
       assertEquals([error.code, error.issues?.[0]?.path], ["VALIDATION_ERROR", "Idempotency-Key"]);
@@ -130,7 +154,7 @@ Deno.test("transition arguments carry the request, never an identity or a side",
 });
 
 Deno.test(
-  "CFA01…CFA16 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
+  "CFA01…CFA17 are 409 with the stable reason, in APPLICATION_CONFLICTS order, without the DB message",
   () => {
     APPLICATION_CONFLICTS.forEach((reason, i) => {
       const code = `CFA${String(i + 1).padStart(2, "0")}`;
@@ -150,12 +174,17 @@ Deno.test(
     assertEquals(fromDatabaseError({ code: "CFA14" }).reason, "PROFILE_REQUIREMENTS_UNMET"); // matching-v18
     assertEquals(fromDatabaseError({ code: "CFA15" }).reason, "RESTRICTIONS_DECLARED"); // T-87
     // v2-16 (20261024800000, T-160): the applicant blocked the organization in the passport.
-    const blocked = fromDatabaseError({ code: "CFA16", message: "the organization is blocked" });
+    const blocked = fromDatabaseError({
+      code: "CFA16",
+      message: "the organization is blocked",
+    });
     assertEquals(
       [blocked.status, blocked.code, blocked.reason],
       [409, "CONFLICT", "ORGANIZATION_BLOCKED"],
     );
-    assertEquals(APPLICATION_CONFLICTS.length, 16);
+    // ADR-003 (20261029100400, V19-028): a confirmed training session overlaps the period.
+    assertEquals(fromDatabaseError({ code: "CFA17" }).reason, "OVERLAPPING_TRAINING");
+    assertEquals(APPLICATION_CONFLICTS.length, 17);
     const unknown = `CFA${String(APPLICATION_CONFLICTS.length + 1).padStart(2, "0")}`;
     assertEquals(fromDatabaseError({ code: unknown }).code, "INTERNAL_ERROR");
     assertEquals(fromDatabaseError({ code: "CF412" }).reason, undefined);
@@ -166,7 +195,10 @@ Deno.test("the error envelope carries `reason` and nothing from the database", a
   const restore = silence();
   const fn = createHandler("test", {
     PATCH: () => {
-      throw fromDatabaseError({ code: "CFA06", message: "every seat is confirmed (row 42)" });
+      throw fromDatabaseError({
+        code: "CFA06",
+        message: "every seat is confirmed (row 42)",
+      });
     },
   });
   const res = await fn(new Request("http://fn/test", { method: "PATCH" }));
@@ -226,7 +258,12 @@ const card = {
   status: "paused",
   qualifications: [
     { qualificationTypeId: "q-sms", code: "SMS", name: "SMS", level: "soft" },
-    { qualificationTypeId: "q-b11", code: "B1.1", name: "Part-66 B1.1", level: "hard" },
+    {
+      qualificationTypeId: "q-b11",
+      code: "B1.1",
+      name: "Part-66 B1.1",
+      level: "hard",
+    },
   ],
 };
 const { id: _id, createdAt: _createdAt, status: _status, ...terms } = card;
@@ -236,7 +273,12 @@ const applicationRow = {
   created_at: "2030-12-02T09:00:00+00:00",
   updated_at: "2030-12-02T10:00:00.123456+00:00",
   reason: null,
-  current_proposal: { id: "p1", version: 1, createdAt: "2030-12-02T10:00:00.123Z", terms },
+  current_proposal: {
+    id: "p1",
+    version: 1,
+    createdAt: "2030-12-02T10:00:00.123Z",
+    terms,
+  },
   accepted_proposal_id: null,
   history: [
     {
@@ -314,7 +356,10 @@ const RULE_COLUMNS = {
 Deno.test(
   "my application: the card names the represented client as recorded (T-169); a proposal's terms never do",
   () => {
-    const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });
+    const own = toCandidate({
+      ...candidateColumns("verified"),
+      candidate_ref: "me",
+    });
     const forClient = {
       ...applicationRow,
       requirement_id: "r1",
@@ -350,7 +395,10 @@ Deno.test(
 Deno.test(
   "my application: the card (any status), proposal vN, timeline and my own eligibility",
   () => {
-    const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });
+    const own = toCandidate({
+      ...candidateColumns("verified"),
+      candidate_ref: "me",
+    });
     const mine = toMyApplication(
       { ...applicationRow, requirement_id: "r1", requirement: card },
       own,
@@ -425,7 +473,10 @@ Deno.test(
 Deno.test(
   "my application is judged with its requirement's profile rules; missing rules fail loudly",
   () => {
-    const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });
+    const own = toCandidate({
+      ...candidateColumns("verified"),
+      candidate_ref: "me",
+    });
     const row = { ...applicationRow, requirement_id: "r1", requirement: card };
     const strict = toMyApplication(row, own, new Map([["r1", { ...NO_RULES, minYears: 10 }]]));
     assertFalse(strict.match.eligible);
@@ -442,7 +493,10 @@ Deno.test(
 Deno.test(
   "proposal terms freeze the builder terms (T-11 widened); versions written before them read as not stated",
   () => {
-    const own = toCandidate({ ...candidateColumns("verified"), candidate_ref: "me" });
+    const own = toCandidate({
+      ...candidateColumns("verified"),
+      candidate_ref: "me",
+    });
     const builder = {
       country: "ES",
       timeZone: "Europe/Madrid",
@@ -469,7 +523,10 @@ Deno.test(
     const mine = toMyApplication(
       {
         ...applicationRow,
-        current_proposal: { ...applicationRow.current_proposal, terms: { ...terms, ...builder } },
+        current_proposal: {
+          ...applicationRow.current_proposal,
+          terms: { ...terms, ...builder },
+        },
         requirement_id: "r1",
         requirement: { ...card, ...builder },
       },
@@ -619,7 +676,13 @@ Deno.test("list query: strict views and status, bounded pages", () => {
   const ORG = "00000000-0000-4000-8000-0000000000bb";
   assertEquals(
     parseValue({ organizationId: ORG, view: "list", status: "accepted" }, listApplicationsQuery),
-    { organizationId: ORG, view: "list", status: "accepted", offset: 0, limit: 20 },
+    {
+      organizationId: ORG,
+      view: "list",
+      status: "accepted",
+      offset: 0,
+      limit: 20,
+    },
   );
   for (const bad of [
     { organizationId: ORG, view: "everything" },

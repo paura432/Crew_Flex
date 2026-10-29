@@ -68,6 +68,7 @@ Deno.test("an organization row keeps the applicant label and drops technician-on
     requirementStatus: null,
     candidate: { name: null, ref: "CF-0123456789" },
     outreachUrgency: null,
+    training: null,
   });
 });
 

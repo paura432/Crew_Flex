@@ -3,6 +3,8 @@
 // the ids at read time, re-checking access. Any signed-in account (professional or organization).
 // Since 20261024400200 (package outreach, v2-17) a third kind, `outreach`, is written by
 // requirement_outreach(): about a requirement (no application), with the urgency it was sent for.
+// Since 20261029100400 (training, ADR-003) a fourth kind, `training`: a request event for the other
+// party or a review decision for the provider; its subject ids and status come in `training`.
 // GET   /notifications?offset=&limit=   → NoticeListResponse { notices, total, unread }
 // GET   /notifications?view=count       → NoticeCountResponse { unread }   (the shell's bell)
 // PATCH /notifications { id }           → NoticeReadResponse { marked: 1, unread, notice }; 404 when
@@ -20,6 +22,7 @@ import {
   NOTICE_AUDIENCES,
   NOTICE_KINDS,
   NOTICE_REQUIREMENT_STATUSES,
+  TRAINING_NOTICE_SUBJECTS,
 } from "../../../src/domain/notices.ts";
 import { OUTREACH_URGENCIES } from "../../../src/domain/outreach.ts";
 import { listNoticesQuery, markNoticesReadInput } from "../../../src/lib/validation/notices.ts";
@@ -42,20 +45,33 @@ const noticeRow = z
     application_id: z.uuid().nullable(),
     application_status: z.enum(APPLICATION_STATUSES).nullable(),
     requirement_status: z.enum(NOTICE_REQUIREMENT_STATUSES).nullable(),
-    requirement_id: z.uuid(),
-    requirement_title: z.string(),
+    // Null only for a training notice (20261029100400).
+    requirement_id: z.uuid().nullable(),
+    requirement_title: z.string().nullable(),
     organization_name: z.string().nullable(),
     candidate_name: z.string().nullable(),
     candidate_ref: z.string().nullable(),
     total: z.number().int(),
     outreach_urgency: z.enum(OUTREACH_URGENCIES).nullish(),
+    training_subject: z.enum(TRAINING_NOTICE_SUBJECTS).nullish(),
+    training_request_id: z.uuid().nullish(),
+    training_course_id: z.uuid().nullish(),
+    training_edition_id: z.uuid().nullish(),
+    training_organization_id: z.uuid().nullish(),
+    training_status: z.string().nullish(),
+    training_title: z.string().nullish(),
   })
-  // An outreach notice is the reader's own (technician side), with its urgency and no application;
-  // every other kind names an application.
+  // An outreach notice is the reader's own (technician side), with its urgency and no application; a
+  // training notice has its subject and status and no requirement; every other kind names an application.
   .refine((r) =>
     r.kind === "outreach"
       ? r.audience === "technician" && r.application_id === null && !!r.outreach_urgency
-      : r.application_id !== null,
+      : r.kind === "training"
+        ? r.application_id === null &&
+          r.requirement_id === null &&
+          !!r.training_subject &&
+          !!r.training_status
+        : r.application_id !== null && r.requirement_id !== null,
   );
 const totalOf = z.number().int();
 
@@ -77,6 +93,18 @@ export function toNotice(raw: unknown): Notice {
     requirementStatus: r.kind === "requirement" ? r.requirement_status : null,
     candidate: technician ? null : { name: r.candidate_name, ref: r.candidate_ref },
     outreachUrgency: r.kind === "outreach" ? (r.outreach_urgency ?? null) : null,
+    training:
+      r.kind === "training" && r.training_subject && r.training_status
+        ? {
+            subject: r.training_subject,
+            requestId: r.training_request_id ?? null,
+            courseId: r.training_course_id ?? null,
+            editionId: r.training_edition_id ?? null,
+            organizationId: r.training_organization_id ?? null,
+            status: r.training_status,
+            title: r.training_title ?? null,
+          }
+        : null,
   };
 }
 
@@ -109,9 +137,17 @@ export const handler = createHandler("notifications", {
     const actor = await requireActor(ctx);
     const query = parseQuery(ctx.url, listNoticesQuery);
     if (query.view === "count") {
-      return { data: { unread: await unreadCount(actor) } satisfies NoticeCountResponse };
+      return {
+        data: {
+          unread: await unreadCount(actor),
+        } satisfies NoticeCountResponse,
+      };
     }
-    let page = await readPage(actor, { p_id: null, p_offset: query.offset, p_limit: query.limit });
+    let page = await readPage(actor, {
+      p_id: null,
+      p_offset: query.offset,
+      p_limit: query.limit,
+    });
     // A page past the end has no row to carry the total: ask the first page for it.
     if (page.notices.length === 0 && query.offset > 0) {
       page = {
@@ -120,7 +156,10 @@ export const handler = createHandler("notifications", {
       };
     }
     return {
-      data: { ...page, unread: await unreadCount(actor) } satisfies NoticeListResponse,
+      data: {
+        ...page,
+        unread: await unreadCount(actor),
+      } satisfies NoticeListResponse,
     };
   },
 
@@ -137,7 +176,11 @@ export const handler = createHandler("notifications", {
       ? ((await readPage(actor, { p_id: input.id, p_offset: 0, p_limit: 1 })).notices[0] ?? null)
       : null;
     return {
-      data: { marked, unread: await unreadCount(actor), notice } satisfies NoticeReadResponse,
+      data: {
+        marked,
+        unread: await unreadCount(actor),
+        notice,
+      } satisfies NoticeReadResponse,
     };
   },
 });

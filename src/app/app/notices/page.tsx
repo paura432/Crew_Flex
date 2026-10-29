@@ -90,25 +90,28 @@ export default async function NoticesPage({ searchParams }: PageProps<"/app/noti
   const title = (n: Notice) => {
     const key = noticeTitleKey(n);
     return key === "outreachUrgent" || key === "outreachAog"
-      ? tOutreach(`notice.${key}`, { title: n.requirementTitle })
+      ? tOutreach(`notice.${key}`, { title: n.requirementTitle ?? "" })
       : t(`kind.${key}`);
   };
   const description = (n: Notice) =>
     (n.kind === "outreach"
       ? // The title names the need; the organization and v1.8's invitation to decide follow.
         [n.organizationName, tOutreach("notice.description")]
-      : [
-          n.requirementTitle,
-          n.audience === "technician"
-            ? n.organizationName
-            : (n.candidate?.name ?? tMatching("anonymous", { ref: n.candidate?.ref ?? "" })),
-          // The title already names a new application and every requirement change.
-          n.kind === "application" &&
-          noticeTitleKey(n) === "applicationUpdate" &&
-          n.applicationStatus
-            ? tDomain(`applicationStatus.${n.applicationStatus}`)
-            : null,
-        ]
+      : n.kind === "training"
+        ? // ADR-003: the course (or provider) and the status reached, as the database rendered them.
+          [n.training?.title, n.training?.status]
+        : [
+            n.requirementTitle,
+            n.audience === "technician"
+              ? n.organizationName
+              : (n.candidate?.name ?? tMatching("anonymous", { ref: n.candidate?.ref ?? "" })),
+            // The title already names a new application and every requirement change.
+            n.kind === "application" &&
+            noticeTitleKey(n) === "applicationUpdate" &&
+            n.applicationStatus
+              ? tDomain(`applicationStatus.${n.applicationStatus}`)
+              : null,
+          ]
     )
       .filter(Boolean)
       .join(" · ");

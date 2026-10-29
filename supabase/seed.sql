@@ -330,3 +330,96 @@ select wr.id, qt.id, 'hard'
 from wr
 cross join public.qualification_types qt
 where qt.code in ('B1.1', 'EWIS', 'HF');
+
+-- =============================================================================================
+-- Training «Formación» (ADR-003, batch V19-01; LOCAL ONLY, flag `training`). A separate, clearly
+-- fictitious provider organization with its own admin, so the employment scenario above stays as
+-- designed (no request, offer or message is seeded: the UI batches create them). Dates are relative
+-- to the clock so the editions stay ahead. Review decisions are set directly (no admin acted).
+--   51 admin.training@crewflex.test → admin of «Demo Formación Aeronáutica» (type other, ES)
+--   provider reviewed · 3 published courses · editions: HF onsite (2 sessions, 12 seats, 220 EUR/person),
+--   A320 differences live (provisional: inquiries only), EWIS refresher self-paced (deadline +90 d) ·
+--   1 draft course (workspace)
+-- =============================================================================================
+select pg_temp.seed_user('00000000-0000-4000-8000-000000000051', 'admin.training@crewflex.test',
+  '{"account_type":"organization","display_name":"Admin Demo Formación","organization_name":"Demo Formación Aeronáutica","organization_type":"other","country":"ES"}');
+
+insert into public.training_providers (organization_id, name, description, website, status, review_note, reviewed_at)
+select id, 'Demo Formación Aeronáutica', 'Centro de formación ficticio para la demo local. Solo datos sintéticos.',
+       'https://training.crewflex.test', 'reviewed', 'Identidad y datos de contacto comprobados (demo).', now()
+from public.organizations where name = 'Demo Formación Aeronáutica';
+
+with provider as (select organization_id from public.training_providers where name = 'Demo Formación Aeronáutica'),
+hf as (
+  insert into public.training_courses
+    (organization_id, title, family, description, language, certificate_info, issuer, scope, status, reviewed_at,
+     prerequisites, syllabus, category)
+  select organization_id, 'Factores humanos (HF) · recurrente', 'safety',
+    'Formación recurrente de factores humanos para personal de mantenimiento (demo sintética).',
+    'Español', 'Certificado de asistencia emitido y entregado por el proveedor.', 'Demo Formación Aeronáutica',
+    'general', 'published', now(), 'Experiencia previa en mantenimiento.', 'Módulos 1–10 de HF (demo).', 'Recurrente'
+  from provider returning id, organization_id
+),
+hf_edition as (
+  insert into public.training_editions
+    (course_id, organization_id, mode, provisional, capacity, city, country, currency, price_unit, price_cents,
+     price_includes, policy, time_zone, status, reviewed_at)
+  select id, organization_id, 'onsite', false, 12, 'Madrid', 'ES', 'EUR', 'person', 22000,
+    '220 EUR por persona, IVA incluido. Sin viaje ni alojamiento.', 'Cancelación sin coste hasta siete días antes.',
+    'Europe/Madrid', 'published', now()
+  from hf returning id
+)
+insert into public.training_sessions (edition_id, span, location, element)
+select id, tstzrange(date_trunc('day', now()) + interval '30 days' + interval '8 hours',
+                     date_trunc('day', now()) + interval '30 days' + interval '16 hours', '[)'),
+       'Aula 1 (demo)', 'theory'::public.training_session_element
+from hf_edition
+union all
+select id, tstzrange(date_trunc('day', now()) + interval '31 days' + interval '8 hours',
+                     date_trunc('day', now()) + interval '31 days' + interval '14 hours', '[)'),
+       'Aula 1 (demo)', 'assessment'::public.training_session_element
+from hf_edition;
+
+with provider as (select organization_id from public.training_providers where name = 'Demo Formación Aeronáutica'),
+a320 as (
+  insert into public.training_courses
+    (organization_id, title, family, description, language, certificate_info, issuer, scope, approval_ref, status,
+     reviewed_at, aircraft)
+  select organization_id, 'Diferencias A320ceo / A320neo', 'type',
+    'Curso de diferencias de tipo (demo sintética). Alcance declarado por el proveedor.',
+    'English', 'Certificate of completion issued by the provider.', 'Demo Formación Aeronáutica',
+    'part147', 'ES.147.DEMO-0000 (ficticia)', 'published', now(), 'A320 Family'
+  from provider returning id, organization_id
+)
+insert into public.training_editions
+  (course_id, organization_id, mode, provisional, capacity, city, country, currency, price_unit, price_cents,
+   price_includes, policy, time_zone, status, reviewed_at)
+select id, organization_id, 'live', true, 20, null, 'ES', 'EUR', 'person', 95000,
+  '950 EUR por persona; fechas provisionales, solo consultas por ahora.', 'Se confirmarán fechas y condiciones.',
+  'Europe/Madrid', 'published', now()
+from a320;
+
+with provider as (select organization_id from public.training_providers where name = 'Demo Formación Aeronáutica'),
+ewis as (
+  insert into public.training_courses
+    (organization_id, title, family, description, language, certificate_info, issuer, scope, status, reviewed_at, category)
+  select organization_id, 'EWIS · actualización (autoestudio)', 'systems',
+    'Actualización EWIS en modalidad de autoestudio (demo sintética).',
+    'Español', 'Certificado de finalización emitido por el proveedor.', 'Demo Formación Aeronáutica',
+    'general', 'published', now(), 'Actualización'
+  from provider returning id, organization_id
+)
+insert into public.training_editions
+  (course_id, organization_id, mode, provisional, deadline, capacity, country, currency, price_unit, price_cents,
+   price_includes, policy, time_zone, status, reviewed_at)
+select id, organization_id, 'selfpaced', false, date_trunc('day', now()) + interval '90 days', 100, 'ES', 'EUR',
+  'module', 6000, '60 EUR por módulo, IVA incluido.', 'Sin reembolso una vez iniciado el acceso.',
+  'Europe/Madrid', 'published', now()
+from ewis;
+
+insert into public.training_courses
+  (organization_id, title, family, description, language, certificate_info, issuer, scope, status)
+select organization_id, 'Run-up de motores CFM56 (borrador)', 'engines',
+  'Borrador de curso de run-up (demo sintética).', 'Español',
+  'Certificado del proveedor.', 'Demo Formación Aeronáutica', 'general', 'draft'
+from public.training_providers where name = 'Demo Formación Aeronáutica';

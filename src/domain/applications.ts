@@ -100,6 +100,9 @@ export const APPLICATION_CONFLICTS = [
   // CFA16: applying to a requirement of an organization the professional blocked in the passport (v2-16, T-160;
   // v1.8 «Esta organización está bloqueada.»). Checked after the requirement's state, before the history.
   "ORGANIZATION_BLOCKED",
+  // CFA17: confirm while a confirmed training session of the professional overlaps the period (V19-028,
+  // ADR-003; migration 20261029100400). Hour-based, both directions (the training confirm refuses CFT08).
+  "OVERLAPPING_TRAINING",
 ] as const;
 export type ApplicationConflict = (typeof APPLICATION_CONFLICTS)[number];
 

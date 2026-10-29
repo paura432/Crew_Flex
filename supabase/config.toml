@@ -529,3 +529,10 @@ import_map = "./functions/deno.json"
 [functions.represented-clients]
 verify_jwt = false
 import_map = "./functions/deno.json"
+
+# Local only, not deployed (ADR-003, training «Formación» v1.9): catalog, provider workspace, requests, offers,
+# messages, admin review. 404 unless the owner-only DB flag `training` is on. Deploy only after migrations
+# 20261029100000…20261029100400.
+[functions.training]
+verify_jwt = false
+import_map = "./functions/deno.json"

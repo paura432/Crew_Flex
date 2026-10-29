@@ -10,6 +10,8 @@ export function noticeTitleKey(
     "kind" | "audience" | "applicationStatus" | "requirementStatus" | "outreachUrgency"
   >,
 ) {
+  // ADR-003: one key for every training event; the description carries the status (UI batch V19-02…).
+  if (notice.kind === "training") return "training";
   // v1.8 `app.mjs:104` «{modo}: {título}» (v2-17): the mode it was distributed for.
   if (notice.kind === "outreach") {
     return notice.outreachUrgency === "aog" ? "outreachAog" : "outreachUrgent";
@@ -32,8 +34,14 @@ export function noticeTitleKey(
  * itself (v1.8 «Ver oportunidades»: decide whether to apply).
  */
 export function noticeHref(
-  notice: Pick<Notice, "kind" | "audience" | "applicationId" | "requirementId">,
+  notice: Pick<Notice, "kind" | "audience" | "applicationId" | "requirementId" | "training">,
 ) {
+  // Training (ADR-003): the professional's requests or the provider's workspace (pages of batch V19-02…).
+  if (notice.kind === "training") {
+    return notice.audience === "technician"
+      ? "/app/professional/training"
+      : "/app/organization/training";
+  }
   if (notice.kind === "outreach") return `/app/professional/opportunities/${notice.requirementId}`;
   return notice.audience === "technician"
     ? `/app/professional/applications#a-${notice.applicationId}`
