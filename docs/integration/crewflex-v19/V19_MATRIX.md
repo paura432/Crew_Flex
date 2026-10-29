@@ -1,0 +1,57 @@
+# V19 · Matriz de requisitos de Formación (41)
+
+Fuente: la auditoría del owner `crewflex_v19_auditoria.md` (`tmp/crewflex_v19_diff_completo.zip`, sha256 `59264ac6…`, 29/10/2026),
+reconciliada con el código. Métrica propia: **no se mezcla** con las 1 587 filas del inventario v1.8. Arquitectura:
+`docs/architecture/ADR-003-training-module.md`.
+
+Estados: VERIFIED_LOCAL · VERIFIED_STG · VERIFIED_PRODUCTION · PARTIAL · IMPLEMENTED_UNVERIFIED · NEEDS_DECISION · BLOCKED ·
+OUT_OF_SCOPE. «PENDIENTE» solo mientras el lote no ha empezado. Paridad local = VERIFIED_LOCAL / (41 − OUT_OF_SCOPE); las
+filas NEEDS_DECISION o BLOCKED dentro del alcance siguen en el denominador.
+
+| ID      | Área           | Requisito                                                  | Prio. | Estado                        | Lote | Archivos | Test de aceptación | Evidencia | SHA | Entorno | Decisión                                          |
+| ------- | -------------- | ---------------------------------------------------------- | ----- | ----------------------------- | ---- | -------- | ------------------ | --------- | --- | ------- | ------------------------------------------------- |
+| V19-001 | Navegación     | Entrada Formación para técnico y empresa                   | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-002 | Navegación     | Entrada Formación para recruiter y admin                   | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-003 | Catálogo       | Catálogo público de cursos publicados                      | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-004 | Catálogo       | Buscador sin distinción de acentos                         | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-005 | Catálogo       | Filtros familia, modalidad, idioma, país, fechas           | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-006 | Catálogo       | Paginación de catálogo con consultas de servidor           | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-007 | Catálogo       | Ficha curso: programa, prerequisitos, emisor, tipo y motor | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-008 | Proveedor      | Perfil de proveedor de formación                           | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-009 | Proveedor      | Revisión de proveedor por administración                   | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-010 | Cursos         | Crear/editar curso de formación                            | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-011 | Cursos         | Enviar curso a revisión y aprobar/rechazar/suspender       | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-012 | Convocatorias  | Edición/convocatoria: sesiones, timezone IANA y modalidad  | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-013 | Convocatorias  | Aforo, ciudad/país, idiomas, condiciones, fechas           | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-014 | Convocatorias  | Autoestudio, fechas provisionales y plazos                 | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-015 | Convocatorias  | Revisión/publicación y cancelación de convocatoria         | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-016 | Precios        | Unidad de precio alumno/motor/módulo/presupuesto           | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-017 | Precios        | Impuestos, inclusiones y política de cancelación visibles  | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-018 | Profesional    | Guardar/retirar curso favorito                             | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-019 | Profesional    | Consulta previa al proveedor                               | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-020 | Profesional    | Solicitud de plaza para fechas confirmadas                 | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-021 | Profesional    | Lista y estados de solicitudes personales                  | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-022 | Proveedor      | Bandeja de consultas, plazas y lista de espera             | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-023 | Reserva        | Oferta de condiciones y aceptación expresa del alumno      | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-024 | Reserva        | Confirmación transaccional y control de cupos              | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-025 | Reserva        | Rechazo, espera, retirada y cancelación con motivo         | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-026 | Reserva        | Resultado final: asistencia/ausencia/finalización          | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-027 | Mensajería     | Conversación privada por solicitud                         | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-028 | Calendario     | Solapes bidireccionales con empleo y formación             | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-029 | Calendario     | Indicador F en calendario sin bloquear día entero          | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-030 | Calendario     | Exportación privada iCalendar de sesiones                  | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-031 | Notificaciones | Avisos sobre revisión, cambios y solicitudes               | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-032 | Seguridad      | Autorización y aislamiento de formación (RBAC/RLS)         | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-033 | Seguridad      | Privacidad de email, wallet y Candidate Pack               | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-034 | Seguridad      | No certificar ni acreditar automáticamente                 | P0    | PENDIENTE (regla a preservar) | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-035 | Datos          | Modelo relacional formación en PostgreSQL + RLS            | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-036 | API            | Edge Functions/servicios de formación                      | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-037 | Datos          | Exportación y cierre de cuenta compatibles con formación   | P1    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-038 | Demo           | Escenario ficticio formación, separado de cuentas reales   | P2    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-039 | QA             | Pruebas de formación y regresión end-to-end                | P0    | PENDIENTE                     | —    | —        | —                  | —         | —   | —       | —                                                 |
+| V19-040 | QA             | Pilotaje y validación profesional real                     | P1    | NEEDS_DECISION                | —    | —        | —                  | —         | —   | —       | Validación externa (piloto con proveedores y TMA) |
+| V19-041 | Alcance        | Pagos integrados, LMS, plazas en bloque, sync externa      | P2    | OUT_OF_SCOPE                  | —    | —        | —                  | —         | —   | —       | Fuera de alcance v1.9 beta                        |
+
+## Resumen
+
+Pendiente de los lotes V19-01…05.
