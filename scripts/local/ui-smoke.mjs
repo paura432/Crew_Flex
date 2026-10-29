@@ -3553,6 +3553,18 @@ await logout();
     // The organization-wide «Candidaturas» (v2-05, v1.8 `Workflow.jsx:53-74`) filtered by the offer.
     await login(MRO, { ensureEnglish: false });
     await p5Es();
+    // ORG-04 #22 (2026-10-29): the need's row on «Necesidades» carries v1.8's «{tarifa} €/h · {h} horas base».
+    await page.goto(`${BASE}/app/organization/requirements`);
+    await page.waitForLoadState("networkidle");
+    const p5RowLoc = page.locator(`main tr:has(a[href='/app/organization/requirements/${p5Id}'])`);
+    const p5Row = (await p5RowLoc.count())
+      ? (await p5RowLoc.first().innerText()).replace(/\s+/g, " ")
+      : "";
+    ok(
+      "PKG ORG-04 22 «Necesidades»: the row of the 2-shift need reads «50 € / h · 16 horas base en 2 jornadas»",
+      p5Row.includes("50 € / h · 16 horas base en 2 jornadas"),
+      p5Row.slice(0, 200),
+    );
     const p5OrgUrl = `/app/organization/applications?requirementId=${p5Id}`;
     const p5Org = await p5Open(p5OrgUrl);
     await expectSpanish("PKG P05 7 «Candidaturas» in Spanish");

@@ -1,6 +1,7 @@
 import sys, re, csv, collections, os
 # The 216 pending rows (≠ / −) of the inventory, one cause each, written to CSV (2026-10-29 audit, `19-pending-audit.md`).
 # Same row rules as recount.py; the metric is NOT changed here: every row stays in the denominator.
+# The committed 19-pending-216.csv is the audit snapshot at 0755ff7; write re-runs elsewhere.
 # Usage: python3 pending.py OUT.csv 10-*.md 20-*.md 30-*.md 40-*.md 50-*.md
 SPLIT = re.compile(r"(?<!\\)\|")
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), *[".."] * 4))
@@ -28,7 +29,7 @@ CAUSES = {
 }
 # Free rows (Bloqueo «—») read one by one; blocked rows follow their Bloqueo below.
 MANUAL = {
-    "PORT": "ORG-04#22",
+    # PORT: ORG-04#22, closed 2026-10-29 (≈)
     "SECDEV": "AUTH-02#13 AUTH-04#6 ACC-01#12 TOOL-07#18",
     "SECGAP": "AUTH-06#9",
     "PROD": "AUTH-06#7",
@@ -66,7 +67,7 @@ def cause_of(rid, sec, b):
 EVID = re.compile(r"PKG [\w-]+(?: [\w/.-]+)?|[\w.-]+\.test\.ts|smoke \d+\w*|E2E [^,;)]*|evidencias/[^`\s,;)]+|docs/audit/evidence/[^`\s,;)]+")
 PATH = re.compile(r"`((?:src|supabase|tests|docs|scripts|messages)/[^`:\s]+?)(?::[\d,-]+)?`")
 
-rows = []
+rows = []; seen = collections.Counter()
 for path in sys.argv[2:]:
     sec = hdr = None; ln = 0
     for line in open(path, encoding="utf8"):
@@ -80,6 +81,7 @@ for path in sys.argv[2:]:
             continue
         if not hdr or not cells or set(cells[0]) <= set("-: ") or len(cells) <= hdr.index("Diff"): continue
         d = cells[hdr.index("Diff")].lstrip("`*")
+        if d and d[0] in "=≈": seen[d[0]] += 1
         if not d or d[0] not in "≠−": continue
         g = lambda h: cells[hdr.index(h)] if h in hdr and hdr.index(h) < len(cells) else ""
         v18 = cells[2] if len(cells) > 2 else ""; nxt = cells[3] if len(cells) > 3 else ""
@@ -108,8 +110,7 @@ assert not set(MANUAL) - set(ids), set(MANUAL) - set(ids)
 with open(sys.argv[1], "w", newline="", encoding="utf8") as f:
     w = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator="\n"); w.writeheader(); w.writerows(rows)
 
-OK, APP = 1050, 1266   # recount.py at 0755ff7: = 452 + ≈ 598 over = + ≈ + ≠ + − = 1 266
-assert len(rows) == APP - OK, len(rows)
+OK = seen["="] + seen["≈"]; APP = OK + len(rows)   # must match recount.py's PARITY line
 pct = lambda n, d=APP: f"{100 * n / d:.1f} %"
 C = collections.Counter
 print("filas", len(rows), dict(C(r["diff"] for r in rows)))
@@ -125,4 +126,5 @@ for k, n in C(r["llaves"] for r in rows if r["causa"] not in ("DEMO", "DECOK", "
 rec = [r for r in rows if r["causa"] in ("DEMO", "DECOK", "V18BUG", "SECDEV", "INTERNAL", "OUT")]
 print(f"--- solo reclasificando (✗/≈, denominador −n): {len(rec)} filas", dict(C(r["causa"] for r in rec)))
 port = len(rows) - len(rec) + sum(r["causa"] == "OUT" for r in rows)
-print(f"techo portando todo lo portable: {OK + port}/{APP} = {pct(OK + port)}; sin decisión nueva: {OK + 1}/{APP} = {pct(OK + 1)}")
+nb = sum(r["categoria"] == "B" for r in rows)
+print(f"techo portando todo lo portable: {OK + port}/{APP} = {pct(OK + port)}; sin decisión nueva: {OK + nb}/{APP} = {pct(OK + nb)}")

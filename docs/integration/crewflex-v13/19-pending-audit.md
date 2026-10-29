@@ -1,5 +1,7 @@
 # 19 · Auditoría de las 216 filas pendientes de paridad v1.8 (29/10/2026)
 
+**Después de la auditoría (29/10):** ORG-04 #22, la única fila B, quedó cerrada (`≈`; smoke `PKG ORG-04 22`, gate completo verde). Paridad **1 051 / 1 266 = 83,0 %**; quedan 215 filas, sin ninguna B. Si vuelves a ejecutar `pending.py`, escribe a otro fichero: el CSV de abajo es la foto de `0755ff7`. Desde ese día producción tiene toda la rama (`574fd4f`, 62 migraciones, 23 funciones) y §0b de Auth, así que §6 ya no describe producción.
+
 Solo lectura: ninguna fila del inventario ha cambiado, la métrica es la de `18-v18-inventory/README.md` y todas las filas
 bloqueadas siguen en el denominador. Matriz fila a fila (los 216 ids originales, una vez cada uno):
 [`19-pending-216.csv`](19-pending-216.csv).

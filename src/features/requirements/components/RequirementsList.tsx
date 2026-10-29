@@ -1,8 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { confirmedCoverage } from "@/domain/coverage";
-import type { WorkRequirement } from "@/domain/work-requirement";
-import { formatPeriod } from "@/i18n/format";
+import { totalBaseHours, type WorkRequirement } from "@/domain/work-requirement";
+import type { Locale } from "@/i18n/config";
+import { formatEuro, formatNumber, formatPeriod } from "@/i18n/format";
 import { CoverageMeter } from "./CoverageMeter";
 import { QualificationChips, RequirementStatusChip, UrgencyChip } from "./RequirementBadges";
 
@@ -24,12 +25,25 @@ export async function RequirementsList({
   seats?: ReadonlyMap<string, number>;
   coverageLabel?: "confirmed" | "covered";
 }) {
-  const [t, tDomain, tHiring, locale] = await Promise.all([
+  const [t, tDomain, tHiring, tTerms, locale] = await Promise.all([
     getTranslations("organization.requirements"),
     getTranslations("domain"),
     getTranslations("hiring"),
-    getLocale(),
+    getTranslations("organization.detail.terms"),
+    getLocale() as Promise<Locale>,
   ]);
+  // ORG-04 #22: v1.8 «{tarifa} €/h · {h} horas base» on the row; the detail keeps every term (T-62). Mode and % stay OUT.
+  const termsLine = ({ conditions: c, shifts }: WorkRequirement) =>
+    [
+      c?.hourlyRate != null && tTerms("rateHourly", { hourly: formatEuro(locale, c.hourlyRate) }),
+      shifts?.length &&
+        tTerms("baseHoursSummary", {
+          hours: formatNumber(locale, totalBaseHours(shifts)),
+          count: shifts.length,
+        }),
+    ]
+      .filter(Boolean)
+      .join(" · ");
   const coverageOf = (r: WorkRequirement) => confirmedCoverage(r.headcount, seats?.get(r.id) ?? 0);
   const manageLink = (r: WorkRequirement) => (
     <Link
@@ -76,6 +90,7 @@ export async function RequirementsList({
                 <div className="text-muted">
                   {r.client ? `${r.location} · ${r.client.name}` : r.location}
                 </div>
+                {termsLine(r) && <div className="text-muted tabular-nums">{termsLine(r)}</div>}
               </td>
               <td className="py-3 pr-4 whitespace-nowrap tabular-nums">
                 {formatPeriod(locale, r.startsAt, r.endsAt)}
@@ -123,6 +138,7 @@ export async function RequirementsList({
               {formatPeriod(locale, r.startsAt, r.endsAt)} · {tDomain(`shift.${r.shift}`)} ·{" "}
               {r.headcount} ×
             </p>
+            {termsLine(r) && <p className="text-sm text-muted tabular-nums">{termsLine(r)}</p>}
             <QualificationChips qualifications={r.qualifications} />
             {seats && (
               <>
