@@ -8,7 +8,7 @@ export interface BatchRow {
   tombstone_id: string | null;
   storage_path: string;
   reason: string;
-  action: "would_tombstone" | "purge" | string;
+  action: "would_tombstone" | "would_expire" | "expired" | "purge" | string;
 }
 
 export interface PurgeItem {
@@ -19,6 +19,8 @@ export interface PurgeItem {
 
 export interface Plan {
   orphans: number;
+  /** Archived documents past the trash retention (N-19): listed (dry-run) or deleted (apply). */
+  expired: number;
   purge: PurgeItem[];
 }
 
@@ -27,16 +29,19 @@ export function planBatch(rows: BatchRow[], limit: number): Plan {
   const seen = new Set<string>();
   const purge: PurgeItem[] = [];
   let orphans = 0;
+  let expired = 0;
   for (const row of rows) {
     if (!OBJECT_PATH.test(row.storage_path)) continue;
     if (row.action === "would_tombstone" || row.reason === "orphan_upload") orphans += 1;
+    // The expired trash is counted once, by its expiry row; its purge row is counted as a purge.
+    if (row.action === "would_expire" || row.action === "expired") expired += 1;
     if (row.action !== "purge" || !row.tombstone_id || seen.has(row.tombstone_id)) continue;
     seen.add(row.tombstone_id);
     if (purge.length < limit) {
       purge.push({ tombstoneId: row.tombstone_id, path: row.storage_path, reason: row.reason });
     }
   }
-  return { orphans, purge };
+  return { orphans, expired, purge };
 }
 
 export interface Recheck {

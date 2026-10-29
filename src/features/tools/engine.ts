@@ -193,6 +193,8 @@ export type ToolErrorCode =
   | "belowAbsoluteZero"
   | "resultOutOfRange"
   | "toleranceRange"
+  | "toleranceRequired"
+  | "toleranceInvalid"
   | "negativeAbsolutePressure"
   | "invalidClock";
 
@@ -269,13 +271,27 @@ export function convertRange(
   to: string,
 ): { nominal: number; low: number; high: number } {
   const n = parseNumber(value, { nonnegative: true });
-  const p = parseNumber(tolerancePercent, { nonnegative: true });
-  if (p > 100) throw new ToolError("toleranceRange");
+  const p = parseTolerance(tolerancePercent);
   return {
     nominal: convert(n, group, from, to),
     low: convert(n * (1 - p / 100), group, from, to),
     high: convert(n * (1 + p / 100), group, from, to),
   };
+}
+
+/** The tolerance field's own errors, so the message names it and never reads like the value's. */
+function parseTolerance(input: string | number): number {
+  let p: number;
+  try {
+    p = parseNumber(input);
+  } catch (error) {
+    if (error instanceof ToolError && error.code === "required") {
+      throw new ToolError("toleranceRequired");
+    }
+    throw new ToolError("toleranceInvalid");
+  }
+  if (p < 0 || p > 100) throw new ToolError("toleranceRange");
+  return p;
 }
 
 /** `H:MM` (1–5 digit hours, minutes 00–59) → decimal hours. */
@@ -291,6 +307,29 @@ export function clockToHours(text: string): number {
 export function hoursToClock(value: string | number): string {
   const minutes = Math.round(parseNumber(value, { nonnegative: true }) * 60);
   return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+/** The locale's decimal mark («,» in es, «.» in en). */
+export function decimalSeparator(locale: string): string {
+  return (
+    new Intl.NumberFormat(locale).formatToParts(1.5).find((p) => p.type === "decimal")?.value ?? "."
+  );
+}
+
+/**
+ * What the engine reads when the input could be misread: a fraction, or a decimal mark that is not
+ * the locale's («1,200» under `en` is 1.2 here, not one thousand two hundred; «1.200» under `es`
+ * too). Null when nothing is ambiguous or the input is not a number (its error is shown elsewhere).
+ */
+export function ambiguousReading(input: string, locale: string): number | null {
+  const s = input.trim();
+  const foreignMark = decimalSeparator(locale) === "," ? "." : ",";
+  if (!s.includes("/") && !s.includes(foreignMark)) return null;
+  try {
+    return parseNumber(s);
+  } catch {
+    return null;
+  }
 }
 
 /** Presentation rounding only. */

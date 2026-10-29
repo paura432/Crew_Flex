@@ -53,7 +53,7 @@ export function SectionHead({
   return (
     <div className="flex items-center justify-between gap-4 text-tool">
       <div>
-        <p className="text-[10px] font-extrabold tracking-[0.17em] text-tool">{kicker}</p>
+        <p className="text-xs font-extrabold tracking-[0.17em] text-tool">{kicker}</p>
         <h2 className="mt-2 text-[23px] leading-tight font-bold tracking-tight text-[#122e43]">
           {title}
         </h2>
@@ -67,11 +67,17 @@ export function ToolField({
   id,
   label,
   hint,
+  reading,
   children,
 }: {
   id: string;
   label: string;
   hint?: string;
+  /**
+   * How the input was read when it could be misread (`ambiguousReading`); `null` keeps the live
+   * region mounted but empty. Fields that never echo a reading leave it undefined.
+   */
+  reading?: string | null;
   children: ReactNode;
 }) {
   return (
@@ -83,6 +89,11 @@ export function ToolField({
       {hint && (
         <p id={`${id}-hint`} className="text-xs text-muted">
           {hint}
+        </p>
+      )}
+      {reading !== undefined && (
+        <p id={`${id}-reading`} aria-live="polite" className="text-xs font-semibold text-[#1d4458]">
+          {reading}
         </p>
       )}
     </div>
@@ -111,7 +122,7 @@ export function ResultCard({
 }) {
   return (
     <div className="rounded-[13px] bg-tool-result p-6 text-white [overflow-wrap:anywhere] sm:p-7">
-      <p className="text-[11px] tracking-[0.09em] text-tool-caption uppercase">{caption}</p>
+      <p className="text-xs tracking-[0.09em] text-tool-caption uppercase">{caption}</p>
       <p className="my-4 flex flex-wrap items-baseline gap-3" aria-live="polite">
         <strong className="text-[31px] font-semibold tracking-tight tabular-nums sm:text-[38px]">
           {value}
@@ -123,7 +134,57 @@ export function ResultCard({
   );
 }
 
-export function CopyResult({ text }: { text: string }) {
+/** v1.8 `.tb-button` (42 px, 44 on touch); `primary` is the teal CTA (white on #057f7d, 4.8:1). */
+export const toolButtonClass = (primary = false) =>
+  `inline-flex min-h-[42px] pointer-coarse:min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${
+    primary
+      ? "border-tool bg-tool text-white hover:brightness-95"
+      : "border-[#ccd9df] bg-white text-[#1d4458] hover:bg-canvas"
+  }`;
+
+/** v1.8 `.tb-tabs`: a row of toggle buttons, one pressed (sections, number of questions). */
+export function PressedGroup<T extends string | number>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex flex-wrap gap-1 rounded-[9px] bg-[#e8edf0] p-1"
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={o.value === value}
+          onClick={() => onChange(o.value)}
+          className="min-h-10 rounded-md px-3.5 text-xs text-[#546c7c] pointer-coarse:min-h-11 aria-[pressed=true]:bg-white aria-[pressed=true]:font-bold aria-[pressed=true]:text-[#116765] aria-[pressed=true]:shadow-sm"
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Copy button; dark by default (inside a result card), `light` on a white panel. */
+export function CopyResult({
+  text,
+  label,
+  light = false,
+}: {
+  text: string;
+  label?: string;
+  light?: boolean;
+}) {
   const t = useTranslations("tools");
   const [copied, setCopied] = useState(false);
   useEffect(() => {
@@ -134,7 +195,11 @@ export function CopyResult({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className="inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border border-[#547e89] px-4 text-[11px] font-bold text-[#c7e9e6] hover:bg-white/5"
+      className={`inline-flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 rounded-lg border px-4 text-xs font-bold ${
+        light
+          ? "border-[#ccd9df] bg-white text-[#1d4458] hover:bg-canvas"
+          : "border-[#547e89] text-[#c7e9e6] hover:bg-white/5"
+      }`}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
@@ -145,7 +210,7 @@ export function CopyResult({ text }: { text: string }) {
       }}
     >
       {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-      {copied ? t("copied") : t("copy")}
+      {copied ? t("copied") : (label ?? t("copy"))}
     </button>
   );
 }
@@ -153,8 +218,10 @@ export function CopyResult({ text }: { text: string }) {
 export function References({ children }: { children: ReactNode }) {
   const t = useTranslations("tools");
   return (
-    <details className="mt-6 border-t border-[#dce5e8] pt-4 text-xs text-[#5f7788]">
-      <summary className="cursor-pointer font-bold text-[#226969]">{t("references")}</summary>
+    <details className="mt-6 border-t border-[#dce5e8] pt-4 text-xs text-muted">
+      <summary className="flex cursor-pointer items-center font-bold text-[#226969] pointer-coarse:min-h-11">
+        {t("references")}
+      </summary>
       <div className="mt-3 space-y-3">
         {children}
         <p>{t("engineNote", { version: ENGINE_VERSION })}</p>
@@ -162,7 +229,7 @@ export function References({ children }: { children: ReactNode }) {
           href={UNIT_SOURCE}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 text-[#076e73] underline"
+          className="inline-flex items-center gap-1 text-[#076e73] underline pointer-coarse:min-h-11"
         >
           {t("nistLink")} <ExternalIcon size={13} />
         </a>
@@ -172,5 +239,6 @@ export function References({ children }: { children: ReactNode }) {
 }
 
 export function Footnote({ children }: { children: ReactNode }) {
-  return <p className="text-[11px] leading-relaxed text-[#718492]">{children}</p>;
+  // 12 px and #587083 (5.2:1 on white, 4.8:1 on canvas); was 11 px #718492 at 3.6–3.9:1.
+  return <p className="text-xs leading-relaxed text-[#587083]">{children}</p>;
 }

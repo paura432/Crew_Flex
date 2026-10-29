@@ -1,10 +1,15 @@
 // Professional availability windows — own data only.
-//   GET    /professional-availability?limit=        → list own windows (RLS)
+//   GET    /professional-availability?limit=        → list own windows (RLS) + calendar `version`
 //   POST   /professional-availability { startsAt, endsAt, status }   (Idempotency-Key: 201 · 200 replay)
 //   PATCH  /professional-availability?id=<uuid> { startsAt, endsAt, status }
 //   DELETE /professional-availability?id=<uuid>
-//   PUT    /professional-availability { days: [{ date, status|null }], rotation? }  (Idempotency-Key)
-//          → sets whole UTC days atomically (shift-cycle generator), RPC replace_availability_days
+//   PUT    /professional-availability { days: [{ date, status|null }], rotation?, expectedVersion? }
+//          (Idempotency-Key) → sets whole UTC days atomically (shift-cycle generator), RPC
+//          replace_availability_days; 409 CONFLICT when `expectedVersion` is stale (W5-03)
+// N-04 (BR-4.9, 20261023300000): every write is refused with 409 `reason: ASSIGNMENT_PROTECTED` when it
+// changes a day of a confirmed assignment (PUT) or reduces the availability one needs (POST/PATCH/DELETE).
+// N-26 (BR-4.6, 20261024200100): POST and PATCH with a start before today (UTC) — a new window or a moved
+// start — are refused by the database (22023, hint `past_start`) → 400 `startsAt: v.start.future`.
 // The technician id is ALWAYS the JWT subject: the body never carries ownership. RLS enforces
 // `technician_profile_id = auth.uid()` as a second layer.
 import { z } from "zod";
@@ -12,12 +17,18 @@ import { requireActor, type Actor } from "../_shared/auth.ts";
 import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import { createdRow, idempotencyKey, parseJsonBody, parseQuery } from "../_shared/validation.ts";
-import { AVAILABILITY_STATUSES, CYCLE_DAYS, ROTATIONS } from "../../../src/domain/availability.ts";
+import {
+  AVAILABILITY_STATUSES,
+  CYCLE_DAYS,
+  PAST_START_HINT,
+  ROTATIONS,
+} from "../../../src/domain/availability.ts";
 import {
   availabilityWindowIdQuery,
   createAvailabilityWindowInput,
   listAvailabilityQuery,
   replaceAvailabilityDaysInput,
+  type ReplaceAvailabilityDaysInput,
   updateAvailabilityWindowInput,
 } from "../../../src/lib/validation/availability.ts";
 import type {
@@ -61,6 +72,27 @@ export function toWindow(raw: unknown): AvailabilityWindow {
   };
 }
 
+/** RPC arguments of the calendar save; no `expectedVersion` (older clients) means no check. */
+export const replaceDaysArgs = (input: ReplaceAvailabilityDaysInput, key: string) => ({
+  p_idempotency_key: key,
+  p_days: input.days,
+  p_rotation: input.rotation ?? null,
+  p_expected_version: input.expectedVersion ?? null,
+});
+
+/**
+ * Single-window writes (POST/PATCH): the N-26 floor becomes the form's field error; everything else maps
+ * as usual (CFV01 → 409 ASSIGNMENT_PROTECTED, other 22023 → plain 400). The DB message never leaks.
+ */
+export function windowWriteError(error: { code?: string; message?: string; hint?: string }) {
+  if (error.code === "22023" && error.hint === PAST_START_HINT) {
+    return new ApiError("VALIDATION_ERROR", undefined, [
+      { path: "startsAt", message: "v.start.future" },
+    ]);
+  }
+  return fromDatabaseError(error);
+}
+
 /** Professionals only: the technician profile must exist for the actor. */
 async function requireTechnician(actor: Actor): Promise<void> {
   const { data, error } = await actor.client
@@ -76,6 +108,10 @@ export const handler = createHandler("professional-availability", {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
     const { limit } = parseQuery(ctx.url, listAvailabilityQuery);
+    // Read before the rows: a write landing in between makes the next save conflict (safe side)
+    // instead of passing with rows the client never saw.
+    const version = await actor.client.rpc("availability_version");
+    if (version.error) throw fromDatabaseError(version.error);
     const [windows, rotation] = await Promise.all([
       actor.client
         .from("availability_windows")
@@ -95,6 +131,7 @@ export const handler = createHandler("professional-availability", {
       data: {
         windows: (windows.data ?? []).map(toWindow),
         rotation: rotation.data ? toRotation(rotation.data) : null,
+        version: z.string().parse(version.data),
       } satisfies AvailabilityListResponse,
     };
   },
@@ -109,7 +146,7 @@ export const handler = createHandler("professional-availability", {
       p_ends_at: input.endsAt,
       p_status: input.status,
     });
-    if (created.error) throw fromDatabaseError(created.error);
+    if (created.error) throw windowWriteError(created.error);
     const { id, replayed } = createdRow(created.data);
     const { data, error } = await actor.client
       .from("availability_windows")
@@ -136,7 +173,7 @@ export const handler = createHandler("professional-availability", {
       .eq("technician_profile_id", actor.id)
       .select(SELECT)
       .maybeSingle();
-    if (error) throw fromDatabaseError(error);
+    if (error) throw windowWriteError(error);
     if (!data) throw new ApiError("NOT_FOUND"); // missing or not owned look the same
     return { data: { window: toWindow(data) } satisfies AvailabilityWindowResponse };
   },
@@ -145,11 +182,10 @@ export const handler = createHandler("professional-availability", {
     const actor = await requireActor(ctx);
     const input = await parseJsonBody(ctx.req, replaceAvailabilityDaysInput);
     await requireTechnician(actor);
-    const applied = await actor.client.rpc("replace_availability_days", {
-      p_idempotency_key: idempotencyKey(ctx.req),
-      p_days: input.days,
-      p_rotation: input.rotation ?? null,
-    });
+    const applied = await actor.client.rpc(
+      "replace_availability_days",
+      replaceDaysArgs(input, idempotencyKey(ctx.req)),
+    );
     if (applied.error) throw fromDatabaseError(applied.error);
     const { id, replayed } = createdRow(applied.data);
     return { data: { changeId: id, replayed } satisfies AvailabilityDaysResponse };

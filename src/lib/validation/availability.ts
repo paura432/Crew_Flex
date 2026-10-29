@@ -75,6 +75,11 @@ export const replaceAvailabilityDaysInput = z
       .max(MAX_REPLACE_DAYS, "v.days.tooMany")
       .refine((days) => new Set(days.map((d) => d.date)).size === days.length, "v.days.duplicate"),
     rotation: availabilityRotationInput.optional(),
+    /** `version` of the calendar the draft was made on (GET); a stale one gets 409 CONFLICT. */
+    expectedVersion: z
+      .string()
+      .regex(/^[0-9a-f]{32}$/, "v.days.version")
+      .optional(),
   })
   // Days may be empty only when the call just saves the pattern.
   .refine((v) => v.days.length > 0 || v.rotation !== undefined, {

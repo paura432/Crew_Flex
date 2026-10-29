@@ -100,3 +100,12 @@ const addDays = (day: string, n: number) =>
 /** Declared expiry on or before `today + REVIEW_WINDOW_DAYS` (UTC dates); no date → never listed. */
 export const isDueForReview = (expiresAt: string | null, today: string): boolean =>
   expiresAt !== null && expiresAt <= addDays(today, REVIEW_WINDOW_DAYS);
+
+/** Titles of own documents per linked qualification (V1.8: the evidence named on the passport). */
+export function evidenceByQualification(
+  links: { qualificationId: string; title: string }[],
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const { qualificationId, title } of links) (out[qualificationId] ??= []).push(title);
+  return out;
+}

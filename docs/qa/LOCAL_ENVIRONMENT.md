@@ -25,6 +25,12 @@ pnpm exec supabase functions serve --env-file supabase/functions/.env       # ev
 pnpm dev                                                                    # http://localhost:3000 (or 3001)
 ```
 
+Local Auth (since PKG account, `supabase/config.toml`): **e-mail confirmation is on** and sessions end **12 h** after
+sign-in. A new sign-up gets its link in Mailpit (http://127.0.0.1:56324; API `/api/v1/search?query=to:"<email>"`);
+seed and E2E accounts are created confirmed. Sign-up by invitation stays off until the owner-only row
+`app_private.feature_flags('invitation_signup', true)` exists (`scripts/local/db-owner-sql.sh`). Auth settings are
+read at `supabase start`: restart the stack after changing them.
+
 Re-seed from scratch (destroys only the local Docker database, asks for confirmation):
 
 ```bash
@@ -55,39 +61,46 @@ bash scripts/local/sb-local.sh db reset
 Deterministic UUIDs `00000000-0000-4000-8000-0000000000NN`. Names are NATO alphabet, e-mails on
 `crewflex.test`. Nobody real.
 
-| NN  | E-mail                       | Role / organization                              | Visibility  | Purpose                                                            |
-| --- | ---------------------------- | ------------------------------------------------ | ----------- | ------------------------------------------------------------------ |
-| 01  | admin.mro@crewflex.test      | admin · Demo MRO Madrid (MRO, ES)                | —           | Product example organization                                       |
-| 02  | admin.other@crewflex.test    | admin · Demo Aero Services Lisbon (MRO, PT)      | —           | Cross-organization isolation                                       |
-| 03  | admin.airline@crewflex.test  | admin · Demo Airline Ops Barcelona (airline, ES) | —           | AOG need, no internal workforce                                    |
-| 11  | alpha@crewflex.test          | member · Demo MRO Madrid                         | private     | Internal, fully qualified → eligible                               |
-| 12  | bravo@crewflex.test          | member · Demo MRO Madrid                         | private     | Internal, FTS expired 2026-09-30 → blocked                         |
-| 13  | charlie@crewflex.test        | member · Demo MRO Madrid                         | private     | Plain member, no ratings; cannot see capacity                      |
-| 14  | manager.mro@crewflex.test    | manager · Demo MRO Madrid                        | private     | Manager role: can create needs and see capacity                    |
-| 21  | delta@crewflex.test          | external                                         | anonymous   | Eligible, pseudonymous ref                                         |
-| 22  | echo@crewflex.test           | external                                         | open        | Eligible, name shown; SMS pending (soft)                           |
-| 23  | foxtrot@crewflex.test        | external                                         | anonymous   | Eligible, SMS verified (soft score 100)                            |
-| 24  | golf@crewflex.test           | external                                         | anonymous   | B1.1 **pending** → not verified                                    |
-| 25  | hotel@crewflex.test          | external                                         | **private** | Never appears in any pool                                          |
-| 26  | india@crewflex.test          | external                                         | anonymous   | Available only until 20 Oct → partial availability                 |
-| 27  | juliett@crewflex.test        | external                                         | open        | TR-B737 instead of TR-A320 → missing for MAD; eligible for BCN AOG |
-| 41  | kilo@crewflex.test           | external                                         | anonymous   | Available all October but **unavailable 19–21 Oct** → partial      |
-| 42  | lima@crewflex.test           | member · Demo Aero Services Lisbon               | private     | Internal B2 + TR-A330 → LIS need fully covered (gap 0)             |
-| 43  | mike@crewflex.test           | external                                         | anonymous   | B2 **expires 2026-11-04**, during the LIS need                     |
-| 44  | november@crewflex.test       | external                                         | open        | B2 + TR-A350 → missing TR-A330                                     |
-| 45  | oscar@crewflex.test          | external                                         | anonymous   | B1.1 **rejected**                                                  |
-| 46  | papa@crewflex.test           | external                                         | anonymous   | B1.1 **withdrawn** → treated as not held                           |
-| 47  | quebec@crewflex.test         | external                                         | open        | B1.1 + TR-B737, **no availability windows** → not available        |
-| 31  | platform.admin@crewflex.test | platform_admin                                   | private     | Platform role (never from metadata)                                |
+| NN  | E-mail                       | Role / organization                                       | Visibility  | Purpose                                                            |
+| --- | ---------------------------- | --------------------------------------------------------- | ----------- | ------------------------------------------------------------------ |
+| 01  | admin.mro@crewflex.test      | admin · Demo MRO Madrid (MRO, ES)                         | —           | Product example organization                                       |
+| 02  | admin.other@crewflex.test    | admin · Demo Aero Services Lisbon (MRO, PT)               | —           | Cross-organization isolation                                       |
+| 03  | admin.airline@crewflex.test  | admin · Demo Airline Ops Barcelona (airline, ES)          | —           | AOG need, no internal workforce                                    |
+| 11  | alpha@crewflex.test          | member · Demo MRO Madrid                                  | private     | Internal, fully qualified → eligible                               |
+| 12  | bravo@crewflex.test          | member · Demo MRO Madrid                                  | private     | Internal, FTS expired 2026-09-30 → blocked                         |
+| 13  | charlie@crewflex.test        | member · Demo MRO Madrid                                  | private     | Plain member, no ratings; cannot see capacity                      |
+| 14  | manager.mro@crewflex.test    | manager · Demo MRO Madrid                                 | private     | Manager role: can create needs and see capacity                    |
+| 21  | delta@crewflex.test          | external                                                  | anonymous   | Eligible, pseudonymous ref                                         |
+| 22  | echo@crewflex.test           | external                                                  | open        | Eligible, name shown; SMS pending (soft)                           |
+| 23  | foxtrot@crewflex.test        | external                                                  | anonymous   | Eligible, SMS verified (soft score 100)                            |
+| 24  | golf@crewflex.test           | external                                                  | anonymous   | B1.1 **pending** → not verified                                    |
+| 25  | hotel@crewflex.test          | external                                                  | **private** | Never appears in any pool                                          |
+| 26  | india@crewflex.test          | external                                                  | anonymous   | Available only until 20 Oct → partial availability                 |
+| 27  | juliett@crewflex.test        | external                                                  | open        | TR-B737 instead of TR-A320 → missing for MAD; eligible for BCN AOG |
+| 41  | kilo@crewflex.test           | external                                                  | anonymous   | Available all October but **unavailable 19–21 Oct** → partial      |
+| 42  | lima@crewflex.test           | member · Demo Aero Services Lisbon                        | private     | Internal B2 + TR-A330 → LIS need fully covered (gap 0)             |
+| 43  | mike@crewflex.test           | external                                                  | anonymous   | B2 **expires 2026-11-04**, during the LIS need                     |
+| 44  | november@crewflex.test       | external                                                  | open        | B2 + TR-A350 → missing TR-A330                                     |
+| 45  | oscar@crewflex.test          | external                                                  | anonymous   | B1.1 **rejected**                                                  |
+| 46  | papa@crewflex.test           | external                                                  | anonymous   | B1.1 **withdrawn** → treated as not held                           |
+| 47  | quebec@crewflex.test         | external                                                  | open        | B1.1 + TR-B737, **no availability windows** → not available        |
+| 31  | platform.admin@crewflex.test | platform_admin · admin · CrewFlex Operaciones (other, ES) | private     | Platform role (never from metadata)                                |
 
 Work requirements: `B1.1 · A320 line maintenance reinforcement` (MAD, 18–22 Oct night, 2 ×, hard B1.1 +
 TR-A320 + EWIS + HF + FTS, soft SMS → required 2, internally eligible 1, gap 1, external eligible 3 of 10),
 `B2 · A330 avionics check support` (LIS, 2–6 Nov, 1 × → gap 0), `B1.1 · B737 AOG recovery` (BCN, 25–26 Oct,
-AOG, 1 × → gap 1, Juliett eligible, Quebec not available), `CAT-A · line support (cancelled)` (status demo).
+AOG, 1 × → gap 1, Juliett eligible, Quebec not available), `CAT-A · line support (cancelled)` (status demo),
+`B1.1 · A320 / B737 NG line check (v1.8 profile rules)` (Demo Airline Ops Barcelona, BCN, 12–16 Oct — already ended,
+so it is in no opportunities list or dashboard focus; hard B1.1 + EWIS + HF; work permit ES, category B1.1, aircraft
+A320 Family or B737 NG, type rating required, ≥ 5 years, Line Maintenance → Delta the only eligible one; Echo
+restricted rating + capability; Foxtrot no B1.1 rating on those aircraft + capability; Golf pending B1.1, 4 years;
+BR-3.7–3.13, package matching-v18). The other requirements state no profile rule, so their outcomes above are
+unchanged; soft scores now also count English B2+ and base/mobility (BR-5.6): Foxtrot keeps 100 on MAD, Echo and
+Delta score 67 there.
 
-Row counts after `db reset`: 22 users/profiles, 19 technician profiles, 3 organizations, 8 memberships,
-17 qualification types, 74 technician qualifications, 17 availability windows, 4 requirements,
-12 requirement qualifications, 4 audit events.
+Row counts after `db reset`: 22 users/profiles, 19 technician profiles, 4 organizations, 9 memberships,
+17 qualification types, 74 technician qualifications, 17 availability windows, 5 requirements,
+15 requirement qualifications, 4 audit events.
 
 ## 5. Verification executed on 2026-10-10 (local only)
 

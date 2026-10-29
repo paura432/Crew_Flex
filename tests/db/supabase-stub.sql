@@ -35,7 +35,7 @@ create table auth.users (
 
 create table auth.identities (
   provider_id text,
-  user_id uuid references auth.users (id),
+  user_id uuid references auth.users (id) on delete cascade, -- as the platform (account deletion)
   identity_data jsonb,
   provider text,
   last_sign_in_at timestamptz,

@@ -1,19 +1,9 @@
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { UnitConverter } from "@/features/tools/components/UnitConverter";
-import { ToolsHeader } from "@/features/tools/components/ToolsHeader";
+import { TOOLS_BASE } from "@/features/tools/ids";
+import { ToolScreen, toolMetadata } from "@/features/tools/components/ToolScreen";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("tools");
-  return { title: t("tile.torque.title") };
-}
+export const generateMetadata = () => toolMetadata("torque");
 
-export default async function ToolsTorquePage() {
-  const t = await getTranslations("tools");
-  return (
-    <>
-      <ToolsHeader title={t("tile.torque.title")} back />
-      <UnitConverter torque />
-    </>
-  );
+// Signed-in workbench; the same screen is public at /tools (T-145).
+export default function ToolsTorquePage() {
+  return <ToolScreen id="torque" base={TOOLS_BASE.app} />;
 }

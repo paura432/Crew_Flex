@@ -6,6 +6,8 @@ import { createUserClient } from "./supabase.ts";
 export interface Actor {
   /** auth.users.id === profiles.id, taken from the verified JWT `sub`. Never from the body. */
   id: string;
+  /** The verified JWT `email` claim, if any (own data export). */
+  email: string | null;
   client: SupabaseClient;
 }
 
@@ -28,7 +30,8 @@ export async function requireActor(ctx: RequestContext): Promise<Actor> {
     throw new ApiError("UNAUTHORIZED");
   }
   ctx.actorId = sub;
-  return { id: sub, client };
+  const email = data?.claims?.email;
+  return { id: sub, email: typeof email === "string" && email !== "" ? email : null, client };
 }
 
 /** Professionals only: the technician profile must exist for the actor (read under RLS). */

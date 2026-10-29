@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { calendarDays, type CalendarWindow } from "./calendar";
+import { calendarDays, type CalendarDay, type CalendarWindow } from "./calendar";
 import {
   cycleDay,
   cycleStates,
+  emptyPreviewReason,
   planChanges,
   planCycle,
   RotationError,
@@ -122,5 +123,42 @@ describe("planCycle", () => {
     expect(replaced["2026-11-08"]).toEqual({ cycle: O, status: null });
     // A rest day over an existing window clears it → it is a real change.
     expect(planChanges(days, replaced)).toContainEqual({ date: "2026-11-08", status: null });
+  });
+
+  it("BR-4.9 / N-04: the days of a confirmed assignment are never generated, even with replace", () => {
+    const windows: CalendarWindow[] = [
+      {
+        id: "a",
+        startsAt: "2026-11-08T00:00:00Z",
+        endsAt: "2026-11-11T00:00:00Z",
+        status: "available",
+      },
+    ];
+    const days = calendarDays(windows, month);
+    const assigned = new Set(["2026-11-09", "2026-11-10"]);
+    const opts = { anchor: "2026-11-01", publishRest: true, today: "2026-11-01", assigned };
+    for (const replace of [false, true]) {
+      const plan = planCycle(days, "7x3", { ...opts, replace });
+      expect([replace, plan["2026-11-09"], plan["2026-11-10"]]).toEqual([
+        replace,
+        undefined,
+        undefined,
+      ]);
+      expect(planChanges(days, plan).some((c) => assigned.has(c.date))).toBe(false);
+    }
+    // The other days of the window are still replaced (v1.8 «Reemplazar…» skips only assigned days).
+    expect(planCycle(days, "7x3", { ...opts, replace: true })["2026-11-08"]).toBeDefined();
+  });
+});
+
+describe("emptyPreviewReason (X-15)", () => {
+  const day = (date: string) => ({ date, windows: [] }) as unknown as CalendarDay;
+  it("a month entirely in the past says so; otherwise the days are already taken", () => {
+    expect(emptyPreviewReason([day("2026-09-29"), day("2026-09-30")], "2026-10-22")).toBe(
+      "pastMonth",
+    );
+    expect(emptyPreviewReason([day("2026-10-21"), day("2026-10-22")], "2026-10-22")).toBe(
+      "nothingGenerated",
+    );
   });
 });

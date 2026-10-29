@@ -3,23 +3,78 @@
 import { z } from "zod";
 import type { Candidate } from "../../../src/domain/matching.ts";
 import {
+  EU_COUNTRIES,
+  isEvaluable,
   REQUIREMENT_LEVELS,
+  REQUIREMENT_TIME_ZONES,
+  type RequiredQualification,
+  type RequirementConditions,
+  type RequirementShift,
   REQUIREMENT_STATUSES,
   SHIFTS,
   URGENCIES,
   type WorkRequirement,
 } from "../../../src/domain/work-requirement.ts";
-import { toCandidate } from "../../../src/lib/candidate-pool.ts";
+import type { CandidatePassport } from "../../../src/domain/passport.ts";
+import { REPRESENTATION_STATUSES } from "../../../src/domain/recruiter.ts";
+import {
+  PROFILE_RULES_SELECT,
+  profileRulesColumns,
+  toCandidate,
+  toCandidatePassport,
+  toProfileRules,
+} from "../../../src/lib/candidate-pool.ts";
+import {
+  requirementConditionsRow,
+  requirementShiftInput,
+} from "../../../src/lib/validation/work-requirement.ts";
 
 export { toCandidate };
 import type { CandidateSummary, ExternalPoolCoverage } from "../../../src/types/api.ts";
 import type { Actor } from "./auth.ts";
 import { ApiError, fromDatabaseError } from "./errors.ts";
 
+// The v1.8 profile requirements (matching-v18, 20261023900000; `country` is the builder's) travel with the
+// requirement so every evaluateMatch on it (matching, capacity, applications) applies them.
 export const REQUIREMENT_SELECT = `
   id, organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_at,
-  work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) )
+  updated_at, country, timezone, description, shifts, conditions, archived_at, ${PROFILE_RULES_SELECT},
+  work_requirement_qualifications ( requirement_level, qualification_types ( id, code, name ) ),
+  represented_clients ( id, name, status )
 `;
+
+/**
+ * The requirement builder's terms as the database stores them (LOCAL 20261023600000; the CHECK constraints
+ * already validated them, the shared schemas parse them again so drift fails loudly). NULL = not stated.
+ */
+export const termsColumns = {
+  country: z.enum(EU_COUNTRIES).nullish(),
+  description: z.string().nullish(),
+  shifts: z.array(requirementShiftInput).nullish(),
+  conditions: requirementConditionsRow.nullish(),
+};
+export const timeZoneColumn = z.enum(REQUIREMENT_TIME_ZONES).nullish();
+
+/** Terms → API (`null` when not stated; instants as ISO UTC). */
+export function toTerms(
+  row: {
+    country?: (typeof EU_COUNTRIES)[number] | null;
+    description?: string | null;
+    shifts?: RequirementShift[] | null;
+    conditions?: RequirementConditions | null;
+  },
+  timeZone: (typeof REQUIREMENT_TIME_ZONES)[number] | null | undefined,
+) {
+  return {
+    country: row.country ?? null,
+    timeZone: timeZone ?? null,
+    description: row.description ?? null,
+    shifts:
+      row.shifts?.map((s) => ({ ...s, startsAt: toIso(s.startsAt), endsAt: toIso(s.endsAt) })) ??
+      null,
+    conditions: row.conditions ?? null,
+  };
+}
 
 const requirementRow = z.object({
   id: z.string(),
@@ -33,6 +88,15 @@ const requirementRow = z.object({
   urgency: z.enum(URGENCIES),
   status: z.enum(REQUIREMENT_STATUSES),
   created_at: z.string(),
+  updated_at: z.string(),
+  ...termsColumns,
+  timezone: timeZoneColumn,
+  archived_at: z.string().nullish(),
+  // Recruiter (LOCAL 20261024500100): the represented client, readable by the agency's members (RLS); null = none.
+  represented_clients: z
+    .object({ id: z.string(), name: z.string(), status: z.enum(REPRESENTATION_STATUSES) })
+    .nullish(),
+  ...profileRulesColumns,
   work_requirement_qualifications: z.array(
     z.object({
       requirement_level: z.enum(REQUIREMENT_LEVELS),
@@ -41,7 +105,11 @@ const requirementRow = z.object({
   ),
 });
 
-const toIso = (value: string) => new Date(value).toISOString();
+export const toIso = (value: string) => new Date(value).toISOString();
+
+/** Hard first, then by code: stable, readable ordering everywhere. */
+export const byLevelThenCode = (a: RequiredQualification, b: RequiredQualification) =>
+  a.level === b.level ? a.code.localeCompare(b.code) : a.level === "hard" ? -1 : 1;
 
 export function toWorkRequirement(raw: unknown): WorkRequirement {
   const row = requirementRow.parse(raw);
@@ -57,6 +125,7 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
     urgency: row.urgency,
     status: row.status,
     createdAt: toIso(row.created_at),
+    updatedAt: toIso(row.updated_at),
     qualifications: row.work_requirement_qualifications
       .map((q) => ({
         qualificationTypeId: q.qualification_types.id,
@@ -64,18 +133,19 @@ export function toWorkRequirement(raw: unknown): WorkRequirement {
         name: q.qualification_types.name,
         level: q.requirement_level,
       }))
-      // Hard first, then by code: stable, readable ordering everywhere.
-      .sort((a, b) =>
-        a.level === b.level ? a.code.localeCompare(b.code) : a.level === "hard" ? -1 : 1,
-      ),
+      .sort(byLevelThenCode),
+    ...toTerms(row, row.timezone),
+    archivedAt: row.archived_at ? toIso(row.archived_at) : null,
+    client: row.represented_clients ?? null,
+    ...toProfileRules(row),
   };
 }
 
 /** Loads a requirement visible to the actor (RLS). Hidden and missing look the same. */
-/** V1.8 evaluates published jobs only: a closed need no longer exposes the candidate pool (BR-1.9). */
+/** V1.8 evaluates published jobs only: a paused or closed need exposes no candidate pool (BR-1.9, M05). */
 export function assertEvaluableStatus(requirement: Pick<WorkRequirement, "status">): void {
-  if (requirement.status === "closed")
-    throw new ApiError("CONFLICT", "This requirement is closed.");
+  if (!isEvaluable(requirement))
+    throw new ApiError("CONFLICT", `This requirement is ${requirement.status}.`);
 }
 
 export async function loadRequirement(actor: Actor, id: string): Promise<WorkRequirement> {
@@ -120,12 +190,32 @@ export async function loadExternalPoolCoverage(
   return { prefiltered: row.prefiltered, hardEligible: row.hard_eligible, cap: row.cap };
 }
 
-export function toCandidateSummary(candidate: Candidate): CandidateSummary {
+/**
+ * The v1.8 card declarations of the same pool rows (package passport), by candidate reference. The
+ * definer function calls get_requirement_candidate_pool itself, so its authorization, cap, order and
+ * blocks apply unchanged; it never returns contact, employer, rate, blocks or restriction text.
+ */
+export async function loadCandidatePassports(
+  actor: Actor,
+  requirementId: string,
+): Promise<Map<string, CandidatePassport>> {
+  const { data, error } = await actor.client.rpc("get_requirement_candidate_passports", {
+    p_requirement_id: requirementId,
+  });
+  if (error) throw fromDatabaseError(error);
+  return new Map(z.array(z.unknown()).parse(data).map(toCandidatePassport));
+}
+
+export function toCandidateSummary(
+  candidate: Candidate,
+  passport?: CandidatePassport | null,
+): CandidateSummary {
   return {
     id: candidate.id,
     pool: candidate.pool,
     displayName: candidate.displayName,
     baseLocation: candidate.baseLocation,
     yearsExperience: candidate.yearsExperience,
+    ...(passport === undefined ? {} : { passport }),
   };
 }

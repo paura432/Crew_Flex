@@ -3,6 +3,7 @@ import { requireActor, requireOrganizationRole } from "../_shared/auth.ts";
 import { ApiError } from "../_shared/errors.ts";
 import { createHandler } from "../_shared/http.ts";
 import {
+  loadCandidatePassports,
   loadCandidatePool,
   assertEvaluableStatus,
   loadRequirement,
@@ -22,9 +23,11 @@ export const handler = createHandler("capacity-evaluate", {
     await requireOrganizationRole(actor, requirement.organizationId, ["admin", "manager"]);
     assertEvaluableStatus(requirement);
 
-    const workforce = (await loadCandidatePool(actor, requirementId)).filter(
-      (c) => c.pool === "internal",
-    );
+    const [pool, passports] = await Promise.all([
+      loadCandidatePool(actor, requirementId),
+      loadCandidatePassports(actor, requirementId),
+    ]);
+    const workforce = pool.filter((c) => c.pool === "internal");
 
     let evaluation;
     try {
@@ -38,7 +41,10 @@ export const handler = createHandler("capacity-evaluate", {
     const byId = new Map(workforce.map((c) => [c.id, c]));
     const { internalMatches, ...capacity } = evaluation;
     const internal = [...internalMatches].sort(compareMatches).map((match) => ({
-      candidate: toCandidateSummary(byId.get(match.candidateId)!),
+      candidate: toCandidateSummary(
+        byId.get(match.candidateId)!,
+        passports.get(match.candidateId) ?? null,
+      ),
       match,
     }));
 

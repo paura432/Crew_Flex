@@ -14,15 +14,25 @@ function toApiError(error: z.ZodError): ApiError {
   );
 }
 
+/**
+ * A requirement with its 366 shifts and a 4000-character description does not fit in 32 KB
+ * (`work-requirements` POST/PUT, requirement builder): that function passes this one.
+ */
+export const MAX_REQUIREMENT_BODY_BYTES = 128 * 1024;
+
+/**
+ * Strict JSON body. `maxBytes` defaults to MAX_BODY_BYTES; a route whose largest VALID body is bigger
+ * (the v1.8 passport: 40 ratings with restrictions) passes its own, proven by a test.
+ */
 export async function parseJsonBody<S extends z.ZodType>(
   req: Request,
   schema: S,
+  { maxBytes = MAX_BODY_BYTES }: { maxBytes?: number } = {},
 ): Promise<z.infer<S>> {
   const declared = Number(req.headers.get("content-length") ?? "0");
-  if (declared > MAX_BODY_BYTES) throw new ApiError("PAYLOAD_TOO_LARGE");
+  if (declared > maxBytes) throw new ApiError("PAYLOAD_TOO_LARGE");
   const text = await req.text();
-  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES)
-    throw new ApiError("PAYLOAD_TOO_LARGE");
+  if (new TextEncoder().encode(text).length > maxBytes) throw new ApiError("PAYLOAD_TOO_LARGE");
 
   let raw: unknown;
   try {

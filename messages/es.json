@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Crew Flex",
+    "appName": "CrewFlex",
     "brandTag": "AVIATION",
     "skipToContent": "Saltar al contenido",
     "signOut": "Cerrar sesión",
@@ -22,30 +22,47 @@
     "utcNote": "Horas en UTC.",
     "notFoundTitle": "No encontrado",
     "notFoundDescription": "Esta página no existe o no tienes acceso a ella.",
-    "backToApp": "Volver a Crew Flex",
+    "backToApp": "Volver a CrewFlex",
     "errorTitle": "No se ha podido mostrar esta página",
     "errorHint": "Inténtalo de nuevo en un momento.",
+    "signOutHint": "Si el problema continúa, cierra sesión y vuelve a entrar.",
     "menu": "Menú"
   },
   "meta": {
     "description": "Convierte cualificaciones, disponibilidad y demanda operativa en capacidad técnica movilizable.",
     "signIn": "Iniciar sesión",
     "register": "Crear cuenta",
-    "professional": "Profesional",
-    "passport": "Pasaporte",
+    "professional": "Mi espacio",
+    "passport": "Mi pasaporte",
     "qualifications": "Cualificaciones",
     "availability": "Disponibilidad",
-    "organization": "Panel de la organización",
-    "requirements": "Necesidades de personal",
+    "organization": "Resumen",
+    "requirements": "Necesidades",
     "newRequirement": "Nueva necesidad",
     "requirement": "Necesidad",
     "matches": "Profesionales elegibles",
+    "candidates": "Buscar candidatos",
     "workforce": "Plantilla",
+    "organizationProfile": "Organización",
     "settings": "Configuración",
-    "verifications": "Revisión de cualificaciones",
+    "verifications": "Verificaciones",
+    "adminOrganizations": "Organizaciones",
+    "audit": "Auditoría",
     "tools": "Herramientas",
-    "documents": "Wallet documental",
-    "recovery": "Restablecer contraseña"
+    "documents": "Documentos",
+    "recovery": "Restablecer contraseña",
+    "admin": "Administración",
+    "recruiter": "Recruiter",
+    "opportunities": "Oportunidades",
+    "opportunity": "Oportunidad",
+    "applications": "Mis candidaturas",
+    "requirementApplications": "Candidaturas",
+    "requirementEdit": "Editar necesidad",
+    "logbook": "Logbook",
+    "organizationApplications": "Candidaturas",
+    "network": "Ofertas en la red",
+    "networkOpportunity": "Oferta en la red",
+    "representations": "Representaciones"
   },
   "nav": {
     "organization": "Organización",
@@ -53,16 +70,34 @@
     "account": "Cuenta",
     "dashboard": "Resumen",
     "requirements": "Necesidades",
+    "candidates": "Buscar candidatos",
     "workforce": "Plantilla",
+    "organizationProfile": "Organización",
     "overview": "Mi espacio",
     "profile": "Mi pasaporte",
     "qualifications": "Cualificaciones",
     "availability": "Disponibilidad",
     "settings": "Configuración",
     "platform": "Plataforma",
+    "administration": "Administración",
     "verifications": "Verificaciones",
+    "adminOrganizations": "Organizaciones",
+    "audit": "Auditoría",
     "tools": "Herramientas",
-    "documents": "Documentos"
+    "documents": "Documentos",
+    "viewAs": "Ver como",
+    "views": {
+      "professional": "Técnico",
+      "organization": "Empresa",
+      "recruiter": "Recruiter",
+      "admin": "Administración"
+    },
+    "opportunities": "Oportunidades",
+    "applications": "Mis candidaturas",
+    "logbook": "Logbook",
+    "organizationApplications": "Candidaturas",
+    "network": "Ofertas en la red",
+    "representations": "Representaciones"
   },
   "landing": {
     "eyebrow": "Personal de mantenimiento aeronáutico",
@@ -88,7 +123,7 @@
   "auth": {
     "signIn": {
       "title": "Iniciar sesión",
-      "lead": "Accede a tu espacio de Crew Flex.",
+      "lead": "Accede a tu espacio de CrewFlex.",
       "noAccount": "¿Sin cuenta?",
       "createOne": "Crea una",
       "submit": "Iniciar sesión",
@@ -96,7 +131,12 @@
       "email": "Correo electrónico",
       "password": "Contraseña",
       "forgot": "¿Has olvidado tu contraseña?",
-      "passwordChanged": "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña."
+      "passwordChanged": "Contraseña cambiada. Se han cerrado todas las sesiones: entra con tu nueva contraseña.",
+      "signedOut": "Sesión cerrada.",
+      "accountClosed": "Cuenta cerrada.",
+      "emailConfirmed": "Correo confirmado. Ya puedes iniciar sesión.",
+      "confirmLinkInvalid": "Enlace caducado, utilizado o no válido. Inicia sesión; si tu correo no está confirmado, regístrate de nuevo para recibir otro enlace.",
+      "haveInvitation": "Tengo una invitación"
     },
     "register": {
       "title": "Crear cuenta",
@@ -115,11 +155,18 @@
       "yourName": "Tu nombre",
       "email": "Correo electrónico",
       "password": "Contraseña",
-      "passwordHint": "Al menos 10 caracteres.",
+      "passwordHint": "Al menos 12 caracteres.",
       "organizationName": "Nombre de la organización",
       "organizationType": "Tipo de organización",
       "country": "País (código ISO)",
-      "countryHint": "p. ej. ES"
+      "countryHint": "p. ej. ES",
+      "invitedAs": "Te han invitado a crear una cuenta de tipo {type}.",
+      "invitationCode": "Código de invitación",
+      "invitationCodeHint": "Viene en el enlace de tu invitación.",
+      "invitationCodeAsk": "Abre el enlace de tu correo de invitación o pega aquí su código.",
+      "invitationOnly": "El alta en CrewFlex es solo por invitación.",
+      "invitationInvalid": "Enlace caducado, utilizado o no válido.",
+      "invitationContinue": "Continuar"
     },
     "errors": {
       "VALIDATION_ERROR": "Revisa los campos marcados.",
@@ -130,7 +177,11 @@
       "NETWORK_ERROR": "No se ha podido contactar con el servicio de autenticación. Reintenta.",
       "UNKNOWN": "La autenticación ha fallado. Inténtalo de nuevo.",
       "SAME_PASSWORD": "Elige una contraseña distinta de la actual.",
-      "RECOVERY_EXPIRED": "La sesión de restablecimiento ha caducado. Solicita un enlace nuevo."
+      "RECOVERY_EXPIRED": "La sesión de restablecimiento ha caducado. Solicita un enlace nuevo.",
+      "RATE_LIMITED": "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
+      "INVITATION_REQUIRED": "El alta es solo por invitación: usa el enlace que has recibido.",
+      "INVITATION_INVALID": "Enlace caducado, utilizado o no válido.",
+      "INVITATION_OTHER_EMAIL": "La invitación pertenece a otro correo."
     },
     "orgType": {
       "mro": "MRO",
@@ -150,10 +201,10 @@
       "expired": "Ese enlace ha caducado o ya se ha usado. Solicita uno nuevo.",
       "backToSignIn": "Volver a iniciar sesión",
       "resetTitle": "Elige una contraseña nueva",
-      "resetLead": "Se cerrarán tus demás sesiones.",
+      "resetLead": "Al guardarla se cerrarán todas tus sesiones, también esta.",
       "newPassword": "Contraseña nueva",
       "confirmPassword": "Repite la contraseña nueva",
-      "passwordHint": "Al menos 10 caracteres.",
+      "passwordHint": "Al menos 12 caracteres.",
       "save": "Guardar contraseña",
       "saving": "Guardando…",
       "noSession": "Esta página necesita un enlace de restablecimiento válido.",
@@ -191,7 +242,7 @@
     },
     "NETWORK_ERROR": {
       "title": "Servicio no disponible",
-      "description": "Crew Flex no ha podido contactar con el backend. Comprueba tu conexión y reintenta."
+      "description": "CrewFlex no ha podido contactar con el backend. Comprueba tu conexión y reintenta."
     },
     "INTERNAL_ERROR": {
       "title": "Error del servidor",
@@ -201,8 +252,10 @@
     "action": {
       "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
       "unreachable": "No se ha podido contactar con el servicio. No se ha guardado nada; reintenta.",
+      "offline": "Se ha perdido la conexión. Tus cambios siguen aquí; comprueba la conexión y reintenta.",
+      "reload": "Esta página es de una versión anterior de la aplicación. Recárgala y vuelve a intentarlo; tus cambios no se han guardado.",
       "gone": "Este elemento ya no existe. Recarga la página.",
-      "conflict": "Ya has declarado esta cualificación. Edita la existente."
+      "conflict": "Ese dato cambió o ya existe. Recarga para ver el estado actual."
     }
   },
   "v": {
@@ -215,7 +268,7 @@
     },
     "password": {
       "required": "Introduce tu contraseña",
-      "min": "Usa al menos 10 caracteres",
+      "min": "Usa al menos 12 caracteres",
       "max": "Usa como máximo 72 caracteres",
       "mismatch": "Las contraseñas no coinciden."
     },
@@ -234,19 +287,25 @@
       "invalid": "Usa un código de país de 2 letras, p. ej. ES"
     },
     "start": {
-      "required": "El inicio debe ser una fecha y hora (UTC)"
+      "required": "El inicio debe ser una fecha y hora (UTC)",
+      "future": "El inicio no puede estar en el pasado"
     },
     "end": {
       "required": "El fin debe ser una fecha y hora (UTC)",
       "afterStart": "El fin debe ser posterior al inicio"
     },
     "window": {
-      "status": "Elige disponible o no disponible",
+      "status": "Elige disponible, no disponible o solo AOG",
       "maxDays": "Una ventana puede abarcar como máximo 366 días",
       "id": "Se necesita un identificador de ventana válido"
     },
     "organization": {
-      "required": "La organización es obligatoria"
+      "required": "La organización es obligatoria",
+      "countryEu": "Selecciona un país de la Unión Europea.",
+      "taxIdRequired": "Indica la identificación fiscal",
+      "taxIdMax": "Como máximo 80 caracteres",
+      "taxAddressRequired": "Indica el domicilio fiscal",
+      "taxAddressMax": "Como máximo 400 caracteres"
     },
     "title": {
       "required": "El título es obligatorio",
@@ -272,7 +331,42 @@
     },
     "requirement": {
       "maxDays": "Una necesidad puede durar como máximo 366 días",
-      "id": "Se necesita un identificador de necesidad válido"
+      "id": "Se necesita un identificador de necesidad válido",
+      "country": "Selecciona un país de la Unión Europea.",
+      "timeZone": "Zona horaria no válida.",
+      "description": "La descripción admite como máximo 4000 caracteres",
+      "shifts": {
+        "hours": "Las horas base deben estar entre 0,25 y 24",
+        "endBeforeStart": "Cada jornada debe terminar después de empezar",
+        "tooLong": "Divide los trabajos de varios días en jornadas de hasta 24 horas.",
+        "hoursExceed": "Las horas base superan la duración del intervalo.",
+        "overlap": "Las jornadas no pueden solaparse.",
+        "sameLocalDay": "Solo se admite una jornada por fecha local de inicio.",
+        "tooMany": "Máximo 366 jornadas.",
+        "envelope": "El periodo debe ir del inicio de la primera jornada al fin de la última"
+      },
+      "conditions": {
+        "hourlyRate": "Tarifa por hora: valor no válido.",
+        "overtimeRate": "Hora extra: valor no válido.",
+        "perDiem": "Dietas: valor no válido.",
+        "shiftHours": "Horas por jornada: valor no válido.",
+        "contractType": "Elige un tipo de contrato",
+        "mobilization": "La movilización máxima debe ser un número entero de 1 a 168 horas",
+        "arrival": "La incorporación debe tener entre 1 y 160 caracteres"
+      },
+      "client": {
+        "select": "Selecciona un cliente.",
+        "required": "Indica el cliente representado.",
+        "inactive": "La representación de este cliente no está activa: elige un cliente activo."
+      },
+      "rules": {
+        "category": "Selecciona una categoría de la lista.",
+        "aircraft": "Selecciona aeronaves de la lista, sin repetir.",
+        "engines": "Selecciona motores de la lista, sin repetir.",
+        "minYears": "La experiencia mínima debe ser un número entero de 0 a 60 años.",
+        "skills": "Selecciona capacidades de la lista, sin repetir.",
+        "typeRating": "Selecciona una aeronave si exiges habilitación de tipo."
+      }
     },
     "qualifications": {
       "min": "Añade al menos una cualificación",
@@ -325,8 +419,12 @@
       "qualification": "Cualificación no válida."
     },
     "review": {
-      "reasonRequired": "Indica un motivo para rechazar (el profesional lo leerá).",
+      "evidenceRequired": "Indica la evidencia o el motivo de la revisión.",
       "noteMax": "Usa como máximo 500 caracteres"
+    },
+    "organizationReview": {
+      "noteRequired": "Indica la evidencia de la revisión",
+      "noteMax": "Usa como máximo 2000 caracteres"
     },
     "day": {
       "invalid": "Elige un día válido"
@@ -334,7 +432,8 @@
     "days": {
       "required": "Elige al menos un día",
       "tooMany": "Como máximo 62 días a la vez",
-      "duplicate": "Cada día solo puede aparecer una vez"
+      "duplicate": "Cada día solo puede aparecer una vez",
+      "version": "Recarga la página para guardar el calendario"
     },
     "rotation": {
       "pattern": "Elige un patrón válido",
@@ -354,6 +453,88 @@
         "tooLarge": "El archivo supera los 5 MB",
         "form": "No se pudo leer la subida. Inténtalo de nuevo."
       }
+    },
+    "application": {
+      "id": "Candidatura no válida",
+      "consent": "Autoriza compartir tus datos con la organización de esta necesidad para presentar la candidatura",
+      "reason": "Indica el motivo",
+      "reasonMax": "El motivo admite como máximo 1000 caracteres",
+      "reasonNotAllowed": "Este cambio no lleva motivo",
+      "proposal": "Falta la versión de la propuesta",
+      "acceptTerms": "Confirma que aceptas estas condiciones"
+    },
+    "logbook": {
+      "date": {
+        "invalid": "Introduce una fecha válida",
+        "future": "El logbook registra actividad realizada, no futura."
+      },
+      "aircraft": {
+        "required": "Indica la aeronave",
+        "max": "La aeronave admite hasta 100 caracteres"
+      },
+      "ata": "El ATA admite hasta 10 caracteres",
+      "hours": "Horas: valor no válido. De 0 a 24, en pasos de 0,1.",
+      "category": "Elige una categoría de la lista",
+      "environment": "Elige un entorno de la lista",
+      "description": {
+        "required": "Describe la tarea realizada",
+        "max": "La descripción admite hasta 3000 caracteres"
+      },
+      "empty": "No hay cambios que guardar",
+      "id": "Se necesita un identificador de entrada válido"
+    },
+    "passport": {
+      "primary": {
+        "required": "Elige tu categoría principal.",
+        "notDeclared": "La categoría principal debe estar entre tus categorías."
+      },
+      "categories": "Elige categorías de la lista, sin repetir.",
+      "aircraft": "Elige aeronaves de la lista, sin repetir.",
+      "engines": "Elige motores de la lista, sin repetir.",
+      "skills": "Elige capacidades de la lista, sin repetir.",
+      "permits": "Elige países de la Unión Europea, sin repetir.",
+      "english": "Elige un nivel de A1 a C2.",
+      "ownTools": "Indica si tienes herramientas propias.",
+      "country": "Selecciona un país de la Unión Europea.",
+      "restrictions": {
+        "text": "Las restricciones deben ser texto.",
+        "max": "Como máximo 2000 caracteres."
+      },
+      "rating": {
+        "list": "Habilitación no válida.",
+        "max": "Máximo cuarenta habilitaciones.",
+        "aircraft": "Elige la aeronave de la habilitación.",
+        "category": "Elige una categoría de licencia.",
+        "restrictionsMax": "Como máximo 500 caracteres por habilitación.",
+        "undeclared": "Cada habilitación debe usar una aeronave y una categoría que hayas marcado.",
+        "duplicate": "Esa habilitación ya está en la lista."
+      },
+      "phone": "Revisa el teléfono: dígitos, espacios y un + inicial.",
+      "organization": "Organización no válida.",
+      "minRate": {
+        "number": "La tarifa debe ser un número.",
+        "min": "La tarifa debe ser positiva.",
+        "max": "La tarifa debe ser como máximo 100 000."
+      },
+      "rateUnit": "Elige EUR / hora o EUR / día.",
+      "blocks": {
+        "max": "Como máximo 200 organizaciones bloqueadas."
+      }
+    },
+    "outreach": {
+      "mobilization": "Indica entre 0 y 720 horas, sin decimales.",
+      "timeZone": "Zona horaria no válida.",
+      "quietHours": "Horas de silencio no válidas."
+    },
+    "recruiter": {
+      "clientName": "Indica un cliente válido en el espacio recruiter.",
+      "clientEmail": "Introduce un correo válido para el cliente.",
+      "noteRequired": "Indica la evidencia de la representación",
+      "noteMax": "Usa como máximo 2000 caracteres"
+    },
+    "directory": {
+      "window": "Completa ambas fechas con un intervalo válido de hasta un año.",
+      "minYears": "Introduce un mínimo de años válido (0 a 60)."
     }
   },
   "domain": {
@@ -364,13 +545,14 @@
       "flexible": "Flexible"
     },
     "urgency": {
-      "planned": "Planificada",
+      "planned": "Planificado",
       "urgent": "Urgente",
       "aog": "AOG"
     },
     "requirementStatus": {
       "draft": "Borrador",
       "open": "Abierta",
+      "paused": "Pausada",
       "covered": "Cubierta",
       "cancelled": "Cancelada",
       "closed": "Cerrada",
@@ -397,11 +579,15 @@
       },
       "anonymous": {
         "label": "Anónimo",
-        "detail": "Tus cualificaciones relevantes pueden emparejarse; tu identidad queda oculta."
+        "detail": "Tus cualificaciones relevantes pueden emparejarse y las organizaciones te encuentran en su directorio con un seudónimo; tu identidad queda oculta."
+      },
+      "verified_orgs": {
+        "label": "Empresas verificadas",
+        "detail": "Perfil anónimo, en el matching y en el directorio solo de las organizaciones con la revisión registrada por la plataforma."
       },
       "open": {
         "label": "Abierto",
-        "detail": "Tu nombre se muestra en los resultados. El contacto sigue requiriendo tu consentimiento."
+        "detail": "Tu nombre se muestra en los resultados y en el directorio de las organizaciones. El contacto sigue requiriendo tu consentimiento."
       }
     },
     "mobility": {
@@ -426,16 +612,42 @@
       "manager": "Manager",
       "admin": "Administrador"
     },
+    "platformRole": {
+      "platform_admin": "Administración de la plataforma"
+    },
     "accountType": {
       "professional": "Profesional",
       "organization": "Organización"
+    },
+    "applicationStatus": {
+      "received": "Recibida",
+      "shortlisted": "Preseleccionada",
+      "proposed": "Propuesta",
+      "accepted": "Aceptada",
+      "confirmed": "Confirmada",
+      "finished": "Finalizada",
+      "rejected": "Rechazada",
+      "withdrawn": "Retirada",
+      "cancelled": "Cancelada"
     }
   },
   "professional": {
+    "identity": {
+      "label": "Tu identidad profesional",
+      "noBase": "Base por completar",
+      "experience": "{count, plural, one {# año} other {# años}} de experiencia declarada",
+      "edit": "Editar perfil",
+      "declared": "Declarado:"
+    },
     "noProfileTitle": "Sin perfil profesional",
     "noProfileDescription": "Esta cuenta es una cuenta de organización.",
     "overview": {
-      "eyebrow": "Espacio profesional",
+      "eyebrow": "Mi espacio",
+      "headline": "Tu perfil. Tu tiempo. <br></br>Tu próxima oportunidad.",
+      "progressLead": "Tu pasaporte está al {percent, number}%",
+      "progressLabel": "Perfil completado al {percent, number} por ciento",
+      "toComplete": "{count, plural, one {# apartado} other {# apartados}} por completar",
+      "progressNote": "Completar los datos te ayuda a encontrar oportunidades. El porcentaje no equivale a una revisión documental.",
       "passport": "Perfil completado",
       "complete": "Todos los elementos del perfil están completos. No es un estado de verificación.",
       "qualifications": "Cualificaciones",
@@ -450,13 +662,11 @@
       "rejectedNext": "{count, plural, one {# cualificación ha sido rechazada por un revisor. Lee el motivo y corrígela.} other {# cualificaciones han sido rechazadas por un revisor. Lee los motivos y corrígelas.}}",
       "awaitingNext": "{count, plural, one {# cualificación espera a un revisor. Hasta que se verifique no cuenta para los requisitos obligatorios.} other {# cualificaciones esperan a un revisor. Hasta que se verifiquen no cuentan para los requisitos obligatorios.}}",
       "openQualifications": "Abrir cualificaciones",
-      "doIt": "Ir",
-      "checklistTitle": "Perfil completado · {percent}%",
+      "doIt": "Completar",
       "itemDone": "hecho",
       "itemPending": "pendiente",
-      "calendarTitle": "Mi disponibilidad este mes",
-      "openAvailability": "Editar disponibilidad",
-      "showChecklist": "Los {count} apartados del perfil",
+      "calendarTitle": "Tu disponibilidad",
+      "openAvailability": "Actualizar disponibilidad",
       "reviewTitle": "Documentos y cursos próximos a revisar",
       "reviewNone": "Nada de lo declarado caduca en los próximos {days} días.",
       "reviewExpired": "Fecha superada",
@@ -469,10 +679,13 @@
       "display_name": "Siguiente: añade tu nombre profesional",
       "base_location": "Siguiente: indica tu base",
       "years_experience": "Siguiente: añade tus años de experiencia",
-      "licence_or_rating": "Siguiente: declara una licencia o type rating",
-      "verified_qualification": "Siguiente: un revisor verifica una cualificación",
-      "availability": "Siguiente: publica días disponibles",
-      "visibility": "Siguiente: elige visibilidad anónima o abierta"
+      "availability": "Siguiente: publica días disponibles futuros",
+      "primary_category": "Siguiente: elige tu categoría principal",
+      "aircraft": "Siguiente: declara las aeronaves con experiencia",
+      "min_rate": "Siguiente: indica tu tarifa mínima",
+      "work_permits": "Siguiente: declara tus permisos de trabajo",
+      "courses": "Siguiente: declara un curso vigente",
+      "document": "Siguiente: sube un documento a tu wallet"
     },
     "facts": {
       "base": "Base",
@@ -491,27 +704,115 @@
       "name": "Nombre profesional",
       "base": "Base habitual",
       "baseHint": "Aeropuerto o ciudad, p. ej. Madrid (MAD)",
-      "experience": "02 · Experiencia y movilidad",
+      "basePlaceholder": "Madrid (MAD)",
+      "experience": "03 · Experiencia y cursos",
       "years": "Años de experiencia",
       "status": "Situación actual",
       "mobility": "Movilidad",
-      "visibilityTitle": "03 · Visibilidad en la red",
+      "visibilityTitle": "05 · Visibilidad en la red",
       "visibilityIntro": "El matching respeta tu elección. Los perfiles privados nunca aparecen ante las organizaciones; el contacto siempre requiere tu consentimiento.",
       "visibilityAria": "Visibilidad",
       "saved": "Pasaporte actualizado. El matching usa los nuevos datos.",
-      "conflict": "Tu pasaporte se modificó en otra ventana o dispositivo. No se ha guardado nada: recarga la página para ver la versión más reciente y vuelve a aplicar tus cambios."
+      "conflict": "Tu pasaporte se modificó en otra ventana o dispositivo. No se ha guardado nada: recarga la página para ver la versión más reciente y vuelve a aplicar tus cambios.",
+      "phone": "Teléfono",
+      "phoneHint": "Privado: no lo ve ninguna organización. El contacto solo se comparte con tu consentimiento.",
+      "baseCountry": "País de la base",
+      "notSet": "Sin indicar",
+      "employer": "Empresa actual",
+      "employerNone": "Ninguna",
+      "employerHint": "Privado. Para que tu empresa no te encuentre, márcala también en «Organizaciones bloqueadas».",
+      "qualificationsTitle": "02 · Cualificaciones",
+      "primaryCategory": "Categoría principal",
+      "primaryPlaceholder": "Elige categoría",
+      "categories": "Categorías y especialidades",
+      "categoriesHint": "Tu categoría principal siempre está marcada.",
+      "aircraft": "Aeronaves con experiencia",
+      "ratingsTitle": "Habilitaciones de tipo",
+      "ratingsIntro": "Aeronave × categoría de licencia. La fecha es opcional cuando no aplique; no se inventa una vigencia. Las tarjetas de candidato solo muestran que declaras restricciones; el texto va en la copia del expediente de las candidaturas que presentes.",
+      "ratingsNone": "Sin habilitaciones declaradas.",
+      "ratingsNeedDeclared": "Marca antes una aeronave y una categoría de licencia (B1, B2, B3, Cat A o Cat C).",
+      "ratingAircraft": "Aeronave de habilitación {n}",
+      "ratingCategory": "Categoría de habilitación {n}",
+      "ratingExpiry": "Vigencia de habilitación {n} (si aplica)",
+      "ratingRestrictions": "Restricciones de habilitación {n}",
+      "ratingRestrictionsPlaceholder": "Sin restricciones declaradas",
+      "addRating": "Añadir habilitación",
+      "removeRating": "Quitar habilitación {n}",
+      "ratingsHint": "Lo declarado no concede autorización de firma. Las licencias y type ratings que cuentan en el matching se declaran y verifican en Cualificaciones.",
+      "generalRestrictions": "Restricciones generales de habilitación o alcance",
+      "generalRestrictionsHint": "Déjalo vacío si no tienes ninguna. El texto va en la copia del expediente de las candidaturas que presentes: no incluyas datos de salud ni otros datos personales.",
+      "english": "Inglés técnico",
+      "engines": "Motores",
+      "skills": "Capacidades",
+      "ownTools": "Tengo herramientas propias",
+      "coursesHint": "Los cursos (Human Factors, EWIS, FTS, SMS) se declaran con su vigencia en Cualificaciones.",
+      "openQualifications": "Abrir cualificaciones",
+      "rateTitle": "04 · Tarifa y permisos de trabajo",
+      "minRate": "Tarifa mínima",
+      "minRateHint": "Solo tú la ves, salvo en la copia del expediente que recibe la organización a la que te presentas. CrewFlex no cobra ni paga nada.",
+      "rateUnit": "Unidad de tarifa",
+      "permits": "Permisos de trabajo declarados",
+      "permitsHint": "Países de la Unión Europea en los que puedes trabajar.",
+      "blocks": "Organizaciones bloqueadas",
+      "blocksHint": "Una organización bloqueada no te encuentra entre sus candidatos externos y no se le avisa; sus necesidades desaparecen de «Oportunidades» y no puedes presentarte a ellas, aunque las candidaturas que ya presentaste se mantienen.",
+      "blocksNone": "Todavía no hay organizaciones en la red.",
+      "save": "Guardar pasaporte",
+      "emptyDraft": {
+        "trigger": "Empezar perfil vacío",
+        "title": "Empezar desde cero",
+        "text": "Se preparará un borrador vacío. El perfil publicado se conserva hasta que guardes el nuevo pasaporte.",
+        "confirm": "Preparar borrador",
+        "prepared": "Borrador vacío preparado. Tu pasaporte publicado no cambia hasta que pulses «Guardar pasaporte»."
+      }
     },
     "item": {
       "display_name": "Nombre profesional",
       "base_location": "Base",
       "years_experience": "Años de experiencia",
-      "licence_or_rating": "Licencia o habilitación de tipo declarada",
-      "verified_qualification": "Al menos una cualificación verificada",
-      "availability": "Días disponibles publicados",
-      "visibility": "Visible para organizaciones (anónimo o abierto)"
+      "availability": "Disponibilidad futura",
+      "primary_category": "Categoría principal",
+      "aircraft": "Aeronaves",
+      "min_rate": "Tarifa mínima",
+      "work_permits": "Países de trabajo",
+      "courses": "Cursos",
+      "document": "Documento aportado"
+    },
+    "activity": {
+      "compatible": "oportunidades compatibles",
+      "active": "Candidaturas en curso",
+      "toAccept": "Propuestas por aceptar",
+      "confirmed": "asignaciones confirmadas",
+      "opportunitiesTitle": "Oportunidades para ti",
+      "applicationsTitle": "Mis candidaturas",
+      "viewAll": "Ver todas",
+      "follow": "Ver seguimiento",
+      "noOpportunities": "Todavía no hay oportunidades compatibles",
+      "noApplications": "Tu próxima candidatura empieza aquí",
+      "loadError": "No se ha podido cargar ahora. Recarga para reintentar.",
+      "opportunitiesDay": "Oportunidades · {day}",
+      "clearDay": "Quitar selección de fecha",
+      "compatibleLine": "Requisitos y disponibilidad compatibles",
+      "restLine": "Posible en descanso: revisa y publica tus fechas",
+      "viewOffer": "Ver oferta",
+      "reviewDates": "Revisar fechas",
+      "noOpportunitiesDay": "Sin oportunidades para este día",
+      "noOpportunitiesHint": "Revisa tu perfil o publica las fechas que quieras ofrecer. Los descansos privados no se envían a empresas.",
+      "openCalendar": "Abrir mi calendario",
+      "noApplicationsHint": "Explora las oportunidades y elige las condiciones y fechas que te encajen.",
+      "searchOpportunities": "Buscar oportunidades",
+      "kicker": "Encuentra tu siguiente paso",
+      "applicationsKicker": "Tu actividad",
+      "days": "{count, plural, one {# jornada} other {# jornadas}}",
+      "rate": "{amount} / h"
     }
   },
   "qualifications": {
+    "evidence": {
+      "linked": "Evidencia: {titles}",
+      "none": "Sin documento vinculado",
+      "open": "Abrir documentos"
+    },
+    "confirmRemove": "Sí, quitarla",
     "title": "Cualificaciones",
     "eyebrow": "Mi pasaporte",
     "description": "Licencias, type ratings, formación y habilitaciones, con fechas de emisión y caducidad. Tú declaras; un revisor autorizado verifica. Un curso debe seguir vigente hasta el último día de una necesidad para superar su filtro obligatorio.",
@@ -543,11 +844,13 @@
     "validUntil": "Válida hasta el {date}",
     "noExpiry": "Sin caducidad",
     "group": "{category} ({count})",
-    "reviewReason": "Revisor: {reason}"
+    "reviewReason": "Revisor: {reason}",
+    "alreadyDeclared": "Ya has declarado esta cualificación. Edita la existente."
   },
   "availability": {
-    "eyebrow": "Mi tiempo",
-    "title": "Disponibilidad elegida",
+    "confirmDelete": "Sí, eliminarla",
+    "eyebrow": "Tu calendario",
+    "title": "Tu tiempo, a tu manera.",
     "description": "Un día libre solo entra en el mercado cuando lo marcas como disponible. Las horas son UTC; las ventanas bloqueadas prevalecen sobre las disponibles.",
     "noProfileDescription": "La disponibilidad pertenece a las cuentas profesionales.",
     "metrics": {
@@ -606,12 +909,14 @@
       "anchor": "Día 1 del ciclo (UTC)",
       "anchorHint": "El primer día de trabajo de tu rotación.",
       "customLength": "Días del ciclo",
+      "customHelp": "Pulsa cada casilla para alternar trabajo y descanso. Puedes dibujar cualquier distribución y repetirla, aunque no sea un bloque regular.",
       "customDays": "Días del ciclo personalizado (pulsa para alternar trabajo / descanso)",
       "customDay": "Día {n}: {state}",
       "publishRest": "Publicar descansos generados como disponibles",
+      "publishRestHint": "Si no lo activas, se quedan como descanso privado. No se envía nada a las organizaciones.",
       "replace": "Reemplazar también los días que ya he guardado en este mes",
       "preview": "Previsualizar ciclo en el mes",
-      "hint": "7–3 / 7–4 alterna 7 de trabajo, 3 libres, 7 de trabajo y 4 libres. Se generan días completos UTC: revisa las horas si tu jornada usa otra zona. Los días de trabajo se guardan como bloqueados; los descansos son privados salvo que los publiques. Los intervalos parciales de los días que no reemplazas se conservan.",
+      "hint": "7–3 / 7–4 alterna 7 de trabajo, 3 libres, 7 de trabajo y 4 libres. Se generan días completos UTC: revisa las horas si tu jornada usa otra zona. Los días de trabajo se guardan como bloqueados; los descansos son privados salvo que los publiques. Se respetan las asignaciones confirmadas, las fechas pasadas y los intervalos parciales de los días que no reemplazas.",
       "rotation": {
         "7x3": "7–3",
         "7x4": "7–4",
@@ -639,7 +944,9 @@
       "error": {
         "customLength": "Elige entre 1 y 31 días.",
         "cycleTooLong": "El ciclo debe caber en 31 días.",
-        "invalidDate": "Elige un día 1 válido."
+        "invalidDate": "Elige un día 1 válido.",
+        "nothingGenerated": "No hay días que generar: todos los días desde hoy ya tienen ventanas guardadas. Marca «Reemplazar también…» o elige otro mes.",
+        "pastMonth": "Este mes ya ha pasado: elige el mes actual o uno futuro."
       },
       "unsaved": "sin guardar",
       "pending": "{count, plural, one {# día modificado} other {# días modificados}} sin guardar. Revisa el calendario y guarda o descarta para cambiar de mes.",
@@ -650,26 +957,60 @@
       "splitWarning": "{count, plural, one {# día está} other {# días están}} dentro de un intervalo más largo o de horas parciales. Al guardar solo se recortan los días marcados y se conservan las horas del resto.",
       "undo": "Deshacer último cambio",
       "patternSaved": "Patrón guardado; ningún día necesitaba cambios.",
-      "useAlternatingBase": "Usar 7–3 / 7–4 como base"
+      "useAlternatingBase": "Usar 7–3 / 7–4 como base",
+      "conflict": "Tu calendario cambió en otra ventana o dispositivo. No se ha guardado nada: recarga para ver la versión más reciente."
     },
-    "pastDay": "{date} ya ha pasado y no se puede cambiar desde el calendario.",
     "statusAogOnly": "Disponible solo para AOG",
     "aogHint": "Los días «Solo AOG» cuentan únicamente para necesidades declaradas como AOG; el resto de necesidades los ve como no disponibles. Los días bloqueados prevalecen sobre ambos.",
-    "calendarLabel": "Disponibilidad por día"
+    "calendarLabel": "Disponibilidad por día",
+    "assigned": "asignación confirmada",
+    "assignedShort": "Asignada",
+    "protected": {
+      "days": "No puedes modificar una fecha con asignación confirmada.",
+      "window": "Conserva la disponibilidad de tus asignaciones confirmadas."
+    },
+    "protectedDay": "Una asignación confirmada está protegida.",
+    "assignedHint": "Las fechas con asignación confirmada están protegidas también en el servidor.",
+    "assignedDay": "Asignado",
+    "mini": {
+      "offers": "{date}: {state}. {count, plural, one {# oportunidad} other {# oportunidades}}",
+      "offersPotential": "{date}: {state}. {count, plural, one {# oportunidad posible} other {# oportunidades posibles}}, revisa la publicación de descanso",
+      "legendOffers": "Oportunidades",
+      "note": "Calendario en UTC. El punto rojo señala oportunidades en días compatibles o descansos que podrías publicar. No cambia tu disponibilidad."
+    },
+    "weekdayShort": {
+      "mon": "L",
+      "tue": "M",
+      "wed": "X",
+      "thu": "J",
+      "fri": "V",
+      "sat": "S",
+      "sun": "D"
+    }
   },
   "organization": {
     "dashboard": {
       "title": "Operaciones",
+      "description": "De una necesidad concreta a un equipo disponible.",
+      "openRequirements": "Necesidades abiertas",
+      "openRequirementsDetail": "De tu organización",
       "noRequirementsTitle": "Aún no hay necesidades",
       "noRequirementsDescription": "Crea una necesidad para ver tu capacidad técnica y el déficit a cubrir.",
       "managersOnlyTitle": "El análisis de capacidad está disponible para managers y administradores",
       "managersOnlyDescription": "Pide el rol de manager a un administrador de la organización.",
       "requirements": "Necesidades",
       "viewAll": "Ver todas",
-      "newRequirement": "Nueva necesidad"
+      "newRequirement": "Nueva necesidad",
+      "applications": "Candidaturas en curso",
+      "toConfirm": "{count, plural, one {# pendiente de confirmar} other {# pendientes de confirmar}}",
+      "confirmedOnly": "Solo asignaciones confirmadas"
     },
     "requirements": {
       "title": "Necesidades de personal",
+      "pagination": "Páginas de necesidades",
+      "pageInfo": "{total, plural, one {# necesidad} other {# necesidades}} · página {page} de {pages}",
+      "previous": "Anterior",
+      "next": "Siguiente",
       "description": "Necesidades operativas, sus cualificaciones y su periodo. Horas en UTC.",
       "caption": "Necesidades de personal",
       "columns": {
@@ -694,7 +1035,8 @@
         "starts": "Inicio",
         "ends": "Fin",
         "shift": "Turno",
-        "headcount": "Personas"
+        "headcount": "Personas",
+        "timeZone": "Zona horaria"
       },
       "close": {
         "action": "Cerrar necesidad",
@@ -702,11 +1044,97 @@
         "confirm": "Sí, cerrarla",
         "cancel": "Mantenerla abierta",
         "closedNote": "Esta necesidad está cerrada. Ya no se puede reabrir."
+      },
+      "status": {
+        "pause": "Pausar",
+        "resume": "Reanudar",
+        "pausedDone": "Necesidad pausada: ya no se publica ni se evalúa.",
+        "resumedDone": "Necesidad reanudada: vuelve a publicarse.",
+        "pausedNote": "Esta necesidad está pausada: no se publica como oportunidad ni se evalúan candidatos. Reanúdala para volver a publicarla.",
+        "conflict": "La necesidad cambió mientras tanto. Recarga para ver su estado actual.",
+        "publish": "Publicar",
+        "publishedDone": "Necesidad publicada: ya aparece en «Oportunidades»."
+      },
+      "edit": "Editar necesidad",
+      "terms": {
+        "rate": "Tarifa",
+        "rateHourly": "{hourly} / h",
+        "rateValue": "{hourly} / h · {daily} / día",
+        "shiftDuration": "Turno y duración",
+        "shiftDurationValue": "{shift} · {hours} h",
+        "contract": "Contrato",
+        "contractValue": "{contract} · EUR",
+        "contractType": {
+          "contractor": "Contractor",
+          "temporary": "Temporal",
+          "permanent": "Permanente",
+          "project": "Por proyecto"
+        },
+        "perDiemOvertime": "Dietas / horas extra",
+        "perDiemValue": "{amount} / día",
+        "overtimeValue": "{amount} / h extra",
+        "coverage": "Cobertura",
+        "coverageValue": "Bloque completo: una candidatura cubre todas las jornadas",
+        "arrival": "Incorporación",
+        "mobilization": "Movilización máxima",
+        "hoursValue": "{hours} h",
+        "budget": "Presupuesto",
+        "budgetMandatory": "requisito obligatorio",
+        "budgetNegotiable": "preferencia negociable",
+        "logisticsTitle": "Logística",
+        "logistics": {
+          "flights": {
+            "included": "Vuelos: incluido",
+            "excluded": "Vuelos: no incluido"
+          },
+          "accommodation": {
+            "included": "Alojamiento: incluido",
+            "excluded": "Alojamiento: no incluido"
+          },
+          "localTransport": {
+            "included": "Transporte local: incluido",
+            "excluded": "Transporte local: no incluido"
+          },
+          "meals": {
+            "included": "Comidas: incluidas",
+            "excluded": "Comidas: no incluidas"
+          },
+          "ownTools": "Herramientas propias requeridas",
+          "companyTools": "Herramientas de empresa"
+        },
+        "baseAmount": "{hours} h × {rate}/h = {amount} para el técnico",
+        "baseHoursSummary": "{hours} horas base en {count, plural, one {# jornada} other {# jornadas}}",
+        "shiftsTitle": "Jornadas ({count})",
+        "coverageTitle": "Cobertura por jornada",
+        "shiftLine": "{span} · {hours} h",
+        "shiftCoverage": "{date} · {filled}/{total} plazas confirmadas",
+        "notice": "Valores informativos de la organización: CrewFlex no gestiona cobros, comisiones ni pagos."
+      },
+      "archive": {
+        "action": "Archivar",
+        "explainClosed": "Archivar la quita de tu lista de necesidades. No se puede deshacer: seguirá en «Ver archivadas» y en el historial.",
+        "explainDraft": "Archivar un borrador lo cierra: ya no se podrá publicar. No se puede deshacer.",
+        "confirm": "Sí, archivarla",
+        "cancel": "Cancelar",
+        "done": "Necesidad archivada.",
+        "chip": "Archivada",
+        "note": "Esta necesidad está archivada.",
+        "listLink": "Ver archivadas",
+        "listBack": "Ver necesidades sin archivar",
+        "listTitle": "Necesidades archivadas",
+        "emptyTitle": "No hay necesidades archivadas"
+      },
+      "duplicate": "Duplicar",
+      "activeApplicationsNote": "Con candidaturas activas, duplica para cambiar la oferta. Puedes revisar la propuesta antes de confirmar.",
+      "draft": {
+        "note": "Este borrador no se publica ni se evalúa. Complétalo y publícalo cuando esté listo.",
+        "complete": "Completar y publicar",
+        "incomplete": "Faltan datos para publicar: completa el borrador con «Completar y publicar»."
       }
     },
     "new": {
       "title": "Nueva necesidad de personal",
-      "description": "Describe la necesidad operativa real. Crew Flex evalúa primero tu capacidad interna.",
+      "description": "Describe la necesidad operativa real. CrewFlex evalúa primero tu capacidad interna.",
       "noPermissionTitle": "No tienes permiso",
       "noPermissionDescription": "Solo los managers y administradores de la organización pueden crear necesidades.",
       "catalogErrorTitle": "No se ha podido cargar el catálogo de cualificaciones",
@@ -720,17 +1148,100 @@
         "urgency": "Urgencia",
         "starts": "Inicio (UTC)",
         "ends": "Fin (UTC)",
-        "shift": "Turno"
+        "shift": "Turno",
+        "country": "País del trabajo",
+        "timeZone": "Zona IANA de la base",
+        "notStated": "Sin indicar",
+        "description": "Descripción y condiciones"
       },
       "titlePlaceholder": "B1.1 · Refuerzo de línea A320",
       "locationPlaceholder": "Madrid (MAD)",
       "qualificationsIntro": "Los requisitos <b>obligatorios</b> descartan candidatos; los <b>deseables</b> solo afectan a la puntuación. Hace falta al menos un requisito obligatorio.",
       "levelAria": "Nivel del requisito {code}",
-      "submit": "Crear necesidad",
-      "submitting": "Creando…",
+      "submit": "Publicar necesidad",
+      "submitting": "Publicando…",
       "forbidden": "Tu rol no puede crear necesidades en esta organización.",
       "unreachable": "No se ha podido contactar con el servicio. Tus datos siguen aquí; reintenta.",
-      "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión."
+      "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+      "editSubmit": "Guardar cambios",
+      "editSubmitting": "Guardando…",
+      "hasApplications": "Esta necesidad ya recibió candidaturas: no se puede editar.",
+      "stale": "La necesidad cambió mientras la editabas. Recarga para ver la versión actual; no se ha guardado nada.",
+      "sectionTerms": "04 · Condiciones y logística",
+      "timeZoneHint": "Solo distingue las fechas locales de las jornadas; las horas se muestran en UTC.",
+      "descriptionHint": "Opcional, hasta 4000 caracteres. La verán los profesionales en la oportunidad.",
+      "defaults": {
+        "arrival": "Antes del inicio del turno"
+      },
+      "shifts": {
+        "title": "Jornadas",
+        "intro": "Sin jornadas, la necesidad es un periodo continuo. Para varios días, añade cada jornada (horas en UTC): el periodo pasa a ir del inicio de la primera al fin de la última. Una candidatura cubre todas las jornadas.",
+        "start": "Inicio de la jornada (UTC)",
+        "end": "Fin de la jornada (UTC)",
+        "hours": "Horas base",
+        "add": "Añadir jornada",
+        "row": "{span} · {hours} h",
+        "remove": "Quitar",
+        "removeAria": "Quitar la jornada {span}",
+        "summary": "<b>{hours} horas base</b> en {count, plural, one {# jornada} other {# jornadas}} de la lista. Solo se publican las jornadas añadidas.",
+        "periodFromShifts": "El periodo se calcula con las jornadas."
+      },
+      "terms": {
+        "hourlyRate": "EUR por hora",
+        "shiftHours": "Horas por jornada",
+        "overtimeRate": "EUR por hora extra",
+        "perDiem": "Dietas EUR por día",
+        "contractType": "Contrato",
+        "maxMobilizationHours": "Movilización máxima (horas)",
+        "arrival": "Incorporación",
+        "budgetMandatory": "Tratar presupuesto como requisito obligatorio",
+        "flights": "Vuelos incluidos",
+        "accommodation": "Alojamiento incluido",
+        "localTransport": "Transporte local incluido",
+        "meals": "Comidas incluidas",
+        "ownTools": "Herramientas propias requeridas"
+      },
+      "summary": {
+        "title": "Revisar antes de publicar",
+        "untitled": "Nueva necesidad",
+        "place": "{base} · {country}",
+        "dayRate": "{amount} / jornada de {hours} h",
+        "requiredShifts": "{count, plural, one {# jornada requerida} other {# jornadas requeridas}}",
+        "viable": "{count, plural, one {# candidato con requisitos y bloques viables} other {# candidatos con requisitos y bloques viables}}",
+        "viableNeedsHard": "Añade un requisito obligatorio y el periodo para estimar los candidatos viables.",
+        "viableLoading": "Calculando los candidatos viables…",
+        "viableUnavailable": "No se ha podido calcular el número de candidatos viables.",
+        "draftNote": "Un borrador puede estar incompleto: no se publica ni se evalúa. Al publicarlo se aplican todas las validaciones.",
+        "viableRulesNote": "El recuento aún no aplica los requisitos del perfil técnico."
+      },
+      "preview": {
+        "open": "Previsualizar requisitos",
+        "title": "Vista previa",
+        "close": "Cerrar vista previa",
+        "noQualifications": "Todavía no hay cualificaciones."
+      },
+      "autosave": {
+        "found": "Tienes un borrador sin guardar en este navegador ({date}).",
+        "restore": "Recuperar",
+        "discard": "Descartar"
+      },
+      "saveDraft": "Guardar borrador",
+      "savingDraft": "Guardando borrador…",
+      "saveAndPublish": "Guardar y publicar",
+      "copyPrefix": "Copia · ",
+      "copyTitle": "Duplicar necesidad",
+      "copyDescription": "Copia de «{title}»: revisa las fechas (empiezan dentro de 45 días) y guárdala como borrador o publícala. Nada se guarda hasta entonces.",
+      "rules": {
+        "title": "Perfil técnico",
+        "intro": "Requisitos del pasaporte del profesional (categoría, aeronaves, motores, experiencia y capacidades): cada uno se comprueba solo si lo indicas; vacío = no se exige. Son filtros: ninguna puntuación los compensa.",
+        "category": "Categoría obligatoria",
+        "anyCategory": "Sin exigir",
+        "minYears": "Experiencia mínima (años)",
+        "aircraft": "Aeronaves aceptadas (basta una)",
+        "engines": "Motores (basta uno)",
+        "requiredSkills": "Capacidades obligatorias (todas)",
+        "requiresTypeRating": "Exigir habilitación de tipo (de la categoría, en una aeronave aceptada, vigente y sin restricciones)"
+      }
     },
     "matches": {
       "eyebrow": "Red externa · vista previa del matching",
@@ -771,7 +1282,11 @@
         "next": "Siguiente",
         "noResults": "Ningún profesional cumple estos filtros",
         "noResultsHint": "Limpia la búsqueda o incluye a los no elegibles para ver todo el grupo evaluado."
-      }
+      },
+      "notEvaluablePaused": "Necesidad pausada",
+      "notEvaluableClosed": "Necesidad cerrada",
+      "notEvaluableDescription": "Solo se evalúan candidatos para necesidades publicadas. Reanuda la necesidad para volver a verlos.",
+      "notEvaluableDraft": "Este borrador no se evalúa"
     },
     "workforce": {
       "title": "Plantilla interna",
@@ -783,6 +1298,53 @@
       "memberQualifications": "Cualificaciones de {name}",
       "managersOnlyTitle": "La plantilla es visible para managers y administradores",
       "managersOnlyDescription": "Los datos de cualificación de los miembros solo se comparten con managers y administradores de la organización."
+    },
+    "profile": {
+      "title": "Organización",
+      "description": "Los datos de tu organización y el estado de su revisión. Los profesionales ven el nombre en las oportunidades.",
+      "statusPending": "Pendiente",
+      "statusReviewed": "Revisión registrada",
+      "reviewTitle": "Revisión",
+      "pendingText": "Pendiente de revisión: un administrador de la plataforma comprobará estos datos.",
+      "reviewedOn": "Revisión registrada el {date}.",
+      "selfReviewNote": "La revisión se registra desde administración. La empresa no puede verificarse a sí misma. Cambiar cualquier dato la devuelve a pendiente.",
+      "dataTitle": "Datos de la organización",
+      "name": "Razón social",
+      "nameHint": "Es el nombre que ven los profesionales en las oportunidades.",
+      "type": "Tipo de organización",
+      "taxId": "Identificación fiscal",
+      "country": "País",
+      "countryChoose": "Elige un país",
+      "taxAddress": "Domicilio fiscal",
+      "save": "Guardar organización",
+      "saved": "Organización guardada.",
+      "conflict": "Otra sesión ha cambiado estos datos. Recarga la página para ver la versión actual; no se ha guardado nada.",
+      "reviewResetNote": "Guardar un cambio devuelve la revisión a pendiente.",
+      "notGiven": "Sin indicar",
+      "adminOnly": "Solo el administrador de la organización puede cambiar estos datos.",
+      "activity": {
+        "title": "Actividad de esta organización",
+        "empty": "Aún no hay actividad propia.",
+        "note": "Últimos 15 eventos de tu organización: qué se hizo y cuándo, sin datos personales.",
+        "actions": {
+          "organization_updated": "Datos de la organización cambiados",
+          "organization_member_removed": "Miembro retirado de la organización",
+          "requirement_created": "Necesidad creada",
+          "requirement_updated": "Necesidad editada",
+          "requirement_status_changed": "Estado de una necesidad cambiado",
+          "requirement_archived": "Necesidad archivada",
+          "requirement_client_changed": "Cliente de una necesidad cambiado",
+          "client_added": "Cliente representado añadido",
+          "client_revoked": "Representación de un cliente revocada",
+          "application_shortlisted": "Candidatura preseleccionada",
+          "application_proposed": "Propuesta enviada",
+          "application_rejected": "Candidatura rechazada",
+          "application_confirmed": "Asignación confirmada",
+          "application_cancelled": "Candidatura cancelada",
+          "application_finished": "Asignación finalizada",
+          "requirement_outreach_distributed": "Aviso Urgente/AOG distribuido"
+        }
+      }
     }
   },
   "capacity": {
@@ -792,7 +1354,7 @@
     "gap": "Déficit",
     "gapDetail": "{count} × a cubrir externamente",
     "coveredInternally": "Cubierto internamente",
-    "coverage": "Cobertura",
+    "coverage": "Cobertura interna",
     "viewEligible": "Ver profesionales externos elegibles",
     "detail": "Detalle de la necesidad"
   },
@@ -819,7 +1381,7 @@
     "availability": {
       "full": "Cubre toda la necesidad",
       "none": "No disponible",
-      "partial": "Cubre el {percent}% del periodo"
+      "partial": "Cubre el {percent, number}% del periodo"
     },
     "blocker": {
       "missing": "Falta {code}",
@@ -827,27 +1389,175 @@
       "expired": "{code} caducó el {date}",
       "expiresDuring": "{code} caduca durante la necesidad ({date})",
       "notAvailable": "No disponible en las fechas de la necesidad",
-      "partial": "Disponible solo el {percent}% del periodo de la necesidad"
+      "partial": "Disponible solo el {percent, number}% del periodo de la necesidad",
+      "workPermit": "Falta declarar permiso de trabajo para {country}",
+      "category": "La categoría no coincide: se pide {category}",
+      "aircraft": "La aeronave no está declarada en el perfil ({list})",
+      "typeRatingMissing": "Falta habilitación de tipo {category} · {list} declarada y vigente, sin restricciones",
+      "typeRatingNotValid": "La habilitación de tipo {category} · {list} solo está vigente hasta el {date}",
+      "typeRatingRestricted": "La habilitación de tipo {category} · {list} tiene restricciones declaradas",
+      "engine": "No declara ninguno de los motores pedidos ({list})",
+      "experience": "No alcanza la experiencia mínima ({count, plural, one {# año} other {# años}})",
+      "skill": "Capacidad requerida: {skill}"
+    },
+    "profileTitle": "Requisitos del perfil",
+    "affinityTitle": "Afinidad (puntuación deseable)",
+    "profile": {
+      "workPermit": "Permiso de trabajo: {country}",
+      "category": "Categoría {category}",
+      "aircraft": "Aeronave: {list}",
+      "typeRating": "Habilitación de tipo {category} · {list}",
+      "engine": "Motor: {list}",
+      "minYears": "Experiencia mínima: {count, plural, one {# año} other {# años}}",
+      "skill": "Capacidad: {skill}",
+      "declared": "Declarado en el perfil",
+      "notDeclared": "No declarado en el perfil",
+      "typeRatingMet": "Declarada, vigente y sin restricciones",
+      "typeRatingMissing": "No declarada",
+      "typeRatingNotValid": "Vigente solo hasta el {date}",
+      "typeRatingRestricted": "Con restricciones declaradas",
+      "yearsDeclared": "{count, plural, one {# año declarado} other {# años declarados}}",
+      "yearsUndeclared": "Experiencia no declarada"
+    },
+    "affinity": {
+      "english": "Inglés técnico",
+      "englishLevel": "Nivel {level}",
+      "englishNone": "Nivel no declarado",
+      "base": "Base habitual o movilidad aceptada",
+      "baseMet": "Misma base o acepta desplazamientos",
+      "baseNotMet": "Otra base y sin desplazamientos"
     }
   },
   "settings": {
     "title": "Configuración",
-    "description": "Tu cuenta y cómo ves Crew Flex. Los datos de negocio están en tu pasaporte o en las páginas de la organización.",
+    "description": "Tu cuenta y cómo ves CrewFlex. Los datos de negocio están en tu pasaporte o en las páginas de la organización.",
     "language": "Idioma / Language",
     "languageDescription": "La interfaz, las fechas y los mensajes siguen esta elección en todos los dispositivos donde inicies sesión. Los códigos de licencia, los tipos de aeronave y tus propios datos nunca se traducen.",
     "saved": "Idioma actualizado.",
     "account": "Cuenta",
     "name": "Nombre",
+    "email": "Correo electrónico",
     "accountType": "Tipo de cuenta",
     "organization": "Organización",
-    "role": "Rol"
+    "role": "Rol",
+    "platformRole": "Rol de plataforma"
+  },
+  "recruiter": {
+    "eyebrow": "Espacio recruiter",
+    "title": "Recruiter y clientes",
+    "description": "De una necesidad concreta a un equipo disponible.",
+    "noAgencyTitle": "Tu cuenta no pertenece a una agencia de personal",
+    "noAgencyBody": "El espacio recruiter es para organizaciones de tipo «Agencia de personal» que representan a clientes. Ábrelo con una cuenta de una agencia.",
+    "networkEyebrow": "Red recruiter · vista previa del matching",
+    "directoryEyebrow": "Red recruiter",
+    "requirementEyebrow": "Necesidad para cliente",
+    "clients": {
+      "title": "Cartera de clientes",
+      "empty": "Aún no hay clientes en la cartera.",
+      "noEmail": "Sin correo",
+      "status": {
+        "pending": "Pendiente de verificación",
+        "active": "Activo",
+        "revoked": "Revocado"
+      },
+      "addedOn": "Añadido el {date}",
+      "activatedOn": "Activo desde el {date}",
+      "revokedOn": "Revocado el {date}",
+      "formTitle": "Añadir un cliente",
+      "name": "Nuevo cliente",
+      "email": "Correo del cliente",
+      "emailHint": "Opcional. Solo lo ven los managers y administradores de tu agencia.",
+      "add": "Añadir cliente",
+      "adding": "Añadiendo…",
+      "added": "Cliente guardado. Queda pendiente hasta que la administración de CrewFlex registre la evidencia de la representación.",
+      "duplicate": "Ese cliente ya está en la cartera, o la cartera está completa (50 pendientes o 200 clientes pendientes o activos).",
+      "notAgency": "Solo una agencia de personal representa a clientes.",
+      "revoke": "Revocar",
+      "revoking": "Revocando…",
+      "revokeAria": "Revocar la representación de {name}",
+      "revokeConfirm": "Confirmar: revocar la representación de {name}. Sus necesidades dejan de mostrarse a los profesionales y no avanzan; no se puede deshacer.",
+      "revokeConfirmButton": "Revocar definitivamente",
+      "cancel": "Cancelar",
+      "revoked": "Representación de {name} revocada.",
+      "note": "El recruiter recibe las candidaturas y coordina en nombre del cliente identificado. No se envían archivos externamente.",
+      "verificationNote": "Un cliente nuevo queda pendiente hasta que la administración de CrewFlex registre la evidencia de la representación. Solo se publica para clientes activos.",
+      "managersOnly": "Añadir y revocar clientes corresponde a los managers y administradores de la agencia.",
+      "loadError": "No se pudo cargar la cartera de clientes."
+    },
+    "builder": {
+      "client": "Cliente destinatario del expediente",
+      "choose": "Seleccionar cliente",
+      "hint": "Obligatorio para publicar. Solo aparecen los clientes activos de la cartera.",
+      "noActive": "No hay clientes activos. Añádelos en la cartera; se activan cuando la administración registra la evidencia.",
+      "manage": "Ir a la cartera de clientes",
+      "note": "El recruiter gestiona la oferta y confirma en nombre del cliente. Los destinatarios están identificados en la candidatura. No hay contrato legal ni envío externo.",
+      "summary": "Para el cliente {client}",
+      "fixed": "Fijado al publicar: el cliente que leen los profesionales es quien recibe las candidaturas. Para otro cliente, crea otra necesidad."
+    },
+    "requirement": {
+      "client": "Cliente",
+      "revokedNote": "La representación de {client} ya no está activa: la necesidad no se muestra a los profesionales ni avanza. Puedes pausarla o cerrarla.",
+      "forClient": "Para {client}"
+    },
+    "opportunity": {
+      "publishedFor": "Publicada por {organization} para el cliente {client}",
+      "sharedTitle": "Qué verá {organization} para el cliente {client}",
+      "consent": "Autorizo compartir con {organization}, para su cliente {client}, estos datos para esta necesidad."
+    },
+    "review": {
+      "eyebrow": "Administración",
+      "title": "Representaciones",
+      "description": "Clientes que las agencias de personal dicen representar. Se activan cuando registras la evidencia.",
+      "evidenceNote": "Comprueba el mandato o contrato de representación y registra aquí su referencia. Nadie activa clientes de una agencia a la que pertenece, perteneció o para la que actuó.",
+      "emptyTitle": "No hay representaciones",
+      "agency": "Agencia",
+      "email": "Correo del cliente",
+      "note": "Evidencia de la representación",
+      "noteHint": "Referencia del mandato o contrato y cómo se comprobó (máx. 2000 caracteres). Solo la ve la administración.",
+      "activate": "Registrar evidencia y activar",
+      "activating": "Registrando…",
+      "activated": "Representación de {name} activada.",
+      "own": "Perteneces a esta agencia: no puedes activar sus clientes.",
+      "changed": "La representación cambió mientras la revisabas. Recarga la página."
+    }
   },
   "admin": {
+    "home": {
+      "eyebrow": "Plataforma",
+      "title": "Administración",
+      "description": "Herramientas de la plataforma disponibles para administradores.",
+      "reviewsTitle": "Revisión de cualificaciones",
+      "reviewsOpen": "Abrir la cola de revisión",
+      "reviewsOff": "La revisión de cualificaciones está desactivada en este entorno.",
+      "toolsTitle": "Herramientas",
+      "toolsOpen": "Abrir herramientas",
+      "figuresKicker": "Control operativo · datos del servidor",
+      "figuresTitle": "Tu plataforma, en cifras.",
+      "figuresDescription": "Información de cuentas autenticadas. Sin importes: las comisiones y los planes no forman parte de esta versión.",
+      "figuresError": "No se han podido cargar las cifras. Recarga la página.",
+      "technicians": "Técnicos registrados",
+      "organizations": "Organizaciones",
+      "activeRequirements": "Necesidades activas",
+      "activeRequirementsDetail": "Abiertas o cubiertas y sin vencer; las pausadas no cuentan",
+      "workingNow": "Técnicos trabajando ahora",
+      "aogWithVacancies": "AOG con vacantes",
+      "demandTitle": "Demanda por licencia",
+      "demandDescription": "Plazas pendientes de cubrir en necesidades activas, por licencia obligatoria; una misma necesidad puede aportar a varias.",
+      "demandEmpty": "Sin demanda pendiente.",
+      "demandNoLicence": "Sin licencia obligatoria",
+      "seats": "{count, plural, one {# plaza} other {# plazas}}",
+      "organizationsTitle": "Revisión de organizaciones",
+      "organizationsText": "Comprueba los datos fiscales de cada organización y registra la revisión con su evidencia.",
+      "organizationsOpen": "Abrir organizaciones",
+      "auditTitle": "Auditoría",
+      "auditText": "Registro de solo lectura de las acciones de la plataforma.",
+      "auditOpen": "Abrir auditoría"
+    },
     "reviews": {
       "eyebrow": "Plataforma",
       "title": "Revisión de cualificaciones",
       "description": "Las cualificaciones autodeclaradas esperan aquí hasta que un administrador de la plataforma las comprueba. Solo las cualificaciones obligatorias verificadas hacen elegible a un profesional.",
-      "evidenceNote": "Todavía no se guardan documentos acreditativos (la cartera documental no está construida). Comprueba cada declaración con la autoridad emisora o con los documentos originales del profesional antes de verificar. Tu decisión y la referencia de la petición quedan auditadas.",
+      "evidenceNote": "Los documentos acreditativos no se consultan desde esta cola: el wallet documental de cada profesional es privado y no se comparte con revisores. Comprueba cada declaración con la autoridad emisora o con los documentos originales del profesional antes de verificar. Tu decisión y la referencia de la petición quedan auditadas.",
       "pendingTitle": "Pendientes de revisión ({count})",
       "emptyTitle": "Nada que revisar",
       "emptyDescription": "Todas las declaraciones activas están decididas.",
@@ -857,8 +1567,10 @@
       "expires": "Caducidad",
       "notGiven": "No indicada",
       "noExpiry": "Sin caducidad",
-      "note": "Motivo o referencia",
-      "noteHint": "Obligatorio para rechazar. Lo verá el profesional; no incluyas datos personales.",
+      "note": "Evidencia o motivo",
+      "noteHint": "Obligatorio. Al verificar queda como evidencia para la plataforma; al rechazar, el profesional leerá el motivo. No incluyas datos personales.",
+      "restrictionsTitle": "Restricciones declaradas",
+      "restrictionsHint": "Resuelve las restricciones con el titular antes de revisar el perfil.",
       "verify": "Verificar",
       "reject": "Rechazar",
       "verifiedDone": "Verificada. La cualificación ya cuenta para el matching.",
@@ -874,9 +1586,50 @@
       "decisionRejected": "Rechazada",
       "yes": "Sí",
       "no": "No"
+    },
+    "organizations": {
+      "eyebrow": "Plataforma",
+      "title": "Revisión de organizaciones",
+      "description": "Las organizaciones completan sus datos en «Organización». Solo una organización con la revisión registrada ve a los profesionales que eligieron «Empresas verificadas».",
+      "evidenceNote": "Comprueba cada organización con el registro mercantil o con su documentación original antes de registrar la revisión. Tu evidencia queda guardada para la plataforma (la organización no la ve) y la decisión queda auditada con la referencia de la petición.",
+      "statusPending": "Pendiente",
+      "statusReviewed": "Revisión registrada",
+      "taxId": "Identificación fiscal",
+      "taxAddress": "Domicilio fiscal",
+      "notGiven": "Sin indicar",
+      "own": "Es tu organización: nadie revisa la suya propia.",
+      "incomplete": "Faltan datos fiscales: la organización debe completarlos en «Organización» antes de la revisión.",
+      "reviewedOn": "Revisión registrada el {date}.",
+      "note": "Evidencia / observaciones de la revisión",
+      "noteHint": "Obligatoria. Qué comprobaste y dónde; no incluyas datos personales.",
+      "register": "Registrar revisión",
+      "reviewedDone": "{name}: revisión registrada.",
+      "changed": "Esta organización ya se revisó o ha cambiado. Recarga la lista.",
+      "emptyTitle": "Todavía no hay organizaciones."
+    },
+    "audit": {
+      "eyebrow": "Plataforma",
+      "title": "Auditoría",
+      "description": "Registro de solo lectura, del más reciente al más antiguo: qué acción, quién (identificador) y sobre qué. Sin texto libre ni datos personales.",
+      "caption": "Eventos de auditoría, página {page}",
+      "when": "Cuándo",
+      "action": "Acción",
+      "actor": "Actor",
+      "object": "Objeto",
+      "details": "Detalles",
+      "system": "Sistema",
+      "pagination": "Páginas de la auditoría",
+      "pageInfo": "Página {page} · 50 eventos por página",
+      "newer": "Más recientes",
+      "older": "Más antiguos",
+      "first": "Ir a la primera página",
+      "emptyTitle": "No hay eventos en esta página.",
+      "errorTitle": "No se ha podido cargar la auditoría.",
+      "errorText": "Recarga la página. Si sigue fallando, la base de datos no responde."
     }
   },
   "tools": {
+    "readAs": "Se lee como {value}",
     "kicker": "TU CAJA DE HERRAMIENTAS",
     "homeTitle": "Para cada jornada.",
     "lead": "Cálculos claros. Unidades visibles. Referencias a mano.",
@@ -892,8 +1645,16 @@
     "favoriteAdd": "Añadir favorito {tool}",
     "favoriteRemove": "Quitar favorito {tool}",
     "open": "Abrir herramienta",
-    "privacyNote": "Tu uso de herramientas es privado: los cálculos se hacen en tu navegador y no se envían a ningún servidor. Tus favoritos se guardan en este navegador.",
+    "privacyNote": "Tu uso de herramientas es privado: los cálculos se hacen en tu navegador y no se envían a ningún servidor. Tus favoritos y el progreso de los retos se guardan en este navegador.",
     "tile": {
+      "daily": {
+        "title": "Reto diario",
+        "sub": "5 o 10 preguntas · rachas"
+      },
+      "translator": {
+        "title": "Traductor",
+        "sub": "Español · inglés · francés"
+      },
       "torque": {
         "title": "Par de apriete",
         "sub": "N·m · lbf·ft · lbf·in"
@@ -901,6 +1662,10 @@
       "convert": {
         "title": "Conversiones",
         "sub": "22 magnitudes técnicas"
+      },
+      "knowledge": {
+        "title": "Inglés y siglas",
+        "sub": "Diccionario · ATA · práctica"
       },
       "duration": {
         "title": "Duración",
@@ -949,9 +1714,115 @@
       "decimal": "Horas decimales → HH:MM",
       "inputClock": "Duración HH:MM",
       "inputDecimal": "Horas decimales",
+      "placeholderClock": "1:30",
+      "placeholderDecimal": "1,5",
       "result": "Resultado",
       "hours": "h",
       "formula": "Horas decimales = horas + minutos / 60. HH:MM se redondea al minuto más próximo."
+    },
+    "knowledge": {
+      "sections": "Secciones",
+      "tab": {
+        "terms": "Diccionario ES / EN",
+        "ata": "Índice ATA",
+        "practice": "Práctica breve"
+      },
+      "counts": "{entries} entradas · {chapters} capítulos de referencia",
+      "searchLabel": "Buscar término, sigla o ATA",
+      "placeholderTerms": "Término, sigla o significado: torque, holgura, AMM…",
+      "placeholderAta": "Número o sistema: 28, combustible…",
+      "area": "Área del diccionario",
+      "allAreas": "Todos",
+      "results": "Entradas del diccionario",
+      "empty": "No hay entradas para esta búsqueda. Prueba el término inglés o una sigla.",
+      "ataEmpty": "Ningún capítulo coincide con esta búsqueda. Prueba el número o el nombre del sistema.",
+      "entryStatus": "Referencia editorial inicial · {version}",
+      "copy": "Copiar ficha",
+      "copyText": "{term} — {translation}. {definition} · CrewFlex, referencia editorial {version}",
+      "emptyTitle": "El significado depende del contexto.",
+      "emptyBody": "Selecciona una entrada para ver su definición y sus ejemplos. Las siglas pueden tener más de una acepción.",
+      "ataNote": "El índice ATA es navegación de referencia, no contiene tareas ni sustituye el índice del manual aplicable.",
+      "practiceKicker": "INGLÉS TÉCNICO · {current}/{total}",
+      "reveal": "Mostrar significado",
+      "next": "Siguiente término",
+      "practiceNote": "Ejemplos originales de lenguaje; no son instrucciones para una tarea concreta.",
+      "sourcesTitle": "Fuentes y revisión editorial",
+      "sourcesBody": "Definiciones breves originales. Catálogo inicial {version}; pendiente de revisión formal por operador antes de integrarlo en documentación controlada. No reproduce manuales ni el diccionario completo de STE. No incluye procedimientos de reset."
+    },
+    "translator": {
+      "kicker": "IDIOMAS · ES / EN / FR",
+      "title": "Traductor de apoyo",
+      "lead": "Repertorio técnico local y acceso a traducción libre con conexión.",
+      "from": "Origen",
+      "to": "Destino",
+      "lang": {
+        "es": "Español",
+        "en": "Inglés",
+        "fr": "Francés"
+      },
+      "swap": "Intercambiar idiomas",
+      "text": "Texto o término",
+      "placeholder": "Torque, fuel, maintenance…",
+      "counter": "{count}/{max} caracteres · no se guarda el texto.",
+      "matchCaption": "Equivalencia del repertorio local",
+      "noMatch": "Sin coincidencia exacta local. Puedes consultar las sugerencias o abrir la traducción libre externa.",
+      "externalTitle": "Traducir texto libre con Google Translate",
+      "externalNote": "Necesita Internet. Al abrir el enlace se enviará el texto escrito a Google. No introduzcas datos personales, documentos internos ni contenido de manuales sin autorización.",
+      "consent": "Quiero enviar este texto a Google para traducirlo.",
+      "open": "Abrir traducción externa",
+      "newTab": "(se abre en otra pestaña)",
+      "externalHint": "Introduce texto, elige idiomas distintos y confirma el envío.",
+      "repertoireTitle": "Repertorio sin conexión",
+      "repertoireBody": "{count} términos y frases originales de apoyo. No es un traductor automático completo.",
+      "noSuggestions": "No hay sugerencias locales para este texto.",
+      "footnote": "El significado depende del contexto. Traducciones de apoyo pendientes de revisión editorial; no sustituyen instrucciones de mantenimiento controladas."
+    },
+    "daily": {
+      "kicker": "APRENDE UN POCO CADA DÍA",
+      "title": "Tu reto aeronáutico",
+      "lead": "Fundamentos, inglés, siglas y sistemas ATA · {date} · día de referencia: Madrid",
+      "current": "Racha actual",
+      "best": "Mejor racha",
+      "total": "Días completados",
+      "days": "{count, plural, one {# día} other {# días}}",
+      "introTitle": {
+        "5": "Cinco minutos para ti",
+        "10": "Diez minutos para ti"
+      },
+      "introBody": "Elige 5 o 10 preguntas. Recibirás una explicación después de cada respuesta. El reto cambia cada día.",
+      "size": "Número de preguntas",
+      "sizeOption": "{count} preguntas",
+      "start": "Comenzar reto de hoy",
+      "unfinished": "El reto del {date} quedó sin terminar, así que no cuenta para tu racha. El de hoy ya está disponible (día de referencia: Madrid).",
+      "progress": "{group} · Pregunta {current} de {total}",
+      "progressLabel": "Progreso del reto",
+      "options": "Respuestas",
+      "confirm": "Confirmar respuesta",
+      "previousRight": "Respuesta anterior correcta",
+      "previousReview": "Repaso de la respuesta anterior",
+      "explained": "{answer}. {explanation}",
+      "doneTitle": "Reto completado",
+      "score": "{score} de {total} respuestas correctas",
+      "doneBody": "Has sumado un día de aprendizaje. Vuelve mañana para continuar tu racha.",
+      "review": "Revisar respuestas y explicaciones",
+      "yourAnswer": "Tu respuesta: {answer}",
+      "rightAnswer": "Respuesta: {answer}",
+      "saveError": "No se pudo guardar el progreso. Libera espacio o permite almacenamiento y vuelve a intentarlo.",
+      "medalsTitle": "Tu colección de constancia",
+      "medalsNote": "Completar el reto suma un día, aunque haya errores. Repetir o recargar no suma días extra. El progreso se guarda solo para tu cuenta en este navegador.",
+      "medal": {
+        "first": "Primer reto",
+        "week": "Una semana aprendiendo",
+        "month": "Constancia de 30 días"
+      },
+      "medalEarned": "Desbloqueado",
+      "medalLocked": "Por conseguir · {count, plural, one {# día} other {# días seguidos}}",
+      "footnote": "Contenido editorial de formación, no examen habilitante. Los logros no acreditan cualificación ni influyen en la selección profesional. No incluye procedimientos ni extractos de AMM/TCM. Catálogo inicial pendiente de revisión formal.",
+      "achievementsTitle": "Logros de aprendizaje",
+      "achievementsNote": "Privados en este navegador · separados de las cualificaciones.",
+      "achievementsStats": "Racha actual: {current, plural, one {# día} other {# días}} · Mejor racha: {best, plural, one {# día} other {# días}} · Retos completados: {total}",
+      "badgesNote": "Las insignias resumen datos declarados. No conceden autorización de firma ni sustituyen la revisión de licencia, tipo o competencia.",
+      "openChallenge": "Abrir el reto diario"
     },
     "copy": "Copiar con unidades",
     "copied": "Copiado",
@@ -970,6 +1841,8 @@
       "belowAbsoluteZero": "La temperatura no puede ser inferior a 0 K.",
       "resultOutOfRange": "El resultado está fuera del rango.",
       "toleranceRange": "La tolerancia porcentual debe estar entre 0 y 100.",
+      "toleranceRequired": "Tolerancia: introduce un porcentaje.",
+      "toleranceInvalid": "Tolerancia: introduce un porcentaje válido, p. ej. 5 o 2,5.",
       "negativeAbsolutePressure": "La presión absoluta no puede ser negativa.",
       "invalidClock": "Usa HH:MM; los minutos van de 00 a 59."
     },
@@ -1105,6 +1978,672 @@
       "valid": "Vigente",
       "soon": "Caduca pronto",
       "expired": "Caducado"
+    },
+    "archive": "Archivar",
+    "archiveNamed": "Archivar {title}",
+    "archived": "Documento archivado. Puedes restaurarlo desde la papelera.",
+    "restore": "Restaurar",
+    "restoreNamed": "Restaurar {title}",
+    "restored": "Documento restaurado.",
+    "deleteForever": "Eliminar definitivamente",
+    "showTrash": "Papelera ({count})",
+    "showWallet": "Ver wallet",
+    "trashTitle": "Papelera ({count})",
+    "trashNote": "Puedes restaurar un documento archivado durante {days, plural, one {# día} other {# días}}; después se elimina definitivamente, también su archivo. Ninguna empresa puede verlo.",
+    "emptyTrash": "Sin documentos. Los documentos archivados pueden restaurarse.",
+    "emptyFiltered": "No hay documentos de este tipo.",
+    "archivedOn": "archivado el {date}",
+    "purgeFrom": "se elimina definitivamente a partir del {date}",
+    "filterLabel": "Filtrar por tipo",
+    "filter": {
+      "all": "Todos",
+      "license": "Licencias",
+      "course": "Cursos",
+      "other": "Otros"
+    },
+    "viewer": {
+      "close": "Cerrar",
+      "loading": "Cargando el documento…",
+      "expired": "El enlace ha caducado. Vuelve a intentarlo para pedir uno nuevo.",
+      "failed": "No se ha podido cargar el documento. Vuelve a intentarlo o ábrelo en una pestaña nueva.",
+      "retry": "Reintentar",
+      "newTab": "Abrir en una pestaña nueva",
+      "pdfFrame": "Vista previa de {title}",
+      "pdfHint": "Si el PDF no se muestra, ábrelo en una pestaña nueva."
+    },
+    "truncated": "Se muestran los {shown} más recientes de {total}."
+  },
+  "opportunities": {
+    "eyebrow": "Oportunidades",
+    "title": "Trabajo que encaja contigo.",
+    "description": "Elegibilidad técnica y disponibilidad se evalúan por separado. Un porcentaje no sustituye un requisito obligatorio.",
+    "searchLabel": "Buscar oportunidad",
+    "searchPlaceholder": "Aeronave, base o empresa…",
+    "searchSubmit": "Buscar",
+    "filtersLabel": "Filtrar oportunidades",
+    "filter": {
+      "all": "Todas",
+      "eligible": "Compatibles",
+      "planned": "Planificado",
+      "urgent": "Urgente",
+      "aog": "AOG"
+    },
+    "emptyTitle": "Sin ofertas para este filtro",
+    "emptyDescription": "Prueba otra búsqueda o revisa tu perfil y fechas.",
+    "pagination": "Páginas de oportunidades",
+    "pageInfo": "{total, plural, one {# oportunidad} other {# oportunidades}} · página {page} de {pages}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "cappedNote": "Se han considerado las {cap} necesidades publicadas que empiezan antes.",
+    "orgOnlyTitle": "Las oportunidades son para profesionales",
+    "orgOnlyDescription": "Esta cuenta no tiene pasaporte profesional.",
+    "card": {
+      "eligible": "Cumples requisitos y disponibilidad",
+      "hardPending": "{count, plural, one {# requisito obligatorio pendiente} other {# requisitos obligatorios pendientes}}",
+      "availability": "Fechas insuficientes para esta cobertura",
+      "people": "{count, plural, one {# persona} other {# personas}}",
+      "applied": "Candidatura: {status}",
+      "rate": "{daily} / día · {hourly} / h",
+      "rateHourly": "{hourly} / h",
+      "shifts": "{count, plural, one {# jornada} other {# jornadas}} · {hours} horas base",
+      "fullBlock": "Bloque completo",
+      "days": "{count, plural, one {# día} other {# días}}"
+    },
+    "detail": {
+      "eyebrow": "Oportunidad",
+      "back": "Volver a oportunidades",
+      "eligibilityTitle": "Tu elegibilidad",
+      "eligible": "Cumples los requisitos obligatorios y la disponibilidad.",
+      "notEligible": "Todavía no eres elegible para esta necesidad.",
+      "eligibilityNote": "Calculada con tu pasaporte y tu disponibilidad. Publicar una necesidad no te hace elegible.",
+      "applyTitle": "Candidatura",
+      "publishedBy": "Publicada por {organization}"
+    },
+    "apply": {
+      "sharedTitle": "Qué verá {organization}",
+      "sharedQualifications": "Tus cualificaciones relevantes para esta necesidad, con su verificación y caducidad.",
+      "sharedAvailability": "Tu disponibilidad durante el periodo de la necesidad.",
+      "sharedIdentity": "Tu base y tus años de experiencia; tu nombre solo si tu visibilidad es «Abierta» (si no, una referencia anónima).",
+      "notShared": "Nunca tu contacto ni tus documentos: siguen protegidos.",
+      "noReservation": "Las candidaturas no reservan el calendario: solo una asignación confirmada protege sus días.",
+      "consent": "Autorizo compartir con {organization} estos datos para esta necesidad.",
+      "submit": "Presentar candidatura",
+      "sending": "Enviando…",
+      "sent": "Candidatura enviada. La organización la verá en su lista.",
+      "toApplications": "Ver mis candidaturas",
+      "blocker": {
+        "REQUIREMENT_NOT_OPEN": "Esta necesidad ya no admite candidaturas.",
+        "REQUIREMENT_STARTED": "El periodo de esta necesidad ya ha empezado: no admite candidaturas.",
+        "ALREADY_APPLIED": "Ya tienes una candidatura en curso ({status}).",
+        "REAPPLY_NOT_ALLOWED": "Tu candidatura anterior terminó ({status}): no puedes volver a presentarte a esta necesidad.",
+        "NOT_ELIGIBLE": "Todavía no cumples los requisitos obligatorios o la disponibilidad: revisa tu elegibilidad."
+      }
+    }
+  },
+  "applications": {
+    "eyebrow": "Mi actividad",
+    "title": "Tus candidaturas.",
+    "description": "La empresa revisa condiciones; el técnico acepta; la empresa confirma.",
+    "emptyTitle": "Tu próxima candidatura empieza aquí",
+    "emptyDescription": "Busca una oportunidad que encaje contigo y preséntate.",
+    "emptyAction": "Ver oportunidades",
+    "filtersLabel": "Filtrar por estado",
+    "all": "Todas ({count})",
+    "orgEyebrow": "Candidaturas",
+    "orgDescription": "Preselecciona, propón y confirma. Al confirmar, el servidor vuelve a comprobar cualificaciones, disponibilidad, plazas y solapes.",
+    "orgEmptyTitle": "Sin candidaturas todavía",
+    "orgEmptyDescription": "Cuando un profesional se presente a esta necesidad aparecerá aquí.",
+    "back": "Volver a la necesidad",
+    "view": "Candidaturas ({count})",
+    "card": {
+      "requirementPaused": "La necesidad está pausada: no admite propuestas ni confirmaciones.",
+      "requirementClosed": "La necesidad está cerrada.",
+      "requirementCovered": "La necesidad está cubierta.",
+      "days": "{count, plural, one {# jornada} other {# jornadas}}",
+      "reason": "Motivo: {reason}",
+      "history": "Historial",
+      "event": "{status} · {date} · {actor}",
+      "actor": {
+        "technician": "profesional",
+        "organization": "organización"
+      }
+    },
+    "proposal": {
+      "title": "Propuesta · versión {version}",
+      "accepted": "Condiciones aceptadas · versión {version}",
+      "pending": "Pendiente de aceptación",
+      "sent": "Enviada el {date}",
+      "notice": "CrewFlex intermedia; el contrato de trabajo o de prestación se acuerda directamente entre las partes.",
+      "newVersion": "Una propuesta nueva necesita otra aceptación; la aceptada se conserva en el historial."
+    },
+    "action": {
+      "shortlisted": "Preseleccionar",
+      "propose": "Enviar propuesta",
+      "repropose": "Nueva versión de la propuesta",
+      "accepted": "Aceptar propuesta",
+      "confirmed": "Confirmar asignación",
+      "finished": "Finalizar",
+      "rejected": "Rechazar",
+      "withdrawn": "Retirar candidatura",
+      "cancelAccepted": "Cancelar candidatura aceptada",
+      "cancelAssignment": "Cancelar asignación",
+      "confirm": "Confirmar",
+      "back": "Volver",
+      "reasonLabel": "Motivo (obligatorio)",
+      "reasonHint": "Lo verá la otra parte. Máximo 1000 caracteres.",
+      "acceptTerms": "Acepto exactamente estas condiciones (versión {version}).",
+      "confirmHint": "El servidor vuelve a comprobar cualificaciones, requisitos del perfil, restricciones, disponibilidad, plazas y solapes antes de confirmar.",
+      "finishHint": "Disponible después de la última jornada.",
+      "withdrawHint": "Se retirará tu candidatura. Podrás volver a presentarte mientras la necesidad siga abierta.",
+      "proposeHint": "Se enviará una copia fija de las condiciones publicadas; el profesional tendrá que aceptarla.",
+      "done": "Hecho: {status}.",
+      "cancelAssignmentHint": "Se liberarán plazas y se restaurará la disponibilidad anterior del técnico. El historial conservará el motivo."
+    },
+    "conflict": {
+      "REQUIREMENT_NOT_OPEN": "La necesidad no está abierta (pausada, cubierta o cerrada).",
+      "REQUIREMENT_STARTED": "El periodo de la necesidad ya ha empezado.",
+      "QUALIFICATION_INVALID": "Falta una cualificación obligatoria verificada y vigente durante todo el periodo.",
+      "AVAILABILITY_INCOMPLETE": "La disponibilidad no cubre todo el periodo.",
+      "OVERLAPPING_ASSIGNMENT": "El profesional ya tiene una asignación confirmada que se solapa.",
+      "HEADCOUNT_REACHED": "Ya están confirmadas todas las plazas.",
+      "PROPOSAL_STALE": "La propuesta ha cambiado: revisa la versión nueva antes de aceptar.",
+      "PERIOD_NOT_ENDED": "Solo se puede finalizar después de la última jornada.",
+      "ALREADY_APPLIED": "Ya hay una candidatura en curso.",
+      "REAPPLY_NOT_ALLOWED": "No se puede volver a presentar: la candidatura anterior terminó.",
+      "ACTIVE_COMMITMENTS": "Resuelve antes las asignaciones activas (aceptadas o confirmadas).",
+      "HAS_APPLICATIONS": "Esta necesidad ya recibió candidaturas: no se puede editar.",
+      "OWN_ORGANIZATION": "No puedes presentarte a una necesidad de tu propia organización.",
+      "PROFILE_REQUIREMENTS_UNMET": "El perfil no cumple los requisitos de la necesidad (permiso de trabajo, categoría, aeronave, habilitación de tipo, motores, experiencia o capacidades).",
+      "RESTRICTIONS_DECLARED": "El profesional declara restricciones generales: no se puede confirmar (perfil o restricciones pendientes de revisión).",
+      "ORGANIZATION_BLOCKED": "Esta organización está bloqueada.",
+      "CLIENT_REQUIRED": "Una agencia de personal publica solo para un cliente representado: indica el cliente.",
+      "CLIENT_NOT_ACTIVE": "La agencia ya no representa a este cliente: esta necesidad no puede avanzar."
+    },
+    "stale": "La candidatura cambió mientras tanto. Recarga para ver su estado actual.",
+    "orgOnlyTitle": "«Mis candidaturas» es para profesionales",
+    "orgOnlyDescription": "Las candidaturas que recibe tu organización están en «Candidaturas».",
+    "orgOnlyAction": "Ver candidaturas",
+    "managersOnlyTitle": "Las candidaturas las gestionan administradores y managers",
+    "managersOnlyDescription": "Tu rol en la organización no permite ver ni mover candidaturas."
+  },
+  "candidatePack": {
+    "brand": "CREWFLEX",
+    "badge": "Expediente compartido",
+    "previewBadge": "Vista previa",
+    "heading": "Expediente",
+    "previewTitle": "Qué compartes con {organization}",
+    "previewIntro": "Además, al presentarte {organization} recibirá esta copia fechada de tu pasaporte y de tu logbook, tal como están ahora. Revísala: las restricciones y las entradas del logbook se copian tal cual las escribiste, y la copia se queda mientras la candidatura siga en curso o termine en una asignación (se borra si la retiras, la rechazan o se cancela).",
+    "sharedCopy": "La copia fechada de tu expediente que ves debajo: todas tus cualificaciones activas, tus restricciones y tu tarifa mínima declaradas y las entradas del logbook que marcaste.",
+    "orgIntro": "Copia del expediente técnico que el profesional compartió al presentarse.",
+    "orgIntroClient": "Copia del expediente técnico que el profesional compartió al presentarse, recibida para el cliente {client}.",
+    "ownIntro": "Esta es la copia que recibió {organization} al presentar tu candidatura.",
+    "ownIntroClient": "Esta es la copia que recibió {organization}, para su cliente {client}, al presentar tu candidatura.",
+    "view": "Ver expediente",
+    "hide": "Cerrar expediente",
+    "years": "{count, plural, one {# año} other {# años}}",
+    "english": "Inglés {level}",
+    "primary": "{category} (principal)",
+    "minRate": "Mínimo declarado: {amount} / {unit}",
+    "rateUnit": {
+      "hour": "hora",
+      "day": "día"
+    },
+    "noBase": "Base no declarada",
+    "qualificationsTitle": "Cualificaciones",
+    "aircraft": "Aeronaves: {list}",
+    "engines": "Motores: {list}",
+    "noneDeclared": "No declarados",
+    "rating": "{aircraft} · {category} · {expiry} · {restrictions}",
+    "noExpiryApplicable": "Sin fecha aplicable",
+    "noRestrictions": "Sin restricciones declaradas",
+    "catalogItem": "{code} · {name} · {verification} · {expiry}",
+    "noExpiry": "Sin caducidad",
+    "expires": "Caduca {date}",
+    "noQualifications": "Sin cualificaciones declaradas.",
+    "coursesTitle": "Cursos",
+    "course": "{name} · {expiry} · {state}",
+    "courseState": {
+      "none": "Sin caducidad",
+      "valid": "Vigente",
+      "soon": "Caduca pronto",
+      "expired": "Caducado"
+    },
+    "noCourses": "Sin cursos declarados.",
+    "skillsTitle": "Capacidades",
+    "permitsTitle": "Permisos de trabajo",
+    "restrictionsTitle": "Restricciones generales",
+    "experienceTitle": "Experiencia compartida",
+    "previewExperienceTitle": "Experiencia que compartes",
+    "previewExperienceHint": "Las entradas de tu logbook marcadas «Seleccionable para expediente», como máximo las {max} más recientes. Para cambiarlas, cambia esa marca en tu logbook antes de presentarte. No dejes matrículas, operadores ni nombres de personas o clientes en las que compartes.",
+    "noExperience": "Ninguna entrada del logbook marcada «Seleccionable para expediente».",
+    "experienceMeta": "{date} · {hours} · {environment}",
+    "experienceMetaAta": "{date} · ATA {ata} · {hours} · {environment}",
+    "protected": "Los originales, nombres de archivos y metadatos identificativos permanecen protegidos.",
+    "notIncluded": "El expediente no incluye nombre real, contacto, empresa actual, organizaciones bloqueadas ni documentos.",
+    "copyDate": "Copia del perfil: {date}. Los cambios del pasaporte y del logbook no alteran esta versión.",
+    "previewNote": "Se copiará al presentar la candidatura. Lo que cambies después en tu pasaporte o en tu logbook no alterará esa copia.",
+    "none": "Esta candidatura no tiene copia del expediente: se presentó antes de que existieran las copias o el profesional cerró su cuenta.",
+    "error": "No se ha podido cargar el expediente.",
+    "previewError": "No se ha podido preparar la vista previa de lo que compartes. Recarga la página para presentar la candidatura."
+  },
+  "logbook": {
+    "eyebrow": "MI EXPERIENCIA",
+    "title": "Logbook personal",
+    "description": "Registro auxiliar privado. No sustituye registros oficiales de la empresa.",
+    "noProfileDescription": "El logbook pertenece a las cuentas profesionales.",
+    "disclaimer": "Registro autodeclarado; no constituye certificación de experiencia ni puesta en servicio. Solo tú puedes verlo; las entradas marcadas «Seleccionable para expediente» se copian en el expediente de las candidaturas que presentes.",
+    "newTitle": "Nueva entrada",
+    "date": "Fecha de la tarea",
+    "aircraft": "Aeronave",
+    "aircraftHint": "Elige un modelo de la lista o escribe el tuyo (por ejemplo, con la matrícula).",
+    "categoryLabel": "Categoría de tarea",
+    "category": {
+      "defect_rectification": "Defect Rectification",
+      "inspection": "Inspection",
+      "component_replacement": "Component Replacement",
+      "troubleshooting": "Troubleshooting",
+      "sheet_metal_structures": "Sheet Metal / Structures",
+      "cabin_interiors": "Cabin / Interiors"
+    },
+    "environmentLabel": "Entorno",
+    "environment": {
+      "line_maintenance": "Line Maintenance",
+      "base_maintenance": "Base Maintenance",
+      "engine_bay_check": "Engine Bay Check",
+      "aog_intervention": "AOG Intervention",
+      "workshop": "Workshop"
+    },
+    "ata": "ATA (opcional)",
+    "hours": "Horas",
+    "hoursHint": "De 0 a 24, en pasos de 0,1.",
+    "descriptionLabel": "Descripción técnica",
+    "cvRelevant": "Disponible para seleccionar en Candidate Pack",
+    "cvRelevantHint": "Las entradas marcadas se copian tal cual (aeronave, fecha, ATA, horas y descripción) en el expediente de cada candidatura que presentes: si la marcas, no incluyas matrículas, operadores ni nombres de personas o clientes. Los expedientes ya enviados conservan su copia.",
+    "save": "Guardar entrada",
+    "saved": "Entrada guardada",
+    "updated": "Logbook actualizado",
+    "deleted": "Entrada eliminada",
+    "invalid": "Indica una tarea realizada, fecha válida y descripción.",
+    "historyTitle": "Historial",
+    "archiveTitle": "Entradas archivadas",
+    "showArchive": "Ver archivo",
+    "showActive": "Ver activas",
+    "empty": "Todavía no hay entradas. Las que guardes aparecerán aquí.",
+    "emptyArchive": "No hay entradas archivadas.",
+    "truncated": "Se muestran las {shown} entradas más recientes de {total}.",
+    "ataValue": "ATA {ata}",
+    "hoursValue": "{hours, number} h",
+    "selfDeclared": "Autodeclarada",
+    "selectable": "Seleccionable para expediente",
+    "editTitle": "Editar experiencia",
+    "archive": "Archivar",
+    "restore": "Restaurar",
+    "confirmDelete": "Eliminar definitivamente"
+  },
+  "passport": {
+    "categories": {
+      "B1_1": "B1.1",
+      "B1_2": "B1.2",
+      "B1_3": "B1.3",
+      "B1_4": "B1.4",
+      "B2": "B2",
+      "B3": "B3",
+      "CAT_A": "Cat A",
+      "CAT_C": "Cat C",
+      "MECHANIC": "Mecánico",
+      "SHEET_METAL": "Sheet Metal",
+      "NDT": "NDT",
+      "HELPER": "Helper"
+    },
+    "skills": {
+      "line_maintenance": "Line Maintenance",
+      "base_maintenance": "Base Maintenance",
+      "aog_support": "AOG Support",
+      "troubleshooting": "Troubleshooting",
+      "engine_change": "Engine Change",
+      "sheet_metal": "Sheet Metal",
+      "ndt": "NDT",
+      "borescope": "Boroscopia",
+      "cabin_systems": "Cabin Systems"
+    },
+    "rateUnit": {
+      "hour": "EUR / hora",
+      "day": "EUR / día"
+    },
+    "badge": "{percent, number}% completado · {count, plural, one {# evidencia} other {# evidencias}}",
+    "badgeNoWallet": "{percent, number}% completado",
+    "candidate": {
+      "declared": "Declarado:",
+      "primary": "{category} (principal)",
+      "english": "Inglés {level}",
+      "permits": "Permisos: {countries}",
+      "restrictions": "Restricciones declaradas"
+    }
+  },
+  "notices": {
+    "nav": "Avisos",
+    "eyebrow": "Actividad",
+    "title": "Avisos internos",
+    "intro": {
+      "technician": "Los cambios de tus candidaturas y de las necesidades a las que te has presentado. No se envían correos ni notificaciones push.",
+      "organization": "Los cambios de las candidaturas a las necesidades de tu organización. No se envían correos ni notificaciones push.",
+      "both": "Los cambios de tus candidaturas y de las candidaturas a las necesidades de tu organización. No se envían correos ni notificaciones push."
+    },
+    "bell": "Avisos: {count, plural, one {# sin leer} other {# sin leer}}",
+    "unread": "{count, plural, one {# sin leer} other {# sin leer}}",
+    "new": "Nuevo",
+    "markAll": "Marcar todas como leídas",
+    "markAllDone": "Todos tus avisos están leídos.",
+    "emptyTitle": "No tienes avisos.",
+    "emptyDescription": "Aquí aparecerá cada cambio de una candidatura en cuanto ocurra.",
+    "listLabel": "Avisos",
+    "kind": {
+      "newApplication": "Nueva candidatura",
+      "applicationUpdate": "Actualización de candidatura",
+      "requirementPaused": "Necesidad pausada",
+      "requirementResumed": "Necesidad reanudada",
+      "requirementClosed": "Necesidad cerrada"
+    },
+    "open": {
+      "technician": "Ver candidatura",
+      "organization": "Ver candidaturas"
+    },
+    "pagination": "Páginas de avisos",
+    "pageInfo": "{total, plural, one {# aviso} other {# avisos}} · página {page} de {pages}",
+    "previous": "Anteriores",
+    "next": "Siguientes"
+  },
+  "account": {
+    "data": {
+      "title": "Tus datos",
+      "export": "Exportar mis datos y archivos",
+      "exportHint": "Un archivo JSON con tu cuenta, tu pasaporte, tus cualificaciones, tu disponibilidad, tus candidaturas y tus documentos (los archivos, hasta 3 MB en total; los demás aparecen en la lista y se descargan desde Documentos). No incluye datos de otras personas ni la auditoría.",
+      "exportFailed": "No se ha podido preparar la exportación. Inténtalo de nuevo.",
+      "closeTitle": "Cerrar cuenta",
+      "closeText": "Elimina credenciales, perfil y archivos. Los registros de compromisos y auditoría se conservan sin el perfil para resolver el historial operativo.",
+      "closeDetails": "Tus candidaturas en curso se retiran. Si eres el último administrador de una organización, sus necesidades abiertas se cierran. No se puede deshacer.",
+      "confirmLabel": "Escribe {word}",
+      "submit": "Cerrar mi cuenta",
+      "submitting": "Cerrando la cuenta…",
+      "errors": {
+        "CONFIRM_WORD": "Escribe {word} para confirmar.",
+        "ACTIVE_COMMITMENTS": "Resuelve primero los compromisos aceptados o confirmados.",
+        "generic": "No se ha podido cerrar la cuenta. Inténtalo de nuevo."
+      },
+      "exporting": "Preparando la exportación…",
+      "exportReady": "Exportación preparada."
+    },
+    "invite": {
+      "title": "Invitar",
+      "description": "Envía por correo una invitación para crear una cuenta. Caduca en 7 días y sirve para una sola cuenta, con ese correo.",
+      "off": "El alta está abierta en este entorno: las invitaciones están desactivadas.",
+      "email": "Correo del invitado",
+      "accountType": "Tipo de cuenta",
+      "submit": "Crear invitación",
+      "submitting": "Enviando…",
+      "sent": "Invitación enviada a {email}.",
+      "errors": {
+        "CONFLICT": "Ya existe una cuenta con ese correo.",
+        "NOT_FOUND": "Las invitaciones están desactivadas en este entorno.",
+        "FORBIDDEN": "Solo la administración de la plataforma puede invitar.",
+        "VALIDATION_ERROR": "Revisa los campos marcados.",
+        "generic": "No se ha podido enviar la invitación. Inténtalo de nuevo en un minuto."
+      }
+    }
+  },
+  "hiring": {
+    "coverage": {
+      "confirmed": "{percent} cobertura confirmada",
+      "covered": "{percent} cubierto",
+      "seats": "{filled} / {total} plazas confirmadas"
+    },
+    "manageApplications": "Gestionar candidaturas",
+    "dashboard": {
+      "coveredShifts": "Jornadas cubiertas",
+      "closeTitle": "Cómo cerrar una cobertura",
+      "step1": "Publica fechas y requisitos.",
+      "step2": "Compara candidatos elegibles.",
+      "step3": "Revisa el Candidate Pack y propone.",
+      "step4": "El técnico acepta y confirmas la asignación.",
+      "quickLinks": "Accesos directos",
+      "builderTitle": "Constructor",
+      "builderText": "Necesidades estructuradas",
+      "packsTitle": "Candidate Packs",
+      "packsText": "Expedientes y seguimiento",
+      "note": "Las propuestas, la aceptación del técnico y la confirmación de tu organización se registran por separado. CrewFlex facilita el proceso; el contrato entre las partes se acuerda fuera de la plataforma."
+    },
+    "applications": {
+      "eyebrow": "Pipeline",
+      "title": "De candidatura a cobertura.",
+      "selected": "Oferta seleccionada: {title}",
+      "viewAll": "Ver todas",
+      "backToOffers": "Volver a ofertas",
+      "emptyTitle": "Sin candidaturas en este estado",
+      "emptyDescription": "Selecciona otra oferta o prepara una candidatura.",
+      "pagination": "Páginas de candidaturas",
+      "pageInfo": "{total, plural, one {# candidatura} other {# candidaturas}} · página {page} de {pages}",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "allTab": "Todas",
+      "closedAccount": "Cuenta cerrada",
+      "closedAccountNote": "El profesional cerró su cuenta; la candidatura y su historial se conservan."
+    },
+    "network": {
+      "title": "Ofertas en la red.",
+      "ownNote": "Las necesidades de tu organización están en «Necesidades».",
+      "detailEyebrow": "Ofertas en la red",
+      "back": "Volver a ofertas en la red",
+      "viewDetail": "Ver detalle"
+    },
+    "opportunityCard": {
+      "viewDetail": "Ver detalle",
+      "prepare": "Preparar candidatura",
+      "applied": "Ya presentada"
+    }
+  },
+  "outreach": {
+    "preferences": {
+      "title": "Avisos de oportunidades",
+      "description": "Decide qué avisos internos de necesidades urgentes o AOG quieres recibir. Una organización solo puede avisarte si eres visible para ella, cumples los requisitos y tu disponibilidad cubre las fechas; nunca sabe quién lo ha recibido.",
+      "consents": "Avisos que aceptas",
+      "urgent": "Quiero avisos internos de trabajos urgentes",
+      "aog": "Quiero avisos internos AOG",
+      "mobilization": "Horas mínimas que necesitas para movilizarte",
+      "mobilizationHint": "De 0 a 720 horas. Déjalo vacío si no quieres declararlo.",
+      "timeZone": "Zona horaria IANA para avisos",
+      "timeZoneHint": "Por ejemplo Europe/Madrid, Europe/Lisbon o UTC.",
+      "quietStart": "Silencio desde (opcional)",
+      "quietEnd": "Silencio hasta (opcional)",
+      "note": "Sin movilización declarada no se distribuyen avisos. El silencio también se respeta para AOG; no se envían correos o SMS.",
+      "save": "Guardar preferencias de avisos",
+      "saved": "Preferencias de avisos guardadas."
+    },
+    "distribution": {
+      "title": "Distribución {urgency}",
+      "explain": "Crea un aviso interno, una sola vez, para cada profesional que acepta avisos de esta urgencia, es visible para tu organización y no la ha bloqueado, no declara restricciones en la habilitación pedida, cumple los requisitos, está disponible todo el periodo, ha declarado una movilización que el inicio respeta y no está en sus horas de silencio. Nunca sabrás a quién llega; con menos de 5 candidatos posibles, tampoco cuántos.",
+      "button": "Distribuir aviso Urgente / AOG",
+      "result": "{count, plural, one {# aviso interno creado} other {# avisos internos creados}}. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.",
+      "resultWithheld": "Avisos internos creados. Con menos de {min} candidatos posibles no se muestra cuántos, para proteger sus preferencias. Se respetan consentimiento, disponibilidad y silencio. No se han enviado emails.",
+      "done": "Distribuida el {date}: {count, plural, one {# aviso interno} other {# avisos internos}}.",
+      "doneWithheld": "Distribuida el {date}. Con menos de {min} candidatos posibles no se muestra cuántos avisos se crearon.",
+      "notOffered": "La distribución solo está disponible mientras la necesidad está publicada y no ha empezado.",
+      "conflict": {
+        "OUTREACH_NOT_OPEN": "Publica o reanuda la necesidad primero.",
+        "OUTREACH_PLANNED": "Las necesidades planificadas no se distribuyen.",
+        "OUTREACH_ALREADY_SENT": "Esta necesidad ya se distribuyó.",
+        "OUTREACH_STARTED": "La necesidad ya ha empezado: ya no se distribuye.",
+        "OUTREACH_DAILY_LIMIT": "Tu organización ya ha distribuido 10 necesidades en las últimas 24 horas. Inténtalo más tarde."
+      }
+    },
+    "notice": {
+      "outreachUrgent": "Urgente: {title}",
+      "outreachAog": "AOG: {title}",
+      "description": "Consulta las condiciones y decide si quieres presentar candidatura.",
+      "open": "Ver oportunidad"
+    },
+    "noticesHint": "Los avisos Urgente y AOG siguen tus preferencias de urgencia, movilización y silencio.",
+    "noticesHintLink": "Configurar avisos"
+  },
+  "shell": {
+    "breadcrumb": "Ruta de navegación",
+    "motto": "Cualificación · Disponibilidad · Confianza",
+    "dock": {
+      "label": "Accesos rápidos",
+      "home": "Inicio",
+      "offers": "Ofertas",
+      "candidates": "Candidatos",
+      "calendar": "Calendario",
+      "applications": "Candidaturas",
+      "tools": "Herramientas",
+      "administration": "Administración"
+    }
+  },
+  "profileHero": {
+    "status": "Estado de mi perfil",
+    "statusTitle": "Estado del perfil · {percent, number}%",
+    "statusIntro": "Información cumplimentada; la revisión de documentos y cualificaciones es independiente.",
+    "allDone": "Los apartados de información están completados.",
+    "close": "Cerrar",
+    "photo": {
+      "add": "Añadir foto",
+      "change": "Cambiar foto",
+      "saving": "Guardando…",
+      "remove": "Quitar foto",
+      "note": "Foto guardada solo en este navegador · JPG, PNG o WebP · hasta 2 MB",
+      "invalid": "Elige una foto JPG, PNG o WebP de hasta 2 MB.",
+      "saveFailed": "No se ha podido guardar la foto. Comprueba el archivo y el espacio del navegador.",
+      "removeFailed": "No se ha podido quitar la foto."
+    }
+  },
+  "badges": {
+    "stripLabel": "Insignias del perfil",
+    "more": "Ver {count, plural, one {# insignia adicional} other {# insignias adicionales}}",
+    "less": "Ocultar las insignias adicionales",
+    "close": "Cerrar detalle de insignia",
+    "footnote": "Resumen del perfil; no concede autorización de firma ni acredita formación por participar en retos.",
+    "years": "{count, plural, one {# año} other {# años}}",
+    "yearsUnit": "AÑOS",
+    "status": {
+      "declared": "Declarado",
+      "verified": "Verificada",
+      "reviewValidity": "Revisar vigencia",
+      "restricted": "Con restricciones",
+      "typeDeclared": "Tipo declarado",
+      "experienceDeclared": "Experiencia declarada"
+    },
+    "detail": {
+      "category": "Categoría declarada en el perfil; pendiente de validación de su alcance.",
+      "specialty": "Especialidad declarada. No acredita métodos, niveles ni autorización.",
+      "verified": "Un revisor de la plataforma verificó la cualificación con este código; su vigencia está en Cualificaciones.",
+      "reviewValidity": "La fecha declarada requiere revisión.",
+      "typeDeclared": "Habilitación de tipo declarada. La autorización de firma corresponde a la organización; no se deduce de una medalla.",
+      "experience": "Experiencia indicada por el profesional; no es una certificación."
+    },
+    "passport": {
+      "label": "Insignias profesionales",
+      "kicker": "Pasaporte visual",
+      "empty": "Añade categorías, habilitaciones y experiencia para completar tu pasaporte visual.",
+      "footnote": "Las insignias resumen datos declarados. No conceden autorización de firma ni sustituyen la revisión de licencia, tipo o competencia."
+    },
+    "yearUnit": "AÑO"
+  },
+  "publicTools": {
+    "signIn": "Acceder a mi cuenta",
+    "note": "Sin cuenta: los cálculos se hacen en este navegador y no se guarda nada en el servidor. El reto diario necesita una cuenta.",
+    "loginNote": "Las herramientas se pueden utilizar sin abrir una cuenta.",
+    "open": "Abrir herramientas"
+  },
+  "orgHome": {
+    "visibleNetwork": "Red visible",
+    "visibleNetworkDetail": "Según permisos y privacidad",
+    "network": "Red profesional",
+    "hero": {
+      "brand": "CrewFlex Aviation",
+      "tag": "Capacidad técnica flexible",
+      "title": "El técnico adecuado. Las fechas adecuadas.",
+      "body": "Define cualificaciones, ventanas de disponibilidad y condiciones para encontrar perfiles realmente viables.",
+      "cta": "Explorar candidatos",
+      "mark": "CF / AVIATION"
+    }
+  },
+  "directory": {
+    "eyebrow": "Red profesional",
+    "title": "Encuentra a tu próximo técnico.",
+    "description": "Compara cualificaciones, experiencia y disponibilidad. La identidad respeta las preferencias de cada profesional.",
+    "visibleNote": "Solo perfiles visibles para tu organización. Los descansos y el calendario privado no se muestran.",
+    "evaluate": {
+      "label": "Evaluar para la oferta",
+      "placeholder": "Sin oferta seleccionada",
+      "submit": "Evaluar",
+      "hint": "La elegibilidad se evalúa en «Profesionales elegibles» de la necesidad elegida."
+    },
+    "filters": {
+      "legend": "Filtros del directorio",
+      "base": "Base habitual",
+      "basePlaceholder": "Madrid (MAD), Lisboa…",
+      "more": "Más filtros",
+      "category": "Categoría",
+      "aircraft": "Aeronave",
+      "english": "Inglés mínimo",
+      "minYears": "Experiencia mínima (años)",
+      "country": "Permiso de trabajo",
+      "from": "Disponibilidad desde",
+      "to": "Disponibilidad hasta",
+      "all": "Todas",
+      "any": "Cualquiera",
+      "anyCountry": "Cualquier país",
+      "help": "El filtro de fechas requiere publicar todos los días del intervalo; no muestra el calendario privado.",
+      "apply": "Aplicar filtros",
+      "clear": "Limpiar filtros"
+    },
+    "summary": "{total, plural, one {<b>#</b> perfil} other {<b>#</b> perfiles}} · página {page} de {pages}",
+    "view": {
+      "label": "Vista del directorio",
+      "compact": "Compacta",
+      "expanded": "Ampliada"
+    },
+    "card": {
+      "anonymous": "Profesional anónimo {ref}",
+      "protectedIdentity": "Identidad protegida",
+      "avatarOf": "Avatar de {name}",
+      "baseNotShared": "Base no compartida",
+      "experience": "Experiencia: {count, plural, one {# año} other {# años}}",
+      "experienceUnknown": "Experiencia no declarada",
+      "english": "Inglés {level}",
+      "englishNone": "Inglés no declarado",
+      "aircraft": "Aeronaves: {list}",
+      "aircraftNone": "Aeronaves: sin declarar",
+      "categories": "Categorías: {list}",
+      "countries": "Países de trabajo: {list}",
+      "countriesNone": "Países de trabajo: sin declarar",
+      "restrictions": "Restricciones declaradas",
+      "openProfile": "Abrir perfil"
+    },
+    "medals": {
+      "label": "Insignias del perfil",
+      "yearsUnit": "años",
+      "experience": "{count, plural, one {# año de experiencia declarada} other {# años de experiencia declarada}}",
+      "category": "Categoría {category}",
+      "aircraft": "Aeronave {aircraft}",
+      "more": "Ver {count, plural, one {# insignia adicional} other {# insignias adicionales}}",
+      "note": "Resumen del perfil; no concede autorización de firma ni acredita formación por participar en retos."
+    },
+    "profile": {
+      "title": "Perfil profesional",
+      "close": "Cerrar",
+      "identity": "{base} · {count, plural, one {# año de experiencia declarada} other {# años de experiencia declarada}}",
+      "basePending": "Base por completar",
+      "sectionExperience": "Experiencia y condiciones",
+      "privacy": "Identidad según visibilidad. Contacto y archivos se comparten desde la candidatura con los consentimientos correspondientes.",
+      "learningNote": "Las medallas de aprendizaje son privadas del profesional y no se muestran."
+    },
+    "emptyTitle": "No hay perfiles para estos filtros",
+    "emptyDescription": "Amplía la búsqueda o revisa las fechas y los requisitos.",
+    "pager": {
+      "label": "Páginas del directorio",
+      "info": "{page} / {pages} · {size} perfiles por página",
+      "previous": "Anterior",
+      "next": "Siguiente"
     }
   }
 }

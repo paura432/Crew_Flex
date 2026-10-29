@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";
@@ -15,7 +15,12 @@ import { REVIEW_NOTE_MAX, type ReviewDecision } from "@/lib/validation/review";
 import type { ReviewQueueItem } from "@/types/api";
 import { reviewQualificationAction } from "../actions";
 
-/** One pending declaration: what was declared, by whom, and the two decisions (reason required to reject). */
+/**
+ * One pending declaration: what was declared, by whom, the declared restrictions (v1.8 «Resuelve las
+ * restricciones con el titular antes de revisar el perfil.», ADM-03 #9) and the two decisions. The note is
+ * required for both (v1.8 evidence, T-170): evidence for the platform when verifying, reason the owner reads
+ * when rejecting.
+ */
 function ReviewCard({
   item,
   onDecided,
@@ -37,18 +42,20 @@ function ReviewCard({
   function decide(decision: ReviewDecision, form: HTMLFormElement) {
     const note = String(new FormData(form).get("note") ?? "");
     setNotice(null);
-    if (decision === "rejected" && note.trim() === "") {
-      setErrors({ note: "v.review.reasonRequired" });
+    if (note.trim() === "") {
+      setErrors({ note: "v.review.evidenceRequired" });
       return;
     }
     setErrors({});
     startTransition(async () => {
-      const result = await reviewQualificationAction({
-        qualificationId: item.id,
-        decision,
-        note,
-        expectedUpdatedAt: item.updatedAt,
-      });
+      const result = await callAction(() =>
+        reviewQualificationAction({
+          qualificationId: item.id,
+          decision,
+          note,
+          expectedUpdatedAt: item.updatedAt,
+        }),
+      );
       if (result.ok) {
         onDecided({
           tone: "ok",
@@ -105,12 +112,23 @@ function ReviewCard({
           <dd>{item.expiresAt ? formatDate(locale, item.expiresAt) : t("noExpiry")}</dd>
         </div>
       </dl>
+      {item.professional.restrictions && (
+        <div
+          className="mt-4 rounded-lg border border-danger/30 bg-danger-bg px-3 py-2 text-sm text-danger"
+          data-testid="review-restrictions"
+        >
+          <p className="font-medium">{t("restrictionsTitle")}</p>
+          <p className="mt-1 break-words whitespace-pre-line">{item.professional.restrictions}</p>
+          <p className="mt-1">{t("restrictionsHint")}</p>
+        </div>
+      )}
       <form onSubmit={onSubmit} noValidate className="mt-4 space-y-3">
         <Field id={noteId} label={t("note")} hint={t("noteHint")} error={errors.note}>
           <textarea
             id={noteId}
             name="note"
             rows={2}
+            required
             maxLength={REVIEW_NOTE_MAX}
             className={controlClass}
             aria-invalid={Boolean(errors.note)}

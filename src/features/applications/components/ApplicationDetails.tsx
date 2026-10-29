@@ -1,0 +1,78 @@
+import { getLocale, getTranslations } from "next-intl/server";
+import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
+import { RequirementTerms } from "@/features/requirements/components/RequirementTerms";
+import type { Locale } from "@/i18n/config";
+import { formatDateTime, formatPeriod } from "@/i18n/format";
+import type { MyApplication, OrgApplication } from "@/types/api";
+
+/** Proposal (R-08 version, frozen terms), reason (T-10) and history of one application, both sides. */
+export async function ApplicationDetails({
+  application,
+}: {
+  application: Pick<
+    MyApplication | OrgApplication,
+    "status" | "reason" | "currentProposal" | "acceptedProposalId" | "history"
+  >;
+}) {
+  const [t, tDomain, locale] = await Promise.all([
+    getTranslations("applications"),
+    getTranslations("domain"),
+    getLocale() as Promise<Locale>,
+  ]);
+  const proposal = application.currentProposal;
+  const accepted = proposal !== null && application.acceptedProposalId === proposal.id;
+  return (
+    <div className="space-y-3 text-sm">
+      {proposal && (
+        <section className="rounded-lg border border-line bg-canvas px-4 py-3">
+          <p className="font-semibold">
+            {accepted
+              ? t("proposal.accepted", { version: proposal.version })
+              : t("proposal.title", { version: proposal.version })}
+            {!accepted && application.status === "proposed" && (
+              <span className="ml-2 font-normal text-muted">· {t("proposal.pending")}</span>
+            )}
+          </p>
+          <p className="text-muted">
+            {t("proposal.sent", { date: formatDateTime(locale, proposal.createdAt) })}
+          </p>
+          <p className="mt-1 tabular-nums">
+            {proposal.terms.location} ·{" "}
+            {formatPeriod(locale, proposal.terms.startsAt, proposal.terms.endsAt)} ·{" "}
+            {tDomain(`shift.${proposal.terms.shift}`)}
+          </p>
+          <div className="mt-2">
+            <QualificationChips qualifications={proposal.terms.qualifications} />
+          </div>
+          {/* v1.8 `Terms` (Workflow.jsx:8-16) without the commission: what this version froze (T-11, v2-12). */}
+          <div className="mt-3">
+            <RequirementTerms terms={proposal.terms} showAmount />
+          </div>
+          {/* R-08 / v1.8 «Una propuesta revisada requiere otra aceptación». */}
+          {proposal.version > 1 && !accepted && (
+            <p className="mt-2 text-sm text-warn">{t("proposal.newVersion")}</p>
+          )}
+          <p className="mt-2 text-xs text-muted">{t("proposal.notice")}</p>
+        </section>
+      )}
+      {application.reason && <p>{t("card.reason", { reason: application.reason })}</p>}
+      <details>
+        <summary className="flex cursor-pointer items-center font-semibold text-blue pointer-coarse:min-h-11">
+          {t("card.history")}
+        </summary>
+        <ol className="mt-2 space-y-1 border-l-2 border-line pl-3 text-muted">
+          {application.history.map((event, i) => (
+            <li key={i} className="tabular-nums">
+              {t("card.event", {
+                status: tDomain(`applicationStatus.${event.to}`),
+                date: formatDateTime(locale, event.at),
+                actor: t(`card.actor.${event.actor}`),
+              })}
+              {event.proposalVersion !== null && ` · v${event.proposalVersion}`}
+            </li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  );
+}

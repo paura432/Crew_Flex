@@ -18,6 +18,21 @@ function supabaseUrl(): string {
   return url;
 }
 
+/**
+ * Public (publishable-key) client with no session, for the Auth calls anyone may make — the
+ * invitation e-mail (`invitations`). PKCE: a link it triggers never carries tokens in its URL.
+ */
+export function createPublicClient(): SupabaseClient {
+  return createClient(supabaseUrl(), publicKey(), {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      flowType: "pkce",
+    },
+  });
+}
+
 /** Client bound to the caller's access token: every query runs under RLS as that user. */
 export function createUserClient(accessToken: string): SupabaseClient {
   return createClient(supabaseUrl(), publicKey(), {

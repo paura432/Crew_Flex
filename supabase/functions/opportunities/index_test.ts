@@ -1,0 +1,348 @@
+import { assert, assertEquals, assertThrows } from "@std/assert";
+import {
+  periodOf,
+  toOpportunity,
+  toOpportunityRequirement,
+  withProfileRules,
+} from "../_shared/applications.ts";
+import { ApiError, fromDatabaseError } from "../_shared/errors.ts";
+import { toCandidate } from "../_shared/requirements.ts";
+import { parseValue } from "../_shared/validation.ts";
+import { listOpportunitiesQuery } from "../../../src/lib/validation/applications.ts";
+import { assertNetworkParams, fitFilter, handler, OPPORTUNITY_CAP } from "./index.ts";
+
+const silence = () => {
+  const { log, error } = console;
+  console.log = () => {};
+  console.error = () => {};
+  return () => Object.assign(console, { log, error });
+};
+
+Deno.test(
+  "opportunities GET rejects unauthenticated requests before any database access",
+  async () => {
+    const restore = silence();
+    const res = await handler(new Request("http://fn/opportunities?eligible=1"));
+    restore();
+    assertEquals([res.status, (await res.json()).error.code], [401, "UNAUTHORIZED"]);
+  },
+);
+
+Deno.test("opportunities is read-only (405 for every write method)", async () => {
+  const restore = silence();
+  for (const method of ["POST", "PATCH", "PUT", "DELETE"]) {
+    const res = await handler(new Request("http://fn/opportunities", { method }));
+    assertEquals(res.status, 405);
+  }
+  restore();
+});
+
+Deno.test(
+  "v2-16: a blocked organization's requirement is absent from the list (SQL), so applying to it is a 409 ORGANIZATION_BLOCKED, never a 500",
+  () => {
+    // list_opportunities (20261024800000) leaves the requirement out, so `?id=` answers 404 like an unpublished one;
+    // a direct apply reaches apply_to_requirement, whose CFA16 maps to the stable reason the professional's UI names.
+    const error = fromDatabaseError({
+      code: "CFA16",
+      message: "the organization is blocked by the applicant",
+    });
+    assertEquals(
+      [error.status, error.code, error.reason],
+      [409, "CONFLICT", "ORGANIZATION_BLOCKED"],
+    );
+    assert(!error.message.includes("applicant"));
+  },
+);
+
+Deno.test("the cap is the SQL cap of list_opportunities", () => {
+  assertEquals(OPPORTUNITY_CAP, 200);
+});
+
+const row = {
+  id: "r1",
+  organization_name: "Demo Airline Ops Barcelona",
+  title: "B1.1 · B737 AOG recovery",
+  location: "Barcelona (BCN)",
+  starts_at: "2031-01-10T06:00:00+00:00",
+  ends_at: "2031-01-11T18:00:00+00:00",
+  shift: "flexible",
+  headcount: 1,
+  urgency: "aog",
+  created_at: "2030-12-01T10:00:00+00:00",
+  qualifications: [
+    { qualificationTypeId: "q-hf", code: "HF", name: "Human factors", level: "soft" },
+    { qualificationTypeId: "q-b11", code: "B1.1", name: "Part-66 B1.1", level: "hard" },
+  ],
+  total: 1,
+};
+
+const me = (
+  verificationStatus: string,
+  windows: { status: string }[] = [{ status: "available" }],
+) =>
+  toCandidate({
+    candidate_ref: "me",
+    candidate_pool: "internal",
+    candidate_display_name: "Technician Delta",
+    candidate_base_location: "Barcelona (BCN)",
+    candidate_years_experience: 12,
+    candidate_qualifications: [
+      {
+        qualificationTypeId: "q-b11",
+        code: "B1.1",
+        status: "active",
+        verificationStatus,
+        expiresAt: null,
+      },
+    ],
+    candidate_availability: windows.map((w) => ({
+      startsAt: "2031-01-01T00:00:00+00:00",
+      endsAt: "2031-02-01T00:00:00+00:00",
+      status: w.status,
+    })),
+    candidate_declarations: {
+      primaryCategory: "B1.1",
+      categories: ["B1.1", "B2"],
+      aircraft: ["A320 Family", "B737 NG"],
+      engines: ["CFM56-5B/7B"],
+      skills: ["line_maintenance", "aog_support"],
+      englishLevel: "C1",
+      mobility: "international",
+      workPermits: ["PT", "ES", "FR"],
+      typeRatings: [
+        { aircraft: "A320 Family", category: "B1.1", expiresAt: null, restricted: false },
+      ],
+      hasRestrictions: false,
+    },
+  });
+
+const NO_RULES = {
+  category: null,
+  aircraft: [],
+  requiresTypeRating: false,
+  engines: [],
+  minYears: null,
+  requiredSkills: [],
+};
+
+Deno.test(
+  "each opportunity gets its v1.8 profile rules; one unpublished in between is left out",
+  () => {
+    const listed = [toOpportunityRequirement(row), toOpportunityRequirement({ ...row, id: "r2" })];
+    const strict = { ...NO_RULES, aircraft: ["B737 MAX" as const], minYears: 15 };
+    const merged = withProfileRules(listed, new Map([["r1", strict]]));
+    assertEquals(
+      merged.map((r) => r.id),
+      ["r1"],
+    );
+    const opportunity = toOpportunity(
+      merged[0]!,
+      me("verified"),
+      [],
+      Date.parse("2030-12-15T00:00:00Z"),
+    );
+    assertEquals(opportunity.applyBlocker, "NOT_ELIGIBLE");
+    assertEquals(
+      opportunity.match.blockers.map((b) => b.code),
+      ["AIRCRAFT_NOT_DECLARED", "INSUFFICIENT_EXPERIENCE"],
+    );
+    // Only availability may make it «possible on a rest day» (BR-14.1): a profile blocker never does.
+    assertEquals(opportunity.possibleOnRest, false);
+    assertEquals(
+      withProfileRules(
+        listed,
+        new Map([
+          ["r1", NO_RULES],
+          ["r2", NO_RULES],
+        ]),
+      ).length,
+      2,
+    );
+  },
+);
+
+Deno.test("rows map to the fixed projection: organization name only, ISO UTC, hard first", () => {
+  const requirement = toOpportunityRequirement(row);
+  assertEquals(Object.keys(requirement).sort(), [
+    "clientName", // recruiter (20261024500100): null without a represented client
+    "conditions",
+    "country",
+    "createdAt",
+    "description",
+    "endsAt",
+    "headcount",
+    "id",
+    "location",
+    "organizationName",
+    "qualifications",
+    "shift",
+    "shifts",
+    "startsAt",
+    "timeZone",
+    "title",
+    "urgency",
+  ]);
+  // A row without the builder terms (older database): not stated.
+  assertEquals(
+    [requirement.country, requirement.timeZone, requirement.shifts, requirement.conditions],
+    [null, null, null, null],
+  );
+  // … nor the recruiter's client (BR-27).
+  assertEquals(requirement.clientName, null);
+  assertEquals(
+    toOpportunityRequirement({ ...row, client_name: "Operador cliente 1" }).clientName,
+    "Operador cliente 1",
+  );
+  assertEquals(requirement.startsAt, "2031-01-10T06:00:00.000Z");
+  assertEquals(
+    requirement.qualifications.map((q) => q.code),
+    ["B1.1", "HF"],
+  );
+});
+
+Deno.test("own eligibility and apply blocker: eligible → none; failed rules are explained", () => {
+  const requirement = toOpportunityRequirement(row);
+  const now = Date.parse("2031-01-01T00:00:00Z");
+  const ok = toOpportunity(requirement, me("verified"), [], now);
+  assert(ok.match.eligible);
+  assertEquals([ok.myApplication, ok.applyBlocker], [null, null]);
+  const pending = toOpportunity(requirement, me("pending"), [], now);
+  assertEquals(pending.applyBlocker, "NOT_ELIGIBLE");
+  assertEquals(pending.match.blockers[0]?.code, "HARD_QUALIFICATION_NOT_VERIFIED");
+  // BR-4.8: an «AOG only» window counts for this AOG need.
+  assert(
+    toOpportunity(requirement, me("verified", [{ status: "aog_only" }]), [], now).match.eligible,
+  );
+  const started = toOpportunity(requirement, me("verified"), [], Date.parse(row.starts_at));
+  assertEquals(started.applyBlocker, "REQUIREMENT_STARTED");
+});
+
+Deno.test(
+  "my latest application decides the blocker (Q5, T-09): withdrawn reopens, rejected closes",
+  () => {
+    const requirement = toOpportunityRequirement(row);
+    const now = Date.parse("2031-01-01T00:00:00Z");
+    const app = (id: string, status: "withdrawn" | "rejected" | "received", createdAt: string) => ({
+      id,
+      requirementId: "r1",
+      status,
+      createdAt,
+    });
+    const reopened = toOpportunity(
+      requirement,
+      me("verified"),
+      [app("a1", "withdrawn", "2030-12-01T00:00:00.000Z")],
+      now,
+    );
+    assertEquals([reopened.myApplication?.status, reopened.applyBlocker], ["withdrawn", null]);
+    const active = toOpportunity(
+      requirement,
+      me("verified"),
+      [
+        app("a1", "withdrawn", "2030-12-01T00:00:00.000Z"),
+        app("a2", "received", "2030-12-02T00:00:00.000Z"),
+      ],
+      now,
+    );
+    assertEquals([active.myApplication?.id, active.applyBlocker], ["a2", "ALREADY_APPLIED"]);
+    const closed = toOpportunity(
+      requirement,
+      me("verified"),
+      [app("a3", "rejected", "2030-12-03T00:00:00.000Z")],
+      now,
+    );
+    assertEquals(closed.applyBlocker, "REAPPLY_NOT_ALLOWED");
+    const other = toOpportunity(
+      requirement,
+      me("verified"),
+      [{ ...app("a4", "received", "2030-12-04T00:00:00.000Z"), requirementId: "r2" }],
+      now,
+    );
+    assertEquals([other.myApplication, other.applyBlocker], [null, null]); // another requirement's
+  },
+);
+
+Deno.test(
+  "BR-14.1 possibleOnRest: only availability missing, rest days (no window) would cover, may apply after",
+  () => {
+    const requirement = toOpportunityRequirement({ ...row, urgency: "planned" });
+    const now = Date.parse("2031-01-01T00:00:00Z");
+    // No window over the period at all: every day is private rest → «Posible en descanso».
+    const rest = toOpportunity(requirement, me("verified", []), [], now);
+    assertEquals([rest.applyBlocker, rest.possibleOnRest], ["NOT_ELIGIBLE", true]);
+    // A blocked window is work, not rest; «AOG only» blocks a planned need (BR-4.8).
+    for (const status of ["unavailable", "aog_only"])
+      assertEquals(
+        toOpportunity(requirement, me("verified", [{ status }]), [], now).possibleOnRest,
+        false,
+      );
+    // A qualification blocker, an eligible match, a started need or an own application: never.
+    assertEquals(toOpportunity(requirement, me("pending", []), [], now).possibleOnRest, false);
+    assertEquals(toOpportunity(requirement, me("verified"), [], now).possibleOnRest, false);
+    assertEquals(
+      toOpportunity(requirement, me("verified", []), [], Date.parse(row.starts_at)).possibleOnRest,
+      false,
+    );
+    const applied = [
+      { id: "a1", requirementId: "r1", status: "received" as const, createdAt: row.created_at },
+    ];
+    assertEquals(
+      toOpportunity(requirement, me("verified", []), applied, now).possibleOnRest,
+      false,
+    );
+  },
+);
+
+Deno.test("list filters: eligible=1, rest=1, both = either, none = all", () => {
+  const eligible = { match: { eligible: true }, possibleOnRest: false };
+  const rest = { match: { eligible: false }, possibleOnRest: true };
+  const neither = { match: { eligible: false }, possibleOnRest: false };
+  const old = { match: { eligible: false } }; // an older function: no field
+  const keep = (query: { eligible?: "1"; rest?: "1" }) =>
+    [eligible, rest, neither, old].map((o) => fitFilter(query)(o as never));
+  assertEquals(keep({}), [true, true, true, true]);
+  assertEquals(keep({ eligible: "1" }), [true, false, false, false]);
+  assertEquals(keep({ rest: "1" }), [false, true, false, false]);
+  assertEquals(keep({ eligible: "1", rest: "1" }), [true, true, false, false]);
+});
+
+Deno.test("own windows are read once for the period covering every requirement", () => {
+  assertEquals(periodOf([]), null);
+  assertEquals(
+    periodOf([
+      { startsAt: "2031-01-10T00:00:00.000Z", endsAt: "2031-01-12T00:00:00.000Z" },
+      { startsAt: "2031-01-05T00:00:00.000Z", endsAt: "2031-01-06T00:00:00.000Z" },
+    ]),
+    { from: "2031-01-05T00:00:00.000Z", to: "2031-01-12T00:00:00.000Z" },
+  );
+});
+
+Deno.test("v2-20 network view: strict query, no eligibility filters, a token first", async () => {
+  assertEquals(parseValue({ view: "network", q: "tr-a320" }, listOpportunitiesQuery), {
+    view: "network",
+    q: "tr-a320",
+    offset: 0,
+    limit: 20,
+  });
+  assertThrows(() => parseValue({ view: "everyone" }, listOpportunitiesQuery), ApiError);
+  const restore = silence();
+  const res = await handler(new Request("http://fn/opportunities?view=network"));
+  restore();
+  assertEquals(res.status, 401);
+});
+
+Deno.test(
+  "v2-20 network view refuses the eligibility filters (400); the professional view keeps them",
+  () => {
+    for (const filter of [{ eligible: "1" }, { rest: "1" }]) {
+      const error = assertThrows(
+        () =>
+          assertNetworkParams(parseValue({ view: "network", ...filter }, listOpportunitiesQuery)),
+        ApiError,
+      );
+      assertEquals(error.code, "VALIDATION_ERROR");
+      assertNetworkParams(parseValue(filter, listOpportunitiesQuery)); // no view: allowed
+    }
+    assertNetworkParams(parseValue({ view: "network", urgency: "aog" }, listOpportunitiesQuery));
+  },
+);

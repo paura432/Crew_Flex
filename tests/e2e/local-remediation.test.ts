@@ -10,64 +10,14 @@
  * and `scripts/local/cleanup-test-rows.sh` removes them.
  * Run: `pnpm e2e:remote` with `.env.e2e` pointing at the local stack.
  */
-import { createClient } from "@supabase/supabase-js";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { isLocalUrl } from "./guard";
+import { call, client, key, signIn, url, type Envelope } from "./local-api";
 
-const url = process.env.E2E_SUPABASE_URL;
-const key = process.env.E2E_SUPABASE_PUBLISHABLE_KEY;
-const LOCAL_PASSWORD = "crewflex-local-only"; // synthetic local seed only (LOCAL_ENVIRONMENT.md §4)
 const MAD = "B1.1 · A320 line maintenance reinforcement";
 const GOLF = "00000000-0000-4000-8000-000000000024";
-
-interface Envelope {
-  ok: boolean;
-  data?: Record<string, unknown>;
-  error?: { code: string; message: string };
-  requestId: string;
-}
-
-const client = (token?: string) =>
-  createClient(url!, key!, {
-    ...(token ? { global: { headers: { Authorization: `Bearer ${token}` } } } : {}),
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-async function signIn(email: string): Promise<string> {
-  const { data, error } = await client().auth.signInWithPassword({
-    email,
-    password: LOCAL_PASSWORD,
-  });
-  if (error || !data.session) throw new Error(`local sign-in failed: ${error?.message}`);
-  return data.session.access_token;
-}
-
-async function call(
-  fn: string,
-  init: {
-    method?: string;
-    token?: string;
-    query?: Record<string, string>;
-    body?: unknown;
-    headers?: Record<string, string>;
-  } = {},
-): Promise<{ status: number; body: Envelope }> {
-  const target = new URL(`/functions/v1/${fn}`, url);
-  for (const [k, v] of Object.entries(init.query ?? {})) target.searchParams.set(k, v);
-  const res = await fetch(target, {
-    method: init.method ?? "GET",
-    headers: {
-      ...init.headers,
-      ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}),
-      apikey: key!,
-      "Content-Type": "application/json",
-    },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  return { status: res.status, body: (await res.json()) as Envelope };
-}
 
 describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", () => {
   let manager = "";
@@ -173,7 +123,8 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
       headers: { "Idempotency-Key": "retry-1" },
     });
     expect(malformed.status).toBe(400);
-    await client(manager).from("work_requirements").update({ status: "cancelled" }).eq("id", id);
+    // M05: nothing moves into `cancelled` any more; closing ends a need.
+    await client(manager).from("work_requirements").update({ status: "closed" }).eq("id", id);
   });
 
   it("I-1: availability and declarations replay instead of duplicating / returning 409", async () => {
@@ -344,6 +295,17 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
       body: { qualificationId: item!.id, decision: "rejected", expectedUpdatedAt: item!.updatedAt },
     });
     expect(rejectWithoutReason.status).toBe(400);
+    // P12 / T-170: a verification needs evidence too (v1.8 «Evidencia / observaciones de la revisión»).
+    const verifyWithoutEvidence = await call("qualification-reviews", {
+      method: "POST",
+      token: platformAdmin,
+      body: { qualificationId: item!.id, decision: "verified", expectedUpdatedAt: item!.updatedAt },
+    });
+    expect([verifyWithoutEvidence.status, verifyWithoutEvidence.body.error?.code]).toEqual([
+      400,
+      "VALIDATION_ERROR",
+    ]);
+    expect(await golfEligible()).toBe(false);
 
     // M1: a decision about a version the reviewer did not see is refused and changes nothing.
     const stale = await call("qualification-reviews", {
@@ -352,6 +314,7 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: remediation 2026-10-15", (
       body: {
         qualificationId: item!.id,
         decision: "verified",
+        note: "E2E: stale version",
         expectedUpdatedAt: "2020-01-01T00:00:00.000Z",
       },
     });
@@ -886,6 +849,10 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
     });
     expect(created.status).toBe(201);
     const id = (created.body.data?.requirement as { id: string }).id;
+    const ids0 = async (query: Record<string, string>) => {
+      const res = await call("work-requirements", { token: manager, query });
+      return (res.body.data?.requirements as { id: string }[]).map((r) => r.id);
+    };
     const close = (token: string) =>
       call("work-requirements", { method: "PATCH", token, body: { id, status: "closed" } });
     const [charlie, adminOther] = await Promise.all([
@@ -894,12 +861,25 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
     ]);
     expect((await close(charlie)).status).toBe(403);
     expect((await close(adminOther)).status).toBe(404);
-    const reopen = await call("work-requirements", {
-      method: "PATCH",
-      token: manager,
-      body: { id, status: "open" },
-    });
-    expect(reopen.status).toBe(400); // the API offers no other transition
+    // M05 (owner 2026-10-22): pause and resume; a paused need is not evaluated.
+    const setStatus = (status: string) =>
+      call("work-requirements", { method: "PATCH", token: manager, body: { id, status } });
+    expect((await setStatus("open")).status).toBe(200); // already open: no-op
+    const paused = await setStatus("paused");
+    expect([paused.status, (paused.body.data?.requirement as { status: string }).status]).toEqual([
+      200,
+      "paused",
+    ]);
+    for (const fn of ["capacity-evaluate", "matching-evaluate"]) {
+      const res = await call(fn, { method: "POST", token: manager, body: { requirementId: id } });
+      expect([fn, res.status]).toEqual([fn, 409]);
+    }
+    expect(
+      await ids0({ organizationId: mroId, status: "open", endsAfter: new Date().toISOString() }),
+    ).not.toContain(id);
+    expect((await setStatus("cancelled")).status).toBe(400); // not an API status
+    const resumed = await setStatus("open");
+    expect((resumed.body.data?.requirement as { status: string }).status).toBe("open");
     const first = await close(manager);
     const again = await close(manager);
     expect([first.status, again.status]).toEqual([200, 200]);
@@ -909,6 +889,7 @@ describe.skipIf(!isLocalUrl(url) || !key)("local E2E: document wallet (D-10)", (
       .update({ status: "open" })
       .eq("id", id);
     expect(direct.error?.code).toBe("55000");
+    expect((await setStatus("open")).status).toBe(409); // closed is terminal (lifecycle check)
     const edit = await client(manager)
       .from("work_requirements")
       .update({ title: "E2E rewritten after close" })

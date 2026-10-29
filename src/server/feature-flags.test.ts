@@ -35,6 +35,7 @@ const validReview = {
   qualificationId: "00000000-0000-4000-8000-000000000001",
   decision: "verified",
   expectedUpdatedAt: "2026-10-15T10:00:00.000Z",
+  note: "Checked against the register", // evidence is required for every decision (T-170)
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -132,7 +133,9 @@ describe("/app/professional/documents", () => {
   it("off: 404 before reading the session or calling the Edge Function", async () => {
     rpc.mockResolvedValueOnce({ data: false, error: null });
     const { default: DocumentsPage } = await import("@/app/app/professional/documents/page");
-    await expect(DocumentsPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(
+      DocumentsPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(requireSessionActor).not.toHaveBeenCalled();
     expect(listDocuments).not.toHaveBeenCalled();
   });

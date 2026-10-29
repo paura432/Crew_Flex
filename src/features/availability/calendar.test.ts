@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  assignmentDays,
   calendarDays,
+  canEditDay,
   countDays,
   dayWindow,
+  isDayEditable,
   monthDays,
   monthOffset,
   parseMonth,
+  refusesPastStart,
   shiftMonth,
 } from "./calendar";
 
@@ -30,6 +34,15 @@ describe("month helpers", () => {
       startsAt: "2026-10-18T00:00:00.000Z",
       endsAt: "2026-10-19T00:00:00.000Z",
     });
+  });
+});
+
+describe("isDayEditable", () => {
+  it("freezes past days and leaves today and later editable (UTC dates)", () => {
+    expect(isDayEditable("2026-10-20", "2026-10-21")).toBe(false); // yesterday
+    expect(isDayEditable("2026-10-21", "2026-10-21")).toBe(true); // today
+    expect(isDayEditable("2026-10-22", "2026-10-21")).toBe(true); // tomorrow
+    expect(isDayEditable("2025-12-31", "2026-01-01")).toBe(false); // across a year boundary
   });
 });
 
@@ -103,5 +116,38 @@ describe("parseMonth", () => {
     [undefined, null],
   ])("%s → %s", (input, expected) => {
     expect(parseMonth(input)).toBe(expected);
+  });
+});
+
+describe("refusesPastStart (X-19, form only)", () => {
+  const today = "2026-10-22";
+  it("a new window may not start on a past day; today and later are fine", () => {
+    expect(refusesPastStart("2026-10-21T23:59", null, today)).toBe(true);
+    expect(refusesPastStart("2026-10-22T00:00", null, today)).toBe(false);
+  });
+  it("an ongoing window keeps its past start when only the end or status changes", () => {
+    expect(refusesPastStart("2026-10-01T08:00", "2026-10-01T08:00", today)).toBe(false);
+    expect(refusesPastStart("2026-10-02T08:00", "2026-10-01T08:00", today)).toBe(true);
+  });
+});
+
+describe("canEditDay (BR-4.9, N-04)", () => {
+  it("past days and the days of a confirmed assignment are locked; the rest is editable", () => {
+    const assigned = new Set(["2026-10-24"]);
+    expect(canEditDay("2026-10-21", "2026-10-22", assigned)).toBe(false); // past
+    expect(canEditDay("2026-10-24", "2026-10-22", assigned)).toBe(false); // assigned
+    expect(canEditDay("2026-10-22", "2026-10-22", assigned)).toBe(true);
+    expect(canEditDay("2026-10-25", "2026-10-22", new Set())).toBe(true);
+  });
+});
+
+describe("assignmentDays (days of confirmed assignments or opportunities)", () => {
+  it("every UTC day an assignment touches, end exclusive", () => {
+    expect([
+      ...assignmentDays([{ startsAt: "2026-12-01T06:00:00Z", endsAt: "2026-12-03T18:00:00Z" }]),
+    ]).toEqual(["2026-12-01", "2026-12-02", "2026-12-03"]);
+    expect([
+      ...assignmentDays([{ startsAt: "2026-12-01T00:00:00Z", endsAt: "2026-12-02T00:00:00Z" }]),
+    ]).toEqual(["2026-12-01"]);
   });
 });

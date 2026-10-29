@@ -1,19 +1,9 @@
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { UnitConverter } from "@/features/tools/components/UnitConverter";
-import { ToolsHeader } from "@/features/tools/components/ToolsHeader";
+import { TOOLS_BASE } from "@/features/tools/ids";
+import { ToolScreen, toolMetadata } from "@/features/tools/components/ToolScreen";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("tools");
-  return { title: t("tile.convert.title") };
-}
+export const generateMetadata = () => toolMetadata("convert");
 
-export default async function ToolsConvertPage() {
-  const t = await getTranslations("tools");
-  return (
-    <>
-      <ToolsHeader title={t("tile.convert.title")} back />
-      <UnitConverter />
-    </>
-  );
+// Signed-in workbench; the same screen is public at /tools (T-145).
+export default function ToolsConvertPage() {
+  return <ToolScreen id="convert" base={TOOLS_BASE.app} />;
 }

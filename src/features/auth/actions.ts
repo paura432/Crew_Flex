@@ -9,42 +9,12 @@ import {
   signInInput,
   signUpInput,
 } from "@/lib/validation/auth";
+import { normalizeInvitationCode } from "@/lib/validation/account";
 import { toFieldErrors } from "@/lib/validation/errors";
+import { isInvitationSignupRequired } from "@/server/feature-flags";
+import { readInvitation } from "./invitation";
 import { hasRecentRecoverySession } from "./recovery";
-import { safeNextPath, type AuthErrorCode, type AuthFormState } from "./state";
-
-interface AuthErrorLike {
-  code?: string;
-  name?: string;
-  status?: number;
-}
-
-/** Maps provider errors to stable codes; the UI translates them (`auth.errors.*`). */
-function mapAuthError(error: AuthErrorLike): { code: AuthErrorCode } {
-  if (error.name === "AuthRetryableFetchError" || error.status === 0) {
-    return { code: "NETWORK_ERROR" };
-  }
-  if (error.name === "AuthSessionMissingError") return { code: "RECOVERY_EXPIRED" };
-  switch (error.code) {
-    case "invalid_credentials":
-      return { code: "INVALID_CREDENTIALS" };
-    case "email_not_confirmed":
-      return { code: "EMAIL_NOT_CONFIRMED" };
-    case "user_already_exists":
-    case "email_exists":
-      return { code: "USER_EXISTS" };
-    case "weak_password":
-      return { code: "WEAK_PASSWORD" };
-    case "same_password":
-      return { code: "SAME_PASSWORD" };
-    // Provider refused a password change outside a recovery session (T22 settings).
-    case "current_password_required":
-    case "reauthentication_needed":
-      return { code: "RECOVERY_EXPIRED" };
-    default:
-      return { code: "UNKNOWN" };
-  }
-}
+import { mapAuthError, safeNextPath, type AuthFormState } from "./state";
 
 function echoValues(formData: FormData, keys: string[]): Record<string, string> {
   return Object.fromEntries(keys.map((key) => [key, String(formData.get(key) ?? "")]));
@@ -78,11 +48,33 @@ export async function signInAction(
   redirect(safeNextPath(formData.get("next")));
 }
 
+/**
+ * Sign-up. With the owner flag `invitation_signup` on (T-40, OD-8 default v1.8) a valid invitation code
+ * is required: its account type replaces the form's, a code of another address is refused without
+ * consuming it, and the sign-up trigger checks and consumes it again in the same transaction (the
+ * real barrier). With the flag off, open sign-up as before. The confirmation link lands on
+ * `/auth/confirm?next=/app` (AUTH-03); with confirmations on, an existing address gets the same
+ * «check your inbox» answer as a new one (no enumeration). With the invitation flag on, a direct
+ * Auth API sign-up of an unknown address fails (CFI01 → 500) while an existing one gets Auth's
+ * obfuscated 200: that residual is documented (SECURITY_PRIVACY T40).
+ */
 export async function signUpAction(
   _prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const accountType = formData.get("accountType");
+  const invitationOnly = await isInvitationSignupRequired();
+  const rawCode = String(formData.get("invitationCode") ?? "");
+  const code = normalizeInvitationCode(rawCode);
+  let accountType = formData.get("accountType");
+  if (invitationOnly) {
+    const echo = { ...echoValues(formData, SIGN_UP_ECHO), invitationCode: rawCode.trim() };
+    if (!rawCode.trim()) return { status: "error", code: "INVITATION_REQUIRED", values: echo };
+    const invitation = code ? await readInvitation(code, null) : null;
+    if (!invitation || invitation.status !== "valid" || !invitation.accountType) {
+      return { status: "error", code: "INVITATION_INVALID", values: echo };
+    }
+    accountType = invitation.accountType;
+  }
   const parsed = signUpInput.safeParse({
     accountType,
     displayName: formData.get("displayName"),
@@ -96,20 +88,33 @@ export async function signUpAction(
         }
       : {}),
   });
+  const values = {
+    ...echoValues(formData, SIGN_UP_ECHO),
+    ...(invitationOnly ? { invitationCode: rawCode.trim() } : {}),
+  };
   if (!parsed.success) {
     return {
       status: "error",
       code: "VALIDATION_ERROR",
       fieldErrors: toFieldErrors(parsed.error),
-      values: echoValues(formData, SIGN_UP_ECHO),
+      values,
     };
   }
 
   const input = parsed.data;
+  if (invitationOnly && code) {
+    const forAddress = await readInvitation(code, input.email);
+    if (forAddress.status === "other_email") {
+      return { status: "error", code: "INVITATION_OTHER_EMAIL", values };
+    }
+    if (forAddress.status !== "valid")
+      return { status: "error", code: "INVITATION_INVALID", values };
+  }
   // Metadata only seeds the profile/organization in the sign-up trigger. It never grants a
-  // platform role (see supabase/migrations: handle_new_user).
-  const metadata =
-    input.accountType === "organization"
+  // platform role (see supabase/migrations: handle_new_user); with invitations the trigger takes the
+  // account type from the invitation and removes the code from the metadata.
+  const metadata = {
+    ...(input.accountType === "organization"
       ? {
           account_type: input.accountType,
           display_name: input.displayName,
@@ -117,16 +122,28 @@ export async function signUpAction(
           organization_type: input.organizationType,
           country: input.country,
         }
-      : { account_type: input.accountType, display_name: input.displayName };
+      : { account_type: input.accountType, display_name: input.displayName }),
+    ...(invitationOnly && code ? { invitation_code: code } : {}),
+  };
 
+  // Server Actions are same-origin (Next.js checks Origin against Host), so this is our own URL.
+  const origin = (await headers()).get("origin");
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
-    options: { data: metadata },
+    options: { data: metadata, emailRedirectTo: `${origin}/auth/confirm?next=/app` },
   });
   if (error) {
-    return { status: "error", ...mapAuthError(error), values: echoValues(formData, SIGN_UP_ECHO) };
+    // The trigger refused (race: the code was used or revoked meanwhile): say so, not «failed».
+    if (invitationOnly && code && (await readInvitation(code, input.email)).status !== "valid") {
+      return { status: "error", code: "INVITATION_INVALID", values };
+    }
+    const mapped = mapAuthError(error);
+    // T-41: an existing address gets the new-address answer (no enumeration). Auth only obfuscates
+    // it itself when neither e-mail nor SMS autoconfirm is on, so the app does not rely on that.
+    if (mapped.code === "USER_EXISTS") return { status: "check_email", email: input.email };
+    return { status: "error", ...mapped, values };
   }
   if (!data.session) return { status: "check_email", email: input.email };
 
@@ -192,6 +209,8 @@ export async function updatePasswordAction(
 
 export async function signOutAction() {
   const supabase = await createServerSupabase();
-  await supabase.auth.signOut();
-  redirect("/login");
+  // This device only, as v1.8 (X-12): auth-js defaults to `global`, which also ended the account's
+  // sessions on every other device. The password reset above stays global on purpose.
+  await supabase.auth.signOut({ scope: "local" });
+  redirect("/login?signedOut=1");
 }

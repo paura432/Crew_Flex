@@ -33,6 +33,8 @@ Then the real code and its tests. Documentation never replaces reading the code 
 | Schema, RLS, grants, RPCs                  | `supabase/migrations/*.sql` (docs: `DATA_MODEL.md`, `AUTHORIZATION.md`)                   |
 | Edge Function contracts                    | `supabase/functions/<name>/index.ts` + `src/types/api.ts` (docs: `EDGE_FUNCTIONS.md`)     |
 | Open / resolved decisions                  | `docs/product/OPEN_DECISIONS.md`, `docs/integration/crewflex-v13/08-product-decisions.md` |
+| v1.8 parity per element (loop 2026-10-23)  | `docs/integration/crewflex-v13/17-parity-matrix-v18.md` (one section per package)         |
+| v1.8 inventory, parity metric (F3)         | `docs/integration/crewflex-v13/18-v18-inventory/README.md` (1 587 rows, `recount.py`)     |
 | Architecture decisions                     | `docs/architecture/ADR-*.md`                                                              |
 | Environments, what production is           | `docs/architecture/ENVIRONMENTS.md`, `docs/audit/DEPLOYMENT_PLAN.md` (execution log)      |
 | Local stack                                | `docs/qa/LOCAL_ENVIRONMENT.md`                                                            |

@@ -4,7 +4,8 @@ import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { listAvailability } from "@/features/availability/api";
-import { parseMonth } from "@/features/availability/calendar";
+import { listMyApplications } from "@/features/applications/api";
+import { assignmentDays, parseMonth } from "@/features/availability/calendar";
 import { AvailabilityManager } from "@/features/availability/components/AvailabilityManager";
 import { requireSessionActor } from "@/server/session";
 
@@ -30,7 +31,17 @@ export default async function ProfessionalAvailabilityPage({
       />
     );
   }
-  const result = await listAvailability();
+  const [result, applications] = await Promise.all([listAvailability(), listMyApplications()]);
+  // Confirmed assignments are shown on their days (v1.8 «Asignado»); a failed read just omits them.
+  const assigned = applications.ok
+    ? [
+        ...assignmentDays(
+          applications.data.applications
+            .filter((a) => a.status === "confirmed")
+            .map((a) => a.requirement),
+        ),
+      ]
+    : [];
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -40,8 +51,10 @@ export default async function ProfessionalAvailabilityPage({
         <AvailabilityManager
           windows={result.data.windows}
           rotation={result.data.rotation}
+          version={result.data.version}
           initialMonth={parseMonth(monthParam) ?? today.slice(0, 7)}
           today={today}
+          assignedDays={assigned}
         />
       ) : (
         <ApiErrorState error={result.error} requestId={result.requestId} />

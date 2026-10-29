@@ -1,10 +1,13 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Field";
 import { StatusChip } from "@/components/ui/StatusChip";
+import type { Locale } from "@/i18n/config";
+import { formatPercent } from "@/i18n/format";
 import type { EvaluatedCandidate } from "@/types/api";
-import { explainAvailability, explainCheck } from "../explain";
+import { explainAvailability, explainCheck, explainProfileCheck } from "../explain";
+import { render, resolvers } from "./MatchCard";
 import { MAX_COMPARE, MATCH_SORTS, type MatchListQuery } from "../list";
 
 /** `?…` for the same page with some params replaced (plain links: works without JavaScript). */
@@ -12,7 +15,8 @@ export function matchListHref(base: string, query: MatchListQuery, over: Partial
   const next = { ...query, ...over };
   const params = new URLSearchParams();
   if (next.q) params.set("q", next.q);
-  if (next.eligibleOnly) params.set("eligible", "1");
+  // «Solo elegibles» is the default (v2-25): only «off» is written.
+  if (!next.eligibleOnly) params.set("eligible", "0");
   if (next.sort !== "relevance") params.set("sort", next.sort);
   if (next.page > 1) params.set("page", String(next.page));
   for (const id of next.compare) params.append("compare", id);
@@ -57,6 +61,8 @@ export async function MatchListControls({ query, base }: { query: MatchListQuery
         </select>
       </label>
       <label className="flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 text-sm">
+        {/* Unticked sends only this one: off. Ticked sends both; `1` wins (parseMatchListQuery). */}
+        <input type="hidden" name="eligible" value="0" />
         <input type="checkbox" name="eligible" value="1" defaultChecked={query.eligibleOnly} />
         {t("eligibleOnly")}
       </label>
@@ -123,7 +129,7 @@ export async function CompareForm({
   return (
     <form id="compare-form" method="get" className="flex flex-wrap items-center gap-3">
       {query.q && <input type="hidden" name="q" value={query.q} />}
-      {query.eligibleOnly && <input type="hidden" name="eligible" value="1" />}
+      {!query.eligibleOnly && <input type="hidden" name="eligible" value="0" />}
       {query.sort !== "relevance" && <input type="hidden" name="sort" value={query.sort} />}
       {query.page > 1 && <input type="hidden" name="page" value={query.page} />}
       {selectedIds
@@ -148,9 +154,10 @@ export async function CompareTable({
   truncated: boolean;
   clearHref: string;
 }) {
-  const [t, tm] = await Promise.all([
+  const [t, tm, locale] = await Promise.all([
     getTranslations("organization.matches.list"),
     getTranslations("matching"),
+    getLocale() as Promise<Locale>,
   ]);
   const labels = [
     ...new Set(items.flatMap((i) => i.match.qualificationChecks.map((c) => explainCheck(c).label))),
@@ -159,6 +166,16 @@ export async function CompareTable({
     const check = item.match.qualificationChecks.map(explainCheck).find((c) => c.label === label);
     return check ? (check.met ? "✓" : "✗") : "—";
   };
+  // v1.8 profile requirements (BR-3.7–3.13): the same rules for every candidate of one requirement.
+  const r = await resolvers();
+  const ruleRows = (items[0]?.match.profileChecks ?? []).map((check, i) => ({
+    key: `${check.rule}-${i}`,
+    label: render(r, explainProfileCheck(check).label),
+    cells: items.map((item) => {
+      const own = item.match.profileChecks?.[i];
+      return own ? (own.met ? "✓" : "✗") : "—";
+    }),
+  }));
   return (
     <section
       aria-labelledby="compare-title"
@@ -168,7 +185,10 @@ export async function CompareTable({
         <h2 id="compare-title" className="font-semibold">
           {t("compareTitle", { count: items.length })}
         </h2>
-        <Link href={clearHref} className="text-sm font-semibold text-blue hover:underline">
+        <Link
+          href={clearHref}
+          className="inline-flex items-center text-sm font-semibold text-blue hover:underline pointer-coarse:min-h-11"
+        >
           {t("compareClear")}
         </Link>
       </div>
@@ -238,6 +258,18 @@ export async function CompareTable({
                 ))}
               </tr>
             ))}
+            {ruleRows.map((row) => (
+              <tr key={row.key}>
+                <th scope="row" className="py-2 pr-3 font-semibold break-words">
+                  {row.label}
+                </th>
+                {row.cells.map((mark, i) => (
+                  <td key={items[i]!.candidate.id} className="py-2 pr-3">
+                    {mark}
+                  </td>
+                ))}
+              </tr>
+            ))}
             <tr>
               <th scope="row" className="py-2 pr-3 font-normal text-muted">
                 {tm("availabilityLabel")}
@@ -245,7 +277,7 @@ export async function CompareTable({
               {items.map(({ candidate, match }) => (
                 <td key={candidate.id} className="py-2 pr-3">
                   {explainAvailability(match.availability.coveredPercent).met ? "✓" : "✗"}{" "}
-                  {match.availability.coveredPercent}%
+                  {formatPercent(locale, match.availability.coveredPercent)}
                 </td>
               ))}
             </tr>

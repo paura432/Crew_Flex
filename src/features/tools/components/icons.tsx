@@ -77,3 +77,43 @@ export const ExternalIcon = (p: P) => (
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
   </Icon>
 );
+
+export const GraduationCapIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+    <path d="M22 10v6" />
+    <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+  </Icon>
+);
+
+export const BookOpenIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M12 7v14" />
+    <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+  </Icon>
+);
+
+export const AwardIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" />
+    <circle cx="12" cy="8" r="6" />
+  </Icon>
+);
+
+export const SearchIcon = (p: P) => (
+  <Icon {...p}>
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.3-4.3" />
+  </Icon>
+);
+
+export const LanguagesIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="m5 8 6 6" />
+    <path d="m4 14 6-6 2-3" />
+    <path d="M2 5h12" />
+    <path d="M7 2h1" />
+    <path d="m22 22-5-10-5 10" />
+    <path d="M14 18h6" />
+  </Icon>
+);

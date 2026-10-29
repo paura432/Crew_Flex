@@ -33,7 +33,7 @@ export async function updateQualificationAction(
   input: unknown,
 ): Promise<ProfileActionResult> {
   const idParsed = qualificationIdQuery.safeParse({ id });
-  if (!idParsed.success) return invalidResult({ form: "Invalid qualification." });
+  if (!idParsed.success) return invalidResult({ form: "v.form.qualification" });
   const parsed = updateQualificationInput.safeParse(input);
   if (!parsed.success) return invalidResult(toFieldErrors(parsed.error));
   return fromProfessionalResponse(await updateQualification(idParsed.data.id, parsed.data), PATHS);
@@ -41,6 +41,6 @@ export async function updateQualificationAction(
 
 export async function deleteQualificationAction(id: unknown): Promise<ProfileActionResult> {
   const idParsed = qualificationIdQuery.safeParse({ id });
-  if (!idParsed.success) return invalidResult({ form: "Invalid qualification." });
+  if (!idParsed.success) return invalidResult({ form: "v.form.qualification" });
   return fromProfessionalResponse(await deleteQualification(idParsed.data.id), PATHS);
 }

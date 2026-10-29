@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 
 /**
- * Refreshes the auth session cookies on every matched request and returns the user id.
+ * Refreshes the auth session cookies on every matched request and returns the user id (and the
+ * client, for the few UX checks the proxy makes before a page streams).
  * `requestHeaders` are forwarded to the route (the proxy adds the CSP nonce there).
  */
 export async function updateSession(
@@ -33,5 +34,5 @@ export async function updateSession(
   // getClaims() verifies the JWT; do not run code between client creation and this call.
   const { data } = await supabase.auth.getClaims();
   const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
-  return { response, userId };
+  return { response, userId, supabase };
 }

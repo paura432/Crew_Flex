@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { listDocuments } from "@/features/documents/api";
 import { DocumentWallet } from "@/features/documents/components/DocumentWallet";
+import { walletView } from "@/features/documents/map";
 import { listQualifications } from "@/features/qualifications/api";
 import { notFound } from "next/navigation";
 import { isDocumentWalletEnabled } from "@/server/feature-flags";
@@ -15,9 +16,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("documents") };
 }
 
-export default async function ProfessionalDocumentsPage() {
+export default async function ProfessionalDocumentsPage({
+  searchParams,
+}: PageProps<"/app/professional/documents">) {
   if (!(await isDocumentWalletEnabled())) notFound();
-  const [actor, t, tProfessional] = await Promise.all([
+  const [{ view: viewParam }, actor, t, tProfessional] = await Promise.all([
+    searchParams,
     requireSessionActor(),
     getTranslations("documents"),
     getTranslations("professional"),
@@ -30,7 +34,12 @@ export default async function ProfessionalDocumentsPage() {
       />
     );
   }
-  const [documents, qualifications] = await Promise.all([listDocuments(), listQualifications()]);
+  // v1.8 «Papelera» / «Ver wallet» (N-19); anything else is the wallet.
+  const view = walletView(viewParam);
+  const [documents, qualifications] = await Promise.all([
+    listDocuments(view),
+    listQualifications(),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -38,6 +47,10 @@ export default async function ProfessionalDocumentsPage() {
       <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
       {documents.ok ? (
         <DocumentWallet
+          key={view}
+          view={view}
+          trashRetentionDays={documents.data.trashRetentionDays}
+          counts={documents.data.counts}
           documents={documents.data.documents}
           // Linking is optional: if the qualifications cannot be loaded, the wallet still works.
           qualifications={

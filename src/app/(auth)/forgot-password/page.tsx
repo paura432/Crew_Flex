@@ -24,7 +24,10 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps<"/f
       )}
       <ForgotPasswordForm />
       <p className="mt-6 text-sm text-muted">
-        <Link href="/login" className="font-semibold text-blue hover:underline">
+        <Link
+          href="/login"
+          className="inline-flex items-center font-semibold text-blue hover:underline pointer-coarse:min-h-11"
+        >
           {t("backToSignIn")}
         </Link>
       </p>

@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { detailRouteOf } from "@/lib/detail-routes";
 import { publicEnv } from "@/lib/env";
+import { detailVisible } from "@/lib/supabase/detail-gate";
 import { updateSession } from "@/lib/supabase/proxy";
+import { isStaffingAgency } from "@/domain/recruiter";
+import { isQualificationReviewEnabled } from "@/server/feature-flags";
+import { compareActing } from "@/lib/acting-organization";
+import type { OrganizationRole, OrganizationType } from "@/types/database";
 
 /**
  * Nonce-based CSP (T18, V1.8 app.mjs:151), **report-only** until a clean violation window has been
@@ -8,13 +14,22 @@ import { updateSession } from "@/lib/supabase/proxy";
  * Next.js reads the nonce from either header and applies it to its own inline scripts.
  */
 const CSP_HEADER = "Content-Security-Policy-Report-Only";
+// React's streaming SSR wraps an SVG segment that resolves late in `<svg aria-hidden="true" style="display:none">`
+// (react-dom-server `startSegmentSVG`; MathML alike). Only that exact attribute value is allowed:
+// sha256("display:none"). Every other style attribute stays blocked.
+const REACT_HIDDEN_SEGMENT_STYLE = "'sha256-aqNNdDLnnrDOnTNdkJpYlAxKVJtLt9CtFLklmInuUAE='";
 function contentSecurityPolicy(nonce: string) {
   const dev = process.env.NODE_ENV === "development"; // React dev tooling needs eval
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'nonce-${nonce}'`,
+    `style-src-attr 'unsafe-hashes' ${REACT_HIDDEN_SEGMENT_STYLE}`,
+    // The wallet viewer (N-21, T-103) fetches the owner's file with its 60-second signed URL
+    // (connect-src: the Supabase origin) and shows it as a blob: images need nothing new, the PDF
+    // frame needs `blob:` in frame-src. The Storage origin itself is never framed or embedded.
     "img-src 'self' blob: data:",
+    "frame-src 'self' blob:",
     "font-src 'self'",
     `connect-src 'self' ${publicEnv.NEXT_PUBLIC_SUPABASE_URL}`,
     "object-src 'none'",
@@ -39,7 +54,7 @@ export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set(CSP_HEADER, csp);
-  const { response, userId } = await updateSession(request, requestHeaders);
+  const { response, userId, supabase } = await updateSession(request, requestHeaders);
   response.headers.set(CSP_HEADER, csp);
   const { pathname, search } = request.nextUrl;
 
@@ -48,6 +63,62 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(pathname + search)}`;
     return redirectKeepingCookies(url, response);
+  }
+  // A path no route matches renders the root not-found page with a 404 status (R-X L1: not
+  // Next's internal `/_not-found` name).
+  const rewriteNotFound = () => {
+    const notFound = NextResponse.rewrite(new URL("/__denied", request.url), {
+      request: { headers: requestHeaders },
+    });
+    for (const cookie of response.cookies.getAll()) notFound.cookies.set(cookie);
+    notFound.headers.set(CSP_HEADER, csp);
+    return notFound;
+  };
+  // X-11: platform-only pages answer a real 404. Their own notFound() runs after the /app loading
+  // boundary has streamed a 200, with the requested page's title; this decides before the stream.
+  // «Espacio recruiter» (BR-27) also opens for a member whose acting organization is a staffing agency.
+  if (userId && /^\/app\/(admin|recruiter)(\/|$)/.test(pathname)) {
+    const recruiter = /^\/app\/recruiter(\/|$)/.test(pathname);
+    const [{ data, error }, memberships] = await Promise.all([
+      supabase.from("profiles").select("platform_role").eq("id", userId).maybeSingle(),
+      recruiter
+        ? supabase
+            .from("organization_members")
+            .select("role, organization:organizations ( id, type )")
+            .eq("profile_id", userId)
+            .overrideTypes<
+              { role: OrganizationRole; organization: { id: string; type: OrganizationType } }[],
+              { merge: false }
+            >()
+        : null,
+    ]);
+    // A failed read fails closed (404); logged without the user id.
+    if (error) console.warn("proxy: profile read failed for a platform page", error.code);
+    const agencyMember =
+      recruiter &&
+      !memberships?.error &&
+      isStaffingAgency(
+        [...(memberships?.data ?? [])].sort((a, b) =>
+          compareActing(
+            { role: a.role, organizationId: a.organization.id },
+            { role: b.role, organizationId: b.organization.id },
+          ),
+        )[0]?.organization.type,
+      );
+    const allowed =
+      agencyMember ||
+      (data?.platform_role === "platform_admin" &&
+        (!pathname.startsWith("/app/admin/verifications") || isQualificationReviewEnabled()));
+    if (!allowed) return rewriteNotFound();
+  }
+  // Area 50 #15 / SH-07 #14: a missing or someone else's requirement, opportunity or network offer
+  // answered 200 «No encontrado» for the same reason; the same reads as the page, before the stream.
+  // Document requests only: a client navigation or prefetch (`rsc` header) has no status to fix and
+  // still gets the page's own notFound(), so lists full of links cost no extra reads.
+  const isDocument = request.headers.get("rsc") === null;
+  const detail = userId && isDocument ? detailRouteOf(pathname) : null;
+  if (userId && detail && (await detailVisible(detail, supabase, userId)) === false) {
+    return rewriteNotFound();
   }
   if ((pathname === "/login" || pathname === "/register") && userId) {
     const url = request.nextUrl.clone();

@@ -7,7 +7,7 @@ Browser
  │  cookies (Supabase session, httpOnly-capable via @supabase/ssr)
  ▼
 Next.js (App Router, Server Components by default)
- │  proxy.ts: refresh session, redirect unauthenticated /app/**
+ │  proxy.ts: refresh session, redirect unauthenticated /app/**, CSP nonce, 404 for platform-only pages (X-11)
  │  server-only: invokeEdgeFunction(name, {method, body, query}) with user access token
  │  direct PostgREST reads under RLS: own context + reference data; exception: internal workforce
  │  (src/features/workforce/api.ts, other members' data under can_view_member / OD-4) — ADR-002 §Decision 3

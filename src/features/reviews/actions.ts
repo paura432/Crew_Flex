@@ -18,7 +18,7 @@ import { submitReview } from "./api";
  */
 export async function reviewQualificationAction(input: unknown): Promise<ProfileActionResult> {
   if (!isQualificationReviewEnabled()) {
-    return { ok: false, code: "NOT_FOUND", message: "This service is not available." };
+    return { ok: false, code: "NOT_FOUND", message: "api.NOT_FOUND.description" };
   }
   const parsed = reviewQualificationInput.safeParse(input);
   if (!parsed.success) return invalidResult(toFieldErrors(parsed.error));

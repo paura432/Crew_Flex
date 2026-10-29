@@ -35,3 +35,21 @@ export async function isDocumentWalletEnabled(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Sign-up by invitation (OD-8 default v1.8, T-40), decided in Supabase like the wallet: the owner-only
+ * row `app_private.feature_flags('invitation_signup', true)`, read through the anon-callable
+ * `public.invitation_signup_required()` (the sign-up page is public). The barrier is the database: the
+ * sign-up trigger refuses any account without a valid invitation while the flag is on (CFI01), whatever
+ * this says. This only chooses the form and the server action's own messages, so an unreadable flag
+ * (e.g. a frontend released before its migration) shows today's open form instead of blocking sign-up.
+ */
+export async function isInvitationSignupRequired(): Promise<boolean> {
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.rpc("invitation_signup_required");
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}

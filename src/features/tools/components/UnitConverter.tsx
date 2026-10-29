@@ -7,6 +7,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import {
+  ambiguousReading,
   convert,
   convertRange,
   ENGINE_VERSION,
@@ -52,6 +53,7 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
 
   const units = unitsOf(group);
   const digits = Number(precision);
+  const reading = ambiguousReading(value, locale);
   const unitLabel = (id: string) =>
     tLoose.has(`unit.${id}`) ? tLoose(`unit.${id}`) : (units[id]?.symbol ?? id);
   const description = tLoose.has(`magnitude.${group}.description`)
@@ -65,7 +67,11 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
     }
     return r;
   });
-  const bounds = range ? outcome(() => convertRange(value, tolerance, group, from, to)) : null;
+  // Nothing to bound until there is a value: the main result already asks for it.
+  const bounds =
+    range && value.trim() !== ""
+      ? outcome(() => convertRange(value, tolerance, group, from, to))
+      : null;
   const formatted = result.value === null ? "—" : formatNumber(locale, result.value, digits);
 
   function changeGroup(next: MagnitudeId) {
@@ -126,6 +132,9 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
               id="tool-value"
               label={t("converter.value")}
               hint={group === "length" ? t("converter.valueHintLength") : t("converter.valueHint")}
+              reading={
+                reading === null ? null : t("readAs", { value: formatNumber(locale, reading, 10) })
+              }
             >
               <input
                 id="tool-value"
@@ -134,7 +143,7 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
                 inputMode="decimal"
                 autoComplete="off"
                 placeholder={t("converter.valuePlaceholder")}
-                aria-describedby="tool-value-hint"
+                aria-describedby="tool-value-hint tool-value-reading"
                 aria-invalid={value !== "" && result.error !== null}
                 onChange={(e) => setValue(e.target.value)}
               />
@@ -205,7 +214,7 @@ export function UnitConverter({ torque = false }: { torque?: boolean }) {
 
           {RANGE_GROUPS.includes(group) && (
             <>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm pointer-coarse:min-h-11">
                 <input
                   type="checkbox"
                   className="size-[17px] shrink-0 accent-tool"

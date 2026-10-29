@@ -1,10 +1,12 @@
 // Professional document wallet (owner decision D-10) — own documents only. LOCAL ONLY.
-//   GET    /professional-documents                  → list own documents (RLS)
+//   GET    /professional-documents[?view=trash]     → own documents of one view (RLS, ≤ 200),
+//          `counts` of both views and `trashRetentionDays` (N-19, T-100)
 //   GET    /professional-documents?id=<uuid>&url=1  → { url, expiresInSeconds: 60 } signed URL (owner)
 //   POST   (only while app_private.feature_flags('document_wallet') is on, else 404)
 //          /professional-documents  multipart/form-data: file, kind, title?, expiresAt?, qualificationId?
 //          Idempotency-Key REQUIRED → 201 created · 200 replay · 409 same key, other request
 //   PATCH  /professional-documents?id=<uuid> { kind, title, expiresAt, qualificationId }
+//          or { archived: true|false } → to the trash / restored (N-19; the database stamps the date)
 //   DELETE /professional-documents?id=<uuid>  → row first, then the object
 // Design and threat model: docs/product/DOCUMENT_WALLET.md. User-JWT client ONLY (no service role):
 // the table's RLS and the bucket's Storage policies are the authorization; ownership is the JWT
@@ -34,8 +36,11 @@ import {
   sniffDocumentMime,
 } from "../../../src/domain/documents.ts";
 import {
+  archiveDocumentInput,
   documentIdQuery,
   documentUrlQuery,
+  isArchivePatch,
+  listDocumentsQuery,
   updateDocumentInput,
   uploadDocumentMetadata,
 } from "../../../src/lib/validation/documents.ts";
@@ -64,8 +69,10 @@ const DEFINITIVE_RPC_ERRORS = new Set([
   "42501",
 ]);
 
-const SELECT =
-  "id, kind, title, mime_type, size_bytes, sha256, expires_at, qualification_id, scan_status, created_at, updated_at";
+/** The columns `toDocument` reads; the `account` export selects these too (plus `storage_path`). */
+export const DOCUMENT_SELECT =
+  "id, kind, title, mime_type, size_bytes, sha256, expires_at, qualification_id, scan_status, archived_at, created_at, updated_at";
+const SELECT = DOCUMENT_SELECT;
 
 const row = z.object({
   id: z.string(),
@@ -77,6 +84,7 @@ const row = z.object({
   expires_at: z.string().nullable(),
   qualification_id: z.string().nullable(),
   scan_status: z.enum(DOCUMENT_SCAN_STATUSES),
+  archived_at: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -93,8 +101,28 @@ export function toDocument(raw: unknown): ProfessionalDocument {
     expiresAt: r.expires_at ? r.expires_at.slice(0, 10) : null,
     qualificationId: r.qualification_id,
     scanStatus: r.scan_status,
+    archivedAt: r.archived_at ? new Date(r.archived_at).toISOString() : null,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
+  };
+}
+
+/**
+ * PATCH body → the row update. `{ archived }` (N-19) moves the document to the trash or back: the value
+ * sent for `archived_at` is only a marker, the database stamps its own clock (trigger
+ * `professional_documents_archive_clock`). Anything else is the full metadata replacement, as before.
+ */
+export function documentPatch(body: unknown): Record<string, string | null> {
+  if (isArchivePatch(body)) {
+    const { archived } = parseValue(body, archiveDocumentInput);
+    return { archived_at: archived ? new Date().toISOString() : null };
+  }
+  const input = parseValue(body, updateDocumentInput);
+  return {
+    kind: input.kind,
+    title: input.title,
+    expires_at: input.expiresAt,
+    qualification_id: input.qualificationId,
   };
 }
 
@@ -251,15 +279,39 @@ async function removeObject(
 export const handler = createHandler(FN, {
   GET: async (ctx) => {
     const actor = await requireActor(ctx);
-    if (ctx.url.searchParams.size === 0) {
-      const { data, error } = await actor.client
+    if (!ctx.url.searchParams.has("id") && !ctx.url.searchParams.has("url")) {
+      const { view } = parseQuery(ctx.url, listDocumentsQuery);
+      const count = (archived: boolean) => {
+        const rows = actor.client
+          .from("professional_documents")
+          .select("id", { count: "exact", head: true })
+          .eq("owner_id", actor.id);
+        return archived ? rows.not("archived_at", "is", null) : rows.is("archived_at", null);
+      };
+      const base = actor.client
         .from("professional_documents")
         .select(SELECT)
-        .eq("owner_id", actor.id)
-        .order("created_at", { ascending: false })
-        .limit(200);
-      if (error) throw fromDatabaseError(error);
-      return { data: { documents: (data ?? []).map(toDocument) } satisfies DocumentListResponse };
+        .eq("owner_id", actor.id);
+      const list =
+        view === "trash"
+          ? base.not("archived_at", "is", null).order("archived_at", { ascending: false })
+          : base.is("archived_at", null).order("created_at", { ascending: false });
+      const [rows, active, trash, retention] = await Promise.all([
+        list.limit(200),
+        count(false),
+        count(true),
+        actor.client.rpc("document_trash_retention_days"),
+      ]);
+      for (const r of [rows, active, trash, retention]) {
+        if (r.error) throw fromDatabaseError(r.error);
+      }
+      return {
+        data: {
+          documents: (rows.data ?? []).map(toDocument),
+          trashRetentionDays: z.number().int().positive().parse(retention.data),
+          counts: { active: active.count ?? 0, trash: trash.count ?? 0 },
+        } satisfies DocumentListResponse,
+      };
     }
 
     const { id } = parseQuery(ctx.url, documentUrlQuery);
@@ -368,15 +420,10 @@ export const handler = createHandler(FN, {
   PATCH: async (ctx) => {
     const actor = await requireActor(ctx);
     const { id } = parseQuery(ctx.url, documentIdQuery);
-    const input = await parseJsonBody(ctx.req, updateDocumentInput);
+    const body = await parseJsonBody(ctx.req, z.unknown());
     const { data, error } = await actor.client
       .from("professional_documents")
-      .update({
-        kind: input.kind,
-        title: input.title,
-        expires_at: input.expiresAt,
-        qualification_id: input.qualificationId,
-      })
+      .update(documentPatch(body))
       .eq("id", id)
       .eq("owner_id", actor.id)
       .select(SELECT)

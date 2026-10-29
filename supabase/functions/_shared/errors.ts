@@ -1,5 +1,32 @@
 // Normalized, client-safe errors. `message` is always safe to show to a user; internal
 // details never leave the function (they are logged, without secrets).
+import {
+  APPLICATION_CONFLICTS,
+  type ApplicationConflict,
+} from "../../../src/domain/applications.ts";
+import {
+  AVAILABILITY_CONFLICTS,
+  type AvailabilityConflict,
+} from "../../../src/domain/availability.ts";
+import { DIRECTORY_CONFLICTS, type DirectoryConflict } from "../../../src/domain/directory.ts";
+import { OUTREACH_CONFLICTS, type OutreachConflict } from "../../../src/domain/outreach.ts";
+import { RECRUITER_CONFLICTS, type RecruiterConflict } from "../../../src/domain/recruiter.ts";
+
+/** Every `reason` a 409 can carry (one family per SQLSTATE prefix). */
+export type ConflictReason =
+  | ApplicationConflict
+  | AvailabilityConflict
+  | OutreachConflict
+  | RecruiterConflict
+  | DirectoryConflict;
+
+const CONFLICT_FAMILIES: Record<string, readonly ConflictReason[]> = {
+  A: APPLICATION_CONFLICTS,
+  V: AVAILABILITY_CONFLICTS,
+  O: OUTREACH_CONFLICTS,
+  R: RECRUITER_CONFLICTS,
+  D: DIRECTORY_CONFLICTS,
+};
 
 export const ERROR_STATUS = {
   UNAUTHORIZED: 401,
@@ -37,6 +64,13 @@ export class ApiError extends Error {
     readonly code: ErrorCode,
     message: string = DEFAULT_MESSAGES[code],
     readonly issues?: FieldIssue[],
+    /**
+     * Which server check refused a 409: applications/opportunities (`APPLICATION_CONFLICTS`),
+     * availability (`AVAILABILITY_CONFLICTS`, BR-4.9), the Urgent/AOG outreach (`OUTREACH_CONFLICTS`,
+     * BR-26), a represented client (`RECRUITER_CONFLICTS`, BR-27) or a refused directory search
+     * (`DIRECTORY_CONFLICTS`, BR-28).
+     */
+    readonly reason?: ConflictReason,
   ) {
     super(message);
     this.name = "ApiError";
@@ -54,13 +88,38 @@ interface PostgrestLikeError {
   message?: string;
 }
 
+/**
+ * Our business conflicts: SQLSTATE `CFA01`…`CFA16` are the entries of `APPLICATION_CONFLICTS` in order
+ * (20261022130300, 20261024100000; CFA14/CFA15 from the applications trigger of 20261023900200; CFA16 from
+ * 20261024800000, the professional's block), `CFV01`… those of
+ * `AVAILABILITY_CONFLICTS` (20261023300000), `CFO01`… those of `OUTREACH_CONFLICTS` (20261024400200), `CFR01`…
+ * those of `RECRUITER_CONFLICTS` (20261024500100), `CFD01`… those of `DIRECTORY_CONFLICTS` (20261024700000).
+ * Custom codes, never `40001` (PostgREST retries that one forever).
+ */
+export function conflictReason(sqlstate: string | undefined): ConflictReason | undefined {
+  const match = /^CF([AVORD])(\d{2})$/.exec(sqlstate ?? "");
+  if (!match) return undefined;
+  return CONFLICT_FAMILIES[match[1]!]?.[Number(match[2]) - 1];
+}
+
 /** Maps PostgREST / Postgres errors to safe API errors. Never forwards the DB message. */
 export function fromDatabaseError(error: PostgrestLikeError): ApiError {
+  const reason = conflictReason(error.code);
+  if (reason) {
+    return new ApiError(
+      "CONFLICT",
+      "This action is not possible in the current state.",
+      undefined,
+      reason,
+    );
+  }
   switch (error.code) {
     case "42501": // insufficient_privilege (incl. RLS violations and our "not authorized")
       return new ApiError("FORBIDDEN");
     case "22023": // invalid_parameter_value
     case "22P02": // invalid_text_representation
+    case "22007": // invalid_datetime_format
+    case "22008": // datetime_field_overflow (e.g. year 0000, which ISO-date validation accepts)
     case "23502": // not_null_violation
     case "23503": // foreign_key_violation (e.g. unknown qualification type)
     case "23514": // check_violation

@@ -23,6 +23,8 @@ const item = (
     softScore: eligible ? 50 : 0,
     reasons: [],
     qualificationChecks: [],
+    profileChecks: [],
+    affinityChecks: [],
     availability: { coveredPercent: 100 },
   },
 });
@@ -38,11 +40,17 @@ describe("parseMatchListQuery", () => {
   it("defaults and rejects unknown values", () => {
     expect(q({ sort: "rate", page: "-2", eligible: "yes" })).toEqual({
       q: "",
-      eligibleOnly: false,
+      eligibleOnly: true, // v2-25: on by default, like v1.8
       sort: "relevance",
       page: 1,
       compare: [],
     });
+  });
+  it("eligible-only: on unless `eligible=0`; the ticked form box (`0` then `1`) is on", () => {
+    expect(q({}).eligibleOnly).toBe(true);
+    expect(q({ eligible: "0" }).eligibleOnly).toBe(false);
+    expect(q({ eligible: ["0", "1"] }).eligibleOnly).toBe(true);
+    expect(q({ eligible: "1" }).eligibleOnly).toBe(true);
   });
   it("keeps distinct, well-formed compare ids", () => {
     expect(q({ compare: ["CF-A", "CF-A", "x'or 1=1", "CF-B"] }).compare).toEqual(["CF-A", "CF-B"]);
@@ -54,31 +62,30 @@ describe("parseMatchListQuery", () => {
 
 describe("listMatches", () => {
   it("relevance keeps the engine order; eligible-only drops ineligible", () => {
-    expect(listMatches(pool, q()).items.map((i) => i.candidate.id)).toEqual([
+    expect(listMatches(pool, q({ eligible: "0" })).items.map((i) => i.candidate.id)).toEqual([
       "CF-A",
       "CF-B",
       "CF-C",
       "CF-D",
     ]);
-    expect(listMatches(pool, q({ eligible: "1" })).items.map((i) => i.candidate.id)).toEqual([
+    expect(listMatches(pool, q()).items.map((i) => i.candidate.id)).toEqual([
       "CF-A",
       "CF-C",
       "CF-D",
     ]);
   });
   it("years: most experience first, unknown last, ties keep engine order", () => {
-    expect(listMatches(pool, q({ sort: "years" })).items.map((i) => i.candidate.id)).toEqual([
-      "CF-B",
-      "CF-D",
-      "CF-A",
-      "CF-C",
-    ]);
+    expect(
+      listMatches(pool, q({ sort: "years", eligible: "0" })).items.map((i) => i.candidate.id),
+    ).toEqual(["CF-B", "CF-D", "CF-A", "CF-C"]);
   });
   it("search is case- and accent-insensitive over ref, visible name and base", () => {
     expect(listMatches(pool, q({ q: "malaga" })).items.map((i) => i.candidate.id)).toEqual([
       "CF-C",
     ]);
-    expect(listMatches(pool, q({ q: "LUCIA" })).items.map((i) => i.candidate.id)).toEqual(["CF-B"]);
+    expect(
+      listMatches(pool, q({ q: "LUCIA", eligible: "0" })).items.map((i) => i.candidate.id),
+    ).toEqual(["CF-B"]);
     expect(listMatches(pool, q({ q: "cf-d" })).items.map((i) => i.candidate.id)).toEqual(["CF-D"]);
   });
   it("pages of 20, page clamped to the last one", () => {

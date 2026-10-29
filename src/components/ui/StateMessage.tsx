@@ -5,8 +5,11 @@ export function StateMessage({
   description,
   action,
   tone = "neutral",
+  heading = false,
 }: {
   title: string;
+  /** The page's only content (404): the title is its h1. */
+  heading?: boolean;
   description?: ReactNode;
   action?: ReactNode;
   tone?: "neutral" | "danger";
@@ -18,7 +21,11 @@ export function StateMessage({
         tone === "danger" ? "border-danger/30 bg-danger-bg" : "border-dashed border-line bg-white"
       }`}
     >
-      <p className={`font-semibold ${tone === "danger" ? "text-danger" : "text-ink"}`}>{title}</p>
+      {heading ? (
+        <h1 className="text-lg font-semibold text-ink">{title}</h1>
+      ) : (
+        <p className={`font-semibold ${tone === "danger" ? "text-danger" : "text-ink"}`}>{title}</p>
+      )}
       {description && (
         <div className="mx-auto mt-1 max-w-prose text-sm text-muted">{description}</div>
       )}
@@ -31,8 +38,8 @@ export function LoadingState({ label }: { label: string }) {
   return (
     <div role="status" aria-live="polite" className="space-y-3">
       <span className="sr-only">{label}</span>
-      <div className="h-24 animate-pulse rounded-xl bg-line/60" />
-      <div className="h-48 animate-pulse rounded-xl bg-line/40" />
+      <div className="h-24 rounded-xl bg-line/60 motion-safe:animate-pulse" />
+      <div className="h-48 rounded-xl bg-line/40 motion-safe:animate-pulse" />
     </div>
   );
 }

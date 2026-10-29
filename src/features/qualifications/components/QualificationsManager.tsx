@@ -3,8 +3,9 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { EXPIRY_TONE, StatusChip, type Tone } from "@/components/ui/StatusChip";
 import { documentExpiryState } from "@/domain/documents";
@@ -29,6 +30,7 @@ import {
   deleteQualificationAction,
   updateQualificationAction,
 } from "../actions";
+import { EvidenceLine } from "./EvidenceLine";
 
 export const VERIFICATION_TONE: Record<VerificationStatus, Tone> = {
   verified: "ok",
@@ -50,11 +52,14 @@ export function QualificationsManager({
   qualifications,
   catalog,
   today,
+  evidence,
 }: {
   qualifications: Qualification[];
   catalog: QualificationType[];
   /** `YYYY-MM-DD` (UTC) from the server render, for the BR-12 expiry chip. */
   today: string;
+  /** Linked wallet documents per qualification id; undefined when the wallet is off. */
+  evidence?: Record<string, string[]>;
 }) {
   const t = useTranslations("qualifications");
   const tDocuments = useTranslations("documents");
@@ -77,7 +82,7 @@ export function QualificationsManager({
   function run(label: string, task: () => Promise<ProfileActionResult>) {
     setNotice(null);
     startTransition(async () => {
-      const result = await task();
+      const result = await callAction(task);
       if (result.ok) {
         idempotency.release();
         setNotice({ tone: "ok", text: label });
@@ -85,7 +90,12 @@ export function QualificationsManager({
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(actionErrorCopy(tRoot, result));
+        // The only 409 here: the qualification is already declared (the generic copy is neutral).
+        setNotice(
+          result.code === "CONFLICT"
+            ? { tone: "danger", text: t("alreadyDeclared"), requestId: result.requestId }
+            : actionErrorCopy(tRoot, result),
+        );
       }
     });
   }
@@ -313,6 +323,7 @@ export function QualificationsManager({
                           ) : null;
                         })()}
                       </span>
+                      {evidence && <EvidenceLine titles={evidence[q.id] ?? []} />}
                       {q.verificationStatus === "rejected" && q.reviewNote && (
                         <span className="mt-1 block text-xs text-danger">
                           {t("reviewReason", { reason: q.reviewNote })}
@@ -327,7 +338,7 @@ export function QualificationsManager({
                     </StatusChip>
                     <div className="flex gap-2">
                       <Button
-                        className="min-h-8 px-3 text-xs"
+                        size="sm"
                         disabled={pending}
                         onClick={() => {
                           setEditing(q);
@@ -337,17 +348,18 @@ export function QualificationsManager({
                       >
                         {tRoot("common.edit")}
                       </Button>
-                      <Button
-                        className="min-h-8 px-3 text-xs text-danger"
+                      <ConfirmButton
+                        size="sm"
                         disabled={pending}
-                        onClick={() =>
+                        label={tRoot("common.remove")}
+                        confirmLabel={t("confirmRemove")}
+                        cancelLabel={tRoot("common.cancel")}
+                        onConfirm={() =>
                           run(t("removed", { code: q.type.code }), () =>
                             deleteQualificationAction(q.id),
                           )
                         }
-                      >
-                        {tRoot("common.remove")}
-                      </Button>
+                      />
                     </div>
                   </li>
                 ))}

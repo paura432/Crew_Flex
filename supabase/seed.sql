@@ -66,6 +66,17 @@ select pg_temp.seed_user('00000000-0000-4000-8000-000000000031', 'platform.admin
 
 update public.profiles set platform_role = 'platform_admin' where id = '00000000-0000-4000-8000-000000000031';
 
+-- The platform admin's own organization, for the «Empresa» view of the switcher (owner 2026-10-22).
+-- Kept apart from the scenario organizations so their workforce and matching stay as designed.
+insert into public.organizations (name, type, country) values ('CrewFlex Operaciones', 'other', 'ES');
+insert into public.organization_members (organization_id, profile_id, role)
+select id, '00000000-0000-4000-8000-000000000031', 'admin' from public.organizations where name = 'CrewFlex Operaciones';
+
+-- Fiscal data of the «Organización» screen (OD-5 default, migration 20261023500100; synthetic values).
+-- Only Demo MRO Madrid has it, still pending review; the other organizations have yet to fill it in.
+update public.organizations set tax_id = 'ESB00000000', tax_address = 'Calle Ficticia 1, 28042 Madrid'
+where name = 'Demo MRO Madrid';
+
 -- Internal workforce of Demo MRO Madrid
 insert into public.organization_members (organization_id, profile_id, role)
 select o.id, m.profile_id::uuid, 'member'
@@ -273,3 +284,49 @@ select wr.id, qt.id, 'hard'
 from wr
 cross join public.qualification_types qt
 where qt.code = 'CAT-A';
+
+-- PKG passport (migrations 20261023100*): v1.8 declarations for the scenario's professionals, so the
+-- candidate cards and the identity card show them. Delta completes every BR-11 item but the wallet
+-- document. Synthetic values only; no phone, employer or block is seeded.
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1}',
+  aircraft = '{A320 Family}', english_level = 'B2', base_country = 'ES', work_permits = '{ES}'
+where profile_id = '00000000-0000-4000-8000-000000000011';
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1,B2}',
+  aircraft = '{A320 Family,B737 NG}', engines = '{CFM56-5B/7B}', skills = '{line_maintenance,aog_support}',
+  english_level = 'C1', base_country = 'ES', work_permits = '{PT,ES,FR}'
+where profile_id = '00000000-0000-4000-8000-000000000021';
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1}',
+  aircraft = '{A320 Family}', english_level = 'B1', base_country = 'ES', work_permits = '{ES}'
+where profile_id = '00000000-0000-4000-8000-000000000022';
+update public.technician_profiles set primary_category = 'B1.1', categories = '{B1.1,CAT-A}',
+  aircraft = '{A320 Family,ATR 72}', english_level = 'B2', base_country = 'PT', work_permits = '{PT,ES}'
+where profile_id = '00000000-0000-4000-8000-000000000023';
+insert into public.technician_private_details (profile_id, min_rate, rate_unit) values
+  ('00000000-0000-4000-8000-000000000021', 45.00, 'hour');
+insert into public.technician_type_ratings (technician_profile_id, aircraft, category, expires_at, restrictions) values
+  ('00000000-0000-4000-8000-000000000021', 'A320 Family', 'B1.1', null, null),
+  ('00000000-0000-4000-8000-000000000022', 'A320 Family', 'B1.1', null, 'No engine run-ups (synthetic)'),
+  ('00000000-0000-4000-8000-000000000023', 'ATR 72', 'CAT-A', '2028-12-31', null);
+
+-- PKG matching-v18 (migrations 20261023900*): one need of Demo Airline Ops Barcelona with the v1.8 profile
+-- requirements (BR-3.7–3.13), so the candidate cards explain them. Its period has already ended (12–16 Oct
+-- 2026): it is never in «Oportunidades», a dashboard focus or a calendar, and its matching page stays
+-- readable (open, «Vencida»). Expected: Delta eligible · Echo restricted rating + capability · Foxtrot no
+-- B1.1 rating on those aircraft + capability · Golf B1.1 pending, below 5 years and no declarations.
+-- One statement per requirement: BR-1.4 is checked when it commits (migration 20261015130000).
+with wr as (
+  insert into public.work_requirements
+  (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by,
+   country, category, aircraft, requires_type_rating, min_years, required_skills)
+  select id, 'B1.1 · A320 / B737 NG line check (v1.8 profile rules)', 'Barcelona (BCN)',
+    '2026-10-12 06:00Z', '2026-10-16 18:00Z', 'day', 1, 'planned', 'open',
+    '00000000-0000-4000-8000-000000000003',
+    'ES', 'B1.1', '{A320 Family,B737 NG}', true, 5, '{line_maintenance}'
+  from public.organizations where name = 'Demo Airline Ops Barcelona'
+  returning id
+)
+insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+select wr.id, qt.id, 'hard'
+from wr
+cross join public.qualification_types qt
+where qt.code in ('B1.1', 'EWIS', 'HF');

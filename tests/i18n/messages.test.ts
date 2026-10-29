@@ -76,7 +76,7 @@ describe("i18n catalogs (es/en)", () => {
     const expected = {
       "domain.shift": ["day", "night", "split", "flexible"],
       "domain.urgency": ["planned", "urgent", "aog"],
-      "domain.requirementStatus": ["draft", "open", "covered", "cancelled", "closed"],
+      "domain.requirementStatus": ["draft", "open", "paused", "covered", "cancelled", "closed"],
       "domain.verification": ["pending", "verified", "rejected", "expired"],
       "domain.held": ["active", "withdrawn"],
       "domain.mobility": ["local", "national", "international"],
@@ -102,9 +102,19 @@ describe("i18n catalogs (es/en)", () => {
         expect(flatEs[key], key).toBeDefined();
       }
     }
-    for (const v of ["private", "anonymous", "open"]) {
+    for (const v of ["private", "anonymous", "verified_orgs", "open"]) {
       expect(flatEs[`domain.visibility.${v}.label`]).toBeDefined();
     }
+  });
+
+  it("names the product «CrewFlex» in one word, as v1.8 did (T-140; VIS-08 #3)", () => {
+    // The brand, the <title> template and the favicon say «CrewFlex»; a stray «Crew Flex» in a
+    // sentence (P14c found three) breaks the one name the user sees everywhere.
+    for (const [key, value] of [...Object.entries(flatEn), ...Object.entries(flatEs)]) {
+      expect(value, key).not.toMatch(/Crew Flex/);
+    }
+    expect(flatEs["common.appName"]).toBe("CrewFlex");
+    expect(flatEn["common.appName"]).toBe("CrewFlex");
   });
 
   it("keeps aviation vocabulary untranslated in Spanish (glossary)", () => {

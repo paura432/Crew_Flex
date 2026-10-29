@@ -11,7 +11,7 @@ import type { FieldErrors } from "@/lib/validation/errors";
  */
 export type MessageResolver = (key: never) => string;
 
-const isValidationKey = (message: string) => /^v\.[a-zA-Z0-9_.]+$/.test(message);
+export const isValidationKey = (message: string) => /^v\.[a-zA-Z0-9_.]+$/.test(message);
 
 export const translateKey = (t: MessageResolver, key: string) => t(key as never);
 

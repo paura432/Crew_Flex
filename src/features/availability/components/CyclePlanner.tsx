@@ -114,6 +114,7 @@ export function CyclePlanner({
           >
             {t("useAlternatingBase")}
           </Button>
+          <p className="text-sm text-muted">{t("customHelp")}</p>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("customDays")}>
             {custom.map((state, i) => (
               <button
@@ -142,17 +143,21 @@ export function CyclePlanner({
       )}
 
       <div className="mt-4 flex flex-col gap-2 text-sm">
-        <label className="flex items-start gap-2">
+        <label className="flex items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
           <input
             type="checkbox"
             className="mt-0.5 size-4"
             checked={publishRest}
             disabled={disabled}
+            aria-describedby="cycle-publish-rest-hint"
             onChange={(e) => setPublishRest(e.target.checked)}
           />
           {t("publishRest")}
         </label>
-        <label className="flex items-start gap-2">
+        <p id="cycle-publish-rest-hint" className="-mt-1 pl-6 text-xs text-muted">
+          {t("publishRestHint")}
+        </p>
+        <label className="flex items-start gap-2 pointer-coarse:min-h-11 pointer-coarse:items-center">
           <input
             type="checkbox"
             className="mt-0.5 size-4"

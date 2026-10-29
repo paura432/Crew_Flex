@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { resolveFieldErrors } from "@/i18n/validation";
+import { PASSWORD_MAX, PASSWORD_MIN } from "@/lib/validation/auth";
 import { requestPasswordResetAction, updatePasswordAction } from "../actions";
 import { initialAuthState } from "../state";
 import { FormAlert } from "./FormAlert";
@@ -61,6 +62,9 @@ export function ResetPasswordForm() {
         type="password"
         autoComplete="new-password"
         required
+        // Native hint for password managers; the server action validates (noValidate form).
+        minLength={id === "password" ? PASSWORD_MIN : undefined}
+        maxLength={PASSWORD_MAX}
         className={controlClass}
         aria-invalid={Boolean(errors[id])}
         aria-describedby={describedBy(id, errors[id], hint)}

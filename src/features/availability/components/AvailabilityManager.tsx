@@ -3,9 +3,10 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, describedBy, Field } from "@/components/ui/Field";
 import { Metric } from "@/components/ui/Metric";
-import { actionErrorCopy, Notice, type NoticeState } from "@/components/ui/Notice";
+import { callAction, Notice, type NoticeState } from "@/components/ui/Notice";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { AvailabilityStatus } from "@/domain/availability";
@@ -25,15 +26,24 @@ import {
 } from "../actions";
 import {
   calendarDays,
+  canEditDay,
   countDays,
   DAY_STYLE,
   dayWindow,
+  refusesPastStart,
   monthOffset,
   shiftMonth,
   WEEKDAYS,
   type DayState,
 } from "../calendar";
-import { planChanges, planCycle, RotationError, type PlannedDay } from "../rotation";
+import {
+  emptyPreviewReason,
+  planChanges,
+  planCycle,
+  RotationError,
+  type PlannedDay,
+} from "../rotation";
+import { availabilityErrorCopy } from "../error-copy";
 import { CyclePlanner, type CycleSettings } from "./CyclePlanner";
 
 type Picker = AvailabilityStatus | "clear";
@@ -58,14 +68,21 @@ export function AvailabilityManager({
   initialMonth,
   today,
   rotation,
+  version,
+  assignedDays = [],
 }: {
   windows: AvailabilityWindow[];
+  /** UTC days of confirmed assignments (D-06): marked and protected (BR-4.9, T-15). */
+  assignedDays?: string[];
   /** Saved generator pattern (private), or null. */
   rotation: AvailabilityRotation | null;
+  /** Calendar version from the last server render; a save from a stale one is refused (W5-03). */
+  version?: string;
   initialMonth: string;
   /** `YYYY-MM-DD` (UTC), from the server render. */
   today: string;
 }) {
+  const assigned = new Set(assignedDays);
   const t = useTranslations("availability");
   const tRoot = useTranslations();
   const locale = useLocale();
@@ -107,10 +124,15 @@ export function AvailabilityManager({
   const blockedDays = countDays(windows, "unavailable", monthStart, monthEnd);
   const aogDays = countDays(windows, "aog_only", monthStart, monthEnd);
 
-  function run(label: string, task: () => Promise<AvailabilityActionResult>, onOk?: () => void) {
+  function run(
+    label: string,
+    task: () => Promise<AvailabilityActionResult>,
+    onOk?: () => void,
+    write: "days" | "window" = "window",
+  ) {
     setNotice(null);
     startTransition(async () => {
-      const result = await task();
+      const result = await callAction(task);
       if (result.ok) {
         idempotency.release();
         onOk?.();
@@ -119,7 +141,7 @@ export function AvailabilityManager({
         setErrors({});
       } else {
         setErrors(result.fieldErrors ?? {});
-        setNotice(actionErrorCopy(tRoot, result));
+        setNotice(availabilityErrorCopy(tRoot, result, write));
       }
     });
   }
@@ -136,10 +158,16 @@ export function AvailabilityManager({
       label,
       () =>
         replaceDaysAction(
-          { days: changes, ...(savedRotation ? { rotation: savedRotation } : {}) },
+          {
+            days: changes,
+            ...(savedRotation ? { rotation: savedRotation } : {}),
+            ...(version ? { expectedVersion: version } : {}),
+          },
           crypto.randomUUID(),
         ),
       clearDraft,
+      // The draft is kept (clearDraft runs on success only) so it can be re-applied after a reload.
+      "days",
     );
   }
 
@@ -165,7 +193,13 @@ export function AvailabilityManager({
 
   function onPreview(settings: CycleSettings) {
     try {
-      const generated = planCycle(days, settings.pattern, { ...settings, today });
+      // BR-4.9: the days of a confirmed assignment are skipped, even with «replace» (v1.8).
+      const generated = planCycle(days, settings.pattern, { ...settings, today, assigned });
+      // X-15: every day from today already has windows and «replace» is off → say so, not silence.
+      if (Object.keys(generated).length === 0) {
+        setCycleError(t(`cycle.error.${emptyPreviewReason(days, today)}`));
+        return;
+      }
       changePlan((old) => ({ ...old, ...generated }));
       setGeneratedWith({
         pattern: settings.pattern,
@@ -194,19 +228,15 @@ export function AvailabilityManager({
 
   function onDayClick(date: string) {
     const day = days.find((d) => d.date === date);
-    if (!day) return;
+    if (!day || !canEditDay(date, today, assigned)) return;
     const status = picker === "clear" ? null : picker;
     if (planned > 0) {
-      if (date >= today) changePlan((old) => ({ ...old, [date]: { status } }));
+      changePlan((old) => ({ ...old, [date]: { status } }));
       return;
     }
     if (day.windows.length > 0 && !day.singleDayWindow) {
       // Never split silently (BR-4.6): the day goes to the draft, the warning below names what saving
       // will cut, and nothing changes until the professional saves.
-      if (date < today) {
-        setNotice({ tone: "danger", text: t("pastDay", { date }) });
-        return;
-      }
       changePlan(() => ({ [date]: { status } }));
       setNotice(null);
       return;
@@ -240,6 +270,14 @@ export function AvailabilityManager({
     const parsed = createAvailabilityWindowInput.safeParse(payload);
     if (!parsed.success) {
       setErrors(toFieldErrors(parsed.error));
+      return;
+    }
+    // X-19, FORM ONLY: a new window, or one whose start moves, cannot start on a past day (as the
+    // calendar, W1-03). The shared schema, the Edge Function and the RPC still accept past windows,
+    // as v1.8 connected did: no backend rule changes here (docs/product/BUSINESS_RULES.md BR-4.6).
+    const formStart = String(form.get("startsAt") ?? "");
+    if (refusesPastStart(formStart, editing ? toLocalInput(editing.startsAt) : null, today)) {
+      setErrors({ startsAt: "v.start.future" });
       return;
     }
     setErrors({});
@@ -332,7 +370,14 @@ export function AvailabilityManager({
           ))}
         </div>
         <p className="text-sm text-muted">{t("pickerHint")}</p>
-        <p className="mb-4 text-sm text-muted">{t("aogHint")}</p>
+        <p className="text-sm text-muted">{t("aogHint")}</p>
+        {/* Legend of the assignment mark + v1.8 «… protegidas también en el servidor» (BR-4.9). */}
+        <p className="mb-4 text-sm text-muted">
+          <span aria-hidden className="font-bold text-navy">
+            ● {t("assignedShort")}
+          </span>{" "}
+          · {t("assignedHint")}
+        </p>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold tracking-wide text-muted uppercase">
           {WEEKDAYS.map((d) => (
@@ -345,6 +390,7 @@ export function AvailabilityManager({
           {cells.map(({ key, day }) => {
             if (day === null) return <div key={key} aria-hidden />;
             const draft = plan[day.date];
+            const isAssigned = assigned.has(day.date);
             const state = draft ? PLANNED_STATE(draft.status) : day.state;
             const label = draft?.cycle
               ? `${dayLabel(state)} · ${t(`cycle.state.${draft.cycle}`)}`
@@ -353,15 +399,21 @@ export function AvailabilityManager({
               <button
                 key={key}
                 type="button"
-                disabled={pending || (planned > 0 && day.date < today)}
+                disabled={pending || !canEditDay(day.date, today, assigned)}
                 onClick={() => onDayClick(day.date)}
-                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}`}
-                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors hover:ring-2 hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
+                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${isAssigned ? `, ${t("assigned")}. ${t("protectedDay")}` : ""}`}
+                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
               >
                 <span className="text-base font-bold tabular-nums">
                   {Number(day.date.slice(-2))}
                 </span>
                 <span className="hidden text-[11px] leading-none sm:block">{dayLabel(state)}</span>
+                {/* Below `sm` only the dot fits the cell (VIS-02 #11); the words are in the label. */}
+                {isAssigned && (
+                  <span aria-hidden className="text-[11px] leading-none font-bold text-navy">
+                    ●<span className="hidden sm:inline"> {t("assignedShort")}</span>
+                  </span>
+                )}
               </button>
             );
           })}
@@ -455,7 +507,7 @@ export function AvailabilityManager({
                 </span>
                 <div className="flex gap-2">
                   <Button
-                    className="min-h-8 px-3 text-xs"
+                    size="sm"
                     onClick={() => {
                       setEditing(w);
                       setErrors({});
@@ -465,13 +517,14 @@ export function AvailabilityManager({
                   >
                     {tRoot("common.edit")}
                   </Button>
-                  <Button
-                    className="min-h-8 px-3 text-xs text-danger"
+                  <ConfirmButton
+                    size="sm"
                     disabled={pending}
-                    onClick={() => run(t("windowDeleted"), () => deleteWindowAction(w.id))}
-                  >
-                    {tRoot("common.delete")}
-                  </Button>
+                    label={tRoot("common.delete")}
+                    confirmLabel={t("confirmDelete")}
+                    cancelLabel={tRoot("common.cancel")}
+                    onConfirm={() => run(t("windowDeleted"), () => deleteWindowAction(w.id))}
+                  />
                 </div>
               </li>
             ))}

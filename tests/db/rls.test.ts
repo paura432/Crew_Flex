@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { PGlite, Transaction } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -9,7 +9,12 @@ import {
   requirementIdByTitle,
   SEED,
 } from "./harness";
+import { APPLICATION_CONFLICTS, APPLICATION_TRANSITIONS } from "../../src/domain/applications";
 import { evaluateMatch, type MatchableRequirement } from "../../src/domain/matching";
+import {
+  canChangeRequirementStatus,
+  REQUIREMENT_STATUSES,
+} from "../../src/domain/work-requirement";
 import { toCandidate } from "../../src/lib/candidate-pool";
 
 const MAD_REQUIREMENT = "B1.1 · A320 line maintenance reinforcement";
@@ -713,6 +718,156 @@ describe("audit", () => {
   });
 });
 
+describe("trigger-only SECURITY DEFINER functions (F1b, migration 20261026100000)", () => {
+  const TRIGGER_FUNCTIONS = [
+    "public.handle_new_user()",
+    "public.audit_requirement_created()",
+    "public.audit_qualification_verified()",
+  ];
+
+  it("no API role holds EXECUTE (Security Advisor finding closed)", async () => {
+    for (const fn of TRIGGER_FUNCTIONS) {
+      const { rows } = await db.query<{ anon: boolean; auth: boolean }>(
+        `select has_function_privilege('anon', $1, 'execute') as anon,
+                has_function_privilege('authenticated', $1, 'execute') as auth`,
+        [fn],
+      );
+      expect(rows[0], fn).toEqual({ anon: false, auth: false });
+    }
+  });
+
+  it("a direct call is refused for authenticated and anon", async () => {
+    for (const userId of [SEED.alpha, null]) {
+      await asUser(db, userId, async (tx) => {
+        for (const fn of TRIGGER_FUNCTIONS) {
+          expect(await queryError(tx, `select ${fn}`), fn).toMatch(
+            /permission denied for function/,
+          );
+        }
+      });
+    }
+  });
+
+  it("sign-up still creates the profile when auth.users is written by a role without EXECUTE", async () => {
+    // Stand-in for GoTrue's supabase_auth_admin: may insert users, holds no EXECUTE on the trigger function.
+    await db.exec(`create role auth_admin_stand_in nologin;
+      grant usage on schema auth to auth_admin_stand_in;
+      grant insert on auth.users to auth_admin_stand_in;`);
+    const { rows: grant } = await db.query<{ can: boolean }>(
+      "select has_function_privilege('auth_admin_stand_in', 'public.handle_new_user()', 'execute') as can",
+    );
+    expect(grant[0]?.can).toBe(false);
+    const id = randomUUID();
+    await db.transaction(async (tx) => {
+      await tx.exec("set local role auth_admin_stand_in");
+      await tx.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         values ($1, 'f1b@crewflex.test', '{"account_type":"professional","display_name":"F1b"}')`,
+        [id],
+      );
+    });
+    const { rows } = await db.query<{ account_type: string; technician: boolean }>(
+      `select p.account_type, exists (select 1 from public.technician_profiles t where t.profile_id = p.id) as technician
+       from public.profiles p where p.id = $1`,
+      [id],
+    );
+    expect(rows).toEqual([{ account_type: "professional", technician: true }]);
+  });
+
+  it("an organization admin's new requirement is still audited (trigger fires under authenticated)", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      const types = await tx.query<{ id: string }>(
+        "select id from public.qualification_types where code = 'B1.1'",
+      );
+      const created = await tx.query<{ id: string }>(
+        `select public.create_work_requirement($1, 'F1b audit check', 'MAD', now(), now() + interval '2 days',
+           'day', 1, 'planned', $2::jsonb) as id`,
+        [
+          mroId,
+          JSON.stringify([{ qualification_type_id: types.rows[0]?.id, requirement_level: "hard" }]),
+        ],
+      );
+      const { rows } = await tx.query<{ action: string; actor_profile_id: string }>(
+        "select action, actor_profile_id from public.audit_events where entity_id = $1",
+        [created.rows[0]?.id],
+      );
+      expect(rows).toEqual([{ action: "requirement.created", actor_profile_id: SEED.adminMro }]);
+    });
+  });
+});
+
+describe("F1c: the other eight advisor DEFINER functions stay callable and answer only for the caller", () => {
+  // Kept on purpose (AUTHORIZATION.md «SECURITY DEFINER functions executable by authenticated»): four RLS
+  // helpers evaluated inside policies as the caller, four RPCs the Edge Functions call with the caller's JWT.
+  const KEPT = [
+    "public.can_view_member(uuid)",
+    "public.get_requirement_candidate_pool(uuid)",
+    "public.get_requirement_external_pool_summary(uuid)",
+    "public.has_org_role(uuid, public.organization_role[])",
+    "public.is_org_member(uuid)",
+    "public.is_platform_admin()",
+    "public.own_qualification_reviews()",
+    "public.review_qualification(uuid, public.verification_status, timestamptz, text, uuid)",
+  ];
+  const ask = (userId: string, sql: string, params: unknown[] = []) =>
+    asUser(db, userId, async (tx) => (await tx.query<{ v: boolean }>(sql, params)).rows[0]?.v);
+
+  it("grants pinned: authenticated may execute, anon may not", async () => {
+    for (const fn of KEPT) {
+      const { rows } = await db.query<{ anon: boolean; auth: boolean }>(
+        `select has_function_privilege('anon', $1, 'execute') as anon,
+                has_function_privilege('authenticated', $1, 'execute') as auth`,
+        [fn],
+      );
+      expect(rows[0], fn).toEqual({ anon: false, auth: true });
+    }
+    await asUser(db, null, async (tx) => {
+      expect(await queryError(tx, "select public.is_platform_admin()")).toMatch(
+        /permission denied for function/,
+      );
+    });
+  });
+
+  it("has_org_role / is_org_member describe the caller's own membership, never someone else's", async () => {
+    const admin = "select public.has_org_role($1, array['admin']::public.organization_role[]) as v";
+    expect(await ask(SEED.adminMro, admin, [mroId])).toBe(true);
+    expect(await ask(SEED.adminOther, admin, [mroId])).toBe(false);
+    expect(await ask(SEED.alpha, admin, [mroId])).toBe(false);
+    const member = "select public.is_org_member($1) as v";
+    expect(await ask(SEED.alpha, member, [mroId])).toBe(true);
+    expect(await ask(SEED.adminOther, member, [mroId])).toBe(false);
+  });
+
+  it("is_platform_admin is true for the platform admin only", async () => {
+    const sql = "select public.is_platform_admin() as v";
+    expect(await ask(SEED.platformAdmin, sql)).toBe(true);
+    expect(await ask(SEED.adminMro, sql)).toBe(false);
+  });
+
+  it("can_view_member: an admin or manager of the member's own organization, nobody else", async () => {
+    const sql = "select public.can_view_member($1) as v";
+    expect(await ask(SEED.adminMro, sql, [SEED.alpha])).toBe(true);
+    expect(await ask(SEED.managerMro, sql, [SEED.alpha])).toBe(true);
+    expect(await ask(SEED.bravo, sql, [SEED.alpha])).toBe(false); // plain colleague
+    expect(await ask(SEED.adminOther, sql, [SEED.alpha])).toBe(false); // other organization
+  });
+
+  it("pool and summary: an unknown requirement and another organization's give the same 42501 (no existence oracle)", async () => {
+    await asUser(db, SEED.adminOther, async (tx) => {
+      for (const fn of [
+        "get_requirement_candidate_pool",
+        "get_requirement_external_pool_summary",
+      ]) {
+        for (const id of [madRequirementId, randomUUID()]) {
+          expect(await queryError(tx, `select * from public.${fn}($1)`, [id]), fn).toMatch(
+            /^not authorized$/,
+          );
+        }
+      }
+    });
+  });
+});
+
 describe("I. integrity backstops in the database (phase 0.8)", () => {
   async function auditActions(tx: Transaction, entityId: string) {
     await tx.exec("reset role");
@@ -1047,7 +1202,8 @@ describe("J. BR-1.4 invariant in the database (E-3, migration 20261015130000)", 
   it("6. editing other fields of a valid requirement keeps working", async () => {
     await asUser(db, SEED.managerMro, async (tx) => {
       await tx.query(
-        "update public.work_requirements set title = 'Renamed need', status = 'covered' where id = $1",
+        // M05: `covered` is no longer set by hand (it comes with D-06 confirmations); pause instead.
+        "update public.work_requirements set title = 'Renamed need', status = 'paused' where id = $1",
         [madRequirementId],
       );
       await tx.exec(commitCheck);
@@ -1098,7 +1254,8 @@ describe("J. BR-1.4 invariant in the database (E-3, migration 20261015130000)", 
     });
   });
 
-  it("L1: a legacy requirement without hard qualifications can still be cancelled, but not reopened", async () => {
+  // M05 (owner 2026-10-22): nothing moves into `cancelled` any more; `closed` is how a need ends.
+  it("L1: a legacy requirement without hard qualifications can still be closed, and stays closed", async () => {
     await db.transaction(async (owner) => {
       // A row that predates the invariant: created as a draft, opened with the trigger disabled.
       const { rows } = await owner.query<{ id: string }>(
@@ -1119,15 +1276,17 @@ describe("J. BR-1.4 invariant in the database (E-3, migration 20261015130000)", 
       );
       await owner.exec(commitCheck);
       await owner.exec("set constraints all deferred");
-      await owner.query("update public.work_requirements set status = 'cancelled' where id = $1", [
+      await owner.query("update public.work_requirements set status = 'closed' where id = $1", [
         rows[0]!.id,
       ]);
-      await owner.exec(commitCheck); // cancelling is always possible
-      await owner.exec("set constraints all deferred");
-      await owner.query("update public.work_requirements set status = 'open' where id = $1", [
-        rows[0]!.id,
-      ]);
-      expect(await queryError(owner, commitCheck)).toMatch(HARD_MISSING);
+      await owner.exec(commitCheck); // closing is always possible
+      expect(
+        await queryError(
+          owner,
+          "update public.work_requirements set status = 'open' where id = $1",
+          [rows[0]!.id],
+        ),
+      ).toMatch(/cannot be (reopened|changed)/); // the frozen-closed trigger fires first
       await owner.rollback();
     });
   });
@@ -1836,7 +1995,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
          select $1, id, '2030-01-01' from public.qualification_types where code = 'HF' returning id`,
         [SEED.platformAdmin],
       );
-      expect(await queryError(tx, review, [rows[0]!.id, "verified", null, null])).toMatch(
+      expect(await queryError(tx, review, [rows[0]!.id, "verified", "Checked", null])).toMatch(
         /own qualification/,
       );
     });
@@ -1877,11 +2036,121 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     });
   });
 
-  it("pending → rejected needs a reason; the owner reads the reason; a decided row cannot be decided again", async () => {
+  it("P12 / T-170 (migration 20261027300000): a verification needs evidence; it stays with the platform, never with the owner", async () => {
     await asUser(db, SEED.platformAdmin, async (tx) => {
       await golfPending(tx);
       const id = await golfB11(tx);
-      expect(await queryError(tx, review, [id, "rejected", "   ", null])).toMatch(/needs a reason/);
+      for (const note of [null, "", "   "]) {
+        expect(await queryError(tx, review, [id, "verified", note, null])).toMatch(
+          /needs evidence/,
+        );
+      }
+      expect(await queryError(tx, review, [id, "verified", "x".repeat(501), null])).toMatch(
+        /too long/,
+      );
+      // Nothing was decided or written by the refused calls.
+      expect(
+        await rowCount(
+          tx,
+          "select 1 from public.qualification_reviews where qualification_id = $1",
+          [id],
+        ),
+      ).toBe(0);
+      const version = (
+        await tx.query<{ v: string }>(
+          "select updated_at::text as v from public.technician_qualifications where id = $1",
+          [id],
+        )
+      ).rows[0]!.v;
+      await tx.query(review, [id, "verified", "  EASA register ref. 123  ", null]);
+      // The platform admin reads the evidence (RLS), trimmed, with the version reviewed.
+      const evidence = await tx.query<Record<string, unknown>>(
+        `select decision, note, reviewed_by, qualification_version::text as qualification_version
+         from public.qualification_reviews where qualification_id = $1`,
+        [id],
+      );
+      expect(evidence.rows).toEqual([
+        {
+          decision: "verified",
+          note: "EASA register ref. 123",
+          reviewed_by: SEED.platformAdmin,
+          qualification_version: version,
+        },
+      ]);
+      // No write grant for anyone, platform admin included.
+      expect(
+        await queryError(
+          tx,
+          "insert into public.qualification_reviews (qualification_id, decision, note, qualification_version) values ($1, 'verified', 'forged', now())",
+          [id],
+        ),
+      ).toMatch(/permission denied/);
+      for (const write of [
+        "update public.qualification_reviews set note = 'forged'",
+        "delete from public.qualification_reviews",
+      ]) {
+        expect(await queryError(tx, write)).toMatch(/permission denied/);
+      }
+      // anon holds no privilege on the table at all.
+      const anon = await tx.query<{ any_privilege: boolean }>(
+        `select bool_or(has_table_privilege('anon', 'public.qualification_reviews', p)) as any_privilege
+         from unnest(array['select', 'insert', 'update', 'delete']) as p`,
+      );
+      expect(anon.rows[0]?.any_privilege).toBe(false);
+      // The owner's column carries no verification evidence (only a rejection's reason, BR-2.6)…
+      await tx.exec("reset role");
+      const own = await tx.query<{ review_note: string | null }>(
+        "select review_note from public.technician_qualifications where id = $1",
+        [id],
+      );
+      expect(own.rows[0]?.review_note).toBeNull();
+      // …and neither the owner nor an organization admin reads the evidence table.
+      for (const who of [GOLF, SEED.adminMro]) {
+        await tx.query("select set_config('request.jwt.claims', $1, true)", [
+          JSON.stringify({ sub: who, role: "authenticated" }),
+        ]);
+        await tx.exec("set local role authenticated");
+        expect(await rowCount(tx, "select * from public.qualification_reviews")).toBe(0);
+        expect(
+          await rowCount(
+            tx,
+            "select * from public.own_qualification_reviews() where qualification_id = $1",
+            [id],
+          ),
+        ).toBe(0);
+        await tx.exec("reset role");
+      }
+    });
+    // A rejection writes the evidence row too and the owner reads its reason.
+    await asUser(db, SEED.platformAdmin, async (tx) => {
+      await golfPending(tx);
+      const id = await golfB11(tx);
+      await tx.query(review, [id, "rejected", "Number not in the register", null]);
+      expect(
+        await rowCount(
+          tx,
+          "select 1 from public.qualification_reviews where qualification_id = $1 and decision = 'rejected' and note = 'Number not in the register'",
+          [id],
+        ),
+      ).toBe(1);
+      await tx.exec("reset role");
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: GOLF, role: "authenticated" }),
+      ]);
+      await tx.exec("set local role authenticated");
+      const own = await tx.query<{ review_note: string }>(
+        "select review_note from public.own_qualification_reviews() where qualification_id = $1",
+        [id],
+      );
+      expect(own.rows[0]?.review_note).toBe("Number not in the register");
+    });
+  });
+
+  it("pending → rejected needs evidence (the reason); the owner reads the reason; a decided row cannot be decided again", async () => {
+    await asUser(db, SEED.platformAdmin, async (tx) => {
+      await golfPending(tx);
+      const id = await golfB11(tx);
+      expect(await queryError(tx, review, [id, "rejected", "   ", null])).toMatch(/needs evidence/);
       expect(await queryError(tx, review, [id, "pending", null, null])).toMatch(
         /verified or rejected/,
       );
@@ -1892,7 +2161,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
         null,
       ]);
       // Second reviewer (or a double click) after the first decision committed: conflict, no change.
-      expect(await queryError(tx, review, [id, "verified", null, null])).toMatch(
+      expect(await queryError(tx, review, [id, "verified", "late", null])).toMatch(
         /not awaiting review/,
       );
       await tx.exec("reset role");
@@ -1928,7 +2197,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
     await asUser(db, SEED.platformAdmin, async (tx) => {
       await golfPending(tx);
       const id = await golfB11(tx);
-      await tx.query(review, [id, "verified", null, null]);
+      await tx.query(review, [id, "verified", "Checked against the register", null]);
       await tx.exec("reset role");
       await tx.query("select set_config('request.jwt.claims', $1, true)", [
         JSON.stringify({ sub: GOLF, role: "authenticated" }),
@@ -1958,7 +2227,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
         await queryError(tx, review, [
           "00000000-0000-4000-8000-00000000dead",
           "verified",
-          null,
+          "Checked",
           null,
         ]),
       ).toMatch(/not found/);
@@ -1969,7 +2238,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
         [id],
       );
       await tx.exec("set local role authenticated");
-      expect(await queryError(tx, review, [id, "verified", null, null])).toMatch(
+      expect(await queryError(tx, review, [id, "verified", "Checked", null])).toMatch(
         /not awaiting review/,
       );
     });
@@ -2020,7 +2289,7 @@ describe("N. qualification review by a platform admin (phase 6, migration 202610
       expect(
         await queryError(
           tx,
-          "select * from public.review_qualification($1, 'verified', $2::timestamptz - interval '1 second', null, null)",
+          "select * from public.review_qualification($1, 'verified', $2::timestamptz - interval '1 second', 'Checked', null)",
           [id, loaded],
         ),
       ).toMatch(/changed since it was loaded/);
@@ -2346,6 +2615,82 @@ describe("O. per-day availability replace (shift-cycle generator, migration 2026
     });
     await asUser(db, null, async (tx) => {
       expect(await queryError(tx, "select * from public.availability_rotations")).toMatch(
+        /permission denied/,
+      );
+    });
+  });
+
+  it("refuses a save made from a stale calendar (W5-03, migration 20261021120000)", async () => {
+    const checked = "select * from public.replace_availability_days($1, $2::jsonb, null, $3)";
+    const version = async (tx: Transaction) =>
+      (await tx.query<{ v: string }>("select public.availability_version() as v")).rows[0]!.v;
+    const first = "6a7b8c9d-0e1f-4a2b-8c3d-4e5f6a7b8c9d";
+    await asUser(db, SEED.delta, async (tx) => {
+      const loaded = await version(tx);
+      expect(loaded).toMatch(/^[0-9a-f]{32}$/);
+      expect(await version(tx)).toBe(loaded); // stable while nothing changes
+      await tx.query(checked, [first, days(["2028-10-01", "available"]), loaded]);
+      const saved = await version(tx);
+      expect(saved).not.toBe(loaded);
+
+      // A second tab still holding `loaded`: CF412, nothing written, the version is unchanged.
+      expect(
+        await queryError(tx, checked, [
+          "7b8c9d0e-1f2a-4b3c-9d4e-5f6a7b8c9d0e",
+          days(["2028-10-02", "unavailable"]),
+          loaded,
+        ]),
+      ).toMatch(/changed since it was loaded/);
+      expect(await version(tx)).toBe(saved);
+      expect(await own(tx, SEED.delta, "2028-10-02T00:00Z", "2028-10-03T00:00Z")).toEqual([]);
+
+      // A retry of the applied request replays (its own write changed the version).
+      const replay = await tx.query<{ replayed: boolean }>(checked, [
+        first,
+        days(["2028-10-01", "available"]),
+        loaded,
+      ]);
+      expect(replay.rows[0]!.replayed).toBe(true);
+
+      // Single-window writes (PostgREST) change it too, so a draft loaded before them conflicts.
+      await tx.query(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+         values ($1, '2028-10-05 08:00Z', '2028-10-05 18:00Z', 'available')`,
+        [SEED.delta],
+      );
+      expect(await version(tx)).not.toBe(saved);
+      expect(
+        await queryError(tx, checked, [
+          "8c9d0e1f-2a3b-4c4d-8e5f-6a7b8c9d0e1f",
+          days(["2028-10-03", "available"]),
+          saved,
+        ]),
+      ).toMatch(/changed since it was loaded/);
+      // Without an expected version (older clients) there is no check.
+      await tx.query(checked, [
+        "9d0e1f2a-3b4c-4d5e-9f6a-7b8c9d0e1f2a",
+        days(["2028-10-03", "available"]),
+        null,
+      ]);
+    });
+    // Each technician has their own version: Delta's writes do not change Alpha's.
+    await asUser(db, SEED.alpha, async (tx) => {
+      const alpha = await version(tx);
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: SEED.delta, role: "authenticated" }),
+      ]);
+      await tx.query(checked, [
+        "0e1f2a3b-4c5d-4e6f-8a7b-8c9d0e1f2a3b",
+        days(["2028-10-04", "available"]),
+        null,
+      ]);
+      await tx.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: SEED.alpha, role: "authenticated" }),
+      ]);
+      expect(await version(tx)).toBe(alpha);
+    });
+    await asUser(db, null, async (tx) => {
+      expect(await queryError(tx, "select public.availability_version()")).toMatch(
         /permission denied/,
       );
     });
@@ -3537,4 +3882,1806 @@ describe("R. closing a requirement (V1.8 job.status, migrations 20261020120000/1
     }
     expect(await status(db)).toBe("open");
   });
+});
+
+describe("S. requirement lifecycle (M05, migrations 20261022130000/130100)", () => {
+  const status = async (tx: { query: PGlite["query"] }) =>
+    (
+      await tx.query<{ status: string }>(
+        "select status from public.work_requirements where id = $1",
+        [madRequirementId],
+      )
+    ).rows[0]?.status;
+
+  it("a manager pauses and resumes; each change is audited with from and to", async () => {
+    await asUser(db, SEED.managerMro, async (tx) => {
+      for (const next of ["paused", "open"]) {
+        await tx.query("update public.work_requirements set status = $2 where id = $1", [
+          madRequirementId,
+          next,
+        ]);
+      }
+      expect(await status(tx)).toBe("open");
+      await tx.exec("reset role");
+      // Same transaction → same created_at: compare as a set.
+      const { rows } = await tx.query<{ metadata: { from: string; to: string } }>(
+        `select metadata from public.audit_events
+         where entity_id = $1 and action = 'requirement.status_changed'`,
+        [madRequirementId],
+      );
+      expect(rows.map((r) => `${r.metadata.from}→${r.metadata.to}`).sort()).toEqual([
+        "open→paused",
+        "paused→open",
+      ]);
+    });
+  });
+
+  it("SQL allows exactly the status changes of the domain table (canChangeRequirementStatus)", async () => {
+    const mismatches: string[] = [];
+    await db.transaction(async (owner) => {
+      for (const from of REQUIREMENT_STATUSES) {
+        for (const to of REQUIREMENT_STATUSES) {
+          if (from === to) continue;
+          await owner.exec("savepoint pair");
+          const { rows } = await owner.query<{ id: string }>(
+            `insert into public.work_requirements (organization_id, title, location, starts_at, ends_at, headcount, status, created_by)
+             values ($1, 'Lifecycle pair', 'MAD', now() + interval '1 day', now() + interval '2 days', 1, $2, $3)
+             returning id`,
+            [mroId, from, SEED.adminMro],
+          );
+          let ok = true;
+          try {
+            await owner.query("update public.work_requirements set status = $2 where id = $1", [
+              rows[0]!.id,
+              to,
+            ]);
+          } catch {
+            ok = false;
+          }
+          await owner.exec("rollback to savepoint pair");
+          if (ok !== canChangeRequirementStatus(from, to))
+            mismatches.push(`${from}→${to}: SQL ${ok}`);
+        }
+      }
+      await owner.rollback();
+    });
+    expect(mismatches).toEqual([]);
+  });
+
+  it("nothing moves into cancelled or covered by hand, not even an admin", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      for (const next of ["cancelled", "covered", "draft"]) {
+        expect(
+          await queryError(
+            tx,
+            `update public.work_requirements set status = '${next}' where id = $1`,
+            [madRequirementId],
+          ),
+        ).toMatch(/is not allowed/);
+      }
+      expect(await status(tx)).toBe("open");
+    });
+  });
+
+  it("a paused requirement can be closed, and then never resumed", async () => {
+    await asUser(db, SEED.adminMro, async (tx) => {
+      for (const next of ["paused", "closed"]) {
+        await tx.query("update public.work_requirements set status = $2 where id = $1", [
+          madRequirementId,
+          next,
+        ]);
+      }
+      expect(
+        await queryError(tx, "update public.work_requirements set status = 'open' where id = $1", [
+          madRequirementId,
+        ]),
+      ).toMatch(/cannot be (reopened|changed)/);
+    });
+  });
+
+  it("plain members and other organizations cannot pause it (no rows touched)", async () => {
+    for (const user of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+      await asUser(db, user, async (tx) => {
+        const { affectedRows } = await tx.query(
+          "update public.work_requirements set status = 'paused' where id = $1",
+          [madRequirementId],
+        );
+        expect(affectedRows ?? 0).toBe(0);
+      });
+    }
+    expect(await status(db)).toBe("open");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// M07 opportunities (D-12), M08 applications (D-06) and the M05 edit — owner decisions of 2026-10-22,
+// migrations 20261022130200 / 20261022130300. Every case runs inside a rolled-back transaction.
+// ---------------------------------------------------------------------------------------------
+
+/** Switches the acting user inside one transaction (null = anon). */
+async function actAs(tx: Transaction, userId: string | null) {
+  await tx.exec("reset role");
+  await tx.query("select set_config('request.jwt.claims', $1, true)", [
+    userId ? JSON.stringify({ sub: userId, role: "authenticated" }) : "",
+  ]);
+  await tx.exec(`set local role ${userId ? "authenticated" : "anon"}`);
+}
+
+/** A statement expected to fail: its SQLSTATE and message (a savepoint keeps the transaction usable). */
+async function sqlError(tx: Transaction, sql: string, params: unknown[] = []) {
+  await tx.exec("savepoint expected_error");
+  try {
+    await tx.query(sql, params);
+  } catch (error) {
+    await tx.exec("rollback to savepoint expected_error");
+    const e = error as { code?: string; message: string };
+    return { code: e.code, message: e.message };
+  }
+  throw new Error(`expected statement to fail: ${sql}`);
+}
+
+/** Owner-side fixture: a requirement with hard B1.1 + TR-A320 and soft SMS (UTC offsets from now()). */
+async function createNeed(
+  tx: Transaction,
+  opts: {
+    org: string;
+    createdBy: string;
+    title?: string;
+    headcount?: number;
+    urgency?: "planned" | "urgent" | "aog";
+    status?: string;
+    startsIn?: string;
+    endsIn?: string;
+  },
+): Promise<string> {
+  await tx.exec("reset role");
+  const { rows } = await tx.query<{ id: string }>(
+    `insert into public.work_requirements
+       (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
+     values ($1, $2, 'Madrid (MAD)', now() + $3::interval, now() + $4::interval, 'day', $5, $6, $7, $8)
+     returning id`,
+    [
+      opts.org,
+      opts.title ?? "Applications fixture",
+      opts.startsIn ?? "5 days",
+      opts.endsIn ?? "8 days",
+      opts.headcount ?? 1,
+      opts.urgency ?? "planned",
+      opts.status === "closed" ? "open" : (opts.status ?? "open"), // closed is frozen: close it below
+      opts.createdBy,
+    ],
+  );
+  const id = rows[0]!.id;
+  await tx.query(
+    `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+     select $1, id, case when code = 'SMS' then 'soft' else 'hard' end::public.requirement_level
+     from public.qualification_types where code in ('B1.1', 'TR-A320', 'SMS')`,
+    [id],
+  );
+  if (opts.status === "closed")
+    await tx.query("update public.work_requirements set status = 'closed' where id = $1", [id]);
+  return id;
+}
+
+/** Owner-side fixture: the seed professionals are available around now (their October windows end). */
+async function makeAvailable(tx: Transaction, profiles: string[]) {
+  await tx.exec("reset role");
+  await tx.query(
+    `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+     select p, now() - interval '30 days', now() + interval '120 days', 'available' from unnest($1::uuid[]) p`,
+    [profiles],
+  );
+}
+
+/** Owner-side shortcut: an application already in `status` (with proposal v1 when the state needs one). */
+async function seedApplication(
+  tx: Transaction,
+  requirementId: string,
+  technician: string,
+  status: string,
+) {
+  await tx.exec("reset role");
+  const id = randomUUID();
+  const proposal = ["proposed", "accepted", "confirmed", "finished", "cancelled"].includes(status)
+    ? randomUUID()
+    : null;
+  const accepted = ["accepted", "confirmed", "finished", "cancelled"].includes(status)
+    ? proposal
+    : null;
+  await tx.query(
+    `insert into public.applications
+       (id, requirement_id, technician_profile_id, status, current_proposal_id, accepted_proposal_id, reason)
+     values ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      id,
+      requirementId,
+      technician,
+      status,
+      proposal,
+      accepted,
+      ["rejected", "cancelled"].includes(status) ? "Fixture" : null,
+    ],
+  );
+  if (proposal) {
+    await tx.query(
+      "insert into public.application_proposals (id, application_id, version, terms) values ($1, $2, 1, '{}')",
+      [proposal, id],
+    );
+  }
+  return id;
+}
+
+interface TransitionRow {
+  application_id: string;
+  status: string;
+  event_id: string;
+  proposal_id: string | null;
+  updated_at: Date;
+  replayed: boolean;
+}
+
+const TRANSITION_SQL = "select * from public.transition_application($1, $2, $3, $4, $5, $6)";
+
+/** The arguments of one transition; the expected version is read as the owner unless given. */
+async function transitionArgs(
+  tx: Transaction,
+  applicationId: string,
+  to: string,
+  opts: { reason?: string; proposalId?: string | null; key?: string; expected?: string },
+) {
+  await tx.exec("reset role");
+  const expected =
+    opts.expected ??
+    (
+      await tx.query<{ updated_at: Date }>(
+        "select updated_at from public.applications where id = $1",
+        [applicationId],
+      )
+    ).rows[0]?.updated_at.toISOString() ??
+    new Date().toISOString();
+  return [
+    applicationId,
+    to,
+    expected,
+    opts.key ?? randomUUID(),
+    opts.reason ?? null,
+    opts.proposalId ?? null,
+  ];
+}
+
+async function step(
+  tx: Transaction,
+  actor: string,
+  applicationId: string,
+  to: string,
+  opts: { reason?: string; proposalId?: string | null; key?: string; expected?: string } = {},
+): Promise<TransitionRow> {
+  const args = await transitionArgs(tx, applicationId, to, opts);
+  await actAs(tx, actor);
+  return (await tx.query<TransitionRow>(TRANSITION_SQL, args)).rows[0]!;
+}
+
+async function stepError(
+  tx: Transaction,
+  actor: string,
+  applicationId: string,
+  to: string,
+  opts: { reason?: string; proposalId?: string | null; key?: string; expected?: string } = {},
+) {
+  const args = await transitionArgs(tx, applicationId, to, opts);
+  await actAs(tx, actor);
+  return sqlError(tx, TRANSITION_SQL, args);
+}
+
+async function applyAs(
+  tx: Transaction,
+  technician: string,
+  requirementId: string,
+  key = randomUUID(),
+) {
+  await actAs(tx, technician);
+  return (
+    await tx.query<{ id: string; replayed: boolean }>(
+      "select * from public.apply_to_requirement($1, $2, true)",
+      [requirementId, key],
+    )
+  ).rows[0]!;
+}
+
+/** Received → shortlisted → proposed (v1) → accepted, the organization side acting as `manager`. */
+async function toAccepted(
+  tx: Transaction,
+  manager: string,
+  technician: string,
+  applicationId: string,
+) {
+  await step(tx, manager, applicationId, "shortlisted");
+  const proposed = await step(tx, manager, applicationId, "proposed");
+  await step(tx, technician, applicationId, "accepted", { proposalId: proposed.proposal_id });
+  return proposed;
+}
+
+/** Owner-side: events, audit rows and status of one application. */
+async function trail(tx: Transaction, applicationId: string) {
+  await tx.exec("reset role");
+  const { rows } = await tx.query<{ events: number; audits: number; status: string }>(
+    `select (select count(*)::int from public.application_events where application_id = $1) as events,
+            (select count(*)::int from public.audit_events where entity_id = $1) as audits,
+            (select status::text from public.applications where id = $1) as status`,
+    [applicationId],
+  );
+  return rows[0]!;
+}
+
+async function requirementStatus(tx: Transaction, id: string) {
+  await tx.exec("reset role");
+  return (
+    await tx.query<{ status: string }>(
+      "select status from public.work_requirements where id = $1",
+      [id],
+    )
+  ).rows[0]?.status;
+}
+
+const conflict = (reason: (typeof APPLICATION_CONFLICTS)[number]) =>
+  `CFA${String(APPLICATION_CONFLICTS.indexOf(reason) + 1).padStart(2, "0")}`;
+
+describe("U. opportunities for every professional (M07, D-12, migration 20261022130200)", () => {
+  let airlineId: string;
+  beforeAll(async () => {
+    airlineId = await orgIdByName(db, "Demo Airline Ops Barcelona");
+  });
+
+  it("every professional — `private` included — lists exactly the open, current requirements of every organization", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const listed = [
+        await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, title: "U open MRO" }),
+        await createNeed(tx, { org: otherOrgId, createdBy: SEED.adminOther, title: "U open LIS" }),
+        await createNeed(tx, {
+          org: airlineId,
+          createdBy: SEED.adminAirline,
+          title: "U open BCN",
+          urgency: "aog",
+        }),
+        // Started but not ended: still published (applying is refused, CFA02).
+        await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, startsIn: "-1 day" }),
+      ];
+      const hidden = [];
+      for (const status of ["draft", "paused", "covered", "closed", "cancelled"])
+        hidden.push(await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, status }));
+      hidden.push(
+        await createNeed(tx, {
+          org: otherOrgId,
+          createdBy: SEED.adminOther,
+          startsIn: "-10 days",
+          endsIn: "-1 day",
+        }),
+      );
+      const truth = (
+        await tx.query<{ id: string }>(
+          "select id from public.work_requirements where status = 'open' and ends_at > now() order by starts_at, id",
+        )
+      ).rows.map((r) => r.id);
+      expect(truth).toEqual(expect.arrayContaining(listed));
+
+      for (const user of [
+        SEED.delta,
+        SEED.hotelPrivate,
+        SEED.alpha,
+        SEED.managerMro,
+        SEED.platformAdmin,
+      ]) {
+        // v2-27 (20261024100000, T-90): never the requirements of the caller's own organizations.
+        await tx.exec("reset role");
+        const own = new Set(
+          (
+            await tx.query<{ id: string }>(
+              `select wr.id from public.work_requirements wr
+               join public.organization_members m on m.organization_id = wr.organization_id
+               where m.profile_id = $1`,
+              [user],
+            )
+          ).rows.map((r) => r.id),
+        );
+        const expected = truth.filter((id) => !own.has(id));
+        await actAs(tx, user);
+        const { rows } = await tx.query<{ id: string; total: number }>(
+          "select id, total from public.list_opportunities()",
+        );
+        expect(rows.map((r) => r.id)).toEqual(expected); // deterministic: soonest first, then id
+        expect(Number(rows[0]?.total)).toBe(expected.length);
+        for (const id of hidden) expect(rows.some((r) => r.id === id)).toBe(false);
+      }
+    });
+  });
+
+  it("returns the fixed projection only: organization name, no ids of people or organizations, no counts", async () => {
+    await asUser(db, SEED.hotelPrivate, async (tx) => {
+      const id = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await actAs(tx, SEED.hotelPrivate);
+      const { rows } = await tx.query<Record<string, unknown>>(
+        "select * from public.list_opportunities($1)",
+        [id],
+      );
+      expect(rows).toHaveLength(1);
+      expect(Object.keys(rows[0]!).sort()).toEqual(
+        [
+          "created_at",
+          "ends_at",
+          "headcount",
+          "id",
+          "location",
+          "organization_name",
+          "qualifications",
+          "shift",
+          "starts_at",
+          "title",
+          "total",
+          "urgency",
+          // requirement builder terms (20261023600000; tests/db/requirement-builder.test.ts)
+          "conditions",
+          "country",
+          "description",
+          "shifts",
+          "time_zone",
+          // the represented client's name, null here (20261024500100; tests/db/recruiter.test.ts)
+          "client_name",
+        ].sort(),
+      );
+      expect(rows[0]!.organization_name).toBe("Demo MRO Madrid");
+      const quals = rows[0]!.qualifications as Record<string, unknown>[];
+      expect(quals.map((q) => [q.code, q.level])).toEqual([
+        ["B1.1", "hard"],
+        ["TR-A320", "hard"],
+        ["SMS", "soft"],
+      ]);
+      for (const q of quals)
+        expect(Object.keys(q).sort()).toEqual(["code", "level", "name", "qualificationTypeId"]);
+      expect(JSON.stringify(rows[0])).not.toContain(SEED.adminMro); // created_by never leaves
+      expect(JSON.stringify(rows[0])).not.toContain(mroId);
+    });
+  });
+
+  it("filters: one id (hidden ones are absent), urgency, literal text search, and a cap of 200", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const paused = await createNeed(tx, {
+        org: mroId,
+        createdBy: SEED.adminMro,
+        status: "paused",
+      });
+      const aog = await createNeed(tx, {
+        org: airlineId,
+        createdBy: SEED.adminAirline,
+        urgency: "aog",
+        title: "Engine change 100% AOG",
+      });
+      await tx.query(
+        `with wr as (
+           insert into public.work_requirements
+             (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by)
+           select $1, 'Bulk need ' || g, 'LIS', now() + interval '3 days', now() + interval '4 days', 'day', 1,
+                  'planned', 'open', $2
+           from generate_series(1, 205) g
+           returning id)
+         insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+         select wr.id, qt.id, 'hard' from wr, public.qualification_types qt where qt.code = 'B2'`,
+        [otherOrgId, SEED.adminOther],
+      );
+      await actAs(tx, SEED.delta);
+      const count = async (sql: string, params: unknown[] = []) =>
+        (await tx.query<{ id: string; urgency: string; total: number }>(sql, params)).rows;
+
+      expect(await count("select * from public.list_opportunities($1)", [paused])).toEqual([]);
+      expect((await count("select * from public.list_opportunities($1)", [aog])).length).toBe(1);
+      const aogOnly = await count("select * from public.list_opportunities(p_urgency => 'aog')");
+      expect(aogOnly.length).toBeGreaterThan(0);
+      expect(aogOnly.every((r) => r.urgency === "aog")).toBe(true);
+      // Case-insensitive, on the organization name too; `%` is a literal, never a wildcard.
+      const byOrg = await count("select * from public.list_opportunities(p_q => 'demo AIRLINE')");
+      expect(byOrg.map((r) => r.id)).toContain(aog);
+      expect(
+        (await count("select * from public.list_opportunities(p_q => '100%')")).map((r) => r.id),
+      ).toEqual([aog]);
+      expect(await count("select * from public.list_opportunities(p_q => '%')")).toEqual(
+        await count("select * from public.list_opportunities(p_q => '100%')"),
+      );
+      const capped = await count("select * from public.list_opportunities(p_limit => 1000)");
+      expect(capped).toHaveLength(200);
+      expect(Number(capped[0]!.total)).toBeGreaterThan(205);
+      const one = await count("select * from public.list_opportunities(p_limit => 1)");
+      expect(one).toHaveLength(1);
+      expect(Number(one[0]!.total)).toBe(Number(capped[0]!.total));
+    });
+  });
+
+  it("organization accounts list the network minus their own (v2-20, 20261024100000), anon is denied, and the projection view is private", async () => {
+    for (const [user, org] of [
+      [SEED.adminMro, () => mroId],
+      [SEED.adminOther, () => otherOrgId],
+      [SEED.adminAirline, () => airlineId],
+    ] as const) {
+      await asUser(db, user, async (tx) => {
+        const own = await createNeed(tx, { org: org(), createdBy: user });
+        await actAs(tx, user);
+        const { rows } = await tx.query<{ id: string }>(
+          "select id from public.list_opportunities()",
+        );
+        expect(rows.some((r) => r.id === own)).toBe(false);
+      });
+    }
+    await asUser(db, null, async (tx) => {
+      for (const sql of [
+        "select * from public.list_opportunities()",
+        "select * from public.own_candidate_profile()",
+      ])
+        expect((await sqlError(tx, sql)).message).toMatch(/permission denied/);
+    });
+    await asUser(db, SEED.delta, async (tx) => {
+      expect((await sqlError(tx, "select * from app_private.requirement_cards")).message).toMatch(
+        /permission denied/,
+      );
+    });
+  });
+
+  it("publication opens no direct read or write path (still 0 rows; pool and edits refused)", async () => {
+    for (const user of [SEED.delta, SEED.hotelPrivate]) {
+      await asUser(db, user, async (tx) => {
+        for (const table of [
+          "work_requirements",
+          "organizations",
+          "work_requirement_qualifications",
+          "audit_events",
+          "applications",
+        ])
+          expect(await rowCount(tx, `select * from public.${table}`)).toBe(0);
+        expect(
+          (
+            await sqlError(tx, "select * from public.get_requirement_candidate_pool($1)", [
+              lisRequirementId,
+            ])
+          ).code,
+        ).toBe("42501");
+        const { affectedRows } = await tx.query(
+          "update public.work_requirements set title = 'Hijacked' where id = $1",
+          [lisRequirementId],
+        );
+        expect(affectedRows ?? 0).toBe(0);
+      });
+    }
+  });
+
+  it("own_candidate_profile returns the caller's own row only, in the candidate-pool shape", async () => {
+    await asUser(db, SEED.managerMro, async (tx) => {
+      const own = await tx.query("select * from public.own_candidate_profile()");
+      expect(own.rows).toHaveLength(1);
+      const me = toCandidate(own.rows[0]);
+      expect(me.id).toBe(SEED.managerMro); // a manager never reads a colleague (Alpha) through it
+      await actAs(tx, SEED.delta);
+      const delta = toCandidate(
+        (
+          await tx.query("select * from public.own_candidate_profile($1, $2)", [
+            "2026-10-18T00:00Z",
+            "2026-10-19T00:00Z",
+          ])
+        ).rows[0],
+      );
+      expect(delta.id).toBe(SEED.delta);
+      expect(delta.qualifications.map((q) => q.code)).toEqual([
+        "B1.1",
+        "EWIS",
+        "FTS",
+        "HF",
+        "TR-A320",
+      ]);
+      expect(delta.availability).toHaveLength(1); // the October window overlaps the range
+      await actAs(tx, SEED.adminMro); // organization account: no technician profile
+      expect(await rowCount(tx, "select * from public.own_candidate_profile()")).toBe(0);
+    });
+  });
+});
+
+describe("V. applications: the D-06 state machine in the database (migration 20261022130300)", () => {
+  const TECHS = [SEED.delta, SEED.echo, SEED.hotelPrivate, SEED.alpha];
+
+  it("T1: app_private.application_transitions is exactly APPLICATION_TRANSITIONS (Q7: no accepted → rejected)", async () => {
+    const { rows } = await db.query<{
+      from_status: string;
+      to_status: string;
+      actor: string;
+      reason_required: boolean;
+    }>(
+      "select from_status, to_status, actor, reason_required from app_private.application_transitions",
+    );
+    const sql = rows.map((r) => `${r.from_status}>${r.to_status}:${r.actor}:${r.reason_required}`);
+    const ts = APPLICATION_TRANSITIONS.map(
+      (t) => `${t.from}>${t.to}:${t.actor}:${t.reason === true}`,
+    );
+    expect(sql.sort()).toEqual(ts.sort());
+    expect(sql.some((s) => s.startsWith("accepted>rejected"))).toBe(false);
+  });
+
+  it("the full journey: apply, shortlist, propose v1, accept, confirm; the last seat covers the requirement once", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 2 });
+      await makeAvailable(tx, [SEED.delta, SEED.echo]);
+      const a = await applyAs(tx, SEED.delta, need);
+      const b = await applyAs(tx, SEED.echo, need);
+      expect(a.replayed).toBe(false);
+      await toAccepted(tx, SEED.managerMro, SEED.delta, a.id);
+      await toAccepted(tx, SEED.managerMro, SEED.echo, b.id);
+      const first = await step(tx, SEED.managerMro, a.id, "confirmed");
+      expect([first.status, first.replayed]).toEqual(["confirmed", false]);
+      expect(await requirementStatus(tx, need)).toBe("open"); // 1 of 2 seats
+      await step(tx, SEED.adminMro, b.id, "confirmed");
+      expect(await requirementStatus(tx, need)).toBe("covered");
+
+      // One audit row per success, ids and flags only; technician-side rows carry no organization.
+      const audit = await tx.query<{
+        action: string;
+        actor_profile_id: string | null;
+        organization_id: string | null;
+        metadata: Record<string, unknown>;
+      }>(
+        "select action, actor_profile_id, organization_id, metadata from public.audit_events where entity_id = $1 order by action",
+        [a.id],
+      );
+      expect(audit.rows.map((r) => r.action).sort()).toEqual(
+        [
+          "application.accepted",
+          "application.confirmed",
+          "application.proposed",
+          "application.received",
+          "application.shortlisted",
+        ].sort(),
+      );
+      for (const row of audit.rows) {
+        const techSide = ["application.received", "application.accepted"].includes(row.action);
+        expect(row.organization_id).toBe(techSide ? null : mroId);
+        expect(Object.keys(row.metadata).sort()).toEqual(
+          [
+            "actor",
+            "from",
+            "proposal_version",
+            "reason_provided",
+            "request_id",
+            "requirement_id",
+            "to",
+            // Applying records the explicit share consent of the form (a flag, never text).
+            ...(row.action === "application.received" ? ["share_consent"] : []),
+          ].sort(),
+        );
+      }
+      const covered = await tx.query<{ actor_profile_id: string | null; metadata: unknown }>(
+        "select actor_profile_id, metadata from public.audit_events where entity_id = $1 and action = 'requirement.status_changed'",
+        [need],
+      );
+      expect(covered.rows).toEqual([
+        { actor_profile_id: null, metadata: { from: "open", to: "covered", system: true } },
+      ]);
+
+      // Both parties read the same timeline (no person ids, no free text).
+      await actAs(tx, SEED.delta);
+      const mine = await tx.query<{
+        history: { from: string | null; to: string; actor: string }[];
+      }>("select history from public.get_my_applications() where application_id = $1", [a.id]);
+      expect(mine.rows[0]!.history.map((h) => `${h.from}>${h.to}:${h.actor}`)).toEqual([
+        "null>received:technician",
+        "received>shortlisted:organization",
+        "shortlisted>proposed:organization",
+        "proposed>accepted:technician",
+        "accepted>confirmed:organization",
+      ]);
+    });
+  });
+
+  it("T2: an invalid transition is 55000 and writes nothing; terminal states have no way out", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      const { id } = await applyAs(tx, SEED.delta, need);
+      const before = await trail(tx, id);
+      expect((await stepError(tx, SEED.managerMro, id, "confirmed")).code).toBe("55000");
+      expect(await trail(tx, id)).toEqual(before);
+      await step(tx, SEED.delta, id, "withdrawn");
+      for (const [actor, to] of [
+        [SEED.managerMro, "shortlisted"],
+        [SEED.delta, "withdrawn"],
+        [SEED.managerMro, "rejected"],
+      ] as const) {
+        const error = await stepError(tx, actor, id, to, to === "rejected" ? { reason: "x" } : {});
+        expect(error.code).toBe("55000");
+      }
+      expect((await trail(tx, id)).status).toBe("withdrawn");
+    });
+  });
+
+  it("T3: the wrong side is 42501; strangers get exactly what a random id gets (P0002); no self-confirm", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      const { id } = await applyAs(tx, SEED.delta, need);
+      expect((await stepError(tx, SEED.delta, id, "shortlisted")).code).toBe("42501");
+      const random = await stepError(tx, SEED.adminOther, randomUUID(), "shortlisted");
+      expect(random.code).toBe("P0002");
+      for (const stranger of [SEED.adminOther, SEED.charlieMember, SEED.echo, SEED.platformAdmin]) {
+        expect(await stepError(tx, stranger, id, "shortlisted")).toEqual(random);
+      }
+      // A manager who applied to their own organization's requirement never acts on it for the org.
+      const self = await seedApplication(tx, need, SEED.managerMro, "accepted");
+      expect((await stepError(tx, SEED.managerMro, self, "confirmed")).code).toBe("42501");
+      expect((await trail(tx, id)).status).toBe("received");
+    });
+  });
+
+  it("T4 (sequential; the concurrent race is in db-race-check.sh): the second confirm of the last seat is CFA06", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 1 });
+      await makeAvailable(tx, [SEED.delta, SEED.echo]);
+      const a = await applyAs(tx, SEED.delta, need);
+      const b = await applyAs(tx, SEED.echo, need);
+      await toAccepted(tx, SEED.managerMro, SEED.delta, a.id);
+      await toAccepted(tx, SEED.managerMro, SEED.echo, b.id);
+      await step(tx, SEED.managerMro, a.id, "confirmed");
+      const before = await trail(tx, b.id);
+      expect((await stepError(tx, SEED.managerMro, b.id, "confirmed")).code).toBe(
+        conflict("HEADCOUNT_REACHED"),
+      );
+      expect(await trail(tx, b.id)).toEqual(before);
+      await tx.exec("reset role");
+      const covered = await rowCount(
+        tx,
+        "select 1 from public.audit_events where entity_id = $1 and metadata ->> 'to' = 'covered'",
+        [need],
+      );
+      expect(covered).toBe(1);
+    });
+  });
+
+  it("T5 (R-08): a new proposal version needs a new acceptance; a stale version is CFA07; proposals are immutable", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      const { id } = await applyAs(tx, SEED.delta, need);
+      const v1 = await toAccepted(tx, SEED.managerMro, SEED.delta, id);
+      const v2 = await step(tx, SEED.managerMro, id, "proposed"); // accepted → proposed
+      expect(v2.proposal_id).not.toBe(v1.proposal_id);
+      expect(
+        (await stepError(tx, SEED.delta, id, "accepted", { proposalId: v1.proposal_id })).code,
+      ).toBe(conflict("PROPOSAL_STALE"));
+      await tx.exec("reset role");
+      const row = await tx.query<{ status: string; accepted_proposal_id: string }>(
+        "select status, accepted_proposal_id from public.applications where id = $1",
+        [id],
+      );
+      expect(row.rows[0]).toEqual({ status: "proposed", accepted_proposal_id: v1.proposal_id });
+      const versions = await tx.query<{ version: number; terms: Record<string, unknown> }>(
+        "select version, terms from public.application_proposals where application_id = $1 order by version",
+        [id],
+      );
+      expect(versions.rows.map((r) => r.version)).toEqual([1, 2]);
+      expect(Object.keys(versions.rows[0]!.terms).sort()).toEqual(
+        [
+          "endsAt",
+          "headcount",
+          "location",
+          "organizationName",
+          "qualifications",
+          "shift",
+          "startsAt",
+          "title",
+          "urgency",
+          // requirement builder terms (20261023600000), frozen per version too
+          "conditions",
+          "country",
+          "description",
+          "shifts",
+          "timeZone",
+          // the represented client as recorded (20261027200000, T-169; v1.8 jobSnapshot.client), null for an MRO
+          "clientName",
+        ].sort(),
+      );
+      await step(tx, SEED.delta, id, "accepted", { proposalId: v2.proposal_id });
+      await tx.exec("reset role");
+      expect(
+        (
+          await sqlError(tx, "update public.application_proposals set version = 9 where id = $1", [
+            v1.proposal_id,
+          ])
+        ).code,
+      ).toBe("55000"); // even the owner
+      await actAs(tx, SEED.delta);
+      expect(
+        (
+          await sqlError(tx, "update public.application_proposals set terms = '{}' where id = $1", [
+            v2.proposal_id,
+          ])
+        ).message,
+      ).toMatch(/permission denied/);
+    });
+  });
+
+  it("T6/T7: a replay returns the same event (one event, one audit row); the same key with another payload is CF409", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      const key = randomUUID();
+      const applied = await applyAs(tx, SEED.delta, need, key);
+      expect(await applyAs(tx, SEED.delta, need, key)).toEqual({ id: applied.id, replayed: true });
+      const expected = (await transitionArgs(tx, applied.id, "shortlisted", {}))[2] as string;
+      const transitionKey = randomUUID();
+      const first = await step(tx, SEED.managerMro, applied.id, "shortlisted", {
+        key: transitionKey,
+        expected,
+      });
+      const again = await step(tx, SEED.managerMro, applied.id, "shortlisted", {
+        key: transitionKey,
+        expected,
+      });
+      expect(again).toEqual({ ...first, replayed: true });
+      expect(await trail(tx, applied.id)).toEqual({ events: 2, audits: 2, status: "shortlisted" });
+      const other = await stepError(tx, SEED.managerMro, applied.id, "rejected", {
+        key: transitionKey,
+        reason: "Other payload",
+      });
+      expect(other.code).toBe("CF409");
+    });
+  });
+
+  it("T8: a stale expectedUpdatedAt is CF412 and changes nothing", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      const { id } = await applyAs(tx, SEED.delta, need);
+      const error = await stepError(tx, SEED.managerMro, id, "shortlisted", {
+        expected: "2026-01-01T00:00:00.000Z",
+      });
+      expect(error.code).toBe("CF412");
+      expect((await trail(tx, id)).status).toBe("received");
+    });
+  });
+
+  it("T9: confirmation re-checks everything at commit, each failure alone, nothing written", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const accepted = async (
+        opts: Parameters<typeof createNeed>[1] = { org: mroId, createdBy: SEED.adminMro },
+      ) => {
+        const need = await createNeed(tx, opts);
+        const { id } = await applyAs(tx, SEED.delta, need);
+        await toAccepted(
+          tx,
+          opts.org === mroId ? SEED.managerMro : SEED.adminOther,
+          SEED.delta,
+          id,
+        );
+        return { need, id };
+      };
+      const refused = async (
+        id: string,
+        manager: string,
+        reason: (typeof APPLICATION_CONFLICTS)[number],
+      ) => {
+        const before = await trail(tx, id);
+        expect((await stepError(tx, manager, id, "confirmed")).code).toBe(conflict(reason));
+        expect(await trail(tx, id)).toEqual(before);
+      };
+      await makeAvailable(tx, [SEED.delta]);
+
+      // A re-dated hard qualification goes back to pending.
+      const q = await accepted();
+      await actAs(tx, SEED.delta);
+      await tx.query(
+        `update public.technician_qualifications set expires_at = date '2030-01-01'
+         where technician_profile_id = $1 and qualification_type_id = (select id from public.qualification_types where code = 'B1.1')`,
+        [SEED.delta],
+      );
+      await refused(q.id, SEED.managerMro, "QUALIFICATION_INVALID");
+      await tx.exec("reset role");
+      await tx.query(
+        `update public.technician_qualifications set verification_status = 'verified'
+         where technician_profile_id = $1 and qualification_type_id = (select id from public.qualification_types where code = 'B1.1')`,
+        [SEED.delta],
+      );
+
+      // A window cut inside the period.
+      const w = await accepted();
+      await actAs(tx, SEED.delta);
+      await tx.query(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+         values ($1, now() + interval '6 days', now() + interval '6 days 1 hour', 'unavailable')`,
+        [SEED.delta],
+      );
+      await refused(w.id, SEED.managerMro, "AVAILABILITY_INCOMPLETE");
+      await tx.exec("reset role");
+      await tx.query(
+        "delete from public.availability_windows where technician_profile_id = $1 and status = 'unavailable'",
+        [SEED.delta],
+      );
+
+      // `aog_only` only: refused for a planned need, accepted for an AOG one (BR-4.8).
+      const planned = await accepted();
+      const aog = await accepted({
+        org: mroId,
+        createdBy: SEED.adminMro,
+        urgency: "aog",
+        startsIn: "20 days",
+        endsIn: "22 days",
+      });
+      await tx.exec("reset role");
+      await tx.query("delete from public.availability_windows where technician_profile_id = $1", [
+        SEED.delta,
+      ]);
+      await tx.query(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+         values ($1, now(), now() + interval '60 days', 'aog_only')`,
+        [SEED.delta],
+      );
+      await refused(planned.id, SEED.managerMro, "AVAILABILITY_INCOMPLETE");
+      expect((await step(tx, SEED.managerMro, aog.id, "confirmed")).status).toBe("confirmed");
+      // N-04 (20261023300000): the confirmed AOG assignment keeps its availability, so the AOG-only
+      // window goes only once the ordinary one covers those days too.
+      await makeAvailable(tx, [SEED.delta]);
+      await tx.query(
+        "delete from public.availability_windows where technician_profile_id = $1 and status = 'aog_only'",
+        [SEED.delta],
+      );
+
+      // Another organization's confirmed assignment overlaps (the AOG one above is 20–22 days out).
+      const lisbon = await accepted({
+        org: otherOrgId,
+        createdBy: SEED.adminOther,
+        startsIn: "21 days",
+        endsIn: "23 days",
+      });
+      await refused(lisbon.id, SEED.adminOther, "OVERLAPPING_ASSIGNMENT");
+
+      // Paused requirement, then a started one (owner fixture: the period cannot be edited any more).
+      const paused = await accepted();
+      await actAs(tx, SEED.managerMro);
+      await tx.query("update public.work_requirements set status = 'paused' where id = $1", [
+        paused.need,
+      ]);
+      await refused(paused.id, SEED.managerMro, "REQUIREMENT_NOT_OPEN");
+      const started = await createNeed(tx, {
+        org: mroId,
+        createdBy: SEED.adminMro,
+        startsIn: "-1 hour",
+        endsIn: "2 days",
+      });
+      const late = await seedApplication(tx, started, SEED.delta, "accepted");
+      await refused(late, SEED.managerMro, "REQUIREMENT_STARTED");
+    });
+  });
+
+  it("T10 (T-10): the reason is required exactly for rejected/cancelled, 1–1000 characters, and both parties read it", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      const { id } = await applyAs(tx, SEED.delta, need);
+      for (const reason of [undefined, "   ", "x".repeat(1001)])
+        expect((await stepError(tx, SEED.managerMro, id, "rejected", { reason })).code).toBe(
+          "22023",
+        );
+      expect((await stepError(tx, SEED.managerMro, id, "shortlisted", { reason: "No" })).code).toBe(
+        "22023",
+      );
+      expect(
+        (await stepError(tx, SEED.managerMro, id, "shortlisted", { proposalId: randomUUID() }))
+          .code,
+      ).toBe("22023");
+      await step(tx, SEED.managerMro, id, "rejected", { reason: "  Missing B1.1 on the dates  " });
+      await actAs(tx, SEED.delta);
+      const mine = await tx.query<{ reason: string }>(
+        "select reason from public.get_my_applications() where application_id = $1",
+        [id],
+      );
+      expect(mine.rows[0]!.reason).toBe("Missing B1.1 on the dates");
+      await actAs(tx, SEED.managerMro);
+      const theirs = await tx.query<{ reason: string }>(
+        "select reason from public.get_requirement_applications($1) where application_id = $2",
+        [need, id],
+      );
+      expect(theirs.rows[0]!.reason).toBe("Missing B1.1 on the dates");
+      await tx.exec("reset role");
+      const audit = await tx.query<{ metadata: Record<string, unknown> }>(
+        "select metadata from public.audit_events where entity_id = $1 and action = 'application.rejected'",
+        [id],
+      );
+      expect(audit.rows[0]!.metadata.reason_provided).toBe(true);
+      expect(JSON.stringify(audit.rows)).not.toContain("Missing B1.1");
+    });
+  });
+
+  it("T11: a rolled-back transition leaves neither its event nor its audit row; a failed confirm writes none", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      const { id } = await applyAs(tx, SEED.delta, need);
+      const before = await trail(tx, id);
+      await tx.exec("savepoint t11");
+      await step(tx, SEED.managerMro, id, "shortlisted");
+      expect(await trail(tx, id)).toEqual({ events: 2, audits: 2, status: "shortlisted" });
+      await tx.exec("rollback to savepoint t11");
+      expect(await trail(tx, id)).toEqual(before);
+    });
+  });
+
+  it("T12: own rows only; organizations read nothing directly; nobody writes the tables", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta, SEED.echo]);
+      const mine = await applyAs(tx, SEED.delta, need);
+      await applyAs(tx, SEED.echo, need);
+      await step(tx, SEED.managerMro, mine.id, "shortlisted");
+      await step(tx, SEED.managerMro, mine.id, "proposed");
+      await actAs(tx, SEED.delta);
+      expect(
+        (await tx.query<{ id: string }>("select id from public.applications")).rows.map(
+          (r) => r.id,
+        ),
+      ).toEqual([mine.id]);
+      expect(await rowCount(tx, "select * from public.application_events")).toBe(3);
+      expect(await rowCount(tx, "select * from public.application_proposals")).toBe(1);
+      for (const user of [SEED.managerMro, SEED.adminMro, SEED.charlieMember, SEED.adminOther]) {
+        await actAs(tx, user);
+        for (const table of ["applications", "application_events", "application_proposals"])
+          expect(await rowCount(tx, `select * from public.${table}`)).toBe(0);
+      }
+      for (const user of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+        await actAs(tx, user);
+        expect(
+          (await sqlError(tx, "select * from public.get_requirement_applications($1)", [need]))
+            .code,
+        ).toBe("42501");
+        expect(
+          (
+            await sqlError(tx, "select * from public.get_requirement_applications($1)", [
+              randomUUID(),
+            ])
+          ).code,
+        ).toBe("42501");
+      }
+      await actAs(tx, SEED.platformAdmin); // support: read-only
+      expect(
+        await rowCount(tx, "select * from public.applications where requirement_id = $1", [need]),
+      ).toBe(2);
+      for (const user of [SEED.delta, SEED.managerMro, SEED.platformAdmin]) {
+        await actAs(tx, user);
+        for (const sql of [
+          "update public.applications set status = 'confirmed' where id = $1",
+          "delete from public.applications where id = $1",
+          "delete from public.application_events where application_id = $1",
+        ])
+          expect((await sqlError(tx, sql, [mine.id])).message).toMatch(/permission denied/);
+        expect(
+          (
+            await sqlError(
+              tx,
+              "insert into public.applications (requirement_id, technician_profile_id) values ($1, $2)",
+              [need, user],
+            )
+          ).message,
+        ).toMatch(/permission denied/);
+      }
+    });
+  });
+
+  it("T13 (Q5, T-08, T-09): apply rules — one active application, re-apply only after withdrawn, eligible and before the start", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta, SEED.echo, SEED.alpha]);
+      const first = await applyAs(tx, SEED.delta, need);
+      await actAs(tx, SEED.delta);
+      const applyError = (requirementId: string) =>
+        sqlError(tx, "select * from public.apply_to_requirement($1, $2, true)", [
+          requirementId,
+          randomUUID(),
+        ]);
+      expect((await applyError(need)).code).toBe(conflict("ALREADY_APPLIED"));
+      await tx.exec("reset role");
+      expect(
+        (
+          await sqlError(
+            tx,
+            "insert into public.applications (requirement_id, technician_profile_id) values ($1, $2)",
+            [need, SEED.delta],
+          )
+        ).code,
+      ).toBe("23505"); // the unique index is the backstop
+      await step(tx, SEED.delta, first.id, "withdrawn");
+      const second = await applyAs(tx, SEED.delta, need);
+      expect(second.id).not.toBe(first.id);
+      await tx.exec("reset role");
+      expect(
+        await rowCount(
+          tx,
+          "select 1 from public.applications where requirement_id = $1 and technician_profile_id = $2",
+          [need, SEED.delta],
+        ),
+      ).toBe(2);
+      await step(tx, SEED.managerMro, second.id, "rejected", { reason: "Not this time" });
+      await actAs(tx, SEED.delta);
+      expect((await applyError(need)).code).toBe(conflict("REAPPLY_NOT_ALLOWED"));
+
+      const cancelled = await applyAs(tx, SEED.echo, need);
+      await toAccepted(tx, SEED.managerMro, SEED.echo, cancelled.id);
+      await step(tx, SEED.managerMro, cancelled.id, "cancelled", { reason: "Budget" });
+      await actAs(tx, SEED.echo);
+      expect((await applyError(need)).code).toBe(conflict("REAPPLY_NOT_ALLOWED"));
+
+      const started = await createNeed(tx, {
+        org: mroId,
+        createdBy: SEED.adminMro,
+        startsIn: "-1 hour",
+      });
+      const far = await createNeed(tx, {
+        org: mroId,
+        createdBy: SEED.adminMro,
+        startsIn: "200 days",
+        endsIn: "203 days",
+      });
+      await actAs(tx, SEED.alpha);
+      expect((await applyError(started)).code).toBe(conflict("REQUIREMENT_STARTED"));
+      expect((await applyError(far)).code).toBe(conflict("AVAILABILITY_INCOMPLETE"));
+      await actAs(tx, "00000000-0000-4000-8000-000000000027"); // Juliett: TR-B737, no TR-A320
+      expect((await applyError(need)).code).toBe(conflict("QUALIFICATION_INVALID"));
+      expect((await applyError(randomUUID())).code).toBe("P0002");
+      await actAs(tx, SEED.adminMro); // organization account
+      expect((await applyError(need)).code).toBe("42501");
+    });
+  });
+
+  it("paused, closed and covered requirements take no application, shortlist or proposal; reject and withdraw stay possible", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta, SEED.echo, SEED.alpha, SEED.hotelPrivate]);
+      const received = await applyAs(tx, SEED.delta, need);
+      const shortlisted = await applyAs(tx, SEED.echo, need);
+      const toReject = await applyAs(tx, SEED.hotelPrivate, need);
+      await step(tx, SEED.managerMro, shortlisted.id, "shortlisted");
+      await actAs(tx, SEED.managerMro);
+      await tx.query("update public.work_requirements set status = 'paused' where id = $1", [need]);
+      await actAs(tx, SEED.alpha);
+      expect(
+        (
+          await sqlError(tx, "select * from public.apply_to_requirement($1, $2, true)", [
+            need,
+            randomUUID(),
+          ])
+        ).code,
+      ).toBe(conflict("REQUIREMENT_NOT_OPEN"));
+      expect((await stepError(tx, SEED.managerMro, received.id, "shortlisted")).code).toBe(
+        conflict("REQUIREMENT_NOT_OPEN"),
+      );
+      expect((await stepError(tx, SEED.managerMro, shortlisted.id, "proposed")).code).toBe(
+        conflict("REQUIREMENT_NOT_OPEN"),
+      );
+      await step(tx, SEED.managerMro, toReject.id, "rejected", { reason: "Paused need" });
+      await step(tx, SEED.delta, received.id, "withdrawn");
+      expect((await trail(tx, shortlisted.id)).status).toBe("shortlisted");
+    });
+  });
+
+  it("Q2/Q3/Q4/Q7: cancel an accepted or confirmed one (covered → open), finish only after the period, never accepted → rejected", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 1 });
+      await makeAvailable(tx, [SEED.delta, SEED.echo]);
+      const a = await applyAs(tx, SEED.delta, need);
+      await toAccepted(tx, SEED.managerMro, SEED.delta, a.id);
+      // Q7: accepted → rejected exists for nobody.
+      for (const actor of [SEED.managerMro, SEED.delta])
+        expect((await stepError(tx, actor, a.id, "rejected", { reason: "No" })).code).toBe("55000");
+      await step(tx, SEED.managerMro, a.id, "confirmed");
+      expect(await requirementStatus(tx, need)).toBe("covered");
+      // Q4: the organization finishes explicitly, after the period; the technician never does.
+      expect((await stepError(tx, SEED.managerMro, a.id, "finished")).code).toBe(
+        conflict("PERIOD_NOT_ENDED"),
+      );
+      expect((await stepError(tx, SEED.delta, a.id, "finished")).code).toBe("42501");
+      // Q3: the technician cancels the confirmed assignment (reason); the seat is free again.
+      await step(tx, SEED.delta, a.id, "cancelled", { reason: "Family emergency" });
+      expect(await requirementStatus(tx, need)).toBe("open");
+      // Q2: the organization cancels an accepted application.
+      const b = await applyAs(tx, SEED.echo, need);
+      await toAccepted(tx, SEED.managerMro, SEED.echo, b.id);
+      expect(
+        (await step(tx, SEED.managerMro, b.id, "cancelled", { reason: "Changed plan" })).status,
+      ).toBe("cancelled");
+      // Q3: the organization cancels a confirmed one; Q4: a period that ended can be finished.
+      const past = await createNeed(tx, {
+        org: mroId,
+        createdBy: SEED.adminMro,
+        startsIn: "-10 days",
+        endsIn: "-2 days",
+      });
+      const done = await seedApplication(tx, past, SEED.delta, "confirmed");
+      const gone = await seedApplication(tx, past, SEED.echo, "confirmed");
+      expect((await step(tx, SEED.managerMro, done, "finished")).status).toBe("finished");
+      expect(
+        (await step(tx, SEED.managerMro, gone, "cancelled", { reason: "No show" })).status,
+      ).toBe("cancelled");
+    });
+  });
+
+  it("T-12 / CFA11: closing is refused while an application is accepted or confirmed; a closed need takes no acceptance", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 2 });
+      await makeAvailable(tx, [SEED.delta, SEED.echo]);
+      const a = await applyAs(tx, SEED.delta, need);
+      const b = await applyAs(tx, SEED.echo, need);
+      await toAccepted(tx, SEED.managerMro, SEED.delta, a.id);
+      await actAs(tx, SEED.managerMro);
+      const close = () =>
+        sqlError(tx, "update public.work_requirements set status = 'closed' where id = $1", [need]);
+      expect((await close()).code).toBe(conflict("ACTIVE_COMMITMENTS"));
+      await step(tx, SEED.managerMro, a.id, "confirmed");
+      await actAs(tx, SEED.managerMro);
+      expect((await close()).code).toBe(conflict("ACTIVE_COMMITMENTS"));
+      await step(tx, SEED.managerMro, a.id, "cancelled", { reason: "Rescheduled" });
+      await step(tx, SEED.managerMro, b.id, "shortlisted");
+      const proposal = await step(tx, SEED.managerMro, b.id, "proposed");
+      await actAs(tx, SEED.managerMro);
+      await tx.query("update public.work_requirements set status = 'closed' where id = $1", [need]);
+      expect(
+        (await stepError(tx, SEED.echo, b.id, "accepted", { proposalId: proposal.proposal_id }))
+          .code,
+      ).toBe(conflict("REQUIREMENT_NOT_OPEN"));
+      await step(tx, SEED.echo, b.id, "withdrawn"); // leaving is always possible
+    });
+  });
+
+  it("covered ↔ open happen only inside a transition, never by hand", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 1 });
+      await makeAvailable(tx, [SEED.delta]);
+      const a = await applyAs(tx, SEED.delta, need);
+      await toAccepted(tx, SEED.managerMro, SEED.delta, a.id);
+      await actAs(tx, SEED.adminMro);
+      expect(
+        (
+          await sqlError(
+            tx,
+            "update public.work_requirements set status = 'covered' where id = $1",
+            [need],
+          )
+        ).message,
+      ).toMatch(/is not allowed/);
+      await step(tx, SEED.managerMro, a.id, "confirmed");
+      await actAs(tx, SEED.adminMro);
+      expect(
+        (
+          await sqlError(tx, "update public.work_requirements set status = 'open' where id = $1", [
+            need,
+          ])
+        ).message,
+      ).toMatch(/is not allowed/);
+      expect(await requirementStatus(tx, need)).toBe("covered");
+    });
+  });
+
+  it("organizations see applicants exactly as in the candidate pool: pseudonym unless internal, name for open or internal", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 4 });
+      await makeAvailable(tx, TECHS);
+      // A member no longer applies to its own organization (CFA13, 20261024100000): Alpha's row stands
+      // for one made before joining it.
+      for (const tech of TECHS)
+        if (tech === SEED.alpha) await seedApplication(tx, need, tech, "received");
+        else await applyAs(tx, tech, need);
+      await actAs(tx, SEED.managerMro);
+      const { rows } = await tx.query<Record<string, unknown>>(
+        "select * from public.get_requirement_applications($1)",
+        [need],
+      );
+      const pseudonym = (profile: string) =>
+        "CF-" +
+        createHash("sha256").update(`${need}:${profile}`).digest("hex").slice(0, 10).toUpperCase();
+      const seen = Object.fromEntries(
+        rows.map((r) => [r.candidate_ref as string, [r.candidate_pool, r.candidate_display_name]]),
+      );
+      expect(seen).toEqual({
+        [pseudonym(SEED.delta)]: ["external", null], // anonymous
+        [pseudonym(SEED.echo)]: ["external", "Technician Echo"], // open
+        [pseudonym(SEED.hotelPrivate)]: ["external", null], // private: visible to this org only, unnamed
+        [SEED.alpha]: ["internal", "Technician Alpha"], // member of the organization
+      });
+      for (const row of rows) {
+        const candidate = toCandidate(row); // the pool parser reads the same columns
+        expect(
+          candidate.qualifications.every((q) => ["B1.1", "TR-A320", "SMS"].includes(q.code)),
+        ).toBe(true);
+        expect(JSON.stringify(row)).not.toContain(SEED.hotelPrivate);
+      }
+      // The external pool still never lists the private professional (S-7 for matching unchanged).
+      const pool = await tx.query<{ candidate_ref: string }>(
+        "select candidate_ref from public.get_requirement_candidate_pool($1)",
+        [need],
+      );
+      expect(pool.rows.map((r) => r.candidate_ref)).not.toContain(pseudonym(SEED.hotelPrivate));
+    });
+  });
+
+  it("dashboard counts: admin/manager of the organization only, per status", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro, headcount: 2 });
+      await makeAvailable(tx, [SEED.delta, SEED.echo]);
+      const a = await applyAs(tx, SEED.delta, need);
+      await applyAs(tx, SEED.echo, need);
+      await step(tx, SEED.managerMro, a.id, "shortlisted");
+      await actAs(tx, SEED.managerMro);
+      const { rows } = await tx.query<{ status: string; total: number }>(
+        "select * from public.get_application_counts($1)",
+        [mroId],
+      );
+      expect(rows).toEqual([
+        { status: "received", total: 1 },
+        { status: "shortlisted", total: 1 },
+      ]);
+      for (const user of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+        await actAs(tx, user);
+        expect(
+          (await sqlError(tx, "select * from public.get_application_counts($1)", [mroId])).code,
+        ).toBe("42501");
+      }
+    });
+  });
+
+  // Account deletion keeps the technician's applications without them and refuses while one is
+  // confirmed (T-42, migration 20261023400100 — supersedes the cascade + seat release of LOW-2); deleting
+  // an organization still cascades its requirements' applications, proposals and events.
+  it("an account never takes a confirmed seat with it; deleting an organization cascades its applications", async () => {
+    await db
+      .transaction(async (owner) => {
+        const need = await createNeed(owner, {
+          org: mroId,
+          createdBy: SEED.adminMro,
+          headcount: 1,
+          status: "covered",
+        });
+        const delta = await seedApplication(owner, need, SEED.delta, "confirmed");
+        const echo = await seedApplication(owner, need, SEED.echo, "proposed");
+        expect(
+          (await sqlError(owner, "delete from auth.users where id = $1", [SEED.delta])).code,
+        ).toBe("CFA11"); // account deletion while confirmed
+        expect(await requirementStatus(owner, need)).toBe("covered");
+        await owner.query("delete from auth.users where id = $1", [SEED.echo]);
+        expect(
+          (
+            await owner.query(
+              "select status, technician_profile_id from public.applications where id = $1",
+              [echo],
+            )
+          ).rows,
+        ).toEqual([{ status: "withdrawn", technician_profile_id: null }]);
+        expect(
+          await rowCount(owner, "select 1 from public.applications where id = $1", [delta]),
+        ).toBe(1);
+        await owner.query("delete from public.organizations where id = $1", [mroId]);
+        expect(
+          await rowCount(owner, "select 1 from public.applications where id = $1", [delta]),
+        ).toBe(0);
+        expect(
+          await rowCount(
+            owner,
+            "select 1 from public.application_proposals where application_id = $1",
+            [delta],
+          ),
+        ).toBe(0);
+        expect(
+          await rowCount(owner, "select 1 from public.applications where id = $1", [echo]),
+        ).toBe(0);
+        expect(
+          await rowCount(owner, "select 1 from public.work_requirements where id = $1", [need]),
+        ).toBe(0);
+        await owner.exec("set constraints all immediate");
+        throw new Error("rollback");
+      })
+      .catch((error: Error) => expect(error.message).toBe("rollback"));
+  });
+
+  it("no oracle on other organizations' requirements: a stranger's qualification insert is always RLS's 42501", async () => {
+    await asUser(db, SEED.echo, async (tx) => {
+      const withApplication = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      const without = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      const closed = await createNeed(tx, {
+        org: mroId,
+        createdBy: SEED.adminMro,
+        status: "closed",
+      });
+      await seedApplication(tx, withApplication, SEED.delta, "withdrawn");
+      const ewis = (
+        await tx.query<{ id: string }>(
+          "select id from public.qualification_types where code = 'EWIS'",
+        )
+      ).rows[0]!.id;
+      // Published ids reach every professional (D-12); other organizations may know them too.
+      for (const stranger of [SEED.echo, SEED.adminOther]) {
+        await actAs(tx, stranger);
+        const answers = [];
+        for (const id of [withApplication, without, closed])
+          answers.push(
+            await sqlError(
+              tx,
+              `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+               values ($1, $2, 'soft')`,
+              [id, ewis],
+            ),
+          );
+        expect(answers.map((a) => a.code)).toEqual(["42501", "42501", "42501"]);
+        expect(new Set(answers.map((a) => a.message)).size).toBe(1);
+      }
+      // The organization itself still gets the precise answers.
+      await actAs(tx, SEED.managerMro);
+      const insert = (id: string) =>
+        sqlError(
+          tx,
+          `insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+           values ($1, $2, 'soft')`,
+          [id, ewis],
+        );
+      expect((await insert(withApplication)).code).toBe(conflict("HAS_APPLICATIONS"));
+      expect((await insert(closed)).code).toBe("55000");
+    });
+  });
+
+  it("applying requires the explicit share consent in the database too (review LOW-4)", async () => {
+    await asUser(db, SEED.delta, async (tx) => {
+      const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+      await makeAvailable(tx, [SEED.delta]);
+      await actAs(tx, SEED.delta);
+      for (const consent of [false, null])
+        expect(
+          (
+            await sqlError(tx, "select * from public.apply_to_requirement($1, $2, $3)", [
+              need,
+              randomUUID(),
+              consent,
+            ])
+          ).code,
+        ).toBe("22023");
+      await tx.exec("reset role");
+      expect(
+        await rowCount(tx, "select 1 from public.applications where requirement_id = $1", [need]),
+      ).toBe(0);
+    });
+  });
+
+  it("anon executes none of the application or edit RPCs (review LOW-5)", async () => {
+    await asUser(db, null, async (tx) => {
+      const id = randomUUID();
+      const at = "2031-01-01T00:00:00Z";
+      for (const [sql, params] of [
+        ["select * from public.apply_to_requirement($1, $2, true)", [id, id]],
+        ["select * from public.transition_application($1, 'shortlisted', $2, $3)", [id, at, id]],
+        ["select * from public.get_requirement_applications($1)", [id]],
+        ["select * from public.get_my_applications()", []],
+        ["select * from public.get_application_counts($1)", [id]],
+        [
+          "select * from public.update_work_requirement($1, $2, 'T', 'MAD', $2, $2, 'day', 1, 'planned', '[]'::jsonb)",
+          [id, at],
+        ],
+      ] as const)
+        expect((await sqlError(tx, sql, [...params])).message).toMatch(/permission denied/);
+    });
+  });
+
+  describe("M05 edit (update_work_requirement) and the freeze after the first application (CFA12)", () => {
+    const EDIT_SQL =
+      "select * from public.update_work_requirement($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)";
+    async function editArgs(tx: Transaction, id: string, changes: Record<string, unknown> = {}) {
+      await tx.exec("reset role");
+      const { rows } = await tx.query<Record<string, unknown>>(
+        `select title, location, starts_at, ends_at, shift, headcount, urgency, updated_at,
+                (select jsonb_agg(jsonb_build_object('qualification_type_id', qualification_type_id,
+                                                     'requirement_level', requirement_level))
+                 from public.work_requirement_qualifications where work_requirement_id = $1) as quals
+         from public.work_requirements where id = $1`,
+        [id],
+      );
+      const r = { ...rows[0]!, ...changes };
+      return [
+        id,
+        (r.updated_at as Date).toISOString(),
+        r.title,
+        r.location,
+        (r.starts_at as Date).toISOString(),
+        (r.ends_at as Date).toISOString(),
+        r.shift,
+        r.headcount,
+        r.urgency,
+        JSON.stringify(r.quals),
+      ];
+    }
+    const ewis = async (tx: Transaction) =>
+      (
+        await tx.query<{ id: string }>(
+          "select id from public.qualification_types where code = 'EWIS'",
+        )
+      ).rows[0]!.id;
+
+    it("an admin/manager edits it: changed fields audited by name; nothing changed is a no-op", async () => {
+      await asUser(db, SEED.managerMro, async (tx) => {
+        const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+        const hardNow = await tx.query<{ qualification_type_id: string }>(
+          "select qualification_type_id from public.work_requirement_qualifications where work_requirement_id = $1 and requirement_level = 'hard'",
+          [need],
+        );
+        const quals = [
+          { qualification_type_id: await ewis(tx), requirement_level: "hard" },
+          ...hardNow.rows.map((q) => ({ ...q, requirement_level: "hard" })),
+        ];
+        const args = await editArgs(tx, need, { title: "Edited title", headcount: 3, quals });
+        await actAs(tx, SEED.managerMro);
+        const { rows } = await tx.query<{ id: string; changed: string[] }>(EDIT_SQL, args);
+        expect(rows[0]!.changed).toEqual(["title", "headcount", "qualifications"]);
+        await tx.exec("reset role");
+        const audit = await tx.query<{ metadata: unknown; actor_profile_id: string }>(
+          "select metadata, actor_profile_id from public.audit_events where entity_id = $1 and action = 'requirement.updated'",
+          [need],
+        );
+        expect(audit.rows).toEqual([
+          {
+            actor_profile_id: SEED.managerMro,
+            metadata: { fields: ["title", "headcount", "qualifications"] },
+          },
+        ]);
+        expect(
+          await rowCount(
+            tx,
+            "select 1 from public.work_requirement_qualifications where work_requirement_id = $1",
+            [need],
+          ),
+        ).toBe(3); // B1.1, TR-A320, EWIS (SMS dropped)
+        const again = await editArgs(tx, need);
+        await actAs(tx, SEED.managerMro);
+        expect((await tx.query<{ changed: string[] }>(EDIT_SQL, again)).rows[0]!.changed).toEqual(
+          [],
+        );
+        await tx.exec("set constraints all immediate"); // BR-1.4 holds at commit
+      });
+    });
+
+    it("stale version CF412, invalid payload 22023, members and other organizations 42501, closed 55000", async () => {
+      await asUser(db, SEED.managerMro, async (tx) => {
+        const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+        const stale = await editArgs(tx, need, { title: "Edited" });
+        stale[1] = "2026-01-01T00:00:00.000Z";
+        await actAs(tx, SEED.managerMro);
+        expect((await sqlError(tx, EDIT_SQL, stale)).code).toBe("CF412");
+        const one = { qualification_type_id: await ewis(tx), requirement_level: "hard" };
+        // empty · no hard one · the same type twice
+        for (const quals of [[], [{ ...one, requirement_level: "soft" }], [one, one]]) {
+          const args = await editArgs(tx, need, { quals });
+          await actAs(tx, SEED.managerMro);
+          expect((await sqlError(tx, EDIT_SQL, args)).code).toBe("22023");
+        }
+        const args = await editArgs(tx, need, { title: "Edited" });
+        for (const user of [SEED.charlieMember, SEED.adminOther, SEED.delta]) {
+          await actAs(tx, user);
+          expect((await sqlError(tx, EDIT_SQL, args)).code).toBe("42501");
+        }
+        await actAs(tx, SEED.managerMro);
+        expect((await sqlError(tx, EDIT_SQL, [randomUUID(), ...args.slice(1)])).code).toBe("42501");
+        await tx.query("update public.work_requirements set status = 'closed' where id = $1", [
+          need,
+        ]);
+        const closed = await editArgs(tx, need, { title: "Edited" });
+        await actAs(tx, SEED.managerMro);
+        expect((await sqlError(tx, EDIT_SQL, closed)).code).toBe("55000");
+      });
+    });
+
+    it("after any application — even withdrawn — the RPC and direct writes are CFA12; status changes stay possible", async () => {
+      await asUser(db, SEED.delta, async (tx) => {
+        const need = await createNeed(tx, { org: mroId, createdBy: SEED.adminMro });
+        await makeAvailable(tx, [SEED.delta]);
+        const { id } = await applyAs(tx, SEED.delta, need);
+        await step(tx, SEED.delta, id, "withdrawn");
+        const frozen = conflict("HAS_APPLICATIONS");
+        const args = await editArgs(tx, need, { title: "Edited" });
+        await actAs(tx, SEED.managerMro);
+        expect((await sqlError(tx, EDIT_SQL, args)).code).toBe(frozen);
+        const ewisId = await ewis(tx);
+        for (const [sql, params] of [
+          ["update public.work_requirements set title = 'Rewritten' where id = $1", [need]],
+          ["update public.work_requirements set headcount = 9 where id = $1", [need]],
+          [
+            "delete from public.work_requirement_qualifications where work_requirement_id = $1 and requirement_level = 'soft'",
+            [need],
+          ],
+          [
+            "insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level) values ($1, $2, 'soft')",
+            [need, ewisId],
+          ],
+        ] as const)
+          expect((await sqlError(tx, sql, [...params])).code).toBe(frozen);
+        await tx.query("update public.work_requirements set status = 'paused' where id = $1", [
+          need,
+        ]);
+        expect(await requirementStatus(tx, need)).toBe("paused");
+      });
+    });
+  });
+});
+
+describe("W. one hard-eligibility rule: SQL (apply/confirm, pool) and TypeScript agree (migration 20261022130300)", () => {
+  it("hard_eligibility = evaluateMatch().eligible on own data = ranked_external_pool.hard_eligible (240 randomized profiles × 3 urgencies)", async () => {
+    let seed = 20261022;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+    const pick = <T>(xs: readonly T[]) => xs[Math.floor(rnd() * xs.length)]!;
+    // MAD need: 2026-10-18 20:00Z → 2026-10-22 06:00Z; first day 18, last day 22 (BR-2). Each hard
+    // qualification is valid 90 % of the time (boundary 22 included), else one defect: missing,
+    // withdrawn, unverified, or an expiry before / on the first day / inside the period.
+    const valid = ["2026-10-22", "2027-01-01"] as const;
+    const defects = [
+      "missing",
+      "withdrawn",
+      "pending",
+      "rejected",
+      "expired",
+      "2026-10-17",
+      "2026-10-18",
+      "2026-10-21",
+    ] as const;
+    type W = [string, string, "available" | "unavailable" | "aog_only"];
+    const windows: W[][] = [
+      [["2026-10-18T20:00Z", "2026-10-22T06:00Z", "available"]],
+      [["2026-10-18T20:00Z", "2026-10-22T06:00Z", "aog_only"]],
+      [["2026-10-18T21:00Z", "2026-10-22T06:00Z", "available"]],
+      [
+        ["2026-10-10T00:00Z", "2026-10-30T00:00Z", "available"],
+        ["2026-10-19T00:00Z", "2026-10-19T01:00Z", "aog_only"],
+      ],
+      [
+        ["2026-10-10T00:00Z", "2026-10-20T00:00Z", "aog_only"],
+        ["2026-10-20T00:00Z", "2026-10-30T00:00Z", "available"],
+      ],
+      [
+        ["2026-10-10T00:00Z", "2026-10-30T00:00Z", "available"],
+        ["2026-10-22T06:00Z", "2026-10-23T00:00Z", "unavailable"],
+      ],
+      [
+        ["2026-10-10T00:00Z", "2026-10-30T00:00Z", "aog_only"],
+        ["2026-10-19T00:00Z", "2026-10-19T01:00Z", "unavailable"],
+      ],
+      [],
+    ];
+    const hard = ["B1.1", "TR-A320", "EWIS", "HF", "FTS"];
+    const ids = Array.from(
+      { length: 240 },
+      (_, i) => `00000000-0000-4000-9300-${String(i).padStart(12, "0")}`,
+    );
+    await asUser(db, SEED.managerMro, async (tx) => {
+      await tx.exec("reset role");
+      await tx.query(
+        `insert into auth.users (id, email, raw_user_meta_data)
+         select id, 'w-' || id || '@crewflex.test', '{"account_type":"professional","display_name":"Parity"}'
+         from unnest($1::uuid[]) id`,
+        [ids],
+      );
+      const quals: [string, string, string, string | null, string][] = [];
+      const wins: [string, string, string, string][] = [];
+      const visibility: string[] = [];
+      for (const id of ids) {
+        visibility.push(pick(["anonymous", "open", "private"] as const));
+        for (const code of hard) {
+          // TR-A320 has no mandatory expiry (BR-2.7): null is a valid value for it.
+          const fine = code === "TR-A320" && rnd() < 0.5 ? null : pick(valid);
+          const defect = rnd() < 0.9 ? null : pick(defects);
+          if (defect === "missing") continue;
+          quals.push([
+            id,
+            code,
+            defect === "withdrawn" ? "withdrawn" : "active",
+            defect?.startsWith("2026") ? defect : fine,
+            defect === "pending" || defect === "rejected" || defect === "expired"
+              ? defect
+              : "verified",
+          ]);
+        }
+        for (const [s, e, st] of pick(windows)) wins.push([id, s, e, st]);
+      }
+      await tx.query(
+        `update public.technician_profiles tp set visibility = v.visibility::public.profile_visibility
+         from unnest($1::uuid[], $2::text[]) as v(id, visibility) where tp.profile_id = v.id`,
+        [ids, visibility],
+      );
+      await tx.query(
+        `insert into public.technician_qualifications
+           (technician_profile_id, qualification_type_id, status, expires_at, verification_status)
+         select q.p, qt.id, q.s::public.qualification_status, q.e::date, q.v::public.verification_status
+         from unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $5::text[]) as q(p, code, s, e, v)
+         join public.qualification_types qt on qt.code = q.code`,
+        [
+          quals.map((q) => q[0]),
+          quals.map((q) => q[1]),
+          quals.map((q) => q[2]),
+          quals.map((q) => q[3]),
+          quals.map((q) => q[4]),
+        ],
+      );
+      await tx.query(
+        `insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+         select w.p, w.s::timestamptz, w.e::timestamptz, w.st::public.availability_status
+         from unnest($1::uuid[], $2::text[], $3::text[], $4::text[]) as w(p, s, e, st)`,
+        [
+          wins.map((w) => w[0]),
+          wins.map((w) => w[1]),
+          wins.map((w) => w[2]),
+          wins.map((w) => w[3]),
+        ],
+      );
+
+      const req = await tx.query<{ starts_at: Date; ends_at: Date }>(
+        "select starts_at, ends_at from public.work_requirements where id = $1",
+        [madRequirementId],
+      );
+      const quals2 = await tx.query<{
+        id: string;
+        code: string;
+        requirement_level: "hard" | "soft";
+      }>(
+        `select qt.id, qt.code, wrq.requirement_level from public.work_requirement_qualifications wrq
+         join public.qualification_types qt on qt.id = wrq.qualification_type_id where wrq.work_requirement_id = $1`,
+        [madRequirementId],
+      );
+      const startsAt = req.rows[0]!.starts_at.toISOString();
+      const endsAt = req.rows[0]!.ends_at.toISOString();
+      // Each professional's own data, read as them through the INVOKER function (the opportunities path).
+      const own = new Map<string, ReturnType<typeof toCandidate>>();
+      for (const id of ids) {
+        await actAs(tx, id);
+        const { rows } = await tx.query("select * from public.own_candidate_profile($1, $2)", [
+          startsAt,
+          endsAt,
+        ]);
+        own.set(id, toCandidate(rows[0]));
+      }
+      await tx.exec("reset role");
+
+      let eligibleSeen = 0;
+      let rankedCompared = 0;
+      for (const urgency of ["urgent", "planned", "aog"] as const) {
+        await tx.query("update public.work_requirements set urgency = $2 where id = $1", [
+          madRequirementId,
+          urgency,
+        ]);
+        const sql = await tx.query<{ p: string; ok: boolean }>(
+          `select p, (h.qualifications_ok and h.availability_ok) as ok
+           from unnest($1::uuid[]) p cross join lateral app_private.hard_eligibility($2, p) h`,
+          [ids, madRequirementId],
+        );
+        const ranked = new Map(
+          (
+            await tx.query<{ profile_id: string; hard_eligible: boolean }>(
+              "select profile_id, hard_eligible from app_private.ranked_external_pool($1)",
+              [madRequirementId],
+            )
+          ).rows.map((r) => [r.profile_id, r.hard_eligible]),
+        );
+        const requirement: MatchableRequirement = {
+          startsAt,
+          endsAt,
+          urgency,
+          qualifications: quals2.rows.map((q) => ({
+            qualificationTypeId: q.id,
+            code: q.code,
+            name: q.code,
+            level: q.requirement_level,
+          })),
+        };
+        expect(sql.rows).toHaveLength(ids.length);
+        for (const row of sql.rows) {
+          const ts = evaluateMatch(requirement, own.get(row.p)!).eligible;
+          expect([urgency, row.p, row.ok]).toEqual([urgency, row.p, ts]);
+          if (ranked.has(row.p)) {
+            expect([urgency, row.p, ranked.get(row.p)]).toEqual([urgency, row.p, row.ok]);
+            rankedCompared++;
+          }
+          if (row.ok) eligibleSeen++;
+        }
+      }
+      expect(eligibleSeen).toBeGreaterThan(20); // the sample exercises both outcomes
+      expect(rankedCompared).toBeGreaterThan(300);
+    });
+  }, 120_000);
 });

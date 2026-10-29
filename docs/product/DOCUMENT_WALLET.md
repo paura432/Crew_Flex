@@ -33,7 +33,10 @@ browser ──multipart──▶ Next.js server action ──invokeEdgeFunction(
 
 - **Endpoints** (`docs/architecture/EDGE_FUNCTIONS.md`): `GET` list · `GET ?id=&url=1` signed URL · `POST`
   multipart (`file`, `kind`, `title`, `expiresAt`, `qualificationId`; `Idempotency-Key` required; 201 / 200 replay
-  / 409) · `PATCH ?id=` (`kind`, `title`, `expiresAt`, `qualificationId`, all required) · `DELETE ?id=`.
+  / 409) · `PATCH ?id=` (`kind`, `title`, `expiresAt`, `qualificationId`, all required) or `{ archived }` (trash,
+  §9) · `DELETE ?id=`. The list returns one view (`?view=trash`, default the wallet; 200 rows each) with `counts` of both
+  views, `archivedAt` per document and `trashRetentionDays`; the page says «Se muestran los 200 más recientes de
+  {n}» when a view was cut.
 - **No service role.** Every query, upload, signed URL and removal runs with the caller's JWT; RLS and Storage
   policies are the authorization. A signed URL for another user's document is a 404 (row invisible) and Storage
   refuses it anyway (object invisible).
@@ -94,6 +97,12 @@ after the grace period), `operator_delete` (anyone else, e.g. SQL by an operator
 `orphan_upload` (created by reconciliation, below). So the licence scans of a deleted account no longer stay in
 the bucket forever: they become due after the grace period.
 
+**«Cerrar cuenta» (PKG account, LOCAL `20261023400100`, T-42).** The person's own closure deletes their document rows
+**as the owner** before the account (tombstones `owner_delete`, due at once — the person asked for the erasure), and
+the `account` function then removes those objects with the person's own token (own folder, no row points at them).
+Whatever Storage leaves is purged by the next `documents-maintenance` run. Only a deletion that skips the button
+(operator, Auth Admin API) takes the `account_deleted` grace.
+
 **Reconciliation.** `document_maintenance_batch` lists objects of the bucket that **no row and no open
 tombstone** reference and that are older than the orphan grace (24 h — a POST may still be committing its row,
 review L-1). Dry-run lists them; apply records `orphan_upload` tombstones. An object that a row references is
@@ -112,10 +121,12 @@ reason — no title, no path). Re-runs are idempotent; failures count `attempts`
 | Grace after account deletion | 30 days (`account_deletion_grace`, 0–3650 days)                    | Time to undo a mistaken deletion or answer a dispute; erasure still happens |
 | Orphan grace                 | 24 h (`orphan_upload_grace`, 1 h–30 days)                          | Never delete bytes a concurrent request may still register                  |
 | Owner delete                 | immediate                                                          | The person asked for it                                                     |
+| Trash retention (T-100, §9)  | 30 days (`archive_retention`, 1–3650 days), then `trash_expired`   | v1.8 «Papelera» with an end: restorable, then really erased                 |
 | Legal hold                   | set/released **only by the database owner in SQL**, no API surface | Rare, high-impact; avoids another DEFINER endpoint. Held = never purged     |
 
 ```sql
 update app_private.document_retention_settings set account_deletion_grace = interval '30 days';
+update app_private.document_retention_settings set archive_retention = interval '30 days';
 update app_private.document_object_tombstones set legal_hold = true  where owner_id = '<uuid>' and purged_at is null;
 update app_private.document_object_tombstones set legal_hold = false where owner_id = '<uuid>' and purged_at is null;
 ```
@@ -125,13 +136,14 @@ tombstones, i.e. after deletion (a hold on live documents is not needed while on
 
 ## 7. Before any remote apply (owner approval required, nothing done)
 
-Ordered rollout: (1) migrations `20261019160000`, `20261019160100`, `20261019160200` (`db push`, creates the bucket and
+Ordered rollout: (1) migrations `20261019160000`, `20261019160100`, `20261019160200` and the trash `20261024200000` (`db push`, creates the bucket and
 policies — check the hosted project has no pre-existing `professional-documents` bucket; the migration fails
 closed if one exists with other settings). Without the flag row the wallet stays OFF (§8); (2) deploy
 `professional-documents` (`verify_jwt = false`, `supabase/config.toml`); (3) leave `STORAGE_PUBLIC_URL` unset;
 (4) only when purging is approved: deploy `documents-maintenance` and set `DOCUMENTS_MAINTENANCE_ENABLED=true`
 (it uses the service role for Storage deletes only); (5) the owner inserts the flag row; (6) remote smoke with
-synthetic files only. Open items: a per-owner quota (none today), scheduling the purge, the retention proposals
+synthetic files only. The trash needs (1) before (2) and (2) before the frontend: an older function lists no
+`archivedAt` (the page then shows no trash) and refuses `{ archived }` (400). Open items: a per-owner quota (none today), scheduling the purge, the retention proposals
 (§6), the audit `sha256` question (§3, L-4), and the scanner decision (§4).
 
 ## 8. Activation gate (owner decision 2026-10-19: Supabase, not Vercel)
@@ -155,7 +167,7 @@ only through the API; if the flag is ever switched off with data in it, a read-o
 
 ## UI and rollout (added with the wallet UI, 2026-10-19)
 
-- `/app/professional/documents` (`src/features/documents`): upload, list, open through a 60-second
+- `/app/professional/documents` (`src/features/documents`; trash, type filter and viewer since §9): upload, list, open through a 60-second
   signed link, edit metadata, delete with confirmation. Copy states that uploading does not certify
   a licence and that no organization can see the files.
 - **Upload goes from the browser straight to the Edge Function** (`src/features/documents/upload.ts`,
@@ -168,3 +180,39 @@ only through the API; if the flag is ever switched off with data in it, a read-o
 - Deliberate difference from V1.8: the owner may open their own unscanned file (V1.8 allowed downloads
   only after a clean scan, even for the owner). The bytes are the owner's own upload; third parties
   still have no path to them.
+
+## 9. Trash, type filter and in-app viewer (package wallet-extras, 2026-10-22 — LOCAL, `20261024200000`)
+
+v1.8 demo parity (`Professional2.jsx:159-219`) under the owner's DEFAULTS rule; defaults T-100…T-103, rules BR-24.
+
+- **Trash (N-19).** «Archivar {título}» (`PATCH { archived: true }`) moves a document to «Papelera ({n})»
+  (`?view=trash`); «Restaurar» brings it back; «Eliminar definitivamente» there is the old delete (row, then object,
+  `owner_delete`). `archived_at` is stamped by the database (trigger `professional_documents_archive_clock`), audited
+  `document.archived` / `document.restored`. The trash page says how long a document stays restorable
+  (`document_trash_retention_days()`) and, per row, «se elimina definitivamente a partir del {fecha}». Archived
+  documents are left out of every other read (review list, evidence count, qualification evidence; T-101). The wallet
+  flag (§8) is untouched: archive and restore are edits of one's own rows, open with the flag off.
+- **Expiry = the §6 machinery, no parallel one.** `document_maintenance_batch` first handles the expired trash
+  (`archived_at <= now() − archive_retention`): dry-run lists it (`would_expire`), apply deletes the rows (oldest
+  first, within the limit; audit `document.trash_expired`, actor = the platform admin), whose AFTER DELETE trigger
+  writes `trash_expired` tombstones due at once; the same run then purges those objects (re-check, service-role
+  Storage delete, `document.purged`). `documents-maintenance` reports `expired`. Legal holds, re-checks and the
+  10-attempt cap apply unchanged. Still manual and unscheduled (§6).
+- **Data rights.** Account closure (`close_my_account`) deletes trashed documents with the others (`owner_delete`,
+  due at once; nothing to restore or expire afterwards); the account export lists them with `archivedAt` and embeds
+  their bytes under the same 3 MiB rule (BR-24.6).
+- **Type filter (N-20, T-102).** Chips with `aria-pressed`: «Todos», «Licencias», «Cursos», «Otros»; the panel
+  counter is what the list shows; «No hay documentos de este tipo.» when a filter empties it.
+- **Viewer (N-21, T-103).** «Abrir» opens a `<dialog>` (Escape or «Cerrar»; the focus returns to «Abrir»): a fresh
+  60-second signed URL, fetched once (`connect-src` already allows the Supabase origin), shown as a blob re-typed with
+  the server-sniffed mime — an `<img>` for PNG/JPEG, an `<iframe>` for PDFs with «Si el PDF no se muestra, ábrelo en
+  una pestaña nueva.». A 400/401/403 answer is «El enlace ha caducado…» and anything else «No se ha podido cargar…»,
+  both with «Reintentar», never an empty frame. Bytes whose magic bytes are not the recorded type are refused the
+  same way (a direct Storage upload could hold anything; the frame is never `sandbox`ed, which would break
+  Chrome's PDF viewer). «Abrir en una pestaña nueva» keeps the previous new-tab path. CSP
+  (`src/proxy.ts`, still report-only): only `frame-src 'self' blob:` is added; `object-src` stays `'none'`, and the
+  Storage origin is neither framed nor an image source. Owner only, as before: nobody else gains a path to a file.
+- **Threat notes.** A blob frame shares the app's origin, but its content is a PDF rendered by the browser's viewer
+  (typed `application/pdf` by the server's sniffing, never `text/html`); scripts cannot run in the app from it. The
+  bytes stay in the browser's memory until the dialog closes (the object URL is revoked then). Hosted Storage must
+  answer CORS for the app origin before the wallet ships (local Kong: `*`).

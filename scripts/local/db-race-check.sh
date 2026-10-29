@@ -3,7 +3,7 @@
 # LOCAL Docker stack only: talks to the container `supabase_db_crew-flex` with `docker exec psql`
 # (never a URL), after the same local-target check as scripts/local/sb-local.sh. Every scenario
 # restores the rows it changed, so the deterministic seed stays as it was.
-# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|all]   (default: all)
+# Usage: bash scripts/local/db-race-check.sh [e3|idempotency|review|availability|applications|notices|wallet-trash|outreach|recruiter|all]   (default: all)
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"; cd "$REPO_ROOT"
 CONTAINER=supabase_db_crew-flex
@@ -126,7 +126,7 @@ review() {
   local since; since="$(echo "select clock_timestamp();" | psql_owner)"
   [ "$(echo "select verification_status from public.technician_qualifications where id = $q;" | psql_owner)" = pending ] \
     || die "Golf's B1.1 must start pending"
-  printf "begin;\nselect verification_status from public.review_qualification(%s, 'verified', (select updated_at from public.technician_qualifications where id = %s), null, null);\nselect pg_sleep(1.5);\ncommit;\n" "$q" "$q" \
+  printf "begin;\nselect verification_status from public.review_qualification(%s, 'verified', (select updated_at from public.technician_qualifications where id = %s), 'Race check', null);\nselect pg_sleep(1.5);\ncommit;\n" "$q" "$q" \
     | psql_as "$PLATFORM_ADMIN" >"$OUT_A" &
   local a=$!
   sleep 0.4
@@ -181,12 +181,424 @@ SQL
   echo "delete from public.availability_windows where $scope;" | psql_owner >/dev/null
 }
 
+# --- D-06 applications and the M05 edit (migration 20261022130300) ------------------------------
+# Each scenario builds its own requirement 30–32 days ahead (owner fixture) and deletes it at the end
+# (cascades applications, proposals, events); the audit trail is append-only and stays.
+DELTA=00000000-0000-4000-8000-000000000021
+ECHO=00000000-0000-4000-8000-000000000022
+ADMIN_AIRLINE=00000000-0000-4000-8000-000000000003
+new_uuid() { cat /proc/sys/kernel/random/uuid; }
+applications_ready() {
+  [ "$(echo "select to_regclass('public.applications') is not null;" | psql_owner)" = t ] && return 0
+  fail "migration 20261022130300 is not applied to the local stack (applications scenarios not run)"
+  return 1
+}
+# Owner fixture: an open requirement of organization "$1" with hard B1.1 and headcount $2; prints its id.
+race_need() { # $1 organization name, $2 headcount, [$3 represented client id — set at creation: BR-27 freezes it once published]
+  psql_owner <<SQL | tail -1
+with wr as (
+  insert into public.work_requirements
+    (organization_id, title, location, starts_at, ends_at, shift, headcount, urgency, status, created_by, on_behalf_of_client_id)
+  select o.id, 'Race applications', 'LIS', date_trunc('day', now()) + interval '30 days',
+         date_trunc('day', now()) + interval '32 days', 'day', $2, 'planned', 'open', m.profile_id, nullif('${3:-}', '')::uuid
+  from public.organizations o
+  join public.organization_members m on m.organization_id = o.id and m.role = 'admin'
+  where o.name = '$1' limit 1
+  returning id)
+insert into public.work_requirement_qualifications (work_requirement_id, qualification_type_id, requirement_level)
+select wr.id, qt.id, 'hard' from wr, public.qualification_types qt where qt.code = 'B1.1'
+returning work_requirement_id;
+SQL
+}
+# Owner fixture: an `accepted` application of technician $2 on requirement $1 with proposal v1 ($3);
+# prints "<application id>|<updated_at>" (the version a transition must send).
+race_accepted() {
+  psql_owner <<SQL | tail -1
+with a as (
+  insert into public.applications (requirement_id, technician_profile_id, status, current_proposal_id, accepted_proposal_id)
+  values ('$1', '$2', 'accepted', '$3', '$3')
+  returning id, updated_at),
+p as (
+  insert into public.application_proposals (id, application_id, version, terms)
+  select '$3', a.id, 1, '{}'::jsonb from a)
+select a.id || '|' || to_char(a.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') from a;
+SQL
+}
+race_available() { # technician $1 is available over the race period (removed by race_cleanup)
+  echo "insert into public.availability_windows (technician_profile_id, starts_at, ends_at, status)
+        values ('$1', date_trunc('day', now()) + interval '29 days', date_trunc('day', now()) + interval '33 days', 'available');" \
+    | psql_owner >/dev/null
+}
+race_cleanup() { # requirement ids
+  local r
+  for r in "$@"; do echo "delete from public.work_requirements where id = '$r';" | psql_owner >/dev/null; done
+  echo "delete from public.availability_windows where technician_profile_id in ('$DELTA', '$ECHO')
+          and starts_at = date_trunc('day', now()) + interval '29 days'
+          and ends_at = date_trunc('day', now()) + interval '33 days';" | psql_owner >/dev/null
+}
+confirm_sql() { # "<application id>|<version>" → the confirmation statement
+  printf "select status from public.transition_application('%s', 'confirmed', '%s', gen_random_uuid());" "${1%%|*}" "${1##*|}"
+}
+
+applications() {
+  echo "== D-06 T4: two confirmations of the last seat at the same time — exactly one wins"
+  applications_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"; race_available "$ECHO"
+  local req a b; req="$(race_need 'Demo Aero Services Lisbon' 1)"
+  a="$(race_accepted "$req" "$DELTA" "$(new_uuid)")"; b="$(race_accepted "$req" "$ECHO" "$(new_uuid)")"
+  printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$(confirm_sql "$a")" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+  local pa=$!
+  sleep 0.4
+  printf '%s\n' "$(confirm_sql "$b")" | psql_as "$ADMIN_OTHER" >"$OUT_B" || true
+  wait "$pa" || true
+  local confirmed status audits covered
+  confirmed="$(echo "select count(*) from public.applications where requirement_id = '$req' and status = 'confirmed';" | psql_owner)"
+  status="$(echo "select status from public.work_requirements where id = '$req';" | psql_owner)"
+  audits="$(echo "select count(*) from public.audit_events where action = 'application.confirmed' and metadata ->> 'requirement_id' = '$req';" | psql_owner)"
+  covered="$(echo "select count(*) from public.audit_events where entity_id = '$req' and metadata ->> 'to' = 'covered';" | psql_owner)"
+  if [ "$confirmed" = 1 ] && [ "$status" = covered ] && [ "$audits" = 1 ] && [ "$covered" = 1 ] \
+     && grep -q 'every seat is confirmed' "$OUT_B"; then
+    pass "one confirmation won, the other waited and got HEADCOUNT_REACHED; covered once; 1 audit row"
+  else fail "confirmed=$confirmed status=$status audits=$audits covered=$covered"; cat "$OUT_A" "$OUT_B"; fi
+  race_cleanup "$req"
+}
+
+pause_vs_confirm() {
+  echo "== M05 × D-06: pause and confirm of the same requirement at the same time (both orders)"
+  applications_ready || return 0
+  local first
+  for first in pause confirm; do
+    : >"$OUT_A"; : >"$OUT_B"
+    race_available "$DELTA"
+    local req a; req="$(race_need 'Demo Aero Services Lisbon' 1)"; a="$(race_accepted "$req" "$DELTA" "$(new_uuid)")"
+    local pause="update public.work_requirements set status = 'paused' where id = '$req';"
+    local held="$pause" other; other="$(confirm_sql "$a")"
+    if [ "$first" = confirm ]; then held="$other"; other="$pause"; fi
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$held" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+    local pa=$!
+    sleep 0.4
+    printf '%s\n' "$other" | psql_as "$ADMIN_OTHER" >"$OUT_B" || true
+    wait "$pa" || true
+    local app status
+    app="$(echo "select status from public.applications where id = '${a%%|*}';" | psql_owner)"
+    status="$(echo "select status from public.work_requirements where id = '$req';" | psql_owner)"
+    if [ "$first" = pause ] && [ "$status" = paused ] && [ "$app" = accepted ] && grep -q 'is not open' "$OUT_B"; then
+      pass "pause first: the confirmation waited for the row and got REQUIREMENT_NOT_OPEN"
+    elif [ "$first" = confirm ] && [ "$status" = covered ] && [ "$app" = confirmed ] && grep -q 'is not allowed' "$OUT_B"; then
+      pass "confirm first: the requirement is covered and the pause was refused (55000)"
+    else fail "$first first: requirement=$status application=$app"; cat "$OUT_A" "$OUT_B"; fi
+    race_cleanup "$req"
+  done
+}
+
+double_booking() {
+  echo "== D-06: two organizations confirm the same technician for overlapping periods at the same time"
+  applications_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"
+  local lis bcn a b
+  lis="$(race_need 'Demo Aero Services Lisbon' 1)"; bcn="$(race_need 'Demo Airline Ops Barcelona' 1)"
+  a="$(race_accepted "$lis" "$DELTA" "$(new_uuid)")"; b="$(race_accepted "$bcn" "$DELTA" "$(new_uuid)")"
+  printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$(confirm_sql "$a")" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+  local pa=$!
+  sleep 0.4
+  printf '%s\n' "$(confirm_sql "$b")" | psql_as "$ADMIN_AIRLINE" >"$OUT_B" || true
+  wait "$pa" || true
+  local confirmed; confirmed="$(echo "select count(*) from public.applications where technician_profile_id = '$DELTA' and requirement_id in ('$lis', '$bcn') and status = 'confirmed';" | psql_owner)"
+  if [ "$confirmed" = 1 ] && grep -q 'another confirmed assignment overlaps' "$OUT_B"; then
+    pass "the technician's advisory lock serialised both; the second got OVERLAPPING_ASSIGNMENT"
+  else fail "confirmed=$confirmed"; cat "$OUT_A" "$OUT_B"; fi
+  race_cleanup "$lis" "$bcn"
+}
+
+apply_vs_edit() {
+  echo "== M05: an edit racing the first application waits for it and is refused (HAS_APPLICATIONS)"
+  applications_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"
+  local req; req="$(race_need 'Demo Aero Services Lisbon' 1)"
+  printf "begin;\nselect replayed from public.apply_to_requirement('%s', gen_random_uuid(), true);\nselect pg_sleep(1.5);\ncommit;\n" "$req" \
+    | psql_as "$DELTA" >"$OUT_A" &
+  local pa=$!
+  sleep 0.4
+  psql_as "$ADMIN_OTHER" >"$OUT_B" <<SQL || true
+select u.changed
+from public.work_requirements wr,
+  lateral public.update_work_requirement(wr.id, wr.updated_at, 'Race applications (edited)', wr.location,
+    wr.starts_at, wr.ends_at, wr.shift, wr.headcount, wr.urgency,
+    (select jsonb_agg(jsonb_build_object('qualification_type_id', q.qualification_type_id,
+                                         'requirement_level', q.requirement_level))
+     from public.work_requirement_qualifications q where q.work_requirement_id = wr.id)) u
+where wr.id = '$req';
+SQL
+  wait "$pa" || true
+  local apps title
+  apps="$(echo "select count(*) from public.applications where requirement_id = '$req';" | psql_owner)"
+  title="$(echo "select title from public.work_requirements where id = '$req';" | psql_owner)"
+  if [ "$apps" = 1 ] && [ "$title" = 'Race applications' ] && grep -q 'received applications cannot be edited' "$OUT_B"; then
+    pass "the application committed first; the edit waited on the requirement row and was refused"
+  else fail "applications=$apps title=$title"; cat "$OUT_A" "$OUT_B"; fi
+  race_cleanup "$req"
+}
+
+# --- In-app notices (migration 20261023800000) ----------------------------------------------------
+# Lima (a member of Lisbon) is promoted to manager for the scenario and set back to member at the end.
+LIMA=00000000-0000-4000-8000-000000000042
+LISBON_ORG="(select id from public.organizations where name = 'Demo Aero Services Lisbon')"
+notices_ready() {
+  [ "$(echo "select to_regclass('public.notifications') is not null;" | psql_owner)" = t ] && return 0
+  fail "migration 20261023800000 is not applied to the local stack (notices scenario not run)"
+  return 1
+}
+notices_role_loss() {
+  echo "== notices: a manager demoted while an application is written keeps no notice of it (both orders)"
+  applications_ready || return 0
+  notices_ready || return 0
+  local first
+  for first in apply demote; do
+    : >"$OUT_A"; : >"$OUT_B"
+    race_available "$DELTA"
+    echo "update public.organization_members set role = 'manager'
+            where profile_id = '$LIMA' and organization_id = $LISBON_ORG;" | psql_owner >/dev/null
+    local req; req="$(race_need 'Demo Aero Services Lisbon' 1)"
+    local apply="select replayed from public.apply_to_requirement('$req', gen_random_uuid(), true);"
+    local demote="update public.organization_members set role = 'member' where profile_id = '$LIMA' and organization_id = $LISBON_ORG;"
+    local held_as="$DELTA" held="$apply" other_as="$ADMIN_OTHER" other="$demote"
+    if [ "$first" = demote ]; then held_as="$ADMIN_OTHER"; held="$demote"; other_as="$DELTA"; other="$apply"; fi
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$held" | psql_as "$held_as" >"$OUT_A" &
+    local pa=$!
+    sleep 0.4
+    printf '%s\n' "$other" | psql_as "$other_as" >"$OUT_B" || true
+    wait "$pa" || true
+    local count_of="select count(*) from public.notifications n join public.applications a on a.id = n.application_id where a.requirement_id = '$req' and n.recipient_id ="
+    local lima admin
+    lima="$(echo "$count_of '$LIMA';" | psql_owner)"
+    admin="$(echo "$count_of '$ADMIN_OTHER';" | psql_owner)"
+    if [ "$lima" = 0 ] && [ "$admin" = 1 ]; then
+      pass "$first first: the membership lock ordered both; the demoted manager has no notice, the admin has one"
+    else fail "$first first: demoted manager notices=$lima admin notices=$admin"; cat "$OUT_A" "$OUT_B"; fi
+    echo "update public.organization_members set role = 'member'
+            where profile_id = '$LIMA' and organization_id = $LISBON_ORG;" | psql_owner >/dev/null
+    race_cleanup "$req"
+  done
+}
+
+# --- Wallet trash expiry (migration 20261024200000, security review MEDIUM-1) -----------------------
+# Delta restores an archived document while a platform admin's sweep expires the trash. Whoever takes the
+# row first wins; a restored document is never deleted (the DELETE re-checks the expiry on its target),
+# and a deleted one cannot be restored. The document, its object, its tombstone and any orphan tombstone
+# recorded by the sweep during the scenario are removed afterwards (audit rows stay: append-only).
+wallet_trash_ready() {
+  [ "$(echo "select exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'professional_documents' and column_name = 'archived_at');" | psql_owner)" = t ] && return 0
+  fail "migration 20261024200000 is not applied to the local stack (wallet-trash scenario not run)"
+  return 1
+}
+wallet_trash() {
+  echo "== wallet trash: the owner restores while the sweep expires the same document (both orders)"
+  wallet_trash_ready || return 0
+  local first
+  for first in restore sweep; do
+    : >"$OUT_A"; : >"$OUT_B"
+    local key; key="$(new_uuid)"
+    local path="$DELTA/$key-0123456789abcdef"
+    local since; since="$(echo "select now();" | psql_owner)"
+    local doc
+    doc="$(psql_owner <<SQL | tail -1
+insert into storage.objects (bucket_id, name, owner, metadata)
+values ('professional-documents', '$path', '$DELTA', '{"size": 3, "mimetype": "application/pdf"}');
+insert into public.professional_documents (owner_id, kind, title, storage_path, mime_type, size_bytes, sha256, archived_at)
+values ('$DELTA', 'other', 'Race trash', '$path', 'application/pdf', 3, repeat('a', 64), now() - interval '400 days')
+returning id;
+SQL
+)"
+    local restore="update public.professional_documents set archived_at = null where id = '$doc';"
+    local sweep="select count(*) from public.document_maintenance_batch(true, 100) where storage_path = '$path' and action = 'expired';"
+    local held_as="$DELTA" held="$restore" other_as="$PLATFORM_ADMIN" other="$sweep"
+    if [ "$first" = sweep ]; then held_as="$PLATFORM_ADMIN"; held="$sweep"; other_as="$DELTA"; other="$restore"; fi
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$held" | psql_as "$held_as" >"$OUT_A" &
+    local pa=$!
+    sleep 0.4
+    printf '%s\n' "$other" | psql_as "$other_as" >"$OUT_B" || true
+    wait "$pa" || true
+    local row tomb audit
+    row="$(echo "select coalesce((select (archived_at is null)::text from public.professional_documents where id = '$doc'), 'gone');" | psql_owner)"
+    tomb="$(echo "select coalesce(string_agg(reason, ','), 'none') from app_private.document_object_tombstones where storage_path = '$path';" | psql_owner)"
+    audit="$(echo "select count(*) from public.audit_events where action = 'document.trash_expired' and entity_id = '$doc';" | psql_owner)"
+    if [ "$first" = restore ] && [ "$row" = true ] && [ "$tomb" = none ] && [ "$audit" = 0 ]; then
+      pass "restore first: the document is back in the wallet; the sweep neither deleted, tombstoned nor audited it"
+    elif [ "$first" = sweep ] && [ "$row" = gone ] && [ "$tomb" = trash_expired ] && [ "$audit" = 1 ]; then
+      pass "sweep first: expired once (trash_expired tombstone, audited); the late restore found nothing"
+    else fail "$first first: row=$row tombstone=$tomb audit=$audit"; cat "$OUT_A" "$OUT_B"; fi
+    # The object row was inserted above without a blob; Storage refuses direct deletes unless allowed.
+    psql_owner >/dev/null <<SQL
+begin;
+set local storage.allow_delete_query = 'true';
+delete from public.professional_documents where id = '$doc';
+delete from app_private.document_object_tombstones
+  where storage_path = '$path' or (reason = 'orphan_upload' and deleted_at >= '$since');
+delete from storage.objects where bucket_id = 'professional-documents' and name = '$path';
+commit;
+SQL
+  done
+}
+
+# Recruiter (20261024500100, BR-27.5): a revocation and an action for the same client at the same time. The action
+# share-locks the representation, so whichever commits first decides: a confirmation that holds it wins and the
+# revocation waits; a revocation that holds it makes the confirmation wait and then refuse (CFR02).
+recruiter_ready() {
+  [ "$(echo "select to_regclass('public.represented_clients') is not null;" | psql_owner)" = t ] && return 0
+  fail "migration 20261024500000 is not applied to the local stack (recruiter scenario not run)"
+  return 1
+}
+recruiter_round() { # $1 = confirm|revoke (the one that commits first)
+  : >"$OUT_A"; : >"$OUT_B"
+  local client req a status confirmed
+  client="$(psql_owner <<SQL | tail -1
+insert into public.represented_clients (agency_id, name, status, activated_at)
+select id, 'Race client ' || gen_random_uuid(), 'active', now() from public.organizations
+where name = 'Demo Aero Services Lisbon' returning id;
+SQL
+)"
+  req="$(race_need 'Demo Aero Services Lisbon' 1 "$client")"
+  a="$(race_accepted "$req" "$DELTA" "$(new_uuid)")"
+  local revoke="select status from public.revoke_represented_client('$client');"
+  if [ "$1" = confirm ]; then
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$(confirm_sql "$a")" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+  else
+    printf 'begin;\n%s\nselect pg_sleep(1.5);\ncommit;\n' "$revoke" | psql_as "$ADMIN_OTHER" >"$OUT_A" &
+  fi
+  local pa=$!
+  sleep 0.4
+  if [ "$1" = confirm ]; then printf '%s\n' "$revoke" | psql_as "$ADMIN_OTHER" >"$OUT_B" || true
+  else printf '%s\n' "$(confirm_sql "$a")" | psql_as "$ADMIN_OTHER" >"$OUT_B" || true; fi
+  wait "$pa" || true
+  status="$(echo "select status from public.represented_clients where id = '$client';" | psql_owner)"
+  confirmed="$(echo "select count(*) from public.applications where requirement_id = '$req' and status = 'confirmed';" | psql_owner)"
+  if [ "$1" = confirm ] && [ "$confirmed" = 1 ] && [ "$status" = revoked ]; then
+    pass "confirm first: the confirmation committed, the revocation waited and then ended the representation"
+  elif [ "$1" = revoke ] && [ "$confirmed" = 0 ] && [ "$status" = revoked ] && grep -q 'not active' "$OUT_B"; then
+    pass "revoke first: the confirmation waited and was refused (CFR02)"
+  else fail "$1 first: confirmed=$confirmed client=$status"; cat "$OUT_A" "$OUT_B"; fi
+  race_cleanup "$req"
+  echo "delete from public.represented_clients where id = '$client';" | psql_owner >/dev/null
+}
+recruiter() {
+  echo "== BR-27.5: revoke a client and confirm an application for it at the same time (both orders)"
+  applications_ready || return 0
+  recruiter_ready || return 0
+  # Owner fixtures: the representation rows do not depend on the organization type (only the RPCs check it).
+  race_available "$DELTA"
+  recruiter_round confirm
+  race_available "$DELTA"
+  recruiter_round revoke
+}
+
+# --- PKG outreach: «Distribuir aviso Urgente / AOG» (migrations 20261024400000…400200) -----------------
+# Delta's notice preferences are saved for the scenario and put back as they were at the end.
+ADMIN_MRO=00000000-0000-4000-8000-000000000001
+MANAGER_MRO=00000000-0000-4000-8000-000000000014
+outreach_ready() {
+  [ "$(echo "select to_regproc('public.requirement_outreach') is not null;" | psql_owner)" = t ] && return 0
+  fail "migrations 20261024400000…400200 are not applied to the local stack (outreach scenario not run)"
+  return 1
+}
+OUTREACH_SAVED=""
+outreach_opt_in() { # Delta accepts AOG notices for the scenario (previous row kept in OUTREACH_SAVED)
+  OUTREACH_SAVED="$(echo "select row_to_json(p) from public.technician_notice_preferences p where profile_id = '$DELTA';" | psql_owner)"
+  psql_owner >/dev/null <<SQL
+insert into public.technician_notice_preferences (profile_id, urgent_opt_in, aog_opt_in, mobilization_hours)
+values ('$DELTA', true, true, 12)
+on conflict (profile_id) do update set urgent_opt_in = true, aog_opt_in = true, mobilization_hours = 12,
+  time_zone = 'Europe/Madrid', quiet_start = null, quiet_end = null;
+SQL
+}
+outreach_restore() {
+  if [ -z "$OUTREACH_SAVED" ]; then
+    echo "delete from public.technician_notice_preferences where profile_id = '$DELTA';" | psql_owner >/dev/null
+  else
+    psql_owner >/dev/null <<SQL
+update public.technician_notice_preferences p
+set urgent_opt_in = s.urgent_opt_in, aog_opt_in = s.aog_opt_in, mobilization_hours = s.mobilization_hours,
+    time_zone = s.time_zone, quiet_start = s.quiet_start, quiet_end = s.quiet_end
+from json_populate_record(null::public.technician_notice_preferences, '$OUTREACH_SAVED'::json) s
+where p.profile_id = '$DELTA';
+SQL
+  fi
+}
+aog_need() { # an open AOG need of Demo MRO Madrid over the race period; prints its id
+  local req; req="$(race_need 'Demo MRO Madrid' 1)"
+  echo "update public.work_requirements set urgency = 'aog' where id = '$req';" | psql_owner >/dev/null
+  echo "$req"
+}
+outreach_twice() {
+  echo "== outreach: an admin and a manager distribute the same need at once — one distribution, one notice"
+  applications_ready || return 0
+  outreach_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"
+  outreach_opt_in
+  local req; req="$(aog_need)"
+  printf "begin;\nselect notified from public.requirement_outreach('%s');\nselect pg_sleep(1.5);\ncommit;\n" "$req" \
+    | psql_as "$ADMIN_MRO" >"$OUT_A" &
+  local pa=$!
+  sleep 0.4
+  printf "select notified from public.requirement_outreach('%s');\n" "$req" | psql_as "$MANAGER_MRO" >"$OUT_B" || true
+  wait "$pa" || true
+  local runs audits notices
+  runs="$(echo "select count(*) from public.outreach_distributions where requirement_id = '$req';" | psql_owner)"
+  audits="$(echo "select count(*) from public.audit_events where action = 'requirement.outreach_distributed' and entity_id = '$req';" | psql_owner)"
+  notices="$(echo "select count(*) from public.notifications where kind = 'outreach' and requirement_id = '$req' and recipient_id = '$DELTA';" | psql_owner)"
+  if [ "$runs" = 1 ] && [ "$audits" = 1 ] && [ "$notices" = 1 ] && grep -q 'already distributed' "$OUT_B"; then
+    pass "the requirement lock ordered both; the second got OUTREACH_ALREADY_SENT and nobody got two notices"
+  else fail "distributions=$runs audits=$audits delta notices=$notices"; cat "$OUT_A" "$OUT_B"; fi
+  outreach_restore
+  race_cleanup "$req"
+}
+outreach_flood() {
+  echo "== outreach: four needs of one organization distributed at once — the 3-per-24 h bound still holds"
+  applications_ready || return 0
+  outreach_ready || return 0
+  : >"$OUT_A"; : >"$OUT_B"
+  race_available "$DELTA"
+  outreach_opt_in
+  # The 3-per-24 h delivery bound counts earlier notices too (ui-smoke «PKG outreach» leaves one): start clean.
+  echo "delete from public.notifications where kind = 'outreach' and recipient_id = '$DELTA';" | psql_owner >/dev/null
+  local needs=() i
+  for i in 1 2 3 4; do needs+=("$(aog_need)"); done
+  printf "begin;\nselect notified from public.requirement_outreach('%s');\nselect pg_sleep(1.5);\ncommit;\n" "${needs[0]}" \
+    | psql_as "$ADMIN_MRO" >"$OUT_A" &
+  local pids=($!)
+  sleep 0.4
+  for i in 1 2 3; do
+    printf "select notified from public.requirement_outreach('%s');\n" "${needs[$i]}" | psql_as "$MANAGER_MRO" >>"$OUT_B" &
+    pids+=($!)
+  done
+  wait "${pids[@]}" || true
+  local list; list="$(printf "'%s'," "${needs[@]}")"; list="${list%,}"
+  local runs notices
+  runs="$(echo "select count(*) from public.outreach_distributions where requirement_id in ($list);" | psql_owner)"
+  notices="$(echo "select count(*) from public.notifications where kind = 'outreach' and recipient_id = '$DELTA' and requirement_id in ($list);" | psql_owner)"
+  if [ "$runs" = 4 ] && [ "$notices" = 3 ]; then
+    pass "the organization lock serialised the four distributions; Delta got 3 notices, not 4"
+  else fail "distributions=$runs delta notices=$notices"; cat "$OUT_A" "$OUT_B"; fi
+  outreach_restore
+  race_cleanup "${needs[@]}"
+}
+
 case "${1:-all}" in
   e3) e3; e3_simultaneous ;;
   idempotency) idempotency ;;
   review) review ;;
   availability) availability ;;
-  all) e3; e3_simultaneous; idempotency; review; availability ;;
+  applications) applications; pause_vs_confirm; double_booking; apply_vs_edit ;;
+  notices) notices_role_loss ;;
+  wallet-trash) wallet_trash ;;
+  recruiter) recruiter ;;
+  outreach) outreach_twice; outreach_flood ;;
+  all) e3; e3_simultaneous; idempotency; review; availability
+       applications; pause_vs_confirm; double_booking; apply_vs_edit; notices_role_loss; wallet_trash
+       outreach_twice; outreach_flood; recruiter ;;
   *) die "unknown scenario: $1" ;;
 esac
 exit "$FAIL"

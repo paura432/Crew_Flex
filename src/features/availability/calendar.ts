@@ -111,6 +111,20 @@ export function calendarDays(windows: CalendarWindow[], month: string): Calendar
   });
 }
 
+/**
+ * Past days are frozen (v1.8 parity; the batch `PUT` already refuses them): only today or later can
+ * be changed from the calendar, with or without a draft. Both are `YYYY-MM-DD` (UTC).
+ */
+export const isDayEditable = (date: string, today: string) => date >= today;
+
+/**
+ * X-19, form only: a new window, or one whose start moves, may not start on a past UTC day. Both
+ * starts are the form's minute-precision `YYYY-MM-DDTHH:mm` (R-X L2: a stored start can carry
+ * seconds); `editingStart` is null for a new window.
+ */
+export const refusesPastStart = (formStart: string, editingStart: string | null, today: string) =>
+  formStart !== editingStart && !isDayEditable(formStart.slice(0, 10), today);
+
 /** Whole-day window boundaries for a calendar day (UTC). */
 export function dayWindow(date: string): { startsAt: string; endsAt: string } {
   const start = dayStart(date);
@@ -137,3 +151,28 @@ export function countDays(
   }
   return n;
 }
+
+/**
+ * UTC days touched by periods (end exclusive): confirmed assignments (D-06 «Asignación», v1.8
+ * «Asignado») or opportunities. Since N-04 (BR-4.9, T-15) the days of a `confirmed` assignment are
+ * protected: not editable here and refused by the server (only `confirmed`, T-16).
+ */
+export function assignmentDays(assignments: readonly { startsAt: string; endsAt: string }[]) {
+  const days = new Set<string>();
+  for (const a of assignments) {
+    const end = Date.parse(a.endsAt);
+    for (let t = dayStart(a.startsAt.slice(0, 10)); t < end; t += DAY_MS)
+      days.add(new Date(t).toISOString().slice(0, 10));
+  }
+  return days;
+}
+
+/**
+ * A calendar day can be changed: today or later (v1.8 parity) and not a day of a confirmed
+ * assignment (BR-4.9, v1.8 «Una asignación confirmada está protegida.»).
+ */
+export const canEditDay = (date: string, today: string, assigned: ReadonlySet<string>) =>
+  isDayEditable(date, today) && !assigned.has(date);
+
+/** The mini calendar's «Asignado» cell (v1.8 `.mini-day.assigned`), over any day state. */
+export const ASSIGNED_STYLE = "border-blue/40 bg-info-bg text-blue";

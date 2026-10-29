@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { isStaffingAgency } from "@/domain/recruiter";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { evaluateRequirementMatches } from "@/features/matching/api";
 import { MatchCard } from "@/features/matching/components/MatchCard";
@@ -20,6 +21,7 @@ import { PoolCoverageNote } from "@/features/matching/components/PoolCoverageNot
 import { getRequirement } from "@/features/requirements/api";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
 import { formatPeriod } from "@/i18n/format";
+import { isEvaluable } from "@/domain/work-requirement";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,14 +33,16 @@ export default async function RequirementMatchesPage({
   params,
   searchParams,
 }: PageProps<"/app/organization/requirements/[id]/matches">) {
-  const [{ id }, search, { canManage }, t, tDashboard, locale] = await Promise.all([
-    params,
-    searchParams,
-    requireOrganizationContext(),
-    getTranslations("organization.matches"),
-    getTranslations("organization.dashboard"),
-    getLocale(),
-  ]);
+  const [{ id }, search, { organization, canManage }, t, tDashboard, tRecruiter, locale] =
+    await Promise.all([
+      params,
+      searchParams,
+      requireOrganizationContext(),
+      getTranslations("organization.matches"),
+      getTranslations("organization.dashboard"),
+      getTranslations("recruiter"),
+      getLocale(),
+    ]);
   // Same gate as the detail page and the dashboard; the RPC re-checks the role on its own.
   if (!canManage) {
     return (
@@ -63,6 +67,8 @@ export default async function RequirementMatchesPage({
     );
   }
   const { requirement } = requirementResult.data;
+  // RLS lets platform admins read every tenant; these pages show the acting organization only.
+  if (requirement.organizationId !== organization.id) notFound();
   const base = `/app/organization/requirements/${requirement.id}/matches`;
   const query = parseMatchListQuery(search);
   const list = matchesResult.ok ? listMatches(matchesResult.data.candidates, query) : null;
@@ -74,7 +80,7 @@ export default async function RequirementMatchesPage({
   return (
     <>
       <PageHeader
-        eyebrow={t("eyebrow")}
+        eyebrow={isStaffingAgency(organization.type) ? tRecruiter("networkEyebrow") : t("eyebrow")}
         title={requirement.title}
         description={t("description", {
           location: requirement.location,
@@ -85,7 +91,20 @@ export default async function RequirementMatchesPage({
       <div className="mb-6">
         <QualificationChips qualifications={requirement.qualifications} />
       </div>
-      {!matchesResult.ok ? (
+      {!isEvaluable(requirement) ? (
+        // V1.8 evaluates published jobs only (M05): no pool for a paused or closed need.
+        <StateMessage
+          title={t(
+            requirement.status === "paused"
+              ? "notEvaluablePaused"
+              : requirement.status === "draft"
+                ? "notEvaluableDraft"
+                : "notEvaluableClosed",
+          )}
+          description={t("notEvaluableDescription")}
+          action={back}
+        />
+      ) : !matchesResult.ok ? (
         <ApiErrorState error={matchesResult.error} requestId={matchesResult.requestId} />
       ) : matchesResult.data.candidates.length === 0 ? (
         <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />

@@ -1,4 +1,24 @@
-# Candidate Pack and contact consent (D-07) · DESIGN, not implemented
+# Candidate Pack and contact consent (D-07) · DESIGN — rules PREPARED, NOT ACTIVATED
+
+> **2026-10-23 (pack-view, local, PARTIAL):** the part of the Pack D-07 does not lock is IMPLEMENTED — the **dated
+> copy** of the professional's technical profile (v2-15 + v2-04, BUSINESS_RULES BR-25, defaults T-110…T-116):
+> frozen in `application_packs` by a trigger when they apply (migration `20261024300000`), previewed in the apply
+> panel («Qué compartes con {organización}», «Experiencia que compartes») before the consent, read through
+> `get_application_pack` by the applicant and the requirement organization's admins/managers («Ver expediente» on the
+> requirement's applications, the organization's «Candidaturas» and «Mis candidaturas»), deleted when the application is withdrawn, rejected or cancelled and when the account closes,
+> listed in the professional's own export. It carries
+> categories, years, English, base, aircraft, engines, declared type ratings, active qualifications and courses,
+> capabilities, work permits, restrictions, the declared minimum rate and the logbook entries marked «Seleccionable
+> para expediente»; never the real name, contact, employer, blocks or documents. Everything below — identity and
+> contact, documents, consents, revocation, audited access — stays as designed and **not activated**.
+
+> **2026-10-22 (M09, local):** the access rules of §1 are pure functions in `src/domain/candidate-pack.ts`
+> (`contactVisible`, `documentAccessible`, kill switch `PACK_ACTIVATION = { contact: false, documents: false }`),
+> tested in `candidate-pack.test.ts` (nothing unlocks while the switch is off; P1/P4 from `accepted`/`confirmed`
+> with the contact consent; P2 only selected, kept, `clean`, unexpired documents; consents independent; a
+> cancellation locks again). **No table, RPC, Edge Function or UI shares contact or documents**, and none of
+> §2 is built: it waits for P3 (retention period, legal), the approved scanner (D-10) and the owner's activation.
+> Applicants are shown to the organization only as the candidate pool shows them (pseudonym rules, T-04).
 
 > Owner direction of 2026-10-19 (D-07, restated later the same day): identity, contact and documents stay protected; access depends on a concrete purpose, a valid application state and explicit consent.
 > Earlier direction (D-07): no private document or contact datum is ever shared because a
@@ -45,17 +65,19 @@ per-requirement pseudonym (`CF-…`, T-04) and the match explanation only.
 
 ## 4. Decisions
 
-Owner proposals of 2026-10-19 for P1–P4; §1 reflects them. Each still needs **ratification** before
-any code that shares data (§4.1). Earlier options and recommendations kept for the record.
+Owner proposals of 2026-10-19 for P1–P4; §1 reflects them. **2026-10-22: P1, P2 and P4 ratified as the local
+implementation direction; P3 (access-log retention) stays open** — no period is set without the legal decision.
+Contracts, domain, interfaces and tests may be prepared; **third-party document access is not activated** until P3,
+the approved scanner (D-10) and their controls exist. Earlier options and recommendations kept for the record.
 
-| #   | Question                                                                       | Options                                                                                                      | Recommendation (earlier)                                                                                                    | Status 2026-10-19                                                                                      |
-| --- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| P1  | Is `proposed` enough for contact, or only from `accepted`?                     | (a) from `proposed` · (b) from `accepted` · (c) only from `confirmed`                                        | (b) From `accepted` (the technician has accepted terms), unless the owner wants earlier contact                             | **Owner proposal: (b)** — contact from acceptance, with its specific consent                           |
-| P2  | May an organization download (not only view) pack documents?                   | (a) view only (inline signed URL) · (b) view and download, each audited · (c) neither until a scanner exists | (b), each audited — and, per D-10, neither until an approved scanner marks the file `clean`                                 | **Owner proposal: (b)**, audited, **only once an approved document scan exists** (until then: neither) |
-| P3  | Retention of access logs                                                       | (a) indefinitely (append-only) · (b) a fixed period, then deleted · (c) account lifetime + a fixed period    | (b) — a defined period agreed with legal counsel (data minimisation; access logs are personal data), append-only until then | **Owner proposal: (b)** limited retention; **the period is not fixed** (legal criterion pending)       |
-| P4  | Is identity (real name) unlocked together with contact, or by its own consent? | (a) with the contact permission · (b) separate identity consent · (c) only from `confirmed`                  | (a): name and contact serve the same purpose; one consent is easier to understand                                           | **Owner proposal: (a)** — real identity and contact under **one common informed consent**              |
+| #   | Question                                                                       | Options                                                                                                      | Recommendation (earlier)                                                                                                    | Status 2026-10-19                                                                                                       |
+| --- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| P1  | Is `proposed` enough for contact, or only from `accepted`?                     | (a) from `proposed` · (b) from `accepted` · (c) only from `confirmed`                                        | (b) From `accepted` (the technician has accepted terms), unless the owner wants earlier contact                             | **Ratified 2026-10-22 (direction): (b)** — contact from acceptance, with its specific consent                           |
+| P2  | May an organization download (not only view) pack documents?                   | (a) view only (inline signed URL) · (b) view and download, each audited · (c) neither until a scanner exists | (b), each audited — and, per D-10, neither until an approved scanner marks the file `clean`                                 | **Ratified 2026-10-22 (direction): (b)**, audited, **only once an approved document scan exists** (until then: neither) |
+| P3  | Retention of access logs                                                       | (a) indefinitely (append-only) · (b) a fixed period, then deleted · (c) account lifetime + a fixed period    | (b) — a defined period agreed with legal counsel (data minimisation; access logs are personal data), append-only until then | **Owner proposal: (b)** limited retention; **the period is not fixed** (legal criterion pending)                        |
+| P4  | Is identity (real name) unlocked together with contact, or by its own consent? | (a) with the contact permission · (b) separate identity consent · (c) only from `confirmed`                  | (a): name and contact serve the same purpose; one consent is easier to understand                                           | **Ratified 2026-10-22 (direction): (a)** — real identity and contact under **one common informed consent**              |
 
-### 4.1 Still to ratify before implementing sensitive operations
+### 4.1 Still blocking real sharing (after the 2026-10-22 ratification)
 
 - P1–P4 as a whole, together with the consent text the technician sees (it must name the
   organization and, for agencies, the represented client — D-12).
@@ -64,4 +86,5 @@ any code that shares data (§4.1). Earlier options and recommendations kept for 
   downloadable by an organization before it exists.
 - The D-06 states the conditions refer to (`APPLICATIONS_STATE_MACHINE.md` §4.1).
 
-Nothing in this document is implemented; no table, function, policy or UI for sharing exists.
+Nothing in §1–§2 is implemented; no table, function, policy or UI for sharing identity, contact or documents exists
+(the dated technical copy of the 2026-10-23 note above is the only shared part).
