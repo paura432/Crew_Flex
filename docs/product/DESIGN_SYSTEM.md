@@ -113,9 +113,10 @@ in metrics use tabular figures.
 
 Desktop (`lg`, ≥ 1024 px): sticky navy sidebar with the name, account type/role (platform admins: the platform
 role) and sign-out at the bottom; the menu scrolls inside the screen when it is taller than the viewport (X-03).
-Above the content a white header (`TopBar`, v1.8 `.workspace-header`, T-142) reads «CrewFlex / {menu entry}»
-(12 px `muted`, 5.2:1; the entry the path belongs to, e.g. «Necesidades» on a requirement's detail) with the notices
-bell on the right. At the end of every `/app` page the v1.8 footer «CREWFLEX AVIATION» · «Cualificación ·
+Above the content a 76 px white header (`TopBar`, v1.8/v1.9 `.workspace-header`, T-142) reads «CrewFlex / {menu entry}»
+(12 px `muted`, 5.2:1; the entry the path belongs to, e.g. «Necesidades» on a requirement's detail; the decorative «/»
+in v1.9's light `#acb8c4`) with the notices bell on the right as v1.9's `.icon-button`: 44 × 44, 1 px `line` border,
+white, icon `#426078` (6.6:1). At the end of every `/app` page the v1.8 footer «CREWFLEX AVIATION» · «Cualificación ·
 Disponibilidad · Confianza» (12 px `muted` on canvas, 4.8:1; the motto from `md`, no version label, T-148).
 Platform admins get a «Ver como» switcher above the menu (D-13): four links (Técnico, Empresa, Recruiter,
 Administración) over their own account, each showing that view's sections. Below

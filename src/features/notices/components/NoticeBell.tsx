@@ -16,7 +16,7 @@ export function NoticeBell({
 }: {
   count: number | null;
   label: string;
-  /** The white desktop header (v1.8 `.workspace-header`); default: the navy bar. */
+  /** The white desktop header (v1.9 `.icon-button`: 44 px, bordered); default: the navy bar. */
   onLight?: boolean;
 }) {
   const badge = unreadBadge(count);
@@ -24,7 +24,7 @@ export function NoticeBell({
     <Link
       href="/app/notices"
       aria-label={label}
-      className={`relative grid size-10 shrink-0 place-items-center rounded-lg pointer-coarse:size-11 ${onLight ? "text-muted hover:bg-canvas hover:text-ink" : "text-[#c4d3e1] hover:bg-white/5 hover:text-white"}`}
+      className={`relative grid shrink-0 place-items-center rounded-lg ${onLight ? "size-11 border border-line bg-white text-[#426078] hover:bg-canvas hover:text-ink" : "size-10 text-[#c4d3e1] hover:bg-white/5 hover:text-white pointer-coarse:size-11"}`}
     >
       <svg
         aria-hidden
