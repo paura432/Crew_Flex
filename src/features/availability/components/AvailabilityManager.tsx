@@ -122,10 +122,6 @@ export function AvailabilityManager({
     ...days.map((day) => ({ key: day.date, day })),
   ];
   const monthStart = `${month}-01`;
-  const monthEnd = `${shiftMonth(month, 1)}-01`;
-  const availableDays = countDays(windows, "available", monthStart, monthEnd);
-  const blockedDays = countDays(windows, "unavailable", monthStart, monthEnd);
-  const aogDays = countDays(windows, "aog_only", monthStart, monthEnd);
 
   function run(
     label: string,
@@ -147,6 +143,13 @@ export function AvailabilityManager({
         setNotice(availabilityErrorCopy(tRoot, result, write));
       }
     });
+  }
+
+  function clearDraft() {
+    setPlan({});
+    setHistory([]);
+    generatedWith.current = null;
+    setCycleError(null);
   }
 
   // Setting days is idempotent by nature (applying the same set twice gives the same windows), so
@@ -172,13 +175,6 @@ export function AvailabilityManager({
       // The draft is kept (clearDraft runs on success only) so it can be re-applied after a reload.
       "days",
     );
-  }
-
-  function clearDraft() {
-    setPlan({});
-    setHistory([]);
-    generatedWith.current = null;
-    setCycleError(null);
   }
 
   /** Every draft change goes through here so it can be undone. */
@@ -289,15 +285,6 @@ export function AvailabilityManager({
       run(t("windowAdded"), () => createWindowAction(parsed.data, idempotency.keyFor(parsed.data)));
   }
 
-  const input = (id: string) => ({
-    id,
-    name: id,
-    className: controlClass,
-    "aria-invalid": Boolean(errors[id]),
-    "aria-describedby": describedBy(id, errors[id]),
-    disabled: pending,
-  });
-
   return (
     <div className="space-y-6">
       <Notice
@@ -305,30 +292,7 @@ export function AvailabilityManager({
         referenceLabel={tRoot("common.reference", { id: notice?.requestId ?? "" })}
       />
 
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Metric
-          label={t("metrics.available")}
-          value={availableDays}
-          detail={t("metrics.availableDetail")}
-          tone={availableDays > 0 ? "ok" : "neutral"}
-        />
-        <Metric
-          label={t("metrics.blocked")}
-          value={blockedDays}
-          detail={t("metrics.blockedDetail")}
-        />
-        <Metric
-          label={t("metrics.aogOnly")}
-          value={aogDays}
-          detail={t("metrics.aogOnlyDetail")}
-          tone={aogDays > 0 ? "warn" : "neutral"}
-        />
-        <Metric
-          label={t("metrics.windows")}
-          value={windows.length}
-          detail={t("metrics.windowsDetail")}
-        />
-      </dl>
+      <MonthMetrics windows={windows} month={month} />
 
       <CyclePlanner
         today={today}
@@ -341,199 +305,370 @@ export function AvailabilityManager({
       <Panel
         title={formatMonth(locale, `${monthStart}T00:00:00Z`)}
         actions={
-          <div className="flex gap-2">
-            <Button
-              aria-label={t("prevMonth")}
-              disabled={planned > 0}
-              onClick={() => setMonth(shiftMonth(month, -1))}
-            >
-              ←
-            </Button>
-            <Button
-              aria-label={t("nextMonth")}
-              disabled={planned > 0}
-              onClick={() => setMonth(shiftMonth(month, 1))}
-            >
-              →
-            </Button>
-          </div>
+          <MonthNav
+            locked={planned > 0}
+            onPrevious={() => setMonth(shiftMonth(month, -1))}
+            onNext={() => setMonth(shiftMonth(month, 1))}
+          />
         }
       >
-        <div className="mb-1 flex flex-wrap gap-2" role="group" aria-label={t("pickerLabel")}>
-          {PICKER_OPTIONS.map(({ value, cls }) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={picker === value}
-              onClick={() => setPicker(value)}
-              className={`min-h-9 pointer-coarse:min-h-11 rounded-lg border px-3 text-sm font-semibold ${cls} aria-[pressed=true]:ring-2 aria-[pressed=true]:ring-navy`}
-            >
-              {t(`picker.${value}`)}
-            </button>
-          ))}
-        </div>
-        <p className="text-sm text-muted">{t("pickerHint")}</p>
-        <p className="text-sm text-muted">{t("aogHint")}</p>
-        {/* Legend of the assignment mark + v1.8 «… protegidas también en el servidor» (BR-4.9). */}
-        <p className="mb-4 text-sm text-muted">
-          <span aria-hidden className="font-bold text-navy">
-            ● {t("assignedShort")}
-          </span>{" "}
-          · {t("assignedHint")}
-        </p>
-
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold tracking-wide text-muted uppercase">
-          {WEEKDAYS.map((d) => (
-            <div key={d} className="py-1">
-              {t(`weekday.${d}`)}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1" aria-busy={pending}>
-          {cells.map(({ key, day }) => {
-            if (day === null) return <div key={key} aria-hidden />;
-            const draft = plan[day.date];
-            const isAssigned = assigned.has(day.date);
-            const state = draft ? PLANNED_STATE(draft.status) : day.state;
-            const label = draft?.cycle
-              ? `${dayLabel(state)} · ${t(`cycle.state.${draft.cycle}`)}`
-              : dayLabel(state);
-            return (
-              <button
-                key={key}
-                type="button"
-                disabled={pending || !canEditDay(day.date, today, assigned)}
-                onClick={() => onDayClick(day.date)}
-                aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${isAssigned ? `, ${t("assigned")}. ${t("protectedDay")}` : ""}`}
-                className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
-              >
-                <span className="text-base font-bold tabular-nums">
-                  {Number(day.date.slice(-2))}
-                </span>
-                <span className="hidden text-[11px] leading-none sm:block">{dayLabel(state)}</span>
-                {/* Below `sm` only the dot fits the cell (VIS-02 #11); the words are in the label. */}
-                {isAssigned && (
-                  <span aria-hidden className="text-[11px] leading-none font-bold text-navy">
-                    ●<span className="hidden sm:inline"> {t("assignedShort")}</span>
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <DayPicker value={picker} onChange={setPicker} />
+        <CalendarGrid
+          cells={cells}
+          plan={plan}
+          assigned={assigned}
+          today={today}
+          pending={pending}
+          onDayClick={onDayClick}
+        />
 
         {planned > 0 && (
-          <div className="mt-4 space-y-3 rounded-lg border border-warn/40 bg-warn-bg p-3 text-sm text-warn">
-            <p role="status">{t("cycle.pending", { count: planned })}</p>
-            {splitDays > 0 && <p>{t("cycle.splitWarning", { count: splitDays })}</p>}
-            <div className="flex flex-wrap gap-2">
-              <Button variant="primary" disabled={pending} aria-busy={pending} onClick={onSavePlan}>
-                {pending ? tRoot("common.saving") : t("cycle.save")}
-              </Button>
-              <Button disabled={pending || history.length === 0} onClick={undo}>
-                {t("cycle.undo")}
-              </Button>
-              <Button disabled={pending} onClick={clearDraft}>
-                {t("cycle.discard")}
-              </Button>
-            </div>
-          </div>
+          <DraftBar
+            planned={planned}
+            splitDays={splitDays}
+            pending={pending}
+            canUndo={history.length > 0}
+            onSave={onSavePlan}
+            onUndo={undo}
+            onDiscard={clearDraft}
+          />
         )}
       </Panel>
 
-      <Panel title={editing ? t("editWindow") : t("addWindow")}>
-        <form
-          key={editing?.id ?? "new"}
-          onSubmit={onSubmit}
-          noValidate
-          className="grid gap-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end"
-        >
-          <Field id="startsAt" label={t("starts")} error={errors.startsAt}>
-            <input
-              {...input("startsAt")}
-              type="datetime-local"
-              step={900}
-              defaultValue={editing ? toLocalInput(editing.startsAt) : ""}
-            />
-          </Field>
-          <Field id="endsAt" label={t("ends")} error={errors.endsAt}>
-            <input
-              {...input("endsAt")}
-              type="datetime-local"
-              step={900}
-              defaultValue={editing ? toLocalInput(editing.endsAt) : ""}
-            />
-          </Field>
-          <Field id="status" label={t("status")} error={errors.status}>
-            <select {...input("status")} defaultValue={editing?.status ?? "available"}>
-              <option value="available">{t("statusAvailable")}</option>
-              <option value="unavailable">{t("statusUnavailable")}</option>
-              <option value="aog_only">{t("statusAogOnly")}</option>
-            </select>
-          </Field>
-          <div className="flex gap-2">
-            <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-              {pending
-                ? tRoot("common.saving")
-                : editing
-                  ? tRoot("common.save")
-                  : tRoot("common.add")}
-            </Button>
-            {editing && (
-              <Button
-                onClick={() => {
-                  setEditing(null);
-                  setErrors({});
-                }}
-              >
-                {tRoot("common.cancel")}
-              </Button>
-            )}
-          </div>
-        </form>
-        {errors.form && <p className="mt-2 text-sm font-medium text-danger">{errors.form}</p>}
-      </Panel>
+      <WindowForm
+        editing={editing}
+        errors={errors}
+        pending={pending}
+        onSubmit={onSubmit}
+        onCancel={() => {
+          setEditing(null);
+          setErrors({});
+        }}
+      />
 
-      <Panel title={t("savedWindows", { count: windows.length })}>
-        {windows.length === 0 ? (
-          <p className="text-sm text-muted">{t("emptyHint")}</p>
-        ) : (
-          <ul className="divide-y divide-line">
-            {windows.map((w) => (
-              <li key={w.id} className="grid gap-2 py-3 text-sm sm:flex sm:items-center sm:gap-3">
-                <StatusChip tone={STATUS_CHIP[w.status].tone}>
-                  {t(STATUS_CHIP[w.status].label)}
-                </StatusChip>
-                <span className="min-w-0 flex-1 tabular-nums">
-                  {formatDateTime(locale, w.startsAt)} <span className="text-muted">→</span>{" "}
-                  <span className="whitespace-nowrap">{formatDateTime(locale, w.endsAt)}</span>
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setEditing(w);
-                      setErrors({});
-                      setNotice(null);
-                    }}
-                    disabled={pending}
-                  >
-                    {tRoot("common.edit")}
-                  </Button>
-                  <ConfirmButton
-                    size="sm"
-                    disabled={pending}
-                    label={tRoot("common.delete")}
-                    confirmLabel={t("confirmDelete")}
-                    cancelLabel={tRoot("common.cancel")}
-                    onConfirm={() => run(t("windowDeleted"), () => deleteWindowAction(w.id))}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
+      <SavedWindows
+        windows={windows}
+        pending={pending}
+        onEdit={(w) => {
+          setEditing(w);
+          setErrors({});
+          setNotice(null);
+        }}
+        onDelete={(w) => run(t("windowDeleted"), () => deleteWindowAction(w.id))}
+      />
     </div>
+  );
+}
+
+type Plan = Record<string, PlannedDay>;
+type Cell = { key: string; day: ReturnType<typeof calendarDays>[number] | null };
+
+const submitKey = (pending: boolean, editing: boolean) =>
+  pending ? "common.saving" : editing ? "common.save" : "common.add";
+
+/** The month's available, blocked and AOG-only days, and the number of saved windows. */
+function MonthMetrics({ windows, month }: { windows: AvailabilityWindow[]; month: string }) {
+  const t = useTranslations("availability");
+  const monthStart = `${month}-01`;
+  const monthEnd = `${shiftMonth(month, 1)}-01`;
+  const availableDays = countDays(windows, "available", monthStart, monthEnd);
+  const blockedDays = countDays(windows, "unavailable", monthStart, monthEnd);
+  const aogDays = countDays(windows, "aog_only", monthStart, monthEnd);
+  return (
+    <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Metric
+        label={t("metrics.available")}
+        value={availableDays}
+        detail={t("metrics.availableDetail")}
+        tone={availableDays > 0 ? "ok" : "neutral"}
+      />
+      <Metric
+        label={t("metrics.blocked")}
+        value={blockedDays}
+        detail={t("metrics.blockedDetail")}
+      />
+      <Metric
+        label={t("metrics.aogOnly")}
+        value={aogDays}
+        detail={t("metrics.aogOnlyDetail")}
+        tone={aogDays > 0 ? "warn" : "neutral"}
+      />
+      <Metric
+        label={t("metrics.windows")}
+        value={windows.length}
+        detail={t("metrics.windowsDetail")}
+      />
+    </dl>
+  );
+}
+
+/** The month grid: saved state, the unsaved draft (dashed) and the protected assignment days. */
+function CalendarGrid({
+  cells,
+  plan,
+  assigned,
+  today,
+  pending,
+  onDayClick,
+}: {
+  cells: Cell[];
+  plan: Plan;
+  assigned: Set<string>;
+  today: string;
+  pending: boolean;
+  onDayClick: (date: string) => void;
+}) {
+  const t = useTranslations("availability");
+  const dayLabel = (state: DayState) => t(`day.${state}`);
+  return (
+    <div className="grid grid-cols-7 gap-1" aria-busy={pending}>
+      {cells.map(({ key, day }) => {
+        if (day === null) return <div key={key} aria-hidden />;
+        const draft = plan[day.date];
+        const isAssigned = assigned.has(day.date);
+        const state = draft ? PLANNED_STATE(draft.status) : day.state;
+        const label = draft?.cycle
+          ? `${dayLabel(state)} · ${t(`cycle.state.${draft.cycle}`)}`
+          : dayLabel(state);
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={pending || !canEditDay(day.date, today, assigned)}
+            onClick={() => onDayClick(day.date)}
+            aria-label={`${day.date}: ${label}${draft ? `, ${t("cycle.unsaved")}` : ""}${isAssigned ? `, ${t("assigned")}. ${t("protectedDay")}` : ""}`}
+            className={`flex min-h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm transition-colors enabled:hover:ring-2 enabled:hover:ring-navy/30 disabled:opacity-60 sm:min-h-20 ${DAY_STYLE[state]} ${draft ? "outline-2 -outline-offset-4 outline-accent outline-dashed" : ""}`}
+          >
+            <span className="text-base font-bold tabular-nums">{Number(day.date.slice(-2))}</span>
+            <span className="hidden text-[11px] leading-none sm:block">{dayLabel(state)}</span>
+            {/* Below `sm` only the dot fits the cell (VIS-02 #11); the words are in the label. */}
+            {isAssigned && (
+              <span aria-hidden className="text-[11px] leading-none font-bold text-navy">
+                ●<span className="hidden sm:inline"> {t("assignedShort")}</span>
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The unsaved draft: how many days, what saving would split, save / undo / discard. */
+function DraftBar({
+  planned,
+  splitDays,
+  pending,
+  canUndo,
+  onSave,
+  onUndo,
+  onDiscard,
+}: {
+  planned: number;
+  splitDays: number;
+  pending: boolean;
+  canUndo: boolean;
+  onSave: () => void;
+  onUndo: () => void;
+  onDiscard: () => void;
+}) {
+  const t = useTranslations("availability");
+  const tRoot = useTranslations();
+  return (
+    <div className="mt-4 space-y-3 rounded-lg border border-warn/40 bg-warn-bg p-3 text-sm text-warn">
+      <p role="status">{t("cycle.pending", { count: planned })}</p>
+      {splitDays > 0 && <p>{t("cycle.splitWarning", { count: splitDays })}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Button variant="primary" disabled={pending} aria-busy={pending} onClick={onSave}>
+          {pending ? tRoot("common.saving") : t("cycle.save")}
+        </Button>
+        <Button disabled={pending || !canUndo} onClick={onUndo}>
+          {t("cycle.undo")}
+        </Button>
+        <Button disabled={pending} onClick={onDiscard}>
+          {t("cycle.discard")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Add a window, or edit the one picked from the list (start, end, status). */
+function WindowForm({
+  editing,
+  errors,
+  pending,
+  onSubmit,
+  onCancel,
+}: {
+  editing: AvailabilityWindow | null;
+  errors: Record<string, string | undefined>;
+  pending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+}) {
+  const t = useTranslations("availability");
+  const tRoot = useTranslations();
+  const input = (id: string) => ({
+    id,
+    name: id,
+    className: controlClass,
+    "aria-invalid": Boolean(errors[id]),
+    "aria-describedby": describedBy(id, errors[id]),
+    disabled: pending,
+  });
+  return (
+    <Panel title={editing ? t("editWindow") : t("addWindow")}>
+      <form
+        key={editing?.id ?? "new"}
+        onSubmit={onSubmit}
+        noValidate
+        className="grid gap-4 md:grid-cols-[1fr_1fr_auto_auto] md:items-end"
+      >
+        <Field id="startsAt" label={t("starts")} error={errors.startsAt}>
+          <input
+            {...input("startsAt")}
+            type="datetime-local"
+            step={900}
+            defaultValue={editing ? toLocalInput(editing.startsAt) : ""}
+          />
+        </Field>
+        <Field id="endsAt" label={t("ends")} error={errors.endsAt}>
+          <input
+            {...input("endsAt")}
+            type="datetime-local"
+            step={900}
+            defaultValue={editing ? toLocalInput(editing.endsAt) : ""}
+          />
+        </Field>
+        <Field id="status" label={t("status")} error={errors.status}>
+          <select {...input("status")} defaultValue={editing?.status ?? "available"}>
+            <option value="available">{t("statusAvailable")}</option>
+            <option value="unavailable">{t("statusUnavailable")}</option>
+            <option value="aog_only">{t("statusAogOnly")}</option>
+          </select>
+        </Field>
+        <div className="flex gap-2">
+          <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+            {tRoot(submitKey(pending, editing !== null))}
+          </Button>
+          {editing && <Button onClick={onCancel}>{tRoot("common.cancel")}</Button>}
+        </div>
+      </form>
+      {errors.form && <p className="mt-2 text-sm font-medium text-danger">{errors.form}</p>}
+    </Panel>
+  );
+}
+
+/** The saved windows with «Editar» and «Eliminar». */
+function SavedWindows({
+  windows,
+  pending,
+  onEdit,
+  onDelete,
+}: {
+  windows: AvailabilityWindow[];
+  pending: boolean;
+  onEdit: (w: AvailabilityWindow) => void;
+  onDelete: (w: AvailabilityWindow) => void;
+}) {
+  const t = useTranslations("availability");
+  const tRoot = useTranslations();
+  const locale = useLocale();
+  return (
+    <Panel title={t("savedWindows", { count: windows.length })}>
+      {windows.length === 0 ? (
+        <p className="text-sm text-muted">{t("emptyHint")}</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {windows.map((w) => (
+            <li key={w.id} className="grid gap-2 py-3 text-sm sm:flex sm:items-center sm:gap-3">
+              <StatusChip tone={STATUS_CHIP[w.status].tone}>
+                {t(STATUS_CHIP[w.status].label)}
+              </StatusChip>
+              <span className="min-w-0 flex-1 tabular-nums">
+                {formatDateTime(locale, w.startsAt)} <span className="text-muted">→</span>{" "}
+                <span className="whitespace-nowrap">{formatDateTime(locale, w.endsAt)}</span>
+              </span>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => onEdit(w)} disabled={pending}>
+                  {tRoot("common.edit")}
+                </Button>
+                <ConfirmButton
+                  size="sm"
+                  disabled={pending}
+                  label={tRoot("common.delete")}
+                  confirmLabel={t("confirmDelete")}
+                  cancelLabel={tRoot("common.cancel")}
+                  onConfirm={() => onDelete(w)}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+function MonthNav({
+  locked,
+  onPrevious,
+  onNext,
+}: {
+  /** An unsaved draft pins the month. */
+  locked: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  const t = useTranslations("availability");
+  return (
+    <div className="flex gap-2">
+      <Button aria-label={t("prevMonth")} disabled={locked} onClick={onPrevious}>
+        ←
+      </Button>
+      <Button aria-label={t("nextMonth")} disabled={locked} onClick={onNext}>
+        →
+      </Button>
+    </div>
+  );
+}
+
+/** What a click on a day paints, the hints, the assignment legend and the weekday header. */
+function DayPicker({ value: current, onChange }: { value: Picker; onChange: (p: Picker) => void }) {
+  const t = useTranslations("availability");
+  return (
+    <>
+      <div className="mb-1 flex flex-wrap gap-2" role="group" aria-label={t("pickerLabel")}>
+        {PICKER_OPTIONS.map(({ value, cls }) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={value === current}
+            onClick={() => onChange(value)}
+            className={`min-h-9 pointer-coarse:min-h-11 rounded-lg border px-3 text-sm font-semibold ${cls} aria-[pressed=true]:ring-2 aria-[pressed=true]:ring-navy`}
+          >
+            {t(`picker.${value}`)}
+          </button>
+        ))}
+      </div>
+      <p className="text-sm text-muted">{t("pickerHint")}</p>
+      <p className="text-sm text-muted">{t("aogHint")}</p>
+      {/* Legend of the assignment mark + v1.8 «… protegidas también en el servidor» (BR-4.9). */}
+      <p className="mb-4 text-sm text-muted">
+        <span aria-hidden className="font-bold text-navy">
+          ● {t("assignedShort")}
+        </span>{" "}
+        · {t("assignedHint")}
+      </p>
+
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold tracking-wide text-muted uppercase">
+        {WEEKDAYS.map((d) => (
+          <div key={d} className="py-1">
+            {t(`weekday.${d}`)}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
