@@ -186,8 +186,8 @@ async function ApplicationsList({
   filters: Filters;
   openPack: string | string[] | undefined;
 }) {
-  const t = await getTranslations("hiring.applications");
   if (!list.ok) return <ApiErrorState error={list.error} requestId={list.requestId} />;
+  const t = await getTranslations("hiring.applications");
   if (list.data.applications.length === 0) {
     return <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />;
   }

@@ -85,17 +85,12 @@ export async function OrganizationOverview({
   description: string;
   children?: ReactNode;
 }) {
-  const [[t, tHiring, tHome], [result, open, counts, network]] = await Promise.all([
-    Promise.all([
-      getTranslations("organization.dashboard"),
-      getTranslations("hiring.dashboard"),
-      getTranslations("orgHome"),
-    ]),
+  const [[t, tHome], [result, open, counts, network]] = await Promise.all([
+    Promise.all([getTranslations("organization.dashboard"), getTranslations("orgHome")]),
     readOverview(organization.id, canManage),
   ]);
   // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and «Jornadas cubiertas» (D-06).
   const perRequirement = counts?.ok ? counts.data.requirements : null;
-  const applicationCounts = perRequirement ? sumCounts(perRequirement) : null;
   const current = open.ok ? currentAtRequestTime(open.data.requirements) : [];
   const focus = current[0];
 
@@ -137,40 +132,12 @@ export async function OrganizationOverview({
       ) : (
         <div className="space-y-6">
           {open.ok ? (
-            <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <Metric
-                label={t("openRequirements")}
-                value={openRequirementsValue(
-                  current.length,
-                  open.data.requirements.length,
-                  DEFAULT_LIST_LIMIT,
-                  open.data.total,
-                )}
-                detail={t("openRequirementsDetail")}
-              />
-              {applicationCounts && (
-                <>
-                  <Metric
-                    label={t("applications")}
-                    value={activeApplications(applicationCounts)}
-                    detail={t("toConfirm", { count: applicationCounts.accepted ?? 0 })}
-                    tone={(applicationCounts.accepted ?? 0) > 0 ? "warn" : "neutral"}
-                  />
-                  <Metric
-                    label={tHiring("coveredShifts")}
-                    value={coveredShifts(perRequirement ?? [])}
-                    detail={t("confirmedOnly")}
-                  />
-                </>
-              )}
-              {canManage && (
-                <Metric
-                  label={tHome("visibleNetwork")}
-                  value={network ?? "—"}
-                  detail={tHome("visibleNetworkDetail")}
-                />
-              )}
-            </dl>
+            <OverviewKpis
+              currentCount={current.length}
+              open={open.data}
+              perRequirement={perRequirement}
+              network={canManage ? network : undefined}
+            />
           ) : (
             <ApiErrorState error={open.error} requestId={open.requestId} />
           )}
@@ -202,5 +169,70 @@ export async function OrganizationOverview({
         <CoverageGuide canManage={canManage} />
       </div>
     </>
+  );
+}
+
+type OpenRead = Extract<Awaited<ReturnType<typeof listFocusCandidates>>, { ok: true }>["data"];
+type PerRequirement = Extract<
+  Awaited<ReturnType<typeof getRequirementApplicationCounts>>,
+  { ok: true }
+>["data"]["requirements"];
+
+/** The four v1.8 KPIs: open requirements, applications, covered shifts and the visible network. */
+async function OverviewKpis({
+  currentCount,
+  open,
+  perRequirement,
+  network,
+}: {
+  currentCount: number;
+  open: OpenRead;
+  /** Per-requirement counters (admin/manager); null hides the two application KPIs. */
+  perRequirement: PerRequirement | null;
+  /** «Red visible» (admin/manager); undefined hides it, null shows «—». */
+  network: number | null | undefined;
+}) {
+  const [t, tHiring, tHome] = await Promise.all([
+    getTranslations("organization.dashboard"),
+    getTranslations("hiring.dashboard"),
+    getTranslations("orgHome"),
+  ]);
+  // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and «Jornadas cubiertas» (D-06).
+  const applicationCounts = perRequirement ? sumCounts(perRequirement) : null;
+  return (
+    <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Metric
+        label={t("openRequirements")}
+        value={openRequirementsValue(
+          currentCount,
+          open.requirements.length,
+          DEFAULT_LIST_LIMIT,
+          open.total,
+        )}
+        detail={t("openRequirementsDetail")}
+      />
+      {applicationCounts && (
+        <>
+          <Metric
+            label={t("applications")}
+            value={activeApplications(applicationCounts)}
+            detail={t("toConfirm", { count: applicationCounts.accepted ?? 0 })}
+            tone={(applicationCounts.accepted ?? 0) > 0 ? "warn" : "neutral"}
+          />
+          <Metric
+            label={tHiring("coveredShifts")}
+            value={coveredShifts(perRequirement ?? [])}
+            detail={t("confirmedOnly")}
+          />
+        </>
+      )}
+      {network !== undefined && (
+        <Metric
+          label={tHome("visibleNetwork")}
+          value={network ?? "—"}
+          detail={tHome("visibleNetworkDetail")}
+        />
+      )}
+    </dl>
   );
 }

@@ -39,12 +39,10 @@ export default async function RequirementDetailPage({
   params,
   searchParams,
 }: PageProps<"/app/organization/requirements/[id]">) {
-  const [{ id }, { archived }, { organization, canManage }, t, tApplications] = await Promise.all([
+  const [{ id }, { archived }, { organization, canManage }] = await Promise.all([
     params,
     searchParams,
     requireOrganizationContext(),
-    getTranslations("organization.detail"),
-    getTranslations("applications"),
   ]);
   const result = await getRequirement(id);
   if (!result.ok) {
@@ -54,15 +52,75 @@ export default async function RequirementDetailPage({
   const { requirement } = result.data;
   // RLS lets platform admins read every tenant; these pages show the acting organization only.
   if (requirement.organizationId !== organization.id) notFound();
-  const closed = requirement.status === "closed";
-  const draft = requirement.status === "draft";
+  return (
+    <RequirementDetail
+      requirement={requirement}
+      canManage={canManage}
+      justArchived={archived === "1"}
+    />
+  );
+}
+
+/** The requirement's facts and actions, its outreach and (published needs) its capacity. */
+async function RequirementDetail({
+  requirement,
+  canManage,
+  justArchived,
+}: {
+  requirement: WorkRequirement;
+  canManage: boolean;
+  justArchived: boolean;
+}) {
+  const t = await getTranslations("organization.detail");
   // V1.8 evaluates published jobs only: a draft, paused or closed need shows its facts, not the pool.
   const evaluable = isEvaluable(requirement);
   const [capacity, applications] = await Promise.all([
     canManage && evaluable ? evaluateRequirementCapacity(requirement.id) : null,
-    canManage && !draft ? listRequirementApplications(requirement.id) : null,
+    canManage && requirement.status !== "draft"
+      ? listRequirementApplications(requirement.id)
+      : null,
   ]);
   const list = applications?.ok ? applications.data.applications : null;
+  return (
+    <>
+      <PageHeader eyebrow={t("eyebrow")} title={requirement.title} />
+      <div className="space-y-6">
+        <RequirementPanel
+          requirement={requirement}
+          canManage={canManage}
+          justArchived={justArchived}
+          list={list}
+        />
+        {/* PKG outreach (v2-17): «Distribución Urgente/AOG», admin/manager, never on planned needs. */}
+        <OutreachPanel requirement={requirement} canManage={canManage} now={requestTime()} />
+        {evaluable && <CapacitySection requirement={requirement} capacity={capacity} />}
+      </div>
+    </>
+  );
+}
+
+type ApplicationList = Extract<
+  Awaited<ReturnType<typeof listRequirementApplications>>,
+  { ok: true }
+>["data"]["applications"];
+
+/** Facts, confirmed coverage and the actions of a closed or a live requirement. */
+async function RequirementPanel({
+  requirement,
+  canManage,
+  justArchived,
+  list,
+}: {
+  requirement: WorkRequirement;
+  canManage: boolean;
+  justArchived: boolean;
+  /** The requirement's applications; null when not read (draft, member) or the read failed. */
+  list: ApplicationList | null;
+}) {
+  const [t, tApplications] = await Promise.all([
+    getTranslations("organization.detail"),
+    getTranslations("applications"),
+  ]);
   const applicationCount = list?.length ?? 0;
   // «Cobertura por jornada» and v2-08 «{p}% cobertura confirmada» (BR-23): seats taken (confirmed +
   // finished), the same count that covers the requirement.
@@ -80,52 +138,42 @@ export default async function RequirementDetailPage({
       {t("duplicate")}
     </ButtonLink>
   );
-
+  const draft = requirement.status === "draft";
   return (
-    <>
-      <PageHeader eyebrow={t("eyebrow")} title={requirement.title} />
-      <div className="space-y-6">
-        <Panel>
-          <RequirementFacts requirement={requirement} confirmedSeats={confirmedSeats} />
-          {coverage && (
-            <div className="mt-4 max-w-sm">
-              <CoverageMeter coverage={coverage} seats />
-            </div>
-          )}
-          {closed ? (
-            <ClosedActions
-              requirement={requirement}
-              canManage={canManage}
-              justArchived={archived === "1"}
-              links={
-                <>
-                  {applicationCount > 0 && applicationsLink}
-                  {duplicateLink}
-                </>
-              }
-            />
-          ) : (
-            <OpenActions
-              requirement={requirement}
-              canManage={canManage}
-              applicationCount={applicationCount}
-              canEdit={
-                canManage && (draft || (applications?.ok === true && applicationCount === 0))
-              }
-              links={
-                <>
-                  {applicationsLink}
-                  {duplicateLink}
-                </>
-              }
-            />
-          )}
-        </Panel>
-        {/* PKG outreach (v2-17): «Distribución Urgente/AOG», admin/manager, never on planned needs. */}
-        <OutreachPanel requirement={requirement} canManage={canManage} now={requestTime()} />
-        {evaluable && <CapacitySection requirement={requirement} capacity={capacity} />}
-      </div>
-    </>
+    <Panel>
+      <RequirementFacts requirement={requirement} confirmedSeats={confirmedSeats} />
+      {coverage && (
+        <div className="mt-4 max-w-sm">
+          <CoverageMeter coverage={coverage} seats />
+        </div>
+      )}
+      {requirement.status === "closed" ? (
+        <ClosedActions
+          requirement={requirement}
+          canManage={canManage}
+          justArchived={justArchived}
+          links={
+            <>
+              {applicationCount > 0 && applicationsLink}
+              {duplicateLink}
+            </>
+          }
+        />
+      ) : (
+        <OpenActions
+          requirement={requirement}
+          canManage={canManage}
+          applicationCount={applicationCount}
+          canEdit={canManage && (draft || (list !== null && applicationCount === 0))}
+          links={
+            <>
+              {applicationsLink}
+              {duplicateLink}
+            </>
+          }
+        />
+      )}
+    </Panel>
   );
 }
 

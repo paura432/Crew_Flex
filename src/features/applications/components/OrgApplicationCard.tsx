@@ -45,6 +45,71 @@ const REQUIREMENT_NOTE = {
 /** Request time (dynamic pages): render must stay pure for React's lint. */
 const periodEndedNow = (r: Pick<WorkRequirement, "endsAt">) => canFinish(r, Date.now());
 
+type MatchingT = Awaited<ReturnType<typeof getTranslations<"matching">>>;
+type HiringT = Awaited<ReturnType<typeof getTranslations<"hiring.applications">>>;
+
+/** The applicant's name and profile line; «Cuenta cerrada» when the technician closed the account. */
+function applicantLines(
+  candidate: CandidateSummary | null,
+  tMatching: MatchingT,
+  tHiring: HiringT,
+) {
+  if (!candidate) return { name: tHiring("closedAccount"), profile: tHiring("closedAccountNote") };
+  const years =
+    candidate.yearsExperience !== null
+      ? ` · ${tMatching("years", { count: candidate.yearsExperience })}`
+      : "";
+  return {
+    name: candidate.displayName ?? tMatching("anonymous", { ref: candidate.id }),
+    profile: `${candidate.baseLocation ?? tMatching("baseNotShared")}${years}`,
+  };
+}
+
+const proposalOf = (application: CardApplication) =>
+  application.currentProposal
+    ? { id: application.currentProposal.id, version: application.currentProposal.version }
+    : null;
+
+const noteOf = (status: RequirementStatus) =>
+  status in REQUIREMENT_NOTE ? REQUIREMENT_NOTE[status as keyof typeof REQUIREMENT_NOTE] : null;
+
+/** «Candidaturas» (v2-05): the requirement as the heading, its period, days and status note. */
+async function RequirementHeading({
+  requirement,
+  name,
+  profile,
+}: {
+  requirement: CardRequirement;
+  name: string;
+  profile: string;
+}) {
+  const [t, locale] = await Promise.all([
+    getTranslations("applications"),
+    getLocale() as Promise<Locale>,
+  ]);
+  const note = noteOf(requirement.status);
+  return (
+    <div>
+      <h2 className="text-lg font-semibold break-words">
+        <Link
+          href={`/app/organization/requirements/${requirement.id}`}
+          className="text-blue hover:underline pointer-coarse:inline-block pointer-coarse:py-2.5"
+        >
+          {requirement.title}
+        </Link>
+      </h2>
+      {/* v1.8 «{candidato} · {n} fechas» (Workflow.jsx:57): the period and its days (T-165). */}
+      <p className="text-sm text-muted tabular-nums">
+        {requirement.location} · {formatPeriod(locale, requirement.startsAt, requirement.endsAt)} ·{" "}
+        {t("card.days", { count: requirementDays(requirement) })}
+      </p>
+      <p className="mt-1 font-semibold break-words">{name}</p>
+      <p className="text-sm text-muted">{profile}</p>
+      {note && <p className="mt-1 text-sm text-muted">{t(`card.${note}`)}</p>}
+    </div>
+  );
+}
+
 /**
  * One application as the organization sees it (M08): the applicant under the pool's rules (T-04),
  * their live eligibility, proposal, history and the admin/manager actions. On the organization-wide
@@ -68,29 +133,14 @@ export async function OrgApplicationCard({
    */
   pack?: { open: boolean; baseHref: string };
 }) {
-  const [t, tHiring, tMatching, tDomain, tPack, locale] = await Promise.all([
-    getTranslations("applications"),
+  const [tHiring, tMatching, tDomain, tPack] = await Promise.all([
     getTranslations("hiring.applications"),
     getTranslations("matching"),
     getTranslations("domain"),
     getTranslations("candidatePack"),
-    getLocale() as Promise<Locale>,
   ]);
   const { candidate, match } = application;
-  const name = candidate
-    ? (candidate.displayName ?? tMatching("anonymous", { ref: candidate.id }))
-    : tHiring("closedAccount");
-  const profile = candidate
-    ? `${candidate.baseLocation ?? tMatching("baseNotShared")}${
-        candidate.yearsExperience !== null
-          ? ` · ${tMatching("years", { count: candidate.yearsExperience })}`
-          : ""
-      }`
-    : tHiring("closedAccountNote");
-  const note =
-    requirement.status in REQUIREMENT_NOTE
-      ? REQUIREMENT_NOTE[requirement.status as keyof typeof REQUIREMENT_NOTE]
-      : null;
+  const { name, profile } = applicantLines(candidate, tMatching, tHiring);
   return (
     <article
       id={`a-${application.id}`} // a notice links here (v2-18)
@@ -108,25 +158,7 @@ export async function OrgApplicationCard({
         )}
       </div>
       {showRequirement ? (
-        <div>
-          <h2 className="text-lg font-semibold break-words">
-            <Link
-              href={`/app/organization/requirements/${requirement.id}`}
-              className="text-blue hover:underline pointer-coarse:inline-block pointer-coarse:py-2.5"
-            >
-              {requirement.title}
-            </Link>
-          </h2>
-          {/* v1.8 «{candidato} · {n} fechas» (Workflow.jsx:57): the period and its days (T-165). */}
-          <p className="text-sm text-muted tabular-nums">
-            {requirement.location} ·{" "}
-            {formatPeriod(locale, requirement.startsAt, requirement.endsAt)} ·{" "}
-            {t("card.days", { count: requirementDays(requirement) })}
-          </p>
-          <p className="mt-1 font-semibold break-words">{name}</p>
-          <p className="text-sm text-muted">{profile}</p>
-          {note && <p className="mt-1 text-sm text-muted">{t(`card.${note}`)}</p>}
-        </div>
+        <RequirementHeading requirement={requirement} name={name} profile={profile} />
       ) : (
         <div>
           <h2 className="text-lg font-semibold break-words">{name}</h2>
@@ -153,11 +185,7 @@ export async function OrgApplicationCard({
         status={application.status}
         updatedAt={application.updatedAt}
         actor="organization"
-        proposal={
-          application.currentProposal
-            ? { id: application.currentProposal.id, version: application.currentProposal.version }
-            : null
-        }
+        proposal={proposalOf(application)}
         periodEnded={periodEndedNow(requirement)}
         requirementOpen={requirement.status === "open"}
       />

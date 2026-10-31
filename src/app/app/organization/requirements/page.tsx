@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
@@ -27,12 +28,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RequirementsPage({
   searchParams,
 }: PageProps<"/app/organization/requirements">) {
-  const [{ page: pageParam, archived }, { organization, canManage }, t, tDashboard, tArchive] =
+  const [{ page: pageParam, archived }, { organization, canManage }, t, tArchive] =
     await Promise.all([
       searchParams,
       requireOrganizationContext(),
       getTranslations("organization.requirements"),
-      getTranslations("organization.dashboard"),
       getTranslations("organization.detail.archive"),
     ]);
   // v1.8 «Archivada» (T-64): archived requirements leave the working list and have their own view.
@@ -70,19 +70,14 @@ export default async function RequirementsPage({
           </div>
         }
       />
-      {!result.ok ? (
-        <ApiErrorState error={result.error} requestId={result.requestId} />
-      ) : total === 0 ? (
-        <StateMessage
-          title={archivedView ? tArchive("emptyTitle") : tDashboard("noRequirementsTitle")}
-          action={(archivedView ? viewToggle : newButton) || undefined}
-        />
-      ) : (
-        <Panel>
-          <RequirementsList requirements={result.data.requirements} seats={seats} />
-          <RequirementsPager page={page} pages={pageCount(total)} total={total} base={base} />
-        </Panel>
-      )}
+      <RequirementsBody
+        result={result}
+        page={page}
+        base={base}
+        archivedView={archivedView}
+        seats={seats}
+        emptyAction={(archivedView ? viewToggle : newButton) || undefined}
+      />
     </>
   );
 }
@@ -112,5 +107,43 @@ async function ViewToggle({ archivedView }: { archivedView: boolean }) {
     <ButtonLink href={archivedView ? ACTIVE_LIST : ARCHIVED_LIST}>
       {archivedView ? t("listBack") : t("listLink")}
     </ButtonLink>
+  );
+}
+
+/** One page of the list, its error, or the empty state of the working or the archived view. */
+async function RequirementsBody({
+  result,
+  page,
+  base,
+  archivedView,
+  seats,
+  emptyAction,
+}: {
+  result: Awaited<ReturnType<typeof listRequirements>>;
+  page: number;
+  base: string | undefined;
+  archivedView: boolean;
+  seats: ReturnType<typeof seatsByRequirement> | undefined;
+  emptyAction: ReactNode;
+}) {
+  if (!result.ok) return <ApiErrorState error={result.error} requestId={result.requestId} />;
+  const total = totalOf(result);
+  if (total === 0) {
+    const [tDashboard, tArchive] = await Promise.all([
+      getTranslations("organization.dashboard"),
+      getTranslations("organization.detail.archive"),
+    ]);
+    return (
+      <StateMessage
+        title={archivedView ? tArchive("emptyTitle") : tDashboard("noRequirementsTitle")}
+        action={emptyAction}
+      />
+    );
+  }
+  return (
+    <Panel>
+      <RequirementsList requirements={result.data.requirements} seats={seats} />
+      <RequirementsPager page={page} pages={pageCount(total)} total={total} base={base} />
+    </Panel>
   );
 }

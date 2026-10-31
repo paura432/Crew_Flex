@@ -30,91 +30,20 @@ export async function CandidatePackView({
   /** One line above the content (who receives it, or who sent it). */
   intro?: string;
 }) {
-  const [t, tCategory, tSkill, tDomain, tLogbook, locale] = await Promise.all([
+  const [t, tSkill, locale] = await Promise.all([
     getTranslations("candidatePack"),
-    getTranslations("passport.categories"),
     getTranslations("passport.skills"),
-    getTranslations("domain"),
-    getTranslations("logbook"),
     getLocale() as Promise<Locale>,
   ]);
   const today = todayUtc();
   const { courses, others } = splitPackQualifications(pack.qualifications);
   const joined = (items: string[]) => (items.length > 0 ? items.join(" · ") : t("noneDeclared"));
-  const expiry = (date: string | null, none: string) =>
-    date ? t("expires", { date: formatDate(locale, date) }) : none;
-  const categories = [
-    ...(pack.primaryCategory
-      ? [t("primary", { category: tCategory(categoryKey(pack.primaryCategory)) })]
-      : []),
-    ...pack.categories
-      .filter((c) => c !== pack.primaryCategory)
-      .map((c) => tCategory(categoryKey(c))),
-  ];
-  const summary = [
-    ...(categories.length > 0 ? [categories.join(" · ")] : []),
-    ...(pack.yearsExperience !== null ? [t("years", { count: pack.yearsExperience })] : []),
-    ...(pack.englishLevel ? [t("english", { level: pack.englishLevel })] : []),
-  ];
-  const base = [
-    pack.baseLocation ?? t("noBase"),
-    ...(pack.baseCountry ? [countryName(locale, pack.baseCountry)] : []),
-  ].join(" · ");
-  const money = (amount: number) => formatAmount(locale, amount);
-  const h4 = "font-semibold text-ink";
 
   return (
     <div className="space-y-4 text-sm">
-      <div className="space-y-1">
-        <p className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold tracking-wide text-muted">{t("brand")}</span>
-          <span className="rounded-full bg-navy px-2.5 py-0.5 text-xs font-semibold text-white">
-            {mode === "copy" ? t("badge") : t("previewBadge")}
-          </span>
-        </p>
-        {intro && <p className="text-muted">{intro}</p>}
-        {summary.length > 0 && <p className="font-semibold break-words">{summary.join(" · ")}</p>}
-        <p className="text-muted break-words">{base}</p>
-        {pack.minRate && (
-          <p className="tabular-nums">
-            {t("minRate", {
-              amount: money(pack.minRate.amount),
-              unit: t(`rateUnit.${pack.minRate.unit}`),
-            })}
-          </p>
-        )}
-      </div>
+      <PackHeader pack={pack} mode={mode} intro={intro} />
 
-      <section className="space-y-1">
-        <h4 className={h4}>{t("qualificationsTitle")}</h4>
-        <p className="break-words">{t("aircraft", { list: joined(pack.aircraft) })}</p>
-        <p className="break-words">{t("engines", { list: joined(pack.engines) })}</p>
-        <ul className="space-y-1">
-          {pack.typeRatings.map((r) => (
-            <li key={`${r.aircraft}:${r.category}`} className="break-words">
-              {t("rating", {
-                aircraft: r.aircraft,
-                category: tCategory(categoryKey(r.category)),
-                expiry: expiry(r.expiresAt, t("noExpiryApplicable")),
-                restrictions: r.restrictions ?? t("noRestrictions"),
-              })}
-            </li>
-          ))}
-          {others.map((q) => (
-            <li key={q.code} className="break-words">
-              {t("catalogItem", {
-                code: q.code,
-                name: q.name,
-                verification: tDomain(`verification.${q.verificationStatus}`),
-                expiry: expiry(q.expiresAt, t("noExpiry")),
-              })}
-            </li>
-          ))}
-        </ul>
-        {pack.typeRatings.length === 0 && others.length === 0 && (
-          <p className="text-muted">{t("noQualifications")}</p>
-        )}
-      </section>
+      <PackQualifications pack={pack} others={others} />
 
       <section className="space-y-1">
         <h4 className={h4}>{t("coursesTitle")}</h4>
@@ -152,41 +81,7 @@ export async function CandidatePackView({
         </p>
       </section>
 
-      <section className="space-y-1">
-        <h4 className={h4}>
-          {mode === "copy" ? t("experienceTitle") : t("previewExperienceTitle")}
-        </h4>
-        {mode === "preview" && (
-          <p className="text-muted">{t("previewExperienceHint", { max: PACK_EXPERIENCE_MAX })}</p>
-        )}
-        {pack.experience.length === 0 ? (
-          <p className="text-muted">{t("noExperience")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {pack.experience.map((e, i) => {
-              const meta = {
-                date: formatDate(locale, e.date),
-                hours: tLogbook("hoursValue", { hours: e.hours }),
-                environment: tLogbook(`environment.${e.environment}`),
-              };
-              return (
-                // react-doctor-disable-next-line no-array-index-as-key -- frozen candidate-pack snapshot; entries have no id and never reorder
-                <li key={i} className="break-words">
-                  <p className="font-semibold">
-                    {e.aircraft} · {tLogbook(`category.${e.category}`)}
-                  </p>
-                  <p className="text-muted tabular-nums">
-                    {e.ata
-                      ? t("experienceMetaAta", { ...meta, ata: e.ata })
-                      : t("experienceMeta", meta)}
-                  </p>
-                  <p className="whitespace-pre-line">{e.description}</p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      <PackExperience experience={pack.experience} mode={mode} />
 
       {packWithheld() && (
         <div className="rounded-lg border border-line bg-canvas px-4 py-3">
@@ -201,5 +96,171 @@ export async function CandidatePackView({
           : t("previewNote")}
       </p>
     </div>
+  );
+}
+
+const h4 = "font-semibold text-ink";
+
+type PackTranslate = Awaited<ReturnType<typeof getTranslations<"candidatePack">>>;
+type CategoryTranslate = Awaited<ReturnType<typeof getTranslations<"passport.categories">>>;
+
+/** «Categoría principal», the other categories, years and English level, in one line. */
+function summaryOf(pack: CandidatePackCopy, t: PackTranslate, tCategory: CategoryTranslate) {
+  const categories = [
+    ...(pack.primaryCategory
+      ? [t("primary", { category: tCategory(categoryKey(pack.primaryCategory)) })]
+      : []),
+    ...pack.categories
+      .filter((c) => c !== pack.primaryCategory)
+      .map((c) => tCategory(categoryKey(c))),
+  ];
+  return [
+    ...(categories.length > 0 ? [categories.join(" · ")] : []),
+    ...(pack.yearsExperience !== null ? [t("years", { count: pack.yearsExperience })] : []),
+    ...(pack.englishLevel ? [t("english", { level: pack.englishLevel })] : []),
+  ];
+}
+
+/** The pack's badge, the intro line, the summary, the base and the minimum rate. */
+async function PackHeader({
+  pack,
+  mode,
+  intro,
+}: {
+  pack: CandidatePackCopy;
+  mode: "copy" | "preview";
+  intro?: string;
+}) {
+  const [t, tCategory, locale] = await Promise.all([
+    getTranslations("candidatePack"),
+    getTranslations("passport.categories"),
+    getLocale() as Promise<Locale>,
+  ]);
+  const summary = summaryOf(pack, t, tCategory);
+  const base = [
+    pack.baseLocation ?? t("noBase"),
+    ...(pack.baseCountry ? [countryName(locale, pack.baseCountry)] : []),
+  ].join(" · ");
+  return (
+    <div className="space-y-1">
+      <p className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold tracking-wide text-muted">{t("brand")}</span>
+        <span className="rounded-full bg-navy px-2.5 py-0.5 text-xs font-semibold text-white">
+          {mode === "copy" ? t("badge") : t("previewBadge")}
+        </span>
+      </p>
+      {intro && <p className="text-muted">{intro}</p>}
+      {summary.length > 0 && <p className="font-semibold break-words">{summary.join(" · ")}</p>}
+      <p className="text-muted break-words">{base}</p>
+      {pack.minRate && (
+        <p className="tabular-nums">
+          {t("minRate", {
+            amount: formatAmount(locale, pack.minRate.amount),
+            unit: t(`rateUnit.${pack.minRate.unit}`),
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Aircraft, engines, type ratings and the catalogue qualifications (courses have their own section). */
+async function PackQualifications({
+  pack,
+  others,
+}: {
+  pack: CandidatePackCopy;
+  others: ReturnType<typeof splitPackQualifications>["others"];
+}) {
+  const [t, tCategory, tDomain, locale] = await Promise.all([
+    getTranslations("candidatePack"),
+    getTranslations("passport.categories"),
+    getTranslations("domain"),
+    getLocale() as Promise<Locale>,
+  ]);
+  const joined = (items: string[]) => (items.length > 0 ? items.join(" · ") : t("noneDeclared"));
+  const expiry = (date: string | null, none: string) =>
+    date ? t("expires", { date: formatDate(locale, date) }) : none;
+  return (
+    <section className="space-y-1">
+      <h4 className={h4}>{t("qualificationsTitle")}</h4>
+      <p className="break-words">{t("aircraft", { list: joined(pack.aircraft) })}</p>
+      <p className="break-words">{t("engines", { list: joined(pack.engines) })}</p>
+      <ul className="space-y-1">
+        {pack.typeRatings.map((r) => (
+          <li key={`${r.aircraft}:${r.category}`} className="break-words">
+            {t("rating", {
+              aircraft: r.aircraft,
+              category: tCategory(categoryKey(r.category)),
+              expiry: expiry(r.expiresAt, t("noExpiryApplicable")),
+              restrictions: r.restrictions ?? t("noRestrictions"),
+            })}
+          </li>
+        ))}
+        {others.map((q) => (
+          <li key={q.code} className="break-words">
+            {t("catalogItem", {
+              code: q.code,
+              name: q.name,
+              verification: tDomain(`verification.${q.verificationStatus}`),
+              expiry: expiry(q.expiresAt, t("noExpiry")),
+            })}
+          </li>
+        ))}
+      </ul>
+      {pack.typeRatings.length === 0 && others.length === 0 && (
+        <p className="text-muted">{t("noQualifications")}</p>
+      )}
+    </section>
+  );
+}
+
+/** The logbook entries the pack carries (the latest {max} in a preview). */
+async function PackExperience({
+  experience,
+  mode,
+}: {
+  experience: CandidatePackCopy["experience"];
+  mode: "copy" | "preview";
+}) {
+  const [t, tLogbook, locale] = await Promise.all([
+    getTranslations("candidatePack"),
+    getTranslations("logbook"),
+    getLocale() as Promise<Locale>,
+  ]);
+  return (
+    <section className="space-y-1">
+      <h4 className={h4}>{mode === "copy" ? t("experienceTitle") : t("previewExperienceTitle")}</h4>
+      {mode === "preview" && (
+        <p className="text-muted">{t("previewExperienceHint", { max: PACK_EXPERIENCE_MAX })}</p>
+      )}
+      {experience.length === 0 ? (
+        <p className="text-muted">{t("noExperience")}</p>
+      ) : (
+        <ul className="space-y-2">
+          {experience.map((e, i) => {
+            const meta = {
+              date: formatDate(locale, e.date),
+              hours: tLogbook("hoursValue", { hours: e.hours }),
+              environment: tLogbook(`environment.${e.environment}`),
+            };
+            return (
+              // react-doctor-disable-next-line no-array-index-as-key -- frozen candidate-pack snapshot; entries have no id and never reorder
+              <li key={i} className="break-words">
+                <p className="font-semibold">
+                  {e.aircraft} · {tLogbook(`category.${e.category}`)}
+                </p>
+                <p className="text-muted tabular-nums">
+                  {e.ata
+                    ? t("experienceMetaAta", { ...meta, ata: e.ata })
+                    : t("experienceMeta", meta)}
+                </p>
+                <p className="whitespace-pre-line">{e.description}</p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

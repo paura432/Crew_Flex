@@ -35,115 +35,25 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
   const isProfessional = actor.profile.account_type === "professional";
 
   const agency = isStaffingAgency(organization?.type);
-  const organizationNav: NavItem[] = [
-    // A staffing agency's «Resumen» is its «Espacio recruiter» (v1.8 «ESPACIO RECRUITER», BR-27).
-    { href: agency ? "/app/recruiter" : "/app/organization", label: tNav("dashboard") },
-    { href: "/app/organization/requirements", label: tNav("requirements") },
-    // v1.8 company order: Resumen, Nueva necesidad, Ofertas y cobertura, Buscar candidatos,
-    // Candidaturas, Ofertas en la red, Organización (v2-05, v2-20, v2-22); Plantilla is Next's own.
-    { href: "/app/organization/candidates", label: tNav("candidates") },
-    { href: "/app/organization/applications", label: tNav("organizationApplications") },
-    { href: "/app/organization/network", label: tNav("network") },
-    { href: "/app/organization/workforce", label: tNav("workforce") },
-    // v1.8 «Organización» (SH-03 #22, OD-5 default): data and review state, every member reads it
-    { href: "/app/organization/settings", label: tNav("organizationProfile") },
-  ];
-  const professionalNav: NavItem[] = [
-    { href: "/app/professional", label: tNav("overview") },
-    { href: "/app/professional/profile", label: tNav("profile") },
-    { href: "/app/professional/qualifications", label: tNav("qualifications") },
-    { href: "/app/professional/availability", label: tNav("availability") },
-    // v1.8 order: … Disponibilidad, Oportunidades, Mis candidaturas, Wallet, Logbook (M07/M08, M14)
-    { href: "/app/professional/opportunities", label: tNav("opportunities") },
-    { href: "/app/professional/applications", label: tNav("applications") },
-    ...(walletEnabled ? [{ href: "/app/professional/documents", label: tNav("documents") }] : []),
-    { href: "/app/professional/logbook", label: tNav("logbook") },
-  ];
-  const accountNav: NavItem[] = [
-    // v1.8 connected «Avisos» for every account type (SH-03 #10), with the unread count.
-    {
-      href: "/app/notices",
-      label: tNotices("nav"),
-      ...(badge
-        ? { badge: { text: badge, label: tNotices("unread", { count: unread ?? 0 }) } }
-        : {}),
-    },
-    { href: "/app/tools", label: tNav("tools") },
-    { href: "/app/settings", label: tNav("settings") },
-  ];
-  // Platform admins only (UI convenience: proxy, pages, functions and RPCs re-check the role).
-  // «Verificaciones» only while the qualification review is enabled (OD-3, server-side flag).
   const isPlatformAdmin = actor.profile.platform_role === "platform_admin";
-  const platformNav: NavItem[] = [
-    { href: "/app/admin", label: tNav("administration") },
-    ...(canOpenQualificationReview(actor.profile)
-      ? [{ href: "/app/admin/verifications", label: tNav("verifications") }]
-      : []),
-    { href: "/app/admin/organizations", label: tNav("adminOrganizations") },
-    // Agencies' represented clients awaiting the evidence (D-12 provisional, T-130).
-    { href: "/app/admin/representations", label: tNav("representations") },
-    { href: "/app/admin/audit", label: tNav("audit") },
-  ];
-
-  const sections: NavSection[] = [
-    ...(actor.memberships.length > 0
-      ? [
-          {
-            label: organization?.name ?? tNav("organization"),
-            // An agency's workspace is «Espacio recruiter» (BR-27): its section follows that view.
-            view: agency ? ("recruiter" as const) : ("organization" as const),
-            items: organizationNav,
-          },
-        ]
-      : []),
-    ...(isProfessional
-      ? [{ label: tNav("professional"), view: "professional" as const, items: professionalNav }]
-      : []),
-    ...(isPlatformAdmin
-      ? [{ label: tNav("platform"), view: "admin" as const, items: platformNav }]
-      : []),
-    { label: tNav("account"), items: accountNav },
-  ];
-  const views = switcherViews(actor);
-  // v1.8 dock (T-141): technician «Inicio · Ofertas · Calendario · Candidaturas · Herramientas»;
-  // company «Inicio · Ofertas · Candidatos · Candidaturas · Herramientas» (SH-05 #2, directory package); admin two.
-  const tools = { href: "/app/tools", label: tShell("dock.tools") };
-  const docks: Partial<Record<WorkspaceView, NavItem[]>> = {
-    ...(isProfessional
-      ? {
-          professional: [
-            { href: "/app/professional", label: tShell("dock.home") },
-            { href: "/app/professional/opportunities", label: tShell("dock.offers") },
-            { href: "/app/professional/availability", label: tShell("dock.calendar") },
-            { href: "/app/professional/applications", label: tShell("dock.applications") },
-            tools,
-          ],
-        }
-      : {}),
-    ...(actor.memberships.length > 0
-      ? {
-          // The same dock under both views: an agency's home is /app/recruiter (BR-27).
-          [agency ? "recruiter" : "organization"]: [
-            { href: agency ? "/app/recruiter" : "/app/organization", label: tShell("dock.home") },
-            { href: "/app/organization/requirements", label: tShell("dock.offers") },
-            { href: "/app/organization/candidates", label: tShell("dock.candidates") },
-            { href: "/app/organization/applications", label: tShell("dock.applications") },
-            tools,
-          ],
-        }
-      : {}),
-    ...(isPlatformAdmin
-      ? { admin: [{ href: "/app/admin", label: tShell("dock.administration") }, tools] }
-      : {}),
+  const roles: ShellRoles = {
+    agency,
+    isProfessional,
+    isPlatformAdmin,
+    isMember: actor.memberships.length > 0,
   };
-  // Where /app lands (src/app/app/page.tsx): the dock's view before a workspace page is opened.
-  const homeView: WorkspaceView = isPlatformAdmin
-    ? "admin"
-    : actor.memberships.length > 0
-      ? agency
-        ? "recruiter"
-        : "organization"
-      : "professional";
+  const sections = navSections(roles, {
+    tNav,
+    tNotices,
+    organizationName: organization?.name,
+    walletEnabled,
+    canReview: canOpenQualificationReview(actor.profile),
+    unread,
+    badge,
+  });
+  const views = switcherViews(actor);
+  const docks = dockItems(roles, tShell);
+  const homeView = homeViewOf(roles);
   const bell = (onLight: boolean) => (
     <NoticeBell
       count={unread}
@@ -230,4 +140,161 @@ export async function AppShell({ actor, children }: { actor: SessionActor; child
       <MobileDock label={tShell("dock.label")} docks={docks} initial={homeView} />
     </div>
   );
+}
+
+type NavT = Awaited<ReturnType<typeof getTranslations<"nav">>>;
+type NoticesT = Awaited<ReturnType<typeof getTranslations<"notices">>>;
+type ShellT = Awaited<ReturnType<typeof getTranslations<"shell">>>;
+
+interface ShellRoles {
+  /** A staffing agency's workspace is «Espacio recruiter» (BR-27). */
+  agency: boolean;
+  isProfessional: boolean;
+  /** UI convenience only: proxy, pages, functions and RPCs re-check the role. */
+  isPlatformAdmin: boolean;
+  isMember: boolean;
+}
+
+function organizationNav(agency: boolean, tNav: NavT): NavItem[] {
+  return [
+    // A staffing agency's «Resumen» is its «Espacio recruiter» (v1.8 «ESPACIO RECRUITER», BR-27).
+    { href: agency ? "/app/recruiter" : "/app/organization", label: tNav("dashboard") },
+    { href: "/app/organization/requirements", label: tNav("requirements") },
+    // v1.8 company order: Resumen, Nueva necesidad, Ofertas y cobertura, Buscar candidatos,
+    // Candidaturas, Ofertas en la red, Organización (v2-05, v2-20, v2-22); Plantilla is Next's own.
+    { href: "/app/organization/candidates", label: tNav("candidates") },
+    { href: "/app/organization/applications", label: tNav("organizationApplications") },
+    { href: "/app/organization/network", label: tNav("network") },
+    { href: "/app/organization/workforce", label: tNav("workforce") },
+    // v1.8 «Organización» (SH-03 #22, OD-5 default): data and review state, every member reads it
+    { href: "/app/organization/settings", label: tNav("organizationProfile") },
+  ];
+}
+
+function professionalNav(walletEnabled: boolean, tNav: NavT): NavItem[] {
+  return [
+    { href: "/app/professional", label: tNav("overview") },
+    { href: "/app/professional/profile", label: tNav("profile") },
+    { href: "/app/professional/qualifications", label: tNav("qualifications") },
+    { href: "/app/professional/availability", label: tNav("availability") },
+    // v1.8 order: … Disponibilidad, Oportunidades, Mis candidaturas, Wallet, Logbook (M07/M08, M14)
+    { href: "/app/professional/opportunities", label: tNav("opportunities") },
+    { href: "/app/professional/applications", label: tNav("applications") },
+    ...(walletEnabled ? [{ href: "/app/professional/documents", label: tNav("documents") }] : []),
+    { href: "/app/professional/logbook", label: tNav("logbook") },
+  ];
+}
+
+function accountNav(
+  tNav: NavT,
+  tNotices: NoticesT,
+  unread: number | null,
+  badge: string | null | undefined,
+): NavItem[] {
+  return [
+    // v1.8 connected «Avisos» for every account type (SH-03 #10), with the unread count.
+    {
+      href: "/app/notices",
+      label: tNotices("nav"),
+      ...(badge
+        ? { badge: { text: badge, label: tNotices("unread", { count: unread ?? 0 }) } }
+        : {}),
+    },
+    { href: "/app/tools", label: tNav("tools") },
+    { href: "/app/settings", label: tNav("settings") },
+  ];
+}
+
+/** «Verificaciones» only while the qualification review is enabled (OD-3, server-side flag). */
+function platformNav(canReview: boolean, tNav: NavT): NavItem[] {
+  return [
+    { href: "/app/admin", label: tNav("administration") },
+    ...(canReview ? [{ href: "/app/admin/verifications", label: tNav("verifications") }] : []),
+    { href: "/app/admin/organizations", label: tNav("adminOrganizations") },
+    // Agencies' represented clients awaiting the evidence (D-12 provisional, T-130).
+    { href: "/app/admin/representations", label: tNav("representations") },
+    { href: "/app/admin/audit", label: tNav("audit") },
+  ];
+}
+
+function navSections(
+  roles: ShellRoles,
+  input: {
+    tNav: NavT;
+    tNotices: NoticesT;
+    organizationName: string | undefined;
+    walletEnabled: boolean;
+    canReview: boolean;
+    unread: number | null;
+    badge: string | null | undefined;
+  },
+): NavSection[] {
+  const { tNav } = input;
+  const sections: NavSection[] = [];
+  if (roles.isMember) {
+    sections.push({
+      label: input.organizationName ?? tNav("organization"),
+      // An agency's workspace is «Espacio recruiter» (BR-27): its section follows that view.
+      view: roles.agency ? "recruiter" : "organization",
+      items: organizationNav(roles.agency, tNav),
+    });
+  }
+  if (roles.isProfessional) {
+    sections.push({
+      label: tNav("professional"),
+      view: "professional",
+      items: professionalNav(input.walletEnabled, tNav),
+    });
+  }
+  if (roles.isPlatformAdmin) {
+    sections.push({
+      label: tNav("platform"),
+      view: "admin",
+      items: platformNav(input.canReview, tNav),
+    });
+  }
+  sections.push({
+    label: tNav("account"),
+    items: accountNav(tNav, input.tNotices, input.unread, input.badge),
+  });
+  return sections;
+}
+
+/**
+ * v1.8 dock (T-141): technician «Inicio · Ofertas · Calendario · Candidaturas · Herramientas»;
+ * company «Inicio · Ofertas · Candidatos · Candidaturas · Herramientas» (SH-05 #2, directory package); admin two.
+ */
+function dockItems(roles: ShellRoles, tShell: ShellT): Partial<Record<WorkspaceView, NavItem[]>> {
+  const tools = { href: "/app/tools", label: tShell("dock.tools") };
+  const docks: Partial<Record<WorkspaceView, NavItem[]>> = {};
+  if (roles.isProfessional) {
+    docks.professional = [
+      { href: "/app/professional", label: tShell("dock.home") },
+      { href: "/app/professional/opportunities", label: tShell("dock.offers") },
+      { href: "/app/professional/availability", label: tShell("dock.calendar") },
+      { href: "/app/professional/applications", label: tShell("dock.applications") },
+      tools,
+    ];
+  }
+  if (roles.isMember) {
+    // The same dock under both views: an agency's home is /app/recruiter (BR-27).
+    docks[roles.agency ? "recruiter" : "organization"] = [
+      { href: roles.agency ? "/app/recruiter" : "/app/organization", label: tShell("dock.home") },
+      { href: "/app/organization/requirements", label: tShell("dock.offers") },
+      { href: "/app/organization/candidates", label: tShell("dock.candidates") },
+      { href: "/app/organization/applications", label: tShell("dock.applications") },
+      tools,
+    ];
+  }
+  if (roles.isPlatformAdmin) {
+    docks.admin = [{ href: "/app/admin", label: tShell("dock.administration") }, tools];
+  }
+  return docks;
+}
+
+/** Where /app lands (src/app/app/page.tsx): the dock's view before a workspace page is opened. */
+function homeViewOf(roles: ShellRoles): WorkspaceView {
+  if (roles.isPlatformAdmin) return "admin";
+  if (!roles.isMember) return "professional";
+  return roles.agency ? "recruiter" : "organization";
 }
