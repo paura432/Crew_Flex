@@ -22,8 +22,8 @@ export function CloseAccountForm() {
       ? undefined
       : state.code === "CONFIRM_WORD"
         ? t("errors.CONFIRM_WORD", { word })
-        : state.code === "ACTIVE_COMMITMENTS"
-          ? t("errors.ACTIVE_COMMITMENTS")
+        : state.code === "ACTIVE_COMMITMENTS" || state.code === "ACTIVE_TRAINING_SEATS"
+          ? t(`errors.${state.code}`)
           : t("errors.generic");
 
   return (

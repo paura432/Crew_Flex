@@ -15,6 +15,8 @@ if [ "${1:-}" = "--dry-run" ]; then
 fi
 # work_requirement_qualifications cascade with the requirement; audit rows stay (append-only, synthetic).
 bash scripts/local/sb-local.sh db query "delete from public.work_requirements where $WHERE returning title"
+bash scripts/local/sb-local.sh db query "delete from public.training_courses where title like 'E2E %' or title like 'Curso Ñandú QA %' returning title"
+bash scripts/local/sb-local.sh db query "delete from public.training_providers where name like 'Academia QA %' returning name"
 # ui-smoke step 5 declares a B2 for Delta and removes it at the end; an interrupted run leaves it (the seed has none).
 bash scripts/local/sb-local.sh db query "delete from public.technician_qualifications q using public.qualification_types qt
   where qt.id = q.qualification_type_id and qt.code = 'B2'

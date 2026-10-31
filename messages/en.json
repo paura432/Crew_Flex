@@ -2409,6 +2409,10 @@
       "technician": "View application",
       "organization": "View applications"
     },
+    "openTraining": {
+      "technician": "View my requests",
+      "organization": "View training"
+    },
     "pagination": "Notice pages",
     "pageInfo": "{total, plural, one {# notice} other {# notices}} · page {page} of {pages}",
     "previous": "Previous",
@@ -2429,6 +2433,7 @@
       "errors": {
         "CONFIRM_WORD": "Type {word} to confirm.",
         "ACTIVE_COMMITMENTS": "Resolve the accepted or confirmed commitments first.",
+        "ACTIVE_TRAINING_SEATS": "Cancel your confirmed training seats with future sessions first.",
         "generic": "The account could not be closed. Try again."
       },
       "exporting": "Preparing the export…",

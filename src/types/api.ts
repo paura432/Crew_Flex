@@ -94,14 +94,16 @@ export interface ApiErrorBody {
    * Which server check refused a 409: applications/opportunities (D-06; `APPLICATION_CONFLICTS`), an
    * availability write that would touch a confirmed assignment (BR-4.9; `AVAILABILITY_CONFLICTS`), a refused
    * «Distribuir aviso Urgente / AOG» (BR-26; `OUTREACH_CONFLICTS`), an action for a represented client (BR-27;
-   * `RECRUITER_CONFLICTS`) or a refused directory search (BR-28; `DIRECTORY_CONFLICTS`).
+   * `RECRUITER_CONFLICTS`), a refused directory search (BR-28; `DIRECTORY_CONFLICTS`) or a training check (BR-30;
+   * `TRAINING_CONFLICTS`).
    */
   reason?:
     | ApplicationConflict
     | AvailabilityConflict
     | OutreachConflict
     | RecruiterConflict
-    | DirectoryConflict;
+    | DirectoryConflict
+    | TrainingConflict;
 }
 
 export type ApiResponse<T> =
@@ -1179,6 +1181,3 @@ export interface TrainingMessageResponse {
   id: string;
   replayed: boolean;
 }
-
-/** `reason` of a 409 from the training RPCs (`TRAINING_CONFLICTS`). */
-export type TrainingConflictReason = TrainingConflict;

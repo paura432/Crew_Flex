@@ -30,7 +30,11 @@ export async function closeAccountAction(
   if (!result.ok) {
     return {
       status: "error",
-      code: result.error.reason === "ACTIVE_COMMITMENTS" ? "ACTIVE_COMMITMENTS" : result.error.code,
+      code:
+        result.error.reason === "ACTIVE_COMMITMENTS" ||
+        result.error.reason === "ACTIVE_TRAINING_SEATS"
+          ? result.error.reason
+          : result.error.code,
       requestId: result.requestId,
     };
   }

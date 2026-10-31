@@ -611,6 +611,6 @@ v1.9 `server/training.mjs` and `src/features/training/trainingModel.js`, ported 
 | BR-30.8 | Messages belong to the two participants (the professional, the provider's admin/manager) while the request is not withdrawn/rejected/cancelled/closed (CFT13); platform admins read requests for support but never messages (N-6). The provider never receives the professional's e-mail (N-5); the wallet and the Candidate Pack are never attached.                                                                                                                                           |
 | BR-30.9 | Notices (`notifications` kind `training`) go to the other party on every request event and to the provider's admins/managers on every review decision. A confirmed seat marks the calendar («F») from `get_my_training_sessions` without writing availability; closing the account is refused with a future confirmed seat (CFT12); the private export includes own requests, offers, history, messages and favourites.                                                                         |
 
-IMPLEMENTED — LOCAL ONLY (backend, batch V19-01); the UI arrives in the next V19 batches. Proof:
+IMPLEMENTED — LOCAL ONLY (backend V19-01; UI V19-02, calendar «F» and `.ics` V19-04; per-row evidence in `docs/integration/crewflex-v19/V19_MATRIX.md`). Proof:
 `src/domain/training.test.ts`, `tests/db/training.test.ts`, `supabase/functions/training/index_test.ts`,
 `scripts/local/db-race-check.sh training`.

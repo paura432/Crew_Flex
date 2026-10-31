@@ -59,6 +59,17 @@ describe("closeAccountAction", () => {
     expect(signOut).not.toHaveBeenCalled();
   });
 
+  it("explains a refusal for a future confirmed training seat (CFT12)", async () => {
+    invokeEdgeFunction.mockResolvedValueOnce({
+      ok: false,
+      error: { code: "CONFLICT", message: "x", reason: "ACTIVE_TRAINING_SEATS" },
+      requestId: "r-2",
+    });
+    expect(await closeAccountAction(initialCloseAccountState, form({ confirm: "CERRAR" }))).toEqual(
+      { status: "error", code: "ACTIVE_TRAINING_SEATS", requestId: "r-2" },
+    );
+  });
+
   it("closed: this device's cookies go and the login says so", async () => {
     invokeEdgeFunction.mockResolvedValueOnce({
       ok: true,

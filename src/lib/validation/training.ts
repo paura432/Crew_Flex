@@ -25,13 +25,14 @@ import {
 import { z } from "./zod.ts";
 
 const text = (max: number, key: string) => z.string(key).trim().min(1, key).max(max, key);
+// Nullish so the schema is idempotent: the server action forwards its parsed output (null) and the function re-parses it.
 const optionalText = (max: number, key: string) =>
   z
     .string(key)
     .trim()
     .max(max, key)
-    .optional()
-    .transform((v) => (v === undefined || v === "" ? null : v));
+    .nullish()
+    .transform((v) => (v == null || v === "" ? null : v));
 const isoInstant = z.iso.datetime({ offset: true });
 const version = z.iso.datetime({ offset: true });
 

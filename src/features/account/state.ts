@@ -6,7 +6,7 @@ export type CloseAccountState =
   | { status: "idle" }
   | {
       status: "error";
-      code: "CONFIRM_WORD" | "ACTIVE_COMMITMENTS" | ApiErrorCode;
+      code: "CONFIRM_WORD" | "ACTIVE_COMMITMENTS" | "ACTIVE_TRAINING_SEATS" | ApiErrorCode;
       requestId?: string;
     };
 

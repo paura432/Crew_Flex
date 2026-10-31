@@ -85,6 +85,13 @@ describe("notice view (v2-18)", () => {
     expect([null, 0, 1, 99, 100].map(unreadBadge)).toEqual([null, null, "1", "99", "99+"]);
   });
 
+  it("a training notice leads to pages that exist: the student's requests, the provider's workspace", () => {
+    expect(noticeHref(notice({ kind: "training" }))).toBe("/app/training/requests");
+    expect(noticeHref(notice({ kind: "training", audience: "organization" }))).toBe(
+      "/app/organization/training",
+    );
+  });
+
   it("names a training status from the catalog in both locales, never the raw code", () => {
     expect(trainingStatusKey("confirmed")).toBe("confirmed");
     expect(trainingStatusKey("no_show")).toBe("noShow");

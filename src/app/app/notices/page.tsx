@@ -153,7 +153,11 @@ export default async function NoticesPage({ searchParams }: PageProps<"/app/noti
                   <OpenNoticeButton
                     id={n.id}
                     label={
-                      n.kind === "outreach" ? tOutreach("notice.open") : t(`open.${n.audience}`)
+                      n.kind === "outreach"
+                        ? tOutreach("notice.open")
+                        : n.kind === "training"
+                          ? t(`openTraining.${n.audience}`)
+                          : t(`open.${n.audience}`)
                     }
                   />
                 </article>

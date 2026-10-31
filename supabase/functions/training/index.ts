@@ -355,17 +355,15 @@ async function write(
   switch (body.op) {
     case "provider": {
       const i = body.input;
-      return {
-        data: toSaved(
-          await rpc(actor, "save_training_provider", {
-            p_organization_id: i.organizationId,
-            p_name: i.name,
-            p_description: i.description,
-            p_website: i.website,
-            p_expected_updated_at: i.expectedUpdatedAt ?? null,
-          }),
-        ),
-      };
+      const rows = (await rpc(actor, "save_training_provider", {
+        p_organization_id: i.organizationId,
+        p_name: i.name,
+        p_description: i.description,
+        p_website: i.website,
+        p_expected_updated_at: i.expectedUpdatedAt ?? null,
+      })) as { organization_id?: string }[];
+      // A provider's id is its organization's (1:1): the RPC returns `organization_id`.
+      return { data: toSaved(rows.map((r) => ({ ...r, id: r.organization_id }))) };
     }
     case "course":
       return {

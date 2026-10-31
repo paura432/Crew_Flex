@@ -43,10 +43,10 @@ export function noticeTitleKey(
 export function noticeHref(
   notice: Pick<Notice, "kind" | "audience" | "applicationId" | "requirementId" | "training">,
 ) {
-  // Training (ADR-003): the professional's requests or the provider's workspace (pages of batch V19-02…).
+  // Training (ADR-003): the professional's requests or the provider's workspace.
   if (notice.kind === "training") {
     return notice.audience === "technician"
-      ? "/app/professional/training"
+      ? "/app/training/requests"
       : "/app/organization/training";
   }
   if (notice.kind === "outreach") return `/app/professional/opportunities/${notice.requirementId}`;

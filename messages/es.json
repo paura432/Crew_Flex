@@ -2409,6 +2409,10 @@
       "technician": "Ver candidatura",
       "organization": "Ver candidaturas"
     },
+    "openTraining": {
+      "technician": "Ver mis solicitudes",
+      "organization": "Ver formación"
+    },
     "pagination": "Páginas de avisos",
     "pageInfo": "{total, plural, one {# aviso} other {# avisos}} · página {page} de {pages}",
     "previous": "Anteriores",
@@ -2429,6 +2433,7 @@
       "errors": {
         "CONFIRM_WORD": "Escribe {word} para confirmar.",
         "ACTIVE_COMMITMENTS": "Resuelve primero los compromisos aceptados o confirmados.",
+        "ACTIVE_TRAINING_SEATS": "Cancela antes tus plazas de formación confirmadas con sesiones futuras.",
         "generic": "No se ha podido cerrar la cuenta. Inténtalo de nuevo."
       },
       "exporting": "Preparando la exportación…",

@@ -185,3 +185,7 @@ supabase_db_crew-flex` (volume kept), wait for `supabase status`, retry. No rese
 'Performance' … negative time stamp` on unrelated pages, which fails check 17; the production build has none.
 - Stop a background `next start` with `pkill -f "[n]ext start -p 3002"` (the bracket keeps `pkill` from
   matching its own command line).
+- Training («Formación», v1.9, flag `training` on): `tests/e2e/training.test.ts` crosses the function ↔ RPC
+  boundary (provider save, a course as the server action forwards it); `scripts/local/training-smoke.mjs` runs the
+  whole browser flow with two organizations and four roles (50 checks; same env as the UI smoke, `EVIDENCE_DIR`
+  for its screenshots). Both write local rows that `scripts/local/cleanup-test-rows.sh` removes.
