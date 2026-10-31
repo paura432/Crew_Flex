@@ -92,7 +92,6 @@ export async function OrganizationOverview({
   // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and «Jornadas cubiertas» (D-06).
   const perRequirement = counts?.ok ? counts.data.requirements : null;
   const current = open.ok ? currentAtRequestTime(open.data.requirements) : [];
-  const focus = current[0];
 
   const newButton = canManage && (
     <ButtonLink href="/app/organization/requirements/new" variant="primary">
@@ -130,39 +129,14 @@ export async function OrganizationOverview({
           action={newButton || undefined}
         />
       ) : (
-        <div className="space-y-6">
-          {open.ok ? (
-            <OverviewKpis
-              currentCount={current.length}
-              open={open.data}
-              perRequirement={perRequirement}
-              network={canManage ? network : undefined}
-            />
-          ) : (
-            <ApiErrorState error={open.error} requestId={open.requestId} />
-          )}
-          {focus && canManage && <FocusCapacity requirement={focus} />}
-          {focus && !canManage && (
-            <StateMessage
-              title={t("managersOnlyTitle")}
-              description={t("managersOnlyDescription")}
-            />
-          )}
-          <Panel
-            title={t("requirements")}
-            actions={
-              <ButtonLink href="/app/organization/requirements" variant="ghost">
-                {t("viewAll")}
-              </ButtonLink>
-            }
-          >
-            <RequirementsList
-              requirements={dashboardRequirements(result.data.requirements, current)}
-              seats={perRequirement ? seatsByRequirement(perRequirement) : undefined}
-              coverageLabel="covered"
-            />
-          </Panel>
-        </div>
+        <OverviewBody
+          requirements={result.data.requirements}
+          open={open}
+          current={current}
+          perRequirement={perRequirement}
+          canManage={canManage}
+          network={network}
+        />
       )}
       {children && <div className="mt-6 space-y-6">{children}</div>}
       <div className="mt-6">
@@ -234,5 +208,57 @@ async function OverviewKpis({
         />
       )}
     </dl>
+  );
+}
+
+/** The KPIs, the focus requirement's capacity (or the members' notice) and the requirements panel. */
+async function OverviewBody({
+  requirements,
+  open,
+  current,
+  perRequirement,
+  canManage,
+  network,
+}: {
+  requirements: WorkRequirement[];
+  open: Awaited<ReturnType<typeof listFocusCandidates>>;
+  current: WorkRequirement[];
+  perRequirement: PerRequirement | null;
+  canManage: boolean;
+  network: number | null;
+}) {
+  const t = await getTranslations("organization.dashboard");
+  const focus = current[0];
+  return (
+    <div className="space-y-6">
+      {open.ok ? (
+        <OverviewKpis
+          currentCount={current.length}
+          open={open.data}
+          perRequirement={perRequirement}
+          network={canManage ? network : undefined}
+        />
+      ) : (
+        <ApiErrorState error={open.error} requestId={open.requestId} />
+      )}
+      {focus && canManage && <FocusCapacity requirement={focus} />}
+      {focus && !canManage && (
+        <StateMessage title={t("managersOnlyTitle")} description={t("managersOnlyDescription")} />
+      )}
+      <Panel
+        title={t("requirements")}
+        actions={
+          <ButtonLink href="/app/organization/requirements" variant="ghost">
+            {t("viewAll")}
+          </ButtonLink>
+        }
+      >
+        <RequirementsList
+          requirements={dashboardRequirements(requirements, current)}
+          seats={perRequirement ? seatsByRequirement(perRequirement) : undefined}
+          coverageLabel="covered"
+        />
+      </Panel>
+    </div>
   );
 }

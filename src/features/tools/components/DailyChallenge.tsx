@@ -4,7 +4,7 @@
 // answer, streaks and medals. Selection, streaks and the stored format live in `src/domain/learning`
 // (BR-16); progress stays in this browser for the signed-in user (`useLearningProgress`).
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { LoadingState } from "@/components/ui/StateMessage";
 import { Metric } from "@/components/ui/Metric";
 import {
@@ -27,6 +27,44 @@ import { LearningMedals } from "./LearningMedals";
 import { Footnote, PressedGroup, SectionHead, ToolPanel } from "./parts";
 import { toolButtonClass } from "./tool-button";
 
+type Question = ReturnType<typeof withOptions>;
+
+/** Today's stored challenge, its questions (with their options) and the answers so far. */
+function todayChallenge(history: LearningHistory | null, today: string | null) {
+  const record = today && history ? history[today] : undefined;
+  const stored = record ? questionsById(record.ids) : null;
+  if (!record || !stored || !today) {
+    return { record, questions: null, answers: [] as string[], index: 0 };
+  }
+  const questions = stored.map((q) => withOptions(QUESTIONS, q, today));
+  return { record, questions, answers: record.answers, index: record.answers.length };
+}
+
+/** Whether every question is answered, the open one and the one just answered. */
+function position(questions: Question[] | null, index: number) {
+  const complete = questions !== null && index === questions.length;
+  const open = questions && !complete;
+  return {
+    complete,
+    current: open ? questions[index]! : null,
+    last: open && index > 0 ? questions[index - 1]! : null,
+  };
+}
+
+/** Yesterday's challenge was started and left unfinished. */
+function leftUnfinished(history: LearningHistory, today: string) {
+  const yesterday = history[addDays(today, -1)];
+  return Boolean(yesterday && !isComplete(yesterday));
+}
+
+/**
+ * The day changed while the question was open: the answer belongs to no day. The re-render shows today's
+ * start screen with the «left unfinished» notice (v1.8 dropped it silently, ✗ TOOL-07 #8).
+ */
+function stillAnswerable(today: string, current: Question | null, selected: string) {
+  return currentLearningDay() === today && Boolean(current?.options.includes(selected));
+}
+
 export function DailyChallenge({ userId }: { userId: string }) {
   const t = useTranslations("tools.daily");
   const tCommon = useTranslations("common");
@@ -38,12 +76,7 @@ export function DailyChallenge({ userId }: { userId: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const answered = useRef(false);
 
-  const record = today && history ? history[today] : undefined;
-  const stored = record ? questionsById(record.ids) : null;
-  const questions =
-    record && stored && today ? stored.map((q) => withOptions(QUESTIONS, q, today)) : null;
-  const answers = questions ? record!.answers : [];
-  const index = answers.length;
+  const { record, questions, answers, index } = todayChallenge(history, today);
 
   // After an answer, move focus to the next question (or to «Challenge completed»).
   useEffect(() => {
@@ -54,12 +87,9 @@ export function DailyChallenge({ userId }: { userId: string }) {
 
   if (history === null || today === null) return <LoadingState label={tCommon("loading")} />;
 
-  const complete = questions !== null && index === questions.length;
-  const current = questions && !complete ? questions[index]! : null;
-  const last = questions && !complete && index > 0 ? questions[index - 1]! : null;
+  const { complete, current, last } = position(questions, index);
   const stats = streak(completedDays(history), today);
-  const yesterday = history[addDays(today, -1)];
-  const unfinished = !questions && yesterday && !isComplete(yesterday);
+  const unfinished = !questions && leftUnfinished(history, today);
 
   function persist(next: LearningHistory) {
     const ok = save(next);
@@ -73,9 +103,7 @@ export function DailyChallenge({ userId }: { userId: string }) {
   }
 
   function confirm() {
-    // The day changed while the question was open: the answer belongs to no day. The re-render shows
-    // today's start screen with the «left unfinished» notice (v1.8 dropped it silently, ✗ TOOL-07 #8).
-    if (currentLearningDay() !== today || !current?.options.includes(selected)) {
+    if (!stillAnswerable(today!, current, selected)) {
       setSelected("");
       return;
     }
@@ -86,7 +114,6 @@ export function DailyChallenge({ userId }: { userId: string }) {
   }
 
   const days = (count: number) => t("days", { count });
-  const score = questions ? answers.filter((a, i) => a === questions[i]!.answer).length : 0;
 
   return (
     <div className="space-y-5">
@@ -105,117 +132,25 @@ export function DailyChallenge({ userId }: { userId: string }) {
 
       <ToolPanel className="mx-auto max-w-[850px]">
         {!questions ? (
-          <>
-            {unfinished && (
-              <p role="status" className="mb-4 rounded-lg bg-[#fff1d7] p-4 text-sm text-[#725119]">
-                {t("unfinished", { date: formatDate(locale, addDays(today, -1)) })}
-              </p>
-            )}
-            <h2
-              ref={heading}
-              tabIndex={-1}
-              className="text-[23px] leading-tight font-bold tracking-tight text-[#122e43]"
-            >
-              {t(`introTitle.${size}`)}
-            </h2>
-            <p className="mt-3 mb-5 text-sm text-[#587083]">{t("introBody")}</p>
-            <PressedGroup
-              label={t("size")}
-              value={size}
-              onChange={setSize}
-              options={CHALLENGE_SIZES.map((n) => ({
-                value: n,
-                label: t("sizeOption", { count: n }),
-              }))}
-            />
-            <div className="mt-5">
-              <button type="button" className={toolButtonClass(true)} onClick={start}>
-                {t("start")}
-              </button>
-            </div>
-          </>
+          <StartView
+            headingRef={heading}
+            unfinishedDate={unfinished ? addDays(today, -1) : null}
+            size={size}
+            onSize={setSize}
+            onStart={start}
+          />
         ) : complete ? (
-          <div className="text-center">
-            <AwardIcon size={48} className="mx-auto text-[#916413]" />
-            <h2
-              ref={heading}
-              tabIndex={-1}
-              className="mt-3 text-[23px] leading-tight font-bold tracking-tight text-[#122e43]"
-            >
-              {t("doneTitle")}
-            </h2>
-            <p className="mt-3 text-[23px] font-semibold text-[#203d50] tabular-nums">
-              {t("score", { score, total: questions.length })}
-            </p>
-            <p className="mt-2 text-sm text-[#587083]">{t("doneBody")}</p>
-            <details className="mt-5 text-left">
-              <summary className="flex cursor-pointer items-center text-sm font-bold text-[#226969] pointer-coarse:min-h-11">
-                {t("review")}
-              </summary>
-              <ol className="mt-3 space-y-3">
-                {questions.map((q, i) => (
-                  <li key={q.id} className="rounded-[10px] bg-[#f0f6f8] p-4 text-sm">
-                    <p className="font-bold text-[#122e43]" lang="es">
-                      {q.prompt}
-                    </p>
-                    <p className="mt-1">{t("yourAnswer", { answer: answers[i] ?? "" })}</p>
-                    <p>{t("rightAnswer", { answer: q.answer })}</p>
-                    <p className="mt-1 text-[#587083]" lang="es">
-                      {q.explanation}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            </details>
-          </div>
+          <DoneView headingRef={heading} questions={questions} answers={answers} />
         ) : (
-          <>
-            <p className="text-xs font-extrabold tracking-[0.17em] text-[#157877]">
-              {t("progress", {
-                group: current!.group,
-                current: index + 1,
-                total: questions.length,
-              })}
-            </p>
-            <progress
-              value={index}
-              max={questions.length}
-              aria-label={t("progressLabel")}
-              className="my-4 block h-2 w-full accent-tool"
-            />
-            <h2
-              ref={heading}
-              tabIndex={-1}
-              lang="es"
-              className="text-[23px] leading-tight font-bold tracking-tight text-[#122e43]"
-            >
-              {current!.prompt}
-            </h2>
-            <div role="group" aria-label={t("options")} className="mt-5 grid gap-3 sm:grid-cols-2">
-              {current!.options.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  lang="es"
-                  aria-pressed={selected === option}
-                  onClick={() => setSelected(option)}
-                  className="min-h-[60px] rounded-[10px] border border-[#cbdbe3] bg-white p-4 text-left text-sm text-[#24465d] [overflow-wrap:anywhere] hover:bg-canvas aria-[pressed=true]:border-[#07877e] aria-[pressed=true]:bg-[#e7f5ef] aria-[pressed=true]:ring-1 aria-[pressed=true]:ring-[#07877e]"
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            <div className="mt-5">
-              <button
-                type="button"
-                className={toolButtonClass(true)}
-                disabled={!selected}
-                onClick={confirm}
-              >
-                {t("confirm")}
-              </button>
-            </div>
-          </>
+          <QuestionView
+            headingRef={heading}
+            question={current!}
+            index={index}
+            total={questions.length}
+            selected={selected}
+            onSelect={setSelected}
+            onConfirm={confirm}
+          />
         )}
         {saveFailed && (
           <p role="alert" className="mt-4 rounded-[7px] bg-[#fff1e9] p-3 text-sm text-[#a74428]">
@@ -223,19 +158,7 @@ export function DailyChallenge({ userId }: { userId: string }) {
           </p>
         )}
         <div role="status">
-          {last && (
-            <div className="mt-5 rounded-[10px] bg-[#f0f6f8] p-4 text-sm">
-              <p className="font-bold text-[#122e43]">
-                {answers[index - 1] === last.answer ? t("previousRight") : t("previousReview")}
-              </p>
-              <p className="mt-1" lang="es">
-                {last.prompt}
-              </p>
-              <p className="mt-1 text-[#587083]" lang="es">
-                {t("explained", { answer: last.answer, explanation: last.explanation })}
-              </p>
-            </div>
-          )}
+          {last && <PreviousAnswer question={last} right={answers[index - 1] === last.answer} />}
         </div>
       </ToolPanel>
 
@@ -248,6 +171,188 @@ export function DailyChallenge({ userId }: { userId: string }) {
       </ToolPanel>
 
       <Footnote>{t("footnote")}</Footnote>
+    </div>
+  );
+}
+
+type HeadingRef = RefObject<HTMLHeadingElement | null>;
+
+/** Before today's challenge: yesterday's unfinished notice, the size and «Empezar». */
+function StartView({
+  headingRef,
+  unfinishedDate,
+  size,
+  onSize,
+  onStart,
+}: {
+  headingRef: HeadingRef;
+  unfinishedDate: string | null;
+  size: ChallengeSize;
+  onSize: (size: ChallengeSize) => void;
+  onStart: () => void;
+}) {
+  const t = useTranslations("tools.daily");
+  const locale = useLocale() as Locale;
+  return (
+    <>
+      {unfinishedDate && (
+        <p role="status" className="mb-4 rounded-lg bg-[#fff1d7] p-4 text-sm text-[#725119]">
+          {t("unfinished", { date: formatDate(locale, unfinishedDate) })}
+        </p>
+      )}
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="text-[23px] leading-tight font-bold tracking-tight text-[#122e43]"
+      >
+        {t(`introTitle.${size}`)}
+      </h2>
+      <p className="mt-3 mb-5 text-sm text-[#587083]">{t("introBody")}</p>
+      <PressedGroup
+        label={t("size")}
+        value={size}
+        onChange={onSize}
+        options={CHALLENGE_SIZES.map((n) => ({
+          value: n,
+          label: t("sizeOption", { count: n }),
+        }))}
+      />
+      <div className="mt-5">
+        <button type="button" className={toolButtonClass(true)} onClick={onStart}>
+          {t("start")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** «Reto completado»: the score and the review of every answer. */
+function DoneView({
+  headingRef,
+  questions,
+  answers,
+}: {
+  headingRef: HeadingRef;
+  questions: Question[];
+  answers: string[];
+}) {
+  const t = useTranslations("tools.daily");
+  const score = answers.filter((a, i) => a === questions[i]?.answer).length;
+  return (
+    <div className="text-center">
+      <AwardIcon size={48} className="mx-auto text-[#916413]" />
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="mt-3 text-[23px] leading-tight font-bold tracking-tight text-[#122e43]"
+      >
+        {t("doneTitle")}
+      </h2>
+      <p className="mt-3 text-[23px] font-semibold text-[#203d50] tabular-nums">
+        {t("score", { score, total: questions.length })}
+      </p>
+      <p className="mt-2 text-sm text-[#587083]">{t("doneBody")}</p>
+      <details className="mt-5 text-left">
+        <summary className="flex cursor-pointer items-center text-sm font-bold text-[#226969] pointer-coarse:min-h-11">
+          {t("review")}
+        </summary>
+        <ol className="mt-3 space-y-3">
+          {questions.map((q, i) => (
+            <li key={q.id} className="rounded-[10px] bg-[#f0f6f8] p-4 text-sm">
+              <p className="font-bold text-[#122e43]" lang="es">
+                {q.prompt}
+              </p>
+              <p className="mt-1">{t("yourAnswer", { answer: answers[i] ?? "" })}</p>
+              <p>{t("rightAnswer", { answer: q.answer })}</p>
+              <p className="mt-1 text-[#587083]" lang="es">
+                {q.explanation}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  );
+}
+
+/** The open question: progress, prompt, the options and «Confirmar». */
+function QuestionView({
+  headingRef,
+  question,
+  index,
+  total,
+  selected,
+  onSelect,
+  onConfirm,
+}: {
+  headingRef: HeadingRef;
+  question: Question;
+  index: number;
+  total: number;
+  selected: string;
+  onSelect: (option: string) => void;
+  onConfirm: () => void;
+}) {
+  const t = useTranslations("tools.daily");
+  return (
+    <>
+      <p className="text-xs font-extrabold tracking-[0.17em] text-[#157877]">
+        {t("progress", { group: question.group, current: index + 1, total })}
+      </p>
+      <progress
+        value={index}
+        max={total}
+        aria-label={t("progressLabel")}
+        className="my-4 block h-2 w-full accent-tool"
+      />
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        lang="es"
+        className="text-[23px] leading-tight font-bold tracking-tight text-[#122e43]"
+      >
+        {question.prompt}
+      </h2>
+      <div role="group" aria-label={t("options")} className="mt-5 grid gap-3 sm:grid-cols-2">
+        {question.options.map((option) => (
+          <button
+            key={option}
+            type="button"
+            lang="es"
+            aria-pressed={selected === option}
+            onClick={() => onSelect(option)}
+            className="min-h-[60px] rounded-[10px] border border-[#cbdbe3] bg-white p-4 text-left text-sm text-[#24465d] [overflow-wrap:anywhere] hover:bg-canvas aria-[pressed=true]:border-[#07877e] aria-[pressed=true]:bg-[#e7f5ef] aria-[pressed=true]:ring-1 aria-[pressed=true]:ring-[#07877e]"
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+      <div className="mt-5">
+        <button
+          type="button"
+          className={toolButtonClass(true)}
+          disabled={!selected}
+          onClick={onConfirm}
+        >
+          {t("confirm")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** After an answer: whether it was right and the explanation. */
+function PreviousAnswer({ question, right }: { question: Question; right: boolean }) {
+  const t = useTranslations("tools.daily");
+  return (
+    <div className="mt-5 rounded-[10px] bg-[#f0f6f8] p-4 text-sm">
+      <p className="font-bold text-[#122e43]">{right ? t("previousRight") : t("previousReview")}</p>
+      <p className="mt-1" lang="es">
+        {question.prompt}
+      </p>
+      <p className="mt-1 text-[#587083]" lang="es">
+        {t("explained", { answer: question.answer, explanation: question.explanation })}
+      </p>
     </div>
   );
 }

@@ -16,6 +16,81 @@ import { archiveRequirementAction, changeRequirementStatusAction } from "../acti
 
 type Step = "close" | "archive" | null;
 
+type StatusT = ReturnType<typeof useTranslations<"organization.detail.status">>;
+type DraftT = ReturnType<typeof useTranslations<"organization.detail.draft">>;
+type RootT = ReturnType<typeof useTranslations>;
+
+/** The outcome of a status change: done, an active-commitments conflict, an incomplete draft, or the error. */
+function changeNotice(
+  result: Awaited<
+    ReturnType<typeof callAction<Awaited<ReturnType<typeof changeRequirementStatusAction>>>>
+  >,
+  next: ChangeRequirementStatusInput["status"],
+  status: RequirementStatus,
+  { tStatus, tDraft, tRoot }: { tStatus: StatusT; tDraft: DraftT; tRoot: RootT },
+): NoticeState {
+  if (result.ok) {
+    const done =
+      next === "paused" ? "pausedDone" : status === "draft" ? "publishedDone" : "resumedDone";
+    return { tone: "ok", text: tStatus(done) };
+  }
+  if (result.code === "CONFLICT") {
+    return {
+      tone: "danger",
+      // v2 diff ORG-05: closing with active commitments showed the qualifications copy.
+      text:
+        "reason" in result && result.reason
+          ? translateKey(tRoot, `applications.conflict.${result.reason}`)
+          : tStatus("conflict"),
+      requestId: result.requestId,
+    };
+  }
+  if (result.code === "VALIDATION_ERROR" && status === "draft") {
+    return { tone: "danger", text: tDraft("incomplete"), requestId: result.requestId };
+  }
+  return actionErrorCopy(tRoot, result);
+}
+
+/** The explicit second step of «Cerrar necesidad» or «Archivar» (neither can be undone). */
+function ConfirmStep({
+  step,
+  status,
+  pending,
+  onConfirm,
+  onBack,
+}: {
+  step: Exclude<Step, null>;
+  status: RequirementStatus;
+  pending: boolean;
+  onConfirm: () => void;
+  onBack: () => void;
+}) {
+  const t = useTranslations("organization.detail.close");
+  const tArchive = useTranslations("organization.detail.archive");
+  const closing = step === "close";
+  return (
+    <div
+      role="group"
+      onKeyDown={(e) => e.key === "Escape" && onBack()}
+      aria-label={closing ? t("action") : tArchive("action")}
+      className="space-y-3 rounded-lg border border-line p-4"
+    >
+      <p className="text-sm">
+        {closing ? t("explain") : tArchive(status === "draft" ? "explainDraft" : "explainClosed")}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="danger" disabled={pending} onClick={onConfirm}>
+          {closing ? t("confirm") : tArchive("confirm")}
+        </Button>
+        {/* Focus lands on the safe choice when the irreversible step opens. */}
+        <Button autoFocus disabled={pending} onClick={onBack}>
+          {closing ? t("cancel") : tArchive("cancel")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * V1.8 `job.status` actions (M05): «Pausar» / «Reanudar» (reversible, one click, as v1.8), «Publicar» for a draft
  * (v2-14: the server applies the creation rules first), «Cerrar necesidad» and «Archivar» (v1.8, one way; T-64)
@@ -62,31 +137,7 @@ export function RequirementStatusActions({
       const result = await callAction(() => changeRequirementStatusAction(id, next));
       setStep(null);
       // Success re-renders the page with the new status (closed: its note replaces this component).
-      setNotice(
-        result.ok
-          ? {
-              tone: "ok",
-              text: tStatus(
-                next === "paused"
-                  ? "pausedDone"
-                  : status === "draft"
-                    ? "publishedDone"
-                    : "resumedDone",
-              ),
-            }
-          : result.code === "CONFLICT"
-            ? {
-                tone: "danger",
-                // v2 diff ORG-05: closing with active commitments showed the qualifications copy.
-                text: result.reason
-                  ? translateKey(tRoot, `applications.conflict.${result.reason}`)
-                  : tStatus("conflict"),
-                requestId: result.requestId,
-              }
-            : result.code === "VALIDATION_ERROR" && status === "draft"
-              ? { tone: "danger", text: tDraft("incomplete"), requestId: result.requestId }
-              : actionErrorCopy(tRoot, result),
-      );
+      setNotice(changeNotice(result, next, status, { tStatus, tDraft, tRoot }));
     });
 
   const archive = () =>
@@ -107,31 +158,13 @@ export function RequirementStatusActions({
   return (
     <div className="space-y-3">
       {step ? (
-        <div
-          role="group"
-          onKeyDown={(e) => e.key === "Escape" && backOut()}
-          aria-label={step === "close" ? t("action") : tArchive("action")}
-          className="space-y-3 rounded-lg border border-line p-4"
-        >
-          <p className="text-sm">
-            {step === "close"
-              ? t("explain")
-              : tArchive(status === "draft" ? "explainDraft" : "explainClosed")}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="danger"
-              disabled={pending}
-              onClick={() => (step === "close" ? change("closed") : archive())}
-            >
-              {step === "close" ? t("confirm") : tArchive("confirm")}
-            </Button>
-            {/* Focus lands on the safe choice when the irreversible step opens. */}
-            <Button autoFocus disabled={pending} onClick={backOut}>
-              {step === "close" ? t("cancel") : tArchive("cancel")}
-            </Button>
-          </div>
-        </div>
+        <ConfirmStep
+          step={step}
+          status={status}
+          pending={pending}
+          onConfirm={() => (step === "close" ? change("closed") : archive())}
+          onBack={backOut}
+        />
       ) : (
         <div className="flex flex-wrap gap-2">
           {!expired && canChangeRequirementStatus(status, "paused") && (

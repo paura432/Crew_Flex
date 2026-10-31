@@ -19,6 +19,142 @@ export interface RequirementTermsData {
   description?: string | null;
 }
 
+type TermsT = ReturnType<typeof useTranslations<"organization.detail.terms">>;
+type Fmt = { t: TermsT; tDomain: ReturnType<typeof useTranslations<"domain">>; locale: Locale };
+type Row = [string, string];
+
+/** The builder's preview passes what is being typed: a number that does not parse yet is not shown. */
+function finiteConditions(conditions: RequirementConditions | null | undefined) {
+  if (!conditions) return null;
+  return Object.fromEntries(
+    Object.entries(conditions).filter(
+      ([, value]) => typeof value !== "number" || Number.isFinite(value),
+    ),
+  ) as RequirementConditions;
+}
+
+/** Rate, shift length, contract and per diem / overtime. */
+function payRows(
+  c: RequirementConditions | null,
+  shift: Shift,
+  { t, tDomain, locale }: Fmt,
+): Row[] {
+  if (!c) return [];
+  const euro = (value: number) => formatEuro(locale, value);
+  const rows: Row[] = [];
+  if (c.hourlyRate !== undefined) {
+    const daily = dayRate(c);
+    rows.push([
+      t("rate"),
+      daily === null
+        ? t("rateHourly", { hourly: euro(c.hourlyRate) })
+        : t("rateValue", { hourly: euro(c.hourlyRate), daily: euro(daily) }),
+    ]);
+  }
+  if (c.shiftHours !== undefined) {
+    rows.push([
+      t("shiftDuration"),
+      t("shiftDurationValue", {
+        shift: tDomain(`shift.${shift}`),
+        hours: formatNumber(locale, c.shiftHours),
+      }),
+    ]);
+  }
+  if (c.contractType) {
+    rows.push([
+      t("contract"),
+      t("contractValue", { contract: t(`contractType.${c.contractType}`) }),
+    ]);
+  }
+  if (c.perDiem !== undefined || c.overtimeRate !== undefined) {
+    rows.push([
+      t("perDiemOvertime"),
+      [
+        c.perDiem !== undefined && t("perDiemValue", { amount: euro(c.perDiem) }),
+        c.overtimeRate !== undefined && t("overtimeValue", { amount: euro(c.overtimeRate) }),
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    ]);
+  }
+  return rows;
+}
+
+/** Arrival, maximum mobilization time and budget. */
+function logisticsRows(c: RequirementConditions | null, { t, locale }: Fmt): Row[] {
+  if (!c) return [];
+  const rows: Row[] = [];
+  if (c.arrival) rows.push([t("arrival"), c.arrival]);
+  if (c.maxMobilizationHours !== undefined) {
+    rows.push([
+      t("mobilization"),
+      t("hoursValue", { hours: formatNumber(locale, c.maxMobilizationHours) }),
+    ]);
+  }
+  if (c.budgetMandatory !== undefined) {
+    rows.push([t("budget"), t(c.budgetMandatory ? "budgetMandatory" : "budgetNegotiable")]);
+  }
+  return rows;
+}
+
+/** Flights, accommodation, transport, meals and tools: included or not. */
+function logisticsOf(c: RequirementConditions | null, t: TermsT): string[] {
+  if (!c) return [];
+  const items = (["flights", "accommodation", "localTransport", "meals"] as const)
+    .filter((key) => c[key] !== undefined)
+    .map((key) => t(`logistics.${key}.${c[key] ? "included" : "excluded"}`));
+  if (c.ownTools !== undefined) {
+    items.push(t(c.ownTools ? "logistics.ownTools" : "logistics.companyTools"));
+  }
+  return items;
+}
+
+/** «{h} h base · {n} jornadas» and the shifts, or per-shift coverage on the organization's view. */
+function ShiftList({
+  shifts,
+  confirmedSeats,
+  headcount,
+}: {
+  shifts: RequirementShift[];
+  confirmedSeats: number | null | undefined;
+  headcount: number;
+}) {
+  const t = useTranslations("organization.detail.terms");
+  const locale = useLocale() as Locale;
+  const coverage = confirmedSeats !== undefined && confirmedSeats !== null;
+  return (
+    <div>
+      <p className="font-semibold tabular-nums">
+        {t("baseHoursSummary", {
+          hours: formatNumber(locale, totalBaseHours(shifts)),
+          count: shifts.length,
+        })}
+      </p>
+      <details className="mt-1">
+        <summary className="flex cursor-pointer items-center font-semibold text-blue pointer-coarse:min-h-11">
+          {coverage ? t("coverageTitle") : t("shiftsTitle", { count: shifts.length })}
+        </summary>
+        <ol className="mt-2 space-y-1 border-l-2 border-line pl-3 tabular-nums">
+          {shifts.map((s) => (
+            <li key={s.startsAt}>
+              {coverage
+                ? t("shiftCoverage", {
+                    date: formatDateTime(locale, s.startsAt),
+                    filled: Math.min(confirmedSeats, headcount),
+                    total: headcount,
+                  })
+                : t("shiftLine", {
+                    span: formatShiftSpan(locale, s.startsAt, s.endsAt),
+                    hours: formatNumber(locale, s.baseHours),
+                  })}
+            </li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  );
+}
+
 /**
  * The requirement builder's terms (v2-09 shifts, v2-12 conditions; v1.8 `JobDetails` / `Logistics`,
  * Marketplace.jsx:11-44, and the connected «Cobertura por jornada», Account.jsx:69): only what the organization
@@ -40,71 +176,16 @@ export function RequirementTerms({
   const tDomain = useTranslations("domain");
   const locale = useLocale() as Locale;
   const euro = (value: number) => formatEuro(locale, value);
-  // The builder's preview passes what is being typed: a number that does not parse yet is not shown.
-  const c = terms.conditions
-    ? (Object.fromEntries(
-        Object.entries(terms.conditions).filter(
-          ([, value]) => typeof value !== "number" || Number.isFinite(value),
-        ),
-      ) as RequirementConditions)
-    : null;
+  const c = finiteConditions(terms.conditions);
   const shifts = sortShifts(terms.shifts ?? []);
-
-  const rows: [string, string][] = [];
-  if (c?.hourlyRate !== undefined) {
-    const daily = dayRate(c);
-    rows.push([
-      t("rate"),
-      daily === null
-        ? t("rateHourly", { hourly: euro(c.hourlyRate) })
-        : t("rateValue", { hourly: euro(c.hourlyRate), daily: euro(daily) }),
-    ]);
-  }
-  if (c?.shiftHours !== undefined) {
-    rows.push([
-      t("shiftDuration"),
-      t("shiftDurationValue", {
-        shift: tDomain(`shift.${terms.shift}`),
-        hours: formatNumber(locale, c.shiftHours),
-      }),
-    ]);
-  }
-  if (c?.contractType) {
-    rows.push([
-      t("contract"),
-      t("contractValue", { contract: t(`contractType.${c.contractType}`) }),
-    ]);
-  }
-  if (c && (c.perDiem !== undefined || c.overtimeRate !== undefined)) {
-    rows.push([
-      t("perDiemOvertime"),
-      [
-        c.perDiem !== undefined && t("perDiemValue", { amount: euro(c.perDiem) }),
-        c.overtimeRate !== undefined && t("overtimeValue", { amount: euro(c.overtimeRate) }),
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    ]);
-  }
-  // D-06 Q6: one application covers every shift (partial coverage is v2-30, blocked).
-  if (c || shifts.length > 0) rows.push([t("coverage"), t("coverageValue")]);
-  if (c?.arrival) rows.push([t("arrival"), c.arrival]);
-  if (c?.maxMobilizationHours !== undefined) {
-    rows.push([
-      t("mobilization"),
-      t("hoursValue", { hours: formatNumber(locale, c.maxMobilizationHours) }),
-    ]);
-  }
-  if (c?.budgetMandatory !== undefined) {
-    rows.push([t("budget"), t(c.budgetMandatory ? "budgetMandatory" : "budgetNegotiable")]);
-  }
-
-  const logistics = (["flights", "accommodation", "localTransport", "meals"] as const)
-    .filter((key) => c?.[key] !== undefined)
-    .map((key) => t(`logistics.${key}.${c?.[key] ? "included" : "excluded"}`));
-  if (c?.ownTools !== undefined) {
-    logistics.push(t(c.ownTools ? "logistics.ownTools" : "logistics.companyTools"));
-  }
+  const fmt = { t, tDomain, locale };
+  const rows = [
+    ...payRows(c, terms.shift, fmt),
+    // D-06 Q6: one application covers every shift (partial coverage is v2-30, blocked).
+    ...(c || shifts.length > 0 ? [[t("coverage"), t("coverageValue")] as Row] : []),
+    ...logisticsRows(c, fmt),
+  ];
+  const logistics = logisticsOf(c, t);
   const amount = showAmount ? baseAmount(terms) : null;
 
   if (!terms.description && rows.length === 0 && shifts.length === 0) return null;
@@ -143,37 +224,7 @@ export function RequirementTerms({
         </p>
       )}
       {shifts.length > 0 && (
-        <div>
-          <p className="font-semibold tabular-nums">
-            {t("baseHoursSummary", {
-              hours: formatNumber(locale, totalBaseHours(shifts)),
-              count: shifts.length,
-            })}
-          </p>
-          <details className="mt-1">
-            <summary className="flex cursor-pointer items-center font-semibold text-blue pointer-coarse:min-h-11">
-              {confirmedSeats === undefined || confirmedSeats === null
-                ? t("shiftsTitle", { count: shifts.length })
-                : t("coverageTitle")}
-            </summary>
-            <ol className="mt-2 space-y-1 border-l-2 border-line pl-3 tabular-nums">
-              {shifts.map((s) => (
-                <li key={s.startsAt}>
-                  {confirmedSeats === undefined || confirmedSeats === null
-                    ? t("shiftLine", {
-                        span: formatShiftSpan(locale, s.startsAt, s.endsAt),
-                        hours: formatNumber(locale, s.baseHours),
-                      })
-                    : t("shiftCoverage", {
-                        date: formatDateTime(locale, s.startsAt),
-                        filled: Math.min(confirmedSeats, terms.headcount),
-                        total: terms.headcount,
-                      })}
-                </li>
-              ))}
-            </ol>
-          </details>
-        </div>
+        <ShiftList shifts={shifts} confirmedSeats={confirmedSeats} headcount={terms.headcount} />
       )}
       {c && <p className="text-xs text-muted">{t("notice")}</p>}
     </div>
