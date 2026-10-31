@@ -10,13 +10,16 @@ v1.8 inventory). Technical decisions are delegated (ADR-003 `docs/architecture/A
 privacy policies stay with the owner (ADR-003 N-1…N-9, safe defaults in code). Authorised: local work, local commits, local DB,
 read-only remote queries. NOT authorised: push to `main`, PR/merge to staging, any deploy, remote migrations, remote users
 (the approved admin-account SQL for `crewflexaviation@gmail.com` is ON HOLD under this rule), production Auth or secrets.
-Branch `feat/v19-training` (from `4644630`, LOCAL, not pushed): `628e1b5` ADR-003 + matrix · `dbc4ac3` V19-01 backend
+Branch `feat/v19-training` (from `4644630`; pushed to origin 2026-10-31 at the owner's request, not merged into `main`): `628e1b5` ADR-003 + matrix · `dbc4ac3` V19-01 backend
 (5 migrations `20261029100000…100400`, function `training`, DB/race tests) · `bcc7086` V19-02 UI · `77c8dc2` P0 + cleanup
 from the independent ponytail audit (review queue `submitted_at`, translated training notice status, typed
 `TrainingReviewItem`, dead code removed; training migrations edited in place → `db reset` locally after pulling) ·
-`8ac75b1` smoke expects the «Formación» nav entries · V19-04 calendar «F» marker (`trainingDays`, not blocking) and
-private `.ics` export (`/app/training/sessions.ics`, `src/features/training/ics.ts`): V19-029/030 VERIFIED_LOCAL.
-Matrix rows of V19-01/02 still say PENDIENTE: V19-05 reconciles every row with evidence.
+`8ac75b1` smoke expects the «Formación» nav entries · `b853a57` V19-04 calendar «F» + private `.ics` · V19-05
+browser QA found and fixed 4 bugs: every provider save answered 500 after writing (RPC returns `organization_id`),
+every course save failed (action forwards parsed nulls, `optionalText` now nullish/idempotent), the professional's
+training notice linked a missing route, account closure with a future seat showed generic copy (CFT12). New:
+`tests/e2e/training.test.ts`, `scripts/local/training-smoke.mjs` (50 browser checks, 2 orgs, 4 roles). Matrix
+reconciled (`0bd5499`): 33/40 VERIFIED_LOCAL = 82,5 %.
 
 Gotchas: Docker Desktop can drop mid-session (`HEALTH=000` → restart, re-run); after ANY local reset set the flags via
 STDIN to `db-owner-sql.sh` and restart `functions serve`; copy `.env.local`, `.env.e2e` and the functions' `.env` into a
@@ -52,10 +55,9 @@ the current one.
 
 ## Next step (one)
 
-V19-05: reconcile the 41 matrix rows against code + tests (browser-verify the V19-02 flows with two organizations),
-then the V19-038 fictitious demo scenario; independent ponytail audit before any new migration batch.
+Independent ponytail audit of V19-04/05, then the last migration batch: rate limits on training requests and messages
+(V19-036, count recent rows per user, new CFT code), the V19-038 demo seed (5 providers, 15 courses, 25 editions;
+it also unlocks the pager check V19-006), and browser checks for 002 (recruiter), 014 (self-paced/provisional), 026.
 
-## Previous next step (owner, on hold under the v1.9 mandate)
-
-The owner signs up `crewflexaviation@gmail.com` on https://crew-flex.vercel.app/register (professional, ≥ 12 characters) and
-confirms; then run the approved admin SQL and verify «Ver como» shows Técnico · Empresa · Recruiter · Administración.
+On hold under the v1.9 mandate (owner): sign up `crewflexaviation@gmail.com` on production, then the approved admin SQL
+and the «Ver como» check.
