@@ -21,6 +21,7 @@ import { loadProfessionalContext } from "@/features/professional/load";
 import { formatPercent } from "@/i18n/format";
 import type { Locale } from "@/i18n/config";
 import { isDocumentWalletEnabled } from "@/server/feature-flags";
+import type { ProfileVisibility } from "@/types/database";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("meta");
@@ -30,16 +31,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ProfessionalOverviewPage({
   searchParams,
 }: PageProps<"/app/professional">) {
-  const [{ month: monthParam }, { actor, overview }, t, tDomain, tNav, locale, walletEnabled] =
-    await Promise.all([
-      searchParams,
-      loadProfessionalContext(),
-      getTranslations("professional"),
-      getTranslations("domain"),
-      getTranslations("nav"),
-      getLocale() as Promise<Locale>,
-      isDocumentWalletEnabled(),
-    ]);
+  const [{ month: monthParam }, { actor, overview }, t, tNav, walletEnabled] = await Promise.all([
+    searchParams,
+    loadProfessionalContext(),
+    getTranslations("professional"),
+    getTranslations("nav"),
+    isDocumentWalletEnabled(),
+  ]);
   if (!overview) {
     return <StateMessage title={t("noProfileTitle")} description={t("noProfileDescription")} />;
   }
@@ -66,7 +64,6 @@ export default async function ProfessionalOverviewPage({
     documentCount,
     new Date(),
   );
-  const nextStep = completeness.missing[0];
   const month = parseMonth(monthParam) ?? today.slice(0, 7);
   const windows = overview.availability.map((w) => ({
     id: w.id,
@@ -111,61 +108,16 @@ export default async function ProfessionalOverviewPage({
           }
         />
         {/* Next-only figures, folded below the v1.8 blocks. */}
-        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {/* Completeness of the profile items (BR-11) is not a verification status (8.2). */}
-          <Metric
-            label={t("overview.passport")}
-            value={formatPercent(locale, completeness.percent)}
-            detail={nextStep ? t(`hint.${nextStep}`) : t("overview.complete")}
-            tone={completeness.percent === 100 ? "ok" : "neutral"}
-          />
-          {/* Held ones only: a withdrawn qualification is one the professional no longer has. */}
-          <Metric label={t("overview.qualifications")} value={active.length} />
-          <Metric
-            label={t("overview.verified")}
-            value={t("overview.verifiedOf", { verified, total: active.length })}
-            detail={awaiting > 0 ? t("overview.awaiting", { count: awaiting }) : undefined}
-            tone={
-              active.length > 0 && verified === active.length
-                ? "ok"
-                : awaiting > 0
-                  ? "warn"
-                  : "neutral"
-            }
-          />
-          <Metric label={t("overview.windows")} value={overview.availability.length} />
-          <Metric
-            className="col-span-2 lg:col-span-1"
-            label={t("overview.visibility")}
-            value={tDomain(`visibility.${overview.profile.visibility}.label`)}
-            detail={tDomain(`visibility.${overview.profile.visibility}.detail`)}
-          />
-          <Metric label={t("activity.active")} value={counts.active ?? "—"} />
-          <Metric
-            label={t("activity.toAccept")}
-            value={counts.toAccept ?? "—"}
-            tone={counts.toAccept ? "warn" : "neutral"}
-          />
-        </dl>
-        {(awaiting > 0 || rejected > 0) && (
-          <Panel title={t("overview.nextTitle")}>
-            <ul className="space-y-3 text-sm">
-              {rejected > 0 && (
-                <li className="flex flex-wrap items-center justify-between gap-3">
-                  <span>{t("overview.rejectedNext", { count: rejected })}</span>
-                  <ButtonLink href="/app/professional/qualifications">
-                    {t("overview.openQualifications")}
-                  </ButtonLink>
-                </li>
-              )}
-              {awaiting > 0 && (
-                <li className="flex flex-wrap items-center justify-between gap-3">
-                  <span>{t("overview.awaitingNext", { count: awaiting })}</span>
-                </li>
-              )}
-            </ul>
-          </Panel>
-        )}
+        <OverviewMetrics
+          completeness={completeness}
+          active={active.length}
+          verified={verified}
+          awaiting={awaiting}
+          windows={overview.availability.length}
+          visibility={overview.profile.visibility}
+          counts={counts}
+        />
+        {(awaiting > 0 || rejected > 0) && <NextSteps awaiting={awaiting} rejected={rejected} />}
         <Panel title={t("overview.reviewTitle")}>
           <UpcomingReviews items={toReview} failed={documentsFailed} today={today} />
         </Panel>
@@ -182,5 +134,92 @@ export default async function ProfessionalOverviewPage({
         </Panel>
       </div>
     </>
+  );
+}
+
+/** «Verificadas»: ok when every held qualification is verified, warn while some await review. */
+const verifiedTone = (active: number, verified: number, awaiting: number) =>
+  active > 0 && verified === active ? "ok" : awaiting > 0 ? "warn" : "neutral";
+
+/** The Next-only figures, folded below the v1.8 blocks. */
+async function OverviewMetrics({
+  completeness,
+  active,
+  verified,
+  awaiting,
+  windows,
+  visibility,
+  counts,
+}: {
+  completeness: ReturnType<typeof completenessOf>;
+  /** Held qualifications only: a withdrawn one is one the professional no longer has. */
+  active: number;
+  verified: number;
+  awaiting: number;
+  windows: number;
+  visibility: ProfileVisibility;
+  counts: ReturnType<typeof activityCounts>;
+}) {
+  const [t, tDomain, locale] = await Promise.all([
+    getTranslations("professional"),
+    getTranslations("domain"),
+    getLocale() as Promise<Locale>,
+  ]);
+  const nextStep = completeness.missing[0];
+  return (
+    <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Completeness of the profile items (BR-11) is not a verification status (8.2). */}
+      <Metric
+        label={t("overview.passport")}
+        value={formatPercent(locale, completeness.percent)}
+        detail={nextStep ? t(`hint.${nextStep}`) : t("overview.complete")}
+        tone={completeness.percent === 100 ? "ok" : "neutral"}
+      />
+      {/* Held ones only: a withdrawn qualification is one the professional no longer has. */}
+      <Metric label={t("overview.qualifications")} value={active} />
+      <Metric
+        label={t("overview.verified")}
+        value={t("overview.verifiedOf", { verified, total: active })}
+        detail={awaiting > 0 ? t("overview.awaiting", { count: awaiting }) : undefined}
+        tone={verifiedTone(active, verified, awaiting)}
+      />
+      <Metric label={t("overview.windows")} value={windows} />
+      <Metric
+        className="col-span-2 lg:col-span-1"
+        label={t("overview.visibility")}
+        value={tDomain(`visibility.${visibility}.label`)}
+        detail={tDomain(`visibility.${visibility}.detail`)}
+      />
+      <Metric label={t("activity.active")} value={counts.active ?? "—"} />
+      <Metric
+        label={t("activity.toAccept")}
+        value={counts.toAccept ?? "—"}
+        tone={counts.toAccept ? "warn" : "neutral"}
+      />
+    </dl>
+  );
+}
+
+/** «Siguientes pasos»: rejected qualifications to fix and the ones awaiting review. */
+async function NextSteps({ awaiting, rejected }: { awaiting: number; rejected: number }) {
+  const t = await getTranslations("professional");
+  return (
+    <Panel title={t("overview.nextTitle")}>
+      <ul className="space-y-3 text-sm">
+        {rejected > 0 && (
+          <li className="flex flex-wrap items-center justify-between gap-3">
+            <span>{t("overview.rejectedNext", { count: rejected })}</span>
+            <ButtonLink href="/app/professional/qualifications">
+              {t("overview.openQualifications")}
+            </ButtonLink>
+          </li>
+        )}
+        {awaiting > 0 && (
+          <li className="flex flex-wrap items-center justify-between gap-3">
+            <span>{t("overview.awaitingNext", { count: awaiting })}</span>
+          </li>
+        )}
+      </ul>
+    </Panel>
   );
 }

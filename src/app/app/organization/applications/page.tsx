@@ -23,6 +23,7 @@ import {
 } from "@/features/applications/organization-view";
 import { getRequirement } from "@/features/requirements/api";
 import { ORGANIZATION_APPLICATIONS_PAGE_SIZE } from "@/lib/validation/applications";
+import type { WorkRequirement } from "@/domain/work-requirement";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,12 +40,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function OrganizationApplicationsPage({
   searchParams,
 }: PageProps<"/app/organization/applications">) {
-  const [search, { organization, canManage }, t, tApplications, tDomain] = await Promise.all([
+  const [search, { organization, canManage }, t, tApplications] = await Promise.all([
     searchParams,
     requireOrganizationContext(),
     getTranslations("hiring.applications"),
     getTranslations("applications"),
-    getTranslations("domain"),
   ]);
   const header = (
     <PageHeader
@@ -77,8 +77,7 @@ export default async function OrganizationApplicationsPage({
     getRequirementApplicationCounts(organization.id),
   ]);
   if (selected && !selected.ok) {
-    if (selected.error.code === "NOT_FOUND" || selected.error.code === "VALIDATION_ERROR")
-      notFound();
+    if (MISSING.has(selected.error.code)) notFound();
     return (
       <>
         {header}
@@ -89,87 +88,132 @@ export default async function OrganizationApplicationsPage({
   const requirement = selected?.data.requirement ?? null;
   // RLS lets platform admins read every tenant; this page shows the acting organization only.
   if (requirement && requirement.organizationId !== organization.id) notFound();
-  // `?page=` past the end lands on the last page (X-04).
-  if (list.ok && list.data.total > 0) {
-    const last = applicationsPageCount(list.data.total);
-    if (filters.page > last) redirect(organizationApplicationsHref(filters, { page: last }));
-  }
-  const all = counts.ok
-    ? countAll(tabCounts(counts.data.requirements, filters.requirementId))
-    : filters.status === null && list.ok
-      ? list.data.total
-      : null;
+  redirectPastLastPage(filters, list);
+  const all = allCount(counts, filters, list);
 
   return (
     <>
       {header}
-      {requirement && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-white p-4">
-          <p className="min-w-0 flex-1 basis-60 text-sm font-semibold break-words">
-            {t("selected", { title: requirement.title })}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink href={organizationApplicationsHref(filters, { requirementId: null })}>
-              {t("viewAll")}
-            </ButtonLink>
-            <ButtonLink href={`/app/organization/requirements/${requirement.id}`}>
-              {t("backToOffers")}
-            </ButtonLink>
-          </div>
-        </div>
-      )}
-      <nav aria-label={tApplications("filtersLabel")} className="mb-6 flex flex-wrap gap-2">
-        <FilterPill
-          href={organizationApplicationsHref(filters, { status: null })}
-          current={filters.status === null}
-        >
-          {all === null ? t("allTab") : tApplications("all", { count: all })}
-        </FilterPill>
-        {APPLICATION_STATUSES.map((status) => (
-          <FilterPill
-            key={status}
-            href={organizationApplicationsHref(filters, { status })}
-            current={filters.status === status}
-          >
-            {tDomain(`applicationStatus.${status}`)}
-          </FilterPill>
-        ))}
-      </nav>
-      {!list.ok ? (
-        <ApiErrorState error={list.error} requestId={list.requestId} />
-      ) : list.data.applications.length === 0 ? (
-        <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />
-      ) : (
-        <>
-          <div className="space-y-4">
-            {list.data.applications.map((application) => (
-              <OrgApplicationCard
-                key={application.id}
-                application={application}
-                requirement={application.requirement}
-                showRequirement
-                pack={{
-                  // v2-15 «Ver expediente»: only a card of this page opens (`?pack=` matched against it).
-                  open: search.pack === application.id,
-                  baseHref: organizationApplicationsHref(filters, { page: filters.page }),
-                }}
-              />
-            ))}
-          </div>
-          <ApplicationsPager filters={filters} total={list.data.total} />
-        </>
-      )}
+      {requirement && <SelectedOffer filters={filters} requirement={requirement} />}
+      <StatusTabs filters={filters} all={all} />
+      <ApplicationsList list={list} filters={filters} openPack={search.pack} />
     </>
   );
 }
 
-async function ApplicationsPager({
+type Filters = ReturnType<typeof parseOrganizationApplicationsFilters>;
+type ApplicationsRead = Awaited<ReturnType<typeof listOrganizationApplications>>;
+type CountsRead = Awaited<ReturnType<typeof getRequirementApplicationCounts>>;
+type Requirement = WorkRequirement;
+
+/** A `?requirementId=` that does not exist (or is malformed) is a 404, not an error state. */
+const MISSING = new Set(["NOT_FOUND", "VALIDATION_ERROR"]);
+
+/** `?page=` past the end lands on the last page (X-04). */
+function redirectPastLastPage(filters: Filters, list: ApplicationsRead) {
+  if (!list.ok || list.data.total === 0) return;
+  const last = applicationsPageCount(list.data.total);
+  if (filters.page > last) redirect(organizationApplicationsHref(filters, { page: last }));
+}
+
+/** «Todas ({n})»: from the counters, else the list total when no status filter is on; null if unknown. */
+function allCount(counts: CountsRead, filters: Filters, list: ApplicationsRead): number | null {
+  if (counts.ok) return countAll(tabCounts(counts.data.requirements, filters.requirementId));
+  return filters.status === null && list.ok ? list.data.total : null;
+}
+
+/** «Oferta seleccionada: {título}» + «Ver todas» + «Volver a ofertas». */
+async function SelectedOffer({
   filters,
-  total,
+  requirement,
 }: {
-  filters: ReturnType<typeof parseOrganizationApplicationsFilters>;
-  total: number;
+  filters: Filters;
+  requirement: Requirement;
 }) {
+  const t = await getTranslations("hiring.applications");
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-line bg-white p-4">
+      <p className="min-w-0 flex-1 basis-60 text-sm font-semibold break-words">
+        {t("selected", { title: requirement.title })}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <ButtonLink href={organizationApplicationsHref(filters, { requirementId: null })}>
+          {t("viewAll")}
+        </ButtonLink>
+        <ButtonLink href={`/app/organization/requirements/${requirement.id}`}>
+          {t("backToOffers")}
+        </ButtonLink>
+      </div>
+    </div>
+  );
+}
+
+/** «Todas ({n})» + the 9 status tabs. */
+async function StatusTabs({ filters, all }: { filters: Filters; all: number | null }) {
+  const [t, tApplications, tDomain] = await Promise.all([
+    getTranslations("hiring.applications"),
+    getTranslations("applications"),
+    getTranslations("domain"),
+  ]);
+  return (
+    <nav aria-label={tApplications("filtersLabel")} className="mb-6 flex flex-wrap gap-2">
+      <FilterPill
+        href={organizationApplicationsHref(filters, { status: null })}
+        current={filters.status === null}
+      >
+        {all === null ? t("allTab") : tApplications("all", { count: all })}
+      </FilterPill>
+      {APPLICATION_STATUSES.map((status) => (
+        <FilterPill
+          key={status}
+          href={organizationApplicationsHref(filters, { status })}
+          current={filters.status === status}
+        >
+          {tDomain(`applicationStatus.${status}`)}
+        </FilterPill>
+      ))}
+    </nav>
+  );
+}
+
+/** The cards of the current page, its error or its empty state, and the pager. */
+async function ApplicationsList({
+  list,
+  filters,
+  openPack,
+}: {
+  list: ApplicationsRead;
+  filters: Filters;
+  openPack: string | string[] | undefined;
+}) {
+  const t = await getTranslations("hiring.applications");
+  if (!list.ok) return <ApiErrorState error={list.error} requestId={list.requestId} />;
+  if (list.data.applications.length === 0) {
+    return <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />;
+  }
+  return (
+    <>
+      <div className="space-y-4">
+        {list.data.applications.map((application) => (
+          <OrgApplicationCard
+            key={application.id}
+            application={application}
+            requirement={application.requirement}
+            showRequirement
+            pack={{
+              // v2-15 «Ver expediente»: only a card of this page opens (`?pack=` matched against it).
+              open: openPack === application.id,
+              baseHref: organizationApplicationsHref(filters, { page: filters.page }),
+            }}
+          />
+        ))}
+      </div>
+      <ApplicationsPager filters={filters} total={list.data.total} />
+    </>
+  );
+}
+
+async function ApplicationsPager({ filters, total }: { filters: Filters; total: number }) {
   const t = await getTranslations("hiring.applications");
   const pages = applicationsPageCount(total);
   const page = Math.min(filters.page, pages);

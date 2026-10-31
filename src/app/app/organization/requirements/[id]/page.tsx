@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { ApiErrorState } from "@/components/ui/ApiErrorState";
 import { ButtonLink } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -38,26 +39,16 @@ export default async function RequirementDetailPage({
   params,
   searchParams,
 }: PageProps<"/app/organization/requirements/[id]">) {
-  const [
-    { id },
-    { archived },
-    { organization, canManage },
-    t,
-    tDashboard,
-    tApplications,
-    tRecruiter,
-  ] = await Promise.all([
+  const [{ id }, { archived }, { organization, canManage }, t, tApplications] = await Promise.all([
     params,
     searchParams,
     requireOrganizationContext(),
     getTranslations("organization.detail"),
-    getTranslations("organization.dashboard"),
     getTranslations("applications"),
-    getTranslations("recruiter.requirement"),
   ]);
   const result = await getRequirement(id);
   if (!result.ok) {
-    if (result.error.code === "NOT_FOUND" || result.error.code === "VALIDATION_ERROR") notFound();
+    if (MISSING.has(result.error.code)) notFound();
     return <ApiErrorState error={result.error} requestId={result.requestId} />;
   }
   const { requirement } = result.data;
@@ -71,15 +62,14 @@ export default async function RequirementDetailPage({
     canManage && evaluable ? evaluateRequirementCapacity(requirement.id) : null,
     canManage && !draft ? listRequirementApplications(requirement.id) : null,
   ]);
-  const applicationCount = applications?.ok ? applications.data.applications.length : 0;
+  const list = applications?.ok ? applications.data.applications : null;
+  const applicationCount = list?.length ?? 0;
   // «Cobertura por jornada» and v2-08 «{p}% cobertura confirmada» (BR-23): seats taken (confirmed +
   // finished), the same count that covers the requirement.
-  const confirmedSeats = applications?.ok
-    ? seatsTaken(countStatuses(applications.data.applications))
-    : null;
+  const confirmedSeats = list ? seatsTaken(countStatuses(list)) : null;
   const coverage =
     confirmedSeats === null ? null : confirmedCoverage(requirement.headcount, confirmedSeats);
-  const applicationsLink = applications?.ok && (
+  const applicationsLink = list && (
     <ButtonLink href={`/app/organization/requirements/${requirement.id}/applications`}>
       {tApplications("view", { count: applicationCount })}
     </ButtonLink>
@@ -103,104 +93,186 @@ export default async function RequirementDetailPage({
             </div>
           )}
           {closed ? (
-            <div className="mt-4 space-y-3 border-t border-line pt-4">
-              {/* «Archivar» redirects here with ?archived=1: the one-way step confirms itself (T-64). */}
-              {archived === "1" && requirement.archivedAt && (
-                <p role="status" className="text-sm font-medium">
-                  {t("archive.done")}
-                </p>
-              )}
-              <p className="text-sm text-muted">
-                {requirement.archivedAt ? t("archive.note") : t("close.closedNote")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {applicationCount > 0 && applicationsLink}
-                {duplicateLink}
-              </div>
-              {canManage && canArchive(requirement) && (
-                <RequirementStatusActions
-                  id={requirement.id}
-                  status={requirement.status}
-                  expired={false}
-                  archivedAt={requirement.archivedAt}
-                />
-              )}
-            </div>
+            <ClosedActions
+              requirement={requirement}
+              canManage={canManage}
+              justArchived={archived === "1"}
+              links={
+                <>
+                  {applicationCount > 0 && applicationsLink}
+                  {duplicateLink}
+                </>
+              }
+            />
           ) : (
-            <div className="mt-4 space-y-3 border-t border-line pt-4">
-              {requirement.status === "paused" && (
-                <p className="text-sm text-muted">{t("status.pausedNote")}</p>
-              )}
-              {/* BR-27.5: a revoked representation hides the requirement and stops it moving forward. */}
-              {requirement.client && !canActForClient(requirement.client.status) && (
-                <p className="rounded-lg border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
-                  {tRecruiter("revokedNote", { client: requirement.client.name })}
-                </p>
-              )}
-              {draft && <p className="text-sm text-muted">{t("draft.note")}</p>}
-              {/* ORG-05 #10: why «Editar» is gone once the requirement received applications. */}
-              {applicationCount > 0 && (
-                <p className="text-sm text-muted">{t("activeApplicationsNote")}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {/* M05: editable only while it never received an application (the server re-checks). */}
-                {/* 7682e92: no edit once the period ended (an expired need is closed, not edited). */}
-                {canManage &&
-                  (draft ||
-                    (applications?.ok && applicationCount === 0 && !expiredNow(requirement))) && (
-                    <ButtonLink
-                      href={`/app/organization/requirements/${requirement.id}/edit`}
-                      variant={draft ? "primary" : "secondary"}
-                    >
-                      {draft ? t("draft.complete") : t("edit")}
-                    </ButtonLink>
-                  )}
-                {applicationsLink}
-                {duplicateLink}
-              </div>
-              {canManage && (
-                <RequirementStatusActions
-                  id={requirement.id}
-                  status={requirement.status}
-                  expired={expiredNow(requirement)}
-                  archivedAt={requirement.archivedAt}
-                />
-              )}
-            </div>
+            <OpenActions
+              requirement={requirement}
+              canManage={canManage}
+              applicationCount={applicationCount}
+              canEdit={
+                canManage && (draft || (applications?.ok === true && applicationCount === 0))
+              }
+              links={
+                <>
+                  {applicationsLink}
+                  {duplicateLink}
+                </>
+              }
+            />
           )}
         </Panel>
         {/* PKG outreach (v2-17): «Distribución Urgente/AOG», admin/manager, never on planned needs. */}
         <OutreachPanel requirement={requirement} canManage={canManage} now={requestTime()} />
-        {!evaluable ? null : !capacity ? (
-          <StateMessage
-            title={tDashboard("managersOnlyTitle")}
-            description={tDashboard("managersOnlyDescription")}
-          />
-        ) : !capacity.ok ? (
-          <ApiErrorState error={capacity.error} requestId={capacity.requestId} />
-        ) : (
-          <>
-            <CapacityOverview requirement={requirement} capacity={capacity.data.capacity} />
-            <section aria-labelledby="internal-title">
-              <h2 id="internal-title" className="mb-3 text-lg font-semibold tracking-tight">
-                {t("internalWorkforce", { count: capacity.data.internal.length })}
-              </h2>
-              {capacity.data.internal.length === 0 ? (
-                <StateMessage
-                  title={t("noTechniciansTitle")}
-                  description={t("noTechniciansDescription")}
-                />
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {capacity.data.internal.map((item) => (
-                    <MatchCard key={item.candidate.id} item={item} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
-        )}
+        {evaluable && <CapacitySection requirement={requirement} capacity={capacity} />}
       </div>
+    </>
+  );
+}
+
+/** A malformed or unknown id is a 404, not an error state. */
+const MISSING = new Set(["NOT_FOUND", "VALIDATION_ERROR"]);
+
+type CapacityRead = Awaited<ReturnType<typeof evaluateRequirementCapacity>> | null;
+
+/** A closed (or archived) requirement: its note, the links and «Archivar» while it can be archived. */
+async function ClosedActions({
+  requirement,
+  canManage,
+  justArchived,
+  links,
+}: {
+  requirement: WorkRequirement;
+  canManage: boolean;
+  justArchived: boolean;
+  links: ReactNode;
+}) {
+  const t = await getTranslations("organization.detail");
+  return (
+    <div className="mt-4 space-y-3 border-t border-line pt-4">
+      {/* «Archivar» redirects here with ?archived=1: the one-way step confirms itself (T-64). */}
+      {justArchived && requirement.archivedAt && (
+        <p role="status" className="text-sm font-medium">
+          {t("archive.done")}
+        </p>
+      )}
+      <p className="text-sm text-muted">
+        {requirement.archivedAt ? t("archive.note") : t("close.closedNote")}
+      </p>
+      <div className="flex flex-wrap gap-2">{links}</div>
+      {canManage && canArchive(requirement) && (
+        <RequirementStatusActions
+          id={requirement.id}
+          status={requirement.status}
+          expired={false}
+          archivedAt={requirement.archivedAt}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A draft, open or paused requirement: its notes, «Editar»/«Completar», the links and the status actions. */
+async function OpenActions({
+  requirement,
+  canManage,
+  applicationCount,
+  canEdit,
+  links,
+}: {
+  requirement: WorkRequirement;
+  canManage: boolean;
+  applicationCount: number;
+  /** Before the period check: a draft, or a published need that never received an application. */
+  canEdit: boolean;
+  links: ReactNode;
+}) {
+  const [t, tRecruiter] = await Promise.all([
+    getTranslations("organization.detail"),
+    getTranslations("recruiter.requirement"),
+  ]);
+  const draft = requirement.status === "draft";
+  const expired = expiredNow(requirement);
+  return (
+    <div className="mt-4 space-y-3 border-t border-line pt-4">
+      {requirement.status === "paused" && (
+        <p className="text-sm text-muted">{t("status.pausedNote")}</p>
+      )}
+      {/* BR-27.5: a revoked representation hides the requirement and stops it moving forward. */}
+      {requirement.client && !canActForClient(requirement.client.status) && (
+        <p className="rounded-lg border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
+          {tRecruiter("revokedNote", { client: requirement.client.name })}
+        </p>
+      )}
+      {draft && <p className="text-sm text-muted">{t("draft.note")}</p>}
+      {/* ORG-05 #10: why «Editar» is gone once the requirement received applications. */}
+      {applicationCount > 0 && <p className="text-sm text-muted">{t("activeApplicationsNote")}</p>}
+      <div className="flex flex-wrap gap-2">
+        {/* M05: editable only while it never received an application (the server re-checks). */}
+        {/* 7682e92: no edit once the period ended (an expired need is closed, not edited). */}
+        {canEdit && (draft || !expired) && (
+          <ButtonLink
+            href={`/app/organization/requirements/${requirement.id}/edit`}
+            variant={draft ? "primary" : "secondary"}
+          >
+            {draft ? t("draft.complete") : t("edit")}
+          </ButtonLink>
+        )}
+        {links}
+      </div>
+      {canManage && (
+        <RequirementStatusActions
+          id={requirement.id}
+          status={requirement.status}
+          expired={expired}
+          archivedAt={requirement.archivedAt}
+        />
+      )}
+    </div>
+  );
+}
+
+/** The published need's capacity: the gap and its internal workforce (admin/manager only). */
+async function CapacitySection({
+  requirement,
+  capacity,
+}: {
+  requirement: WorkRequirement;
+  capacity: CapacityRead;
+}) {
+  const [t, tDashboard] = await Promise.all([
+    getTranslations("organization.detail"),
+    getTranslations("organization.dashboard"),
+  ]);
+  if (!capacity) {
+    return (
+      <StateMessage
+        title={tDashboard("managersOnlyTitle")}
+        description={tDashboard("managersOnlyDescription")}
+      />
+    );
+  }
+  if (!capacity.ok) return <ApiErrorState error={capacity.error} requestId={capacity.requestId} />;
+  const { internal } = capacity.data;
+  return (
+    <>
+      <CapacityOverview requirement={requirement} capacity={capacity.data.capacity} />
+      <section aria-labelledby="internal-title">
+        <h2 id="internal-title" className="mb-3 text-lg font-semibold tracking-tight">
+          {t("internalWorkforce", { count: internal.length })}
+        </h2>
+        {internal.length === 0 ? (
+          <StateMessage
+            title={t("noTechniciansTitle")}
+            description={t("noTechniciansDescription")}
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {internal.map((item) => (
+              <MatchCard key={item.candidate.id} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
     </>
   );
 }

@@ -37,7 +37,7 @@ export default async function RequirementsPage({
     ]);
   // v1.8 «Archivada» (T-64): archived requirements leave the working list and have their own view.
   const archivedView = archived === "1";
-  const base = archivedView ? "/app/organization/requirements?archived=1" : undefined;
+  const base = archivedView ? ARCHIVED_LIST : undefined;
   // Newest first, 20 per page: the old ascending 50-row read hid every need after the 50th.
   const page = parseRequirementsPage(pageParam);
   const [result, counts] = await Promise.all([
@@ -51,27 +51,11 @@ export default async function RequirementsPage({
     canManage ? getRequirementApplicationCounts(organization.id) : null,
   ]);
   const seats = counts?.ok ? seatsByRequirement(counts.data.requirements) : undefined;
-  const total = result.ok ? (result.data.total ?? result.data.requirements.length) : 0;
+  const total = totalOf(result);
   // `?page=` past the end (hand-edited, or rows closed meanwhile) lands on the last page (X-04).
-  if (total > 0 && page > pageCount(total)) {
-    redirect(`${base ? `${base}&` : "/app/organization/requirements?"}page=${pageCount(total)}`);
-  }
-  const newButton = canManage && (
-    <ButtonLink href="/app/organization/requirements/new" variant="primary">
-      {tDashboard("newRequirement")}
-    </ButtonLink>
-  );
-  const viewToggle = (
-    <ButtonLink
-      href={
-        archivedView
-          ? "/app/organization/requirements"
-          : "/app/organization/requirements?archived=1"
-      }
-    >
-      {archivedView ? tArchive("listBack") : tArchive("listLink")}
-    </ButtonLink>
-  );
+  if (total > 0 && page > pageCount(total)) redirect(pageHref(base, pageCount(total)));
+  const newButton = canManage && <NewRequirementButton />;
+  const viewToggle = <ViewToggle archivedView={archivedView} />;
 
   return (
     <>
@@ -100,5 +84,33 @@ export default async function RequirementsPage({
         </Panel>
       )}
     </>
+  );
+}
+
+const ACTIVE_LIST = "/app/organization/requirements";
+const ARCHIVED_LIST = "/app/organization/requirements?archived=1";
+
+const pageHref = (base: string | undefined, page: number) =>
+  `${base ? `${base}&` : `${ACTIVE_LIST}?`}page=${page}`;
+
+const totalOf = (result: Awaited<ReturnType<typeof listRequirements>>) =>
+  result.ok ? (result.data.total ?? result.data.requirements.length) : 0;
+
+async function NewRequirementButton() {
+  const t = await getTranslations("organization.dashboard");
+  return (
+    <ButtonLink href="/app/organization/requirements/new" variant="primary">
+      {t("newRequirement")}
+    </ButtonLink>
+  );
+}
+
+/** «Archivadas» ↔ back to the working list (v1.8 «Archivada», T-64). */
+async function ViewToggle({ archivedView }: { archivedView: boolean }) {
+  const t = await getTranslations("organization.detail.archive");
+  return (
+    <ButtonLink href={archivedView ? ACTIVE_LIST : ARCHIVED_LIST}>
+      {archivedView ? t("listBack") : t("listLink")}
+    </ButtonLink>
   );
 }

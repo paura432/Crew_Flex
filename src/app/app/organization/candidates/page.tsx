@@ -19,6 +19,7 @@ import {
   directoryHref,
   parseDirectoryQuery,
   toDirectorySearchParams,
+  type DirectoryQuery,
 } from "@/features/directory/query";
 import { listRequirements } from "@/features/requirements/api";
 import { currentRequirements } from "@/features/requirements/dashboard";
@@ -72,12 +73,11 @@ export default async function CandidatesPage({
     hasErrors ? null : searchCandidateDirectory(toDirectorySearchParams(organization.id, query)),
     listRequirements(organization.id, { status: "open", endsAfter: new Date().toISOString() }),
   ]);
-  if (result?.ok && result.data.total > 0) {
-    const last = Math.max(1, Math.ceil(result.data.total / DIRECTORY_PAGE_SIZE));
-    if (query.page > last) redirect(directoryHref(query, { page: last }));
+  // `?page=` past the end lands on the last page.
+  if (result?.ok && result.data.total > 0 && query.page > pageCount(result.data.total)) {
+    redirect(directoryHref(query, { page: pageCount(result.data.total) }));
   }
   const evaluable = open.ok ? evaluableAtRequestTime(open.data.requirements) : [];
-  const pages = result?.ok ? Math.max(1, Math.ceil(result.data.total / DIRECTORY_PAGE_SIZE)) : 1;
 
   return (
     <>
@@ -95,39 +95,53 @@ export default async function CandidatesPage({
       {result === null ? null : !result.ok ? (
         <ApiErrorState error={result.error} requestId={result.requestId} />
       ) : (
-        <DirectoryView
-          labels={{
-            group: t("view.label"),
-            compact: t("view.compact"),
-            expanded: t("view.expanded"),
-          }}
-          summary={
-            <p className="text-sm text-muted" role="status">
-              {t.rich("summary", {
-                total: result.data.total,
-                page: result.data.page,
-                pages,
-                b: (chunks) => <strong className="text-ink">{chunks}</strong>,
-              })}
-            </p>
-          }
-        >
-          {result.data.candidates.length === 0 ? (
-            <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Position in the key: two visible professionals may (rarely) share a 40-bit ref (T-151). */}
-              {result.data.candidates.map((candidate, index) => (
-                // react-doctor-disable-next-line no-array-index-as-key -- refs may collide (T-151); the server-ordered page never reorders on the client
-                <DirectoryCard key={`${index}:${candidate.ref}`} candidate={candidate} />
-              ))}
-            </div>
-          )}
-          {result.data.total > 0 && (
-            <DirectoryPager query={query} page={result.data.page} pages={pages} />
-          )}
-        </DirectoryView>
+        <DirectoryResults data={result.data} query={query} />
       )}
     </>
+  );
+}
+
+const pageCount = (total: number) => Math.max(1, Math.ceil(total / DIRECTORY_PAGE_SIZE));
+
+type DirectoryData = Extract<
+  Awaited<ReturnType<typeof searchCandidateDirectory>>,
+  { ok: true }
+>["data"];
+
+/** One page of the directory: the summary, the cards (or the empty state) and the pager. */
+async function DirectoryResults({ data, query }: { data: DirectoryData; query: DirectoryQuery }) {
+  const t = await getTranslations("directory");
+  const pages = pageCount(data.total);
+  return (
+    <DirectoryView
+      labels={{
+        group: t("view.label"),
+        compact: t("view.compact"),
+        expanded: t("view.expanded"),
+      }}
+      summary={
+        <p className="text-sm text-muted" role="status">
+          {t.rich("summary", {
+            total: data.total,
+            page: data.page,
+            pages,
+            b: (chunks) => <strong className="text-ink">{chunks}</strong>,
+          })}
+        </p>
+      }
+    >
+      {data.candidates.length === 0 ? (
+        <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Position in the key: two visible professionals may (rarely) share a 40-bit ref (T-151). */}
+          {data.candidates.map((candidate, index) => (
+            // react-doctor-disable-next-line no-array-index-as-key -- refs may collide (T-151); the server-ordered page never reorders on the client
+            <DirectoryCard key={`${index}:${candidate.ref}`} candidate={candidate} />
+          ))}
+        </div>
+      )}
+      {data.total > 0 && <DirectoryPager query={query} page={data.page} pages={pages} />}
+    </DirectoryView>
   );
 }

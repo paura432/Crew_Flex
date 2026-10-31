@@ -16,12 +16,17 @@ import {
   MatchPager,
 } from "@/features/matching/components/MatchList";
 import { matchListHref } from "@/features/matching/list";
-import { listMatches, MAX_COMPARE, parseMatchListQuery } from "@/features/matching/list";
+import {
+  listMatches,
+  MAX_COMPARE,
+  parseMatchListQuery,
+  type MatchListQuery,
+} from "@/features/matching/list";
 import { PoolCoverageNote } from "@/features/matching/components/PoolCoverageNote";
 import { getRequirement } from "@/features/requirements/api";
 import { QualificationChips } from "@/features/requirements/components/RequirementBadges";
 import { formatPeriod } from "@/i18n/format";
-import { isEvaluable } from "@/domain/work-requirement";
+import { isEvaluable, type WorkRequirement } from "@/domain/work-requirement";
 import { requireOrganizationContext } from "@/server/session";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -57,11 +62,7 @@ export default async function RequirementMatchesPage({
     evaluateRequirementMatches(id),
   ]);
   if (!requirementResult.ok) {
-    if (
-      requirementResult.error.code === "NOT_FOUND" ||
-      requirementResult.error.code === "VALIDATION_ERROR"
-    )
-      notFound();
+    if (MISSING.has(requirementResult.error.code)) notFound();
     return (
       <ApiErrorState error={requirementResult.error} requestId={requirementResult.requestId} />
     );
@@ -71,8 +72,6 @@ export default async function RequirementMatchesPage({
   if (requirement.organizationId !== organization.id) notFound();
   const base = `/app/organization/requirements/${requirement.id}/matches`;
   const query = parseMatchListQuery(search);
-  const list = matchesResult.ok ? listMatches(matchesResult.data.candidates, query) : null;
-  const selected = new Set(query.compare);
   const back = (
     <ButtonLink href={`/app/organization/requirements/${requirement.id}`}>{t("back")}</ButtonLink>
   );
@@ -94,13 +93,7 @@ export default async function RequirementMatchesPage({
       {!isEvaluable(requirement) ? (
         // V1.8 evaluates published jobs only (M05): no pool for a paused or closed need.
         <StateMessage
-          title={t(
-            requirement.status === "paused"
-              ? "notEvaluablePaused"
-              : requirement.status === "draft"
-                ? "notEvaluableDraft"
-                : "notEvaluableClosed",
-          )}
+          title={t(notEvaluableKey(requirement.status))}
           description={t("notEvaluableDescription")}
           action={back}
         />
@@ -109,65 +102,93 @@ export default async function RequirementMatchesPage({
       ) : matchesResult.data.candidates.length === 0 ? (
         <StateMessage title={t("emptyTitle")} description={t("emptyDescription")} />
       ) : (
-        list && (
-          <>
-            <p className="mb-2 text-sm text-muted" role="status">
-              {t.rich("summary", {
-                eligible: matchesResult.data.summary.eligible,
-                evaluated: matchesResult.data.summary.evaluated,
-                b: (chunks) => <strong className="text-ink">{chunks}</strong>,
-              })}
-            </p>
-            <PoolCoverageNote
-              evaluated={matchesResult.data.summary.evaluated}
-              pool={matchesResult.data.summary.pool}
-            />
-            <MatchListControls query={query} base={base} />
-            {list.compared.length > 0 && (
-              <CompareTable
-                items={list.compared}
-                truncated={list.compareTruncated}
-                clearHref={matchListHref(base, query, { compare: [] })}
-              />
-            )}
-            {list.total === 0 ? (
-              <StateMessage title={t("list.noResults")} description={t("list.noResultsHint")} />
-            ) : (
-              <>
-                <div className="mb-4">
-                  <CompareForm
-                    query={query}
-                    selectedIds={list.compared.map((item) => item.candidate.id)}
-                    visibleIds={list.items.map((item) => item.candidate.id)}
-                  />
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {list.items.map((item) => (
-                    <MatchCard
-                      key={item.candidate.id}
-                      item={item}
-                      footer={
-                        <CompareToggle
-                          id={item.candidate.id}
-                          checked={selected.has(item.candidate.id)}
-                          full={list.compared.length >= MAX_COMPARE}
-                        />
-                      }
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-            <MatchPager
-              base={base}
-              query={query}
-              page={list.page}
-              pages={list.pages}
-              total={list.total}
-            />
-          </>
-        )
+        <MatchesPool data={matchesResult.data} query={query} base={base} />
       )}
+    </>
+  );
+}
+
+/** A malformed or unknown id is a 404, not an error state. */
+const MISSING = new Set(["NOT_FOUND", "VALIDATION_ERROR"]);
+
+const notEvaluableKey = (status: WorkRequirement["status"]) =>
+  status === "paused"
+    ? "notEvaluablePaused"
+    : status === "draft"
+      ? "notEvaluableDraft"
+      : "notEvaluableClosed";
+
+type MatchesData = Extract<
+  Awaited<ReturnType<typeof evaluateRequirementMatches>>,
+  { ok: true }
+>["data"];
+
+/** The evaluated pool: summary, coverage, list controls, comparison, cards and pager. */
+async function MatchesPool({
+  data,
+  query,
+  base,
+}: {
+  data: MatchesData;
+  query: MatchListQuery;
+  base: string;
+}) {
+  const t = await getTranslations("organization.matches");
+  const list = listMatches(data.candidates, query);
+  const selected = new Set(query.compare);
+  return (
+    <>
+      <p className="mb-2 text-sm text-muted" role="status">
+        {t.rich("summary", {
+          eligible: data.summary.eligible,
+          evaluated: data.summary.evaluated,
+          b: (chunks) => <strong className="text-ink">{chunks}</strong>,
+        })}
+      </p>
+      <PoolCoverageNote evaluated={data.summary.evaluated} pool={data.summary.pool} />
+      <MatchListControls query={query} base={base} />
+      {list.compared.length > 0 && (
+        <CompareTable
+          items={list.compared}
+          truncated={list.compareTruncated}
+          clearHref={matchListHref(base, query, { compare: [] })}
+        />
+      )}
+      {list.total === 0 ? (
+        <StateMessage title={t("list.noResults")} description={t("list.noResultsHint")} />
+      ) : (
+        <>
+          <div className="mb-4">
+            <CompareForm
+              query={query}
+              selectedIds={list.compared.map((item) => item.candidate.id)}
+              visibleIds={list.items.map((item) => item.candidate.id)}
+            />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {list.items.map((item) => (
+              <MatchCard
+                key={item.candidate.id}
+                item={item}
+                footer={
+                  <CompareToggle
+                    id={item.candidate.id}
+                    checked={selected.has(item.candidate.id)}
+                    full={list.compared.length >= MAX_COMPARE}
+                  />
+                }
+              />
+            ))}
+          </div>
+        </>
+      )}
+      <MatchPager
+        base={base}
+        query={query}
+        page={list.page}
+        pages={list.pages}
+        total={list.total}
+      />
     </>
   );
 }
