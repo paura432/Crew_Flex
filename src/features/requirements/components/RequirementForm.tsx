@@ -11,8 +11,9 @@ import {
   type FormEvent,
 } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { callAction } from "@/components/ui/Notice";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
+import { callAction } from "@/components/ui/action-result";
 import { AIRCRAFT, categoryKey, ENGINES, PROFESSIONAL_CATEGORIES, SKILLS } from "@/domain/passport";
 import { QUALIFICATION_CATEGORIES, type QualificationType } from "@/domain/qualification";
 import {
@@ -31,7 +32,13 @@ import {
   type WorkRequirement,
 } from "@/domain/work-requirement";
 import type { Locale } from "@/i18n/config";
-import { formatCountry, formatEuro, formatNumber, formatShiftSpan } from "@/i18n/format";
+import {
+  formatCountry,
+  formatEuro,
+  formatLocalDateTime,
+  formatNumber,
+  formatShiftSpan,
+} from "@/i18n/format";
 import { resolveFieldErrors, translateKey } from "@/i18n/validation";
 import { useIdempotencyKey } from "@/lib/idempotency";
 import { toLocalInput } from "@/lib/format";
@@ -382,10 +389,7 @@ export function RequirementForm({
           >
             <p>
               {t("autosave.found", {
-                date: new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }).format(new Date(restorable.savedAt)),
+                date: formatLocalDateTime(locale, restorable.savedAt),
               })}
             </p>
             <div className="flex gap-2">

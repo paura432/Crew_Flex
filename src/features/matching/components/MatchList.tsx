@@ -1,28 +1,14 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/Button";
+import { buttonClass } from "@/components/ui/button-class";
 import { controlClass } from "@/components/ui/Field";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";
 import { formatPercent } from "@/i18n/format";
 import type { EvaluatedCandidate } from "@/types/api";
 import { explainAvailability, explainCheck, explainProfileCheck } from "../explain";
-import { render, resolvers } from "./MatchCard";
-import { MAX_COMPARE, MATCH_SORTS, type MatchListQuery } from "../list";
-
-/** `?…` for the same page with some params replaced (plain links: works without JavaScript). */
-export function matchListHref(base: string, query: MatchListQuery, over: Partial<MatchListQuery>) {
-  const next = { ...query, ...over };
-  const params = new URLSearchParams();
-  if (next.q) params.set("q", next.q);
-  // «Solo elegibles» is the default (v2-25): only «off» is written.
-  if (!next.eligibleOnly) params.set("eligible", "0");
-  if (next.sort !== "relevance") params.set("sort", next.sort);
-  if (next.page > 1) params.set("page", String(next.page));
-  for (const id of next.compare) params.append("compare", id);
-  const qs = params.toString();
-  return qs ? `${base}?${qs}` : base;
-}
+import { render, resolvers } from "../resolvers";
+import { MAX_COMPARE, MATCH_SORTS, matchListHref, type MatchListQuery } from "../list";
 
 /** Search, eligible-only and sort as a native GET form; the compare selection is kept. */
 export async function MatchListControls({ query, base }: { query: MatchListQuery; base: string }) {
@@ -60,9 +46,9 @@ export async function MatchListControls({ query, base }: { query: MatchListQuery
           ))}
         </select>
       </label>
+      {/* Unticked sends only this one: off. Ticked sends both; `1` wins (parseMatchListQuery). */}
+      <input type="hidden" name="eligible" value="0" />
       <label className="flex min-h-10 pointer-coarse:min-h-11 items-center gap-2 text-sm">
-        {/* Unticked sends only this one: off. Ticked sends both; `1` wins (parseMatchListQuery). */}
-        <input type="hidden" name="eligible" value="0" />
         <input type="checkbox" name="eligible" value="1" defaultChecked={query.eligibleOnly} />
         {t("eligibleOnly")}
       </label>
@@ -126,6 +112,7 @@ export async function CompareForm({
   visibleIds: string[];
 }) {
   const t = await getTranslations("organization.matches.list");
+  const visible = new Set(visibleIds);
   return (
     <form id="compare-form" method="get" className="flex flex-wrap items-center gap-3">
       {query.q && <input type="hidden" name="q" value={query.q} />}
@@ -133,7 +120,7 @@ export async function CompareForm({
       {query.sort !== "relevance" && <input type="hidden" name="sort" value={query.sort} />}
       {query.page > 1 && <input type="hidden" name="page" value={query.page} />}
       {selectedIds
-        .filter((id) => !visibleIds.includes(id))
+        .filter((id) => !visible.has(id))
         .map((id) => (
           <input key={id} type="hidden" name="compare" value={id} />
         ))}

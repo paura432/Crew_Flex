@@ -37,6 +37,8 @@ export default async function ProfessionalQualificationsPage() {
   // Evidence line only when the wallet is on; nothing is asked from it otherwise.
   const links = walletEnabled ? await listOwnDocumentLinks() : null;
   const evidence = links ? evidenceByQualification(links) : undefined;
+  // Server component: «today» is decided once, on the server (UTC), and sent as a prop.
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -53,7 +55,7 @@ export default async function ProfessionalQualificationsPage() {
         <QualificationsManager
           qualifications={result.data.qualifications}
           catalog={catalog}
-          today={new Date().toISOString().slice(0, 10)}
+          today={today}
           evidence={evidence}
         />
       )}

@@ -3,8 +3,10 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { Locale } from "@/i18n/config";

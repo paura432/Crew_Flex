@@ -1,5 +1,6 @@
 import { TOOLS_BASE } from "@/features/tools/ids";
-import { ToolScreen, toolMetadata } from "@/features/tools/components/ToolScreen";
+import { ToolScreen } from "@/features/tools/components/ToolScreen";
+import { toolMetadata } from "@/features/tools/metadata";
 
 export const generateMetadata = () => toolMetadata("duration");
 

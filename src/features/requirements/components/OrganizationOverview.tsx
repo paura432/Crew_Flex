@@ -52,6 +52,18 @@ const activeApplications = (counts: Partial<Record<ApplicationStatus, number>>) 
     .filter(([status]) => !TERMINAL_APPLICATION_STATUSES.includes(status as ApplicationStatus))
     .reduce((sum, [, n]) => sum + (n ?? 0), 0);
 
+/** The overview's reads, in parallel; the hiring counters only for admins and managers. */
+const readOverview = (organizationId: string, canManage: boolean) =>
+  Promise.all([
+    // Archived needs (v1.8 «Archivada», T-64) leave the working lists.
+    listRequirements(organizationId, { archived: "exclude" }),
+    listFocusCandidates(organizationId),
+    // Per requirement (v2-08): the organization's counters are their sums (admin/manager, T-93).
+    canManage ? getRequirementApplicationCounts(organizationId) : null,
+    // v1.8 «Red visible» (area 50 #13, T-146): admin/manager, like the other hiring counters.
+    canManage ? getVisibleNetworkCount(organizationId) : null,
+  ]);
+
 /**
  * The organization's «Resumen» (v1.8 `CompanyHome`): open requirements, applications in progress, covered shifts,
  * the focus requirement's capacity and the requirements list. Shared by `/app/organization` and the recruiter's
@@ -73,19 +85,13 @@ export async function OrganizationOverview({
   description: string;
   children?: ReactNode;
 }) {
-  const [t, tHiring, tHome] = await Promise.all([
-    getTranslations("organization.dashboard"),
-    getTranslations("hiring.dashboard"),
-    getTranslations("orgHome"),
-  ]);
-  const [result, open, counts, network] = await Promise.all([
-    // Archived needs (v1.8 «Archivada», T-64) leave the working lists.
-    listRequirements(organization.id, { archived: "exclude" }),
-    listFocusCandidates(organization.id),
-    // Per requirement (v2-08): the organization's counters are their sums (admin/manager, T-93).
-    canManage ? getRequirementApplicationCounts(organization.id) : null,
-    // v1.8 «Red visible» (area 50 #13, T-146): admin/manager, like the other hiring counters.
-    canManage ? getVisibleNetworkCount(organization.id) : null,
+  const [[t, tHiring, tHome], [result, open, counts, network]] = await Promise.all([
+    Promise.all([
+      getTranslations("organization.dashboard"),
+      getTranslations("hiring.dashboard"),
+      getTranslations("orgHome"),
+    ]),
+    readOverview(organization.id, canManage),
   ]);
   // v1.8 CompanyHome: «Candidaturas · {n} pendientes de confirmar» and «Jornadas cubiertas» (D-06).
   const perRequirement = counts?.ok ? counts.data.requirements : null;

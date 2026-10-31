@@ -8,8 +8,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useOptimistic, useState, useTransition, type FormEvent } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
 import {

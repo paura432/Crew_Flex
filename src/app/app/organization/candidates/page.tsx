@@ -118,6 +118,7 @@ export default async function CandidatesPage({
             <div className="grid gap-4 md:grid-cols-2">
               {/* Position in the key: two visible professionals may (rarely) share a 40-bit ref (T-151). */}
               {result.data.candidates.map((candidate, index) => (
+                // react-doctor-disable-next-line no-array-index-as-key -- refs may collide (T-151); the server-ordered page never reorders on the client
                 <DirectoryCard key={`${index}:${candidate.ref}`} candidate={candidate} />
               ))}
             </div>

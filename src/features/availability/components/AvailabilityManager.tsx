@@ -1,12 +1,14 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
 import { Metric } from "@/components/ui/Metric";
-import { callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { callAction } from "@/components/ui/action-result";
 import { Panel } from "@/components/ui/Panel";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { AvailabilityStatus } from "@/domain/availability";
@@ -104,7 +106,8 @@ export function AvailabilityManager({
   // Undo steps of the draft (V1.8 demo planner); cleared on save and discard.
   const [history, setHistory] = useState<Record<string, PlannedDay>[]>([]);
   // The pattern of the last preview; saved with the days so it is offered again next time.
-  const [generatedWith, setGeneratedWith] = useState<AvailabilityRotation | null>(null);
+  // Not shown on screen: a ref, so setting it never re-renders.
+  const generatedWith = useRef<AvailabilityRotation | null>(null);
   const planned = Object.keys(plan).length;
   const [pending, startTransition] = useTransition();
   const idempotency = useIdempotencyKey();
@@ -174,7 +177,7 @@ export function AvailabilityManager({
   function clearDraft() {
     setPlan({});
     setHistory([]);
-    setGeneratedWith(null);
+    generatedWith.current = null;
     setCycleError(null);
   }
 
@@ -201,11 +204,11 @@ export function AvailabilityManager({
         return;
       }
       changePlan((old) => ({ ...old, ...generated }));
-      setGeneratedWith({
+      generatedWith.current = {
         pattern: settings.pattern,
         anchor: settings.anchor,
         customCycle: settings.pattern === "custom" ? settings.custom : [],
-      });
+      };
       setCycleError(null);
       setNotice(null);
     } catch (error) {
@@ -216,14 +219,14 @@ export function AvailabilityManager({
 
   function onSavePlan() {
     const changes = planChanges(days, plan);
-    if (changes.length === 0 && !generatedWith) {
+    if (changes.length === 0 && !generatedWith.current) {
       clearDraft();
       setNotice({ tone: "ok", text: t("cycle.nothingToSave") });
       return;
     }
     const label =
       changes.length === 0 ? t("cycle.patternSaved") : t("cycle.saved", { count: changes.length });
-    replaceDays(label, changes, generatedWith ?? undefined);
+    replaceDays(label, changes, generatedWith.current ?? undefined);
   }
 
   function onDayClick(date: string) {

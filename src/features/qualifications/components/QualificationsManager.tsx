@@ -4,16 +4,15 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { Panel } from "@/components/ui/Panel";
-import { EXPIRY_TONE, StatusChip, type Tone } from "@/components/ui/StatusChip";
+import { StatusChip } from "@/components/ui/StatusChip";
+import { EXPIRY_TONE } from "@/components/ui/tones";
 import { documentExpiryState } from "@/domain/documents";
-import {
-  QUALIFICATION_CATEGORIES,
-  type QualificationType,
-  type VerificationStatus,
-} from "@/domain/qualification";
+import { QUALIFICATION_CATEGORIES, type QualificationType } from "@/domain/qualification";
 import { formatDate } from "@/i18n/format";
 import { resolveFieldErrors } from "@/i18n/validation";
 import { useIdempotencyKey } from "@/lib/idempotency";
@@ -31,13 +30,7 @@ import {
   updateQualificationAction,
 } from "../actions";
 import { EvidenceLine } from "./EvidenceLine";
-
-export const VERIFICATION_TONE: Record<VerificationStatus, Tone> = {
-  verified: "ok",
-  pending: "warn",
-  rejected: "danger",
-  expired: "danger",
-};
+import { VERIFICATION_TONE } from "../tones";
 
 const toNull = (value: FormDataEntryValue | null) => {
   const text = String(value ?? "").trim();

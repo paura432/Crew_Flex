@@ -8,7 +8,7 @@ import {
 import { categoryKey } from "@/domain/passport";
 import { countryName } from "@/features/organizations/countries";
 import type { Locale } from "@/i18n/config";
-import { formatDate, formatDateTime, INTL_LOCALE } from "@/i18n/format";
+import { formatAmount, formatDate, formatDateTime } from "@/i18n/format";
 import type { CandidatePackCopy } from "@/types/api";
 
 /** `YYYY-MM-DD` (UTC) of the request: the course states are read against it (outside render for the lint). */
@@ -60,10 +60,7 @@ export async function CandidatePackView({
     pack.baseLocation ?? t("noBase"),
     ...(pack.baseCountry ? [countryName(locale, pack.baseCountry)] : []),
   ].join(" · ");
-  const money = (amount: number) =>
-    new Intl.NumberFormat(INTL_LOCALE[locale], { style: "currency", currency: "EUR" }).format(
-      amount,
-    );
+  const money = (amount: number) => formatAmount(locale, amount);
   const h4 = "font-semibold text-ink";
 
   return (
@@ -173,6 +170,7 @@ export async function CandidatePackView({
                 environment: tLogbook(`environment.${e.environment}`),
               };
               return (
+                // react-doctor-disable-next-line no-array-index-as-key -- frozen candidate-pack snapshot; entries have no id and never reorder
                 <li key={i} className="break-words">
                   <p className="font-semibold">
                     {e.aircraft} · {tLogbook(`category.${e.category}`)}

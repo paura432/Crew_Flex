@@ -21,7 +21,8 @@
     "db:types": "supabase gen types typescript --project-id sbjkzrkmcekokkqiuvvh --schema public > src/types/database.generated.ts",
     "db:types:local": "bash scripts/local/db-types.sh",
     "prepare": "husky",
-    "lint:edge": "deno lint --config supabase/functions/deno.json supabase/functions"
+    "lint:edge": "deno lint --config supabase/functions/deno.json supabase/functions",
+    "doctor": "react-doctor . --verbose"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
@@ -46,6 +47,7 @@
     "husky": "9.1.7",
     "lint-staged": "17.6.0",
     "prettier": "3.9.9",
+    "react-doctor": "0.9.18",
     "supabase": "2.120.0",
     "tailwindcss": "^4",
     "typescript": "^5",

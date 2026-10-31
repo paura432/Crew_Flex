@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useState, type MouseEvent } from "react";
-import { buttonClass } from "@/components/ui/Button";
+import { buttonClass } from "@/components/ui/button-class";
 import { exportFileName } from "../state";
 
 const EXPORT_URL = "/app/settings/export";
@@ -12,6 +12,17 @@ const EXPORT_URL = "/app/settings/export";
  * link without script (the route answers with an attachment); with script the file is fetched first so
  * the outcome can be told honestly — a failure comes back as the Settings page, not as JSON.
  */
+/** The export as a blob, or null when the request failed or did not return JSON. Never throws. */
+async function fetchExport(): Promise<Blob | null> {
+  try {
+    const response = await fetch(EXPORT_URL, { cache: "no-store" });
+    if (!response.ok || !/json/.test(response.headers.get("content-type") ?? "")) return null;
+    return await response.blob();
+  } catch {
+    return null;
+  }
+}
+
 export function ExportLink() {
   const t = useTranslations("account.data");
   const locale = useLocale();
@@ -20,12 +31,13 @@ export function ExportLink() {
   async function download(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
     setState("busy");
+    const blob = await fetchExport();
+    if (!blob) {
+      setState("failed");
+      return;
+    }
     try {
-      const response = await fetch(EXPORT_URL, { cache: "no-store" });
-      if (!response.ok || !/json/.test(response.headers.get("content-type") ?? "")) {
-        throw new Error("export failed");
-      }
-      const url = URL.createObjectURL(await response.blob());
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.download = exportFileName(locale);

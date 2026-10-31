@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { buttonClass } from "@/components/ui/Button";
+import { buttonClass } from "@/components/ui/button-class";
 import { controlClass } from "@/components/ui/Field";
 import { FilterPill } from "@/components/ui/FilterPill";
 import { Pager } from "@/components/ui/Pager";

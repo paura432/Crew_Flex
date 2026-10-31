@@ -4,7 +4,8 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { controlClass } from "@/components/ui/Field";
-import { callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { callAction } from "@/components/ui/action-result";
 import {
   availableTransitions,
   REASON_MAX,

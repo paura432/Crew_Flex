@@ -62,7 +62,7 @@ const ICON_PATHS: Record<string, string> = {
 };
 
 /** The menu icon of an entry (the mobile dock reuses it). */
-export const iconPath = (href: string) => ICON_PATHS[href] ?? BRIEFCASE;
+const iconPath = (href: string) => ICON_PATHS[href] ?? BRIEFCASE;
 
 /** The inline 18 px stroke icon of an entry; the active one is accent in the sidebar. */
 export function NavIcon({ href, className }: { href: string; className: string }) {

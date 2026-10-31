@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { ButtonLink } from "@/components/ui/Button";
-import { EXPIRY_TONE, StatusChip } from "@/components/ui/StatusChip";
+import { StatusChip } from "@/components/ui/StatusChip";
+import { EXPIRY_TONE } from "@/components/ui/tones";
 import { documentExpiryState, REVIEW_WINDOW_DAYS } from "@/domain/documents";
 import type { Locale } from "@/i18n/config";
 import { formatDate } from "@/i18n/format";

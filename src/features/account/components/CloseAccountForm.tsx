@@ -3,7 +3,8 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
 import { closeAccountWord } from "@/lib/validation/account";
 import { closeAccountAction } from "../actions";
 import { initialCloseAccountState } from "../state";

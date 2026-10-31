@@ -60,6 +60,7 @@ export function listMatches(items: EvaluatedCandidate[], query: MatchListQuery) 
       (!query.eligibleOnly || match.eligible) &&
       (!needle ||
         [candidate.id, candidate.displayName ?? "", candidate.baseLocation ?? ""].some((field) =>
+          // react-doctor-disable-next-line js-set-map-lookups -- substring search on a string, not an array lookup
           fold(field).includes(needle),
         )),
   );
@@ -91,4 +92,18 @@ export function listMatches(items: EvaluatedCandidate[], query: MatchListQuery) 
       query.compare.filter((id) => items.some((item) => item.candidate.id === id)).length >
       MAX_COMPARE,
   };
+}
+
+/** `?…` for the same page with some params replaced (plain links: works without JavaScript). */
+export function matchListHref(base: string, query: MatchListQuery, over: Partial<MatchListQuery>) {
+  const next = { ...query, ...over };
+  const params = new URLSearchParams();
+  if (next.q) params.set("q", next.q);
+  // «Solo elegibles» is the default (v2-25): only «off» is written.
+  if (!next.eligibleOnly) params.set("eligible", "0");
+  if (next.sort !== "relevance") params.set("sort", next.sort);
+  if (next.page > 1) params.set("page", String(next.page));
+  for (const id of next.compare) params.append("compare", id);
+  const qs = params.toString();
+  return qs ? `${base}?${qs}` : base;
 }

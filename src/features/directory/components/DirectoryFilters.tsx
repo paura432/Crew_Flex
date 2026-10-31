@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/Button";
+import { buttonClass } from "@/components/ui/button-class";
 import { controlClass } from "@/components/ui/Field";
 import { Pager } from "@/components/ui/Pager";
 import { DIRECTORY_PAGE_SIZE } from "@/domain/directory";
@@ -178,8 +178,8 @@ const CLEARED: Partial<DirectoryQuery> = {
  * (the one place eligibility is computed — the directory never evaluates anyone, T-155).
  */
 export async function EvaluateForm({ requirements }: { requirements: WorkRequirement[] }) {
-  const t = await getTranslations("directory.evaluate");
   if (requirements.length === 0) return null;
+  const t = await getTranslations("directory.evaluate");
   return (
     <form
       method="get"

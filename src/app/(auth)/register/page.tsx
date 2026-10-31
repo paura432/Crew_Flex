@@ -19,8 +19,11 @@ export async function generateMetadata(): Promise<Metadata> {
  * for (a plain GET form, no script), with one the invitation's own form.
  */
 export default async function RegisterPage({ searchParams }: PageProps<"/register">) {
-  const [params, t] = await Promise.all([searchParams, getTranslations("auth.register")]);
-  const invitationOnly = await isInvitationSignupRequired();
+  const [params, t, invitationOnly] = await Promise.all([
+    searchParams,
+    getTranslations("auth.register"),
+    isInvitationSignupRequired(),
+  ]);
   const given = typeof params.invite === "string" ? params.invite : "";
   const code = invitationOnly ? normalizeInvitationCode(given) : null;
   const invitation = code ? await readInvitation(code, null) : null;

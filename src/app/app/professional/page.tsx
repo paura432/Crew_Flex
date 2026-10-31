@@ -13,11 +13,8 @@ import { ProfessionalHero } from "@/features/professional/components/Professiona
 import { ProfileFacts } from "@/features/professional/components/ProfessionalSections";
 import { UpcomingReviews } from "@/features/professional/components/UpcomingReviews";
 import { upcomingReviews } from "@/features/professional/reviews";
-import {
-  activityCounts,
-  loadActivity,
-  ProfessionalActivity,
-} from "@/features/applications/components/ProfessionalActivity";
+import { ProfessionalActivity } from "@/features/applications/components/ProfessionalActivity";
+import { activityCounts, loadActivity } from "@/features/applications/activity";
 import { LearningAchievements } from "@/features/tools/components/LearningAchievements";
 import { completenessOf } from "@/features/professional/completeness";
 import { loadProfessionalContext } from "@/features/professional/load";

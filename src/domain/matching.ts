@@ -240,7 +240,8 @@ function typeRatingCheck(
 ): Extract<ProfileCheck, { rule: "type_rating" }> {
   const category = requirement.category ?? null;
   const aircraft = requirement.aircraft ?? [];
-  const matching = ratings.filter((r) => r.category === category && aircraft.includes(r.aircraft));
+  const wanted = new Set(aircraft);
+  const matching = ratings.filter((r) => r.category === category && wanted.has(r.aircraft));
   const valid = matching.filter(
     (r) => validityForPeriod(r.expiresAt, requirement.startsAt, requirement.endsAt) === "valid",
   );
@@ -262,6 +263,9 @@ function typeRatingCheck(
 /** BR-3.7–3.13: the profile requirements this requirement states, against the own declarations. */
 function profileChecksFor(requirement: MatchableRequirement, candidate: Candidate): ProfileCheck[] {
   const d = candidate.declarations;
+  const declaredAircraft = new Set(d.aircraft);
+  const declaredEngines = new Set(d.engines);
+  const declaredSkills = new Set(d.skills);
   const checks: ProfileCheck[] = [];
   if (requirement.country) {
     const country = requirement.country;
@@ -273,12 +277,12 @@ function profileChecksFor(requirement: MatchableRequirement, candidate: Candidat
   }
   const aircraft = requirement.aircraft ?? [];
   if (aircraft.length > 0) {
-    checks.push({ rule: "aircraft", aircraft, met: aircraft.some((a) => d.aircraft.includes(a)) });
+    checks.push({ rule: "aircraft", aircraft, met: aircraft.some((a) => declaredAircraft.has(a)) });
   }
   if (requirement.requiresTypeRating) checks.push(typeRatingCheck(requirement, d.typeRatings));
   const engines = requirement.engines ?? [];
   if (engines.length > 0) {
-    checks.push({ rule: "engine", engines, met: engines.some((e) => d.engines.includes(e)) });
+    checks.push({ rule: "engine", engines, met: engines.some((e) => declaredEngines.has(e)) });
   }
   if (requirement.minYears !== undefined && requirement.minYears !== null) {
     const minYears = requirement.minYears;
@@ -286,7 +290,7 @@ function profileChecksFor(requirement: MatchableRequirement, candidate: Candidat
     checks.push({ rule: "min_years", minYears, years, met: (years ?? 0) >= minYears });
   }
   for (const skill of requirement.requiredSkills ?? []) {
-    checks.push({ rule: "skill", skill, met: d.skills.includes(skill) });
+    checks.push({ rule: "skill", skill, met: declaredSkills.has(skill) });
   }
   return checks;
 }

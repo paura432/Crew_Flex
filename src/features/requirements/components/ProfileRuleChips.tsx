@@ -3,7 +3,7 @@ import { categoryKey } from "@/domain/passport";
 import type { RequirementProfileRules } from "@/domain/work-requirement";
 
 /** Whether a requirement states any v1.8 profile rule beyond the country (BR-3.8–3.13). */
-export const hasProfileRules = (r: RequirementProfileRules) =>
+const hasProfileRules = (r: RequirementProfileRules) =>
   Boolean(
     r.category ||
     r.aircraft?.length ||

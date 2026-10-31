@@ -21,9 +21,9 @@ import {
   PressedGroup,
   ToolField,
   ToolPanel,
-  toolButtonClass,
   toolControlClass,
 } from "./parts";
+import { toolButtonClass } from "./tool-button";
 
 type Tab = "terms" | "ata" | "practice";
 const TABS: readonly Tab[] = ["terms", "ata", "practice"];

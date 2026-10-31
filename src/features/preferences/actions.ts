@@ -18,6 +18,7 @@ export type LocaleActionResult =
  * profile through the Edge Function, so it follows them to other devices. Never touches the
  * session or the current route — the caller refreshes the tree.
  */
+// react-doctor-disable-next-line server-auth-actions -- public by design: sets only the caller's own locale cookie (works before sign-in); persisting it requires a session (checked below)
 export async function setLocaleAction(input: unknown): Promise<LocaleActionResult> {
   const parsed = updatePreferencesInput.safeParse(input);
   if (!parsed.success) return { ok: false, code: "VALIDATION_ERROR", message: "v.locale.invalid" };

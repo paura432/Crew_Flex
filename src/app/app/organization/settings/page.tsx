@@ -100,6 +100,7 @@ export default async function OrganizationSettingsPage() {
             ) : (
               <ol className="divide-y divide-line text-sm">
                 {activity.map((item, i) => (
+                  // react-doctor-disable-next-line no-array-index-as-key -- read-only audit log rendered once on the server; never reordered
                   <li
                     key={`${item.at}-${i}`}
                     className="flex flex-wrap justify-between gap-x-4 gap-y-1 py-2"

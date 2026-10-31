@@ -152,12 +152,11 @@ export const updateProfessionalProfileInput = z
     }
     // A rating is for an aircraft and a category the professional declares, once each.
     const seen = new Set<string>();
+    const aircraft = new Set(value.aircraft);
+    const categories = new Set(value.categories);
     value.typeRatings.forEach((rating, index) => {
       const key = `${rating.aircraft}|${rating.category}`;
-      if (
-        !value.aircraft.includes(rating.aircraft) ||
-        !value.categories.includes(rating.category)
-      ) {
+      if (!aircraft.has(rating.aircraft) || !categories.has(rating.category)) {
         ctx.addIssue({
           code: "custom",
           path: ["typeRatings", index],

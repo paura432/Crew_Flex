@@ -3,8 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { CLIENT_EMAIL_MAX, CLIENT_NAME_MAX } from "@/domain/recruiter";
 import { resolveFieldErrors } from "@/i18n/validation";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";

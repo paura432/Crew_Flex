@@ -71,6 +71,7 @@ export async function invokeEdgeFunction<T>(
   const multipart = body instanceof FormData;
   let response: Response;
   try {
+    // react-doctor-disable-next-line no-fetch-response-used-without-status-check -- error responses carry the API envelope too; a success envelope is accepted only on a 2xx (see below)
     response = await fetch(url, {
       method,
       headers: {
@@ -88,8 +89,11 @@ export async function invokeEdgeFunction<T>(
     return failure("NETWORK_ERROR", "The service could not be reached. Try again.", requestId);
   }
 
+  // Error envelopes travel with 4xx/5xx; a success envelope only counts on a 2xx.
   const payload: unknown = await response.json().catch(() => null);
-  if (isEnvelope(payload)) return payload as ApiResponse<T>;
+  if (isEnvelope(payload) && (response.ok || payload.ok === false)) {
+    return payload as ApiResponse<T>;
+  }
   if (response.status === 404) {
     return failure("NOT_FOUND", "This service is not available yet.", requestId);
   }

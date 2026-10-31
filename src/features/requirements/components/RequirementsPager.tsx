@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/Button";
+import { buttonClass } from "@/components/ui/button-class";
 
 /** `base` keeps a view's own query (the archived list, T-64). */
 const href = (page: number, base?: string) =>

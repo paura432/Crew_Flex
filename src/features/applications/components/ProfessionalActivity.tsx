@@ -2,52 +2,18 @@ import { getLocale, getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { StatusChip } from "@/components/ui/StatusChip";
-import { TERMINAL_APPLICATION_STATUSES } from "@/domain/applications";
 import { requirementDays } from "@/domain/work-requirement";
 import { assignmentDays, type CalendarWindow } from "@/features/availability/calendar";
-import { listOpportunities } from "@/features/opportunities/api";
 import { HomeOpportunities } from "@/features/opportunities/components/HomeOpportunities";
 import { HOME_FEED, homeOpportunities, miniCalendar } from "@/features/opportunities/home";
 import { HomeSection } from "@/features/professional/components/HomeSection";
 import type { Locale } from "@/i18n/config";
 import { formatMonth, formatPeriod } from "@/i18n/format";
-import { listMyApplications } from "../api";
+import type { ActivityReads } from "../activity";
 import { APPLICATION_TONE } from "../view";
-
-/** Opportunities read for the calendar dots and the feed (the function's page maximum). */
-const DOTS = 50;
 
 /** lucide `CheckCircle`, the v1.8 mark of an application row (`TechnicianHome.jsx:15`). */
 const CHECK_CIRCLE = "M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01l-3-3";
-
-/**
- * The three reads of «Mi espacio»: compatible and possible-on-rest opportunities, own applications.
- * Read once by the page; the hero's counters and this section share them.
- */
-export const loadActivity = () =>
-  Promise.all([
-    listOpportunities({ eligible: "1", limit: DOTS }),
-    // BR-14.1 «Posible en descanso»; a failed read only leaves those rows out.
-    listOpportunities({ rest: "1", limit: DOTS }),
-    listMyApplications(),
-  ]);
-export type ActivityReads = Awaited<ReturnType<typeof loadActivity>>;
-
-/**
- * The counters: the hero's v1.8 pair (compatible, confirmed) and the Next-only pair (in progress, to
- * accept); null when the read failed (shown as «—»).
- */
-export function activityCounts([compatible, , applications]: ActivityReads) {
-  const mine = applications.ok ? applications.data.applications : null;
-  return {
-    compatible: compatible.ok ? compatible.data.total : null,
-    confirmed: mine ? mine.filter((a) => a.status === "confirmed").length : null,
-    active: mine
-      ? mine.filter((a) => !TERMINAL_APPLICATION_STATUSES.includes(a.status)).length
-      : null,
-    toAccept: mine ? mine.filter((a) => a.status === "proposed").length : null,
-  };
-}
 
 /**
  * v1.8 technician home (`TechnicianHome.jsx:15`, `ConnectedHome.jsx:15`, T-161): the passport card (the

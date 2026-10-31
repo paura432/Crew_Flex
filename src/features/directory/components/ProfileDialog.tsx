@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, type ReactNode } from "react";
-import { buttonClass } from "@/components/ui/Button";
+import { buttonClass } from "@/components/ui/button-class";
 
 /**
  * v1.8 «Abrir perfil» → modal «Perfil profesional» (MKT-02 #13) as a native `<dialog>`: Escape and the close

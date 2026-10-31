@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { buttonClass } from "./Button";
+import { buttonClass } from "./button-class";
 
 /**
  * «{total} … · página {p} de {n}» (`role=status`) with «Anterior» / «Siguiente» links; the caller builds

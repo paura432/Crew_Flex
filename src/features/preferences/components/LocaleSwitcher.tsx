@@ -3,7 +3,8 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { useRovingRadio } from "@/components/ui/radio-group";
 import { LOCALES, type Locale } from "@/i18n/config";
 import { setLocaleAction } from "../actions";

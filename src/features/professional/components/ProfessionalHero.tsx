@@ -45,6 +45,7 @@ export async function ProfessionalHero({
     getTranslations("professional.activity"),
   ]);
   const { percent, items, missing } = completeness;
+  const missingSet = new Set(missing);
   const stats = [
     { key: "compatible", value: compatible, label: tActivity("compatible") },
     { key: "confirmed", value: confirmed, label: tActivity("confirmed") },
@@ -80,7 +81,7 @@ export async function ProfessionalHero({
           items={items.map((item) => ({
             key: item,
             label: tItem(item),
-            done: !missing.includes(item),
+            done: !missingSet.has(item),
             href: COMPLETENESS_HREF[item],
           }))}
           labels={{

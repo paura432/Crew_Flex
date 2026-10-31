@@ -1,14 +1,7 @@
 import type { ReactNode } from "react";
-import type { ExpiryState } from "@/domain/documents";
+import type { Tone } from "./tones";
 
-export type Tone = "neutral" | "ok" | "warn" | "danger" | "info";
-
-/** BR-12 expiry state → tone, shared by the wallet, the qualifications list and the review list. */
-export const EXPIRY_TONE: Record<Exclude<ExpiryState, "none">, Tone> = {
-  valid: "ok",
-  soon: "warn",
-  expired: "danger",
-};
+export type { Tone } from "./tones";
 
 const tones: Record<Tone, string> = {
   neutral: "bg-canvas text-muted border-line",

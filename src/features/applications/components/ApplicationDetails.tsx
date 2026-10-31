@@ -62,6 +62,7 @@ export async function ApplicationDetails({
         </summary>
         <ol className="mt-2 space-y-1 border-l-2 border-line pl-3 text-muted">
           {application.history.map((event, i) => (
+            // react-doctor-disable-next-line no-array-index-as-key -- append-only status history; events have no id and never reorder
             <li key={i} className="tabular-nums">
               {t("card.event", {
                 status: tDomain(`applicationStatus.${event.to}`),

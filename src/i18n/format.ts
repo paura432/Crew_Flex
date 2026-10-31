@@ -65,6 +65,34 @@ export const formatEuro = (locale: Locale, value: number) =>
     maximumFractionDigits: 2,
   }).format(value);
 
+const amountCache = new Map<Locale, Intl.NumberFormat>();
+/** A frozen pack's amounts in EUR, always with cents («50,00 €» / «€50.00»). */
+export const formatAmount = (locale: Locale, value: number) => {
+  let instance = amountCache.get(locale);
+  if (!instance) {
+    instance = new Intl.NumberFormat(INTL_LOCALE[locale], { style: "currency", currency: "EUR" });
+    amountCache.set(locale, instance);
+  }
+  return instance.format(value);
+};
+
+const localCache = new Map<Locale, Intl.DateTimeFormat>();
+/**
+ * A moment in the viewer's own time zone («31 oct 2026, 12:05»), for browser-only facts such as when a
+ * local draft was saved. Never call it while server rendering: the zone would be the server's.
+ */
+export const formatLocalDateTime = (locale: Locale, iso: string) => {
+  let instance = localCache.get(locale);
+  if (!instance) {
+    instance = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+    localCache.set(locale, instance);
+  }
+  return instance.format(new Date(iso));
+};
+
 /** Hours and other plain numbers with the locale's decimal mark («7,5» / «7.5»). */
 export const formatNumber = (locale: Locale, value: number) =>
   new Intl.NumberFormat(INTL_LOCALE[locale], { maximumFractionDigits: 2 }).format(value);

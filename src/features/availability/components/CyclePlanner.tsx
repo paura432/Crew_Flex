@@ -117,6 +117,7 @@ export function CyclePlanner({
           <p className="text-sm text-muted">{t("customHelp")}</p>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("customDays")}>
             {custom.map((state, i) => (
+              // react-doctor-disable-next-line no-array-index-as-key -- the index is the day of the cycle: a fixed-length positional array
               <button
                 key={i}
                 type="button"

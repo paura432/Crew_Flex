@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MessageResolver } from "@/i18n/validation";
 import { redirect } from "next/navigation";
-import { actionErrorCopy, callAction } from "./Notice";
+import { actionErrorCopy, callAction } from "./action-result";
 
 // Echo translator: the text says which catalog key was chosen.
 const t: MessageResolver = (key: string) => `«${key}»`;

@@ -5,7 +5,7 @@ import type { RequiredQualification, Urgency } from "@/domain/work-requirement";
 // Synchronous (hook) versions of the requirement chips: they render in Server Components and in the
 // builder's client preview alike (no server-only import here). RequirementBadges wraps them for pages.
 
-export const URGENCY_TONE: Record<Urgency, Tone> = {
+const URGENCY_TONE: Record<Urgency, Tone> = {
   planned: "info",
   urgent: "warn",
   aog: "danger",

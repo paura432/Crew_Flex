@@ -1,11 +1,8 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { StatusChip } from "@/components/ui/StatusChip";
-import type { Locale } from "@/i18n/config";
-import { formatDate } from "@/i18n/format";
 import type { MatchResult } from "@/domain/matching";
 import { categoryKey, type CandidatePassport } from "@/domain/passport";
-import { countryName } from "@/features/organizations/countries";
 import type { EvaluatedCandidate } from "@/types/api";
 import {
   explainAffinity,
@@ -15,55 +12,14 @@ import {
   explainProfileCheck,
   type CheckTone,
   type ExplainedRule,
-  type ExplainedText,
 } from "../explain";
+import { render, resolvers, type Resolvers } from "../resolvers";
 
 const markTone: Record<CheckTone, string> = {
   ok: "text-ok",
   warn: "text-warn",
   danger: "text-danger",
 };
-
-type Translate = Awaited<ReturnType<typeof getTranslations<"matching">>>;
-
-export interface Resolvers {
-  t: Translate;
-  tDomain: Awaited<ReturnType<typeof getTranslations<"domain">>>;
-  tCategory: Awaited<ReturnType<typeof getTranslations<"passport.categories">>>;
-  tSkill: Awaited<ReturnType<typeof getTranslations<"passport.skills">>>;
-  locale: Locale;
-}
-
-export async function resolvers(): Promise<Resolvers> {
-  const [t, tDomain, tCategory, tSkill, locale] = await Promise.all([
-    getTranslations("matching"),
-    getTranslations("domain"),
-    getTranslations("passport.categories"),
-    getTranslations("passport.skills"),
-    getLocale() as Promise<Locale>,
-  ]);
-  return { t, tDomain, tCategory, tSkill, locale };
-}
-
-/**
- * Resolves a structured explanation in the active locale: dates formatted, statuses, categories and
- * capabilities labelled, countries named; aircraft and engine designations as they are.
- */
-export function render(r: Resolvers, text: ExplainedText) {
-  const p = text.params ?? {};
-  return r.t(text.key as Parameters<Translate>[0], {
-    code: p.code ?? "",
-    percent: p.percent ?? 0,
-    date: p.date ? formatDate(r.locale, p.date) : "",
-    status: p.status ? r.tDomain(`verification.${p.status}`).toLowerCase() : "",
-    country: p.country ? countryName(r.locale, p.country) : "",
-    category: p.category ? r.tCategory(categoryKey(p.category)) : "",
-    skill: p.skill ? r.tSkill(p.skill) : "",
-    list: p.list ?? "",
-    count: p.count ?? 0,
-    level: p.level ?? "",
-  });
-}
 
 /**
  * v1.8 card declarations (category, aircraft, English, work permits, «Restricciones declaradas») under
@@ -155,6 +111,7 @@ function RuleRows({ title, rows, r }: { title: string; rows: ExplainedRule[]; r:
       <p className="text-xs font-semibold tracking-wide text-muted uppercase">{title}</p>
       <ul className="mt-1 divide-y divide-line text-sm">
         {rows.map((row, i) => (
+          // react-doctor-disable-next-line no-array-index-as-key -- server-rendered explanation list, deterministic order, no ids
           <li
             key={`${row.rule}-${i}`}
             className="grid grid-cols-[1rem_minmax(0,1fr)] gap-x-3 py-1.5"
@@ -198,6 +155,7 @@ export async function MatchExplanation({ match }: { match: MatchResult }) {
           </p>
           <ul className="mt-1 list-disc pl-5 text-sm text-danger">
             {match.blockers.map((blocker, i) => (
+              // react-doctor-disable-next-line no-array-index-as-key -- server-rendered explanation list, deterministic order, no ids
               <li key={i}>{render(r, explainBlocker(blocker))}</li>
             ))}
           </ul>

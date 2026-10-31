@@ -35,6 +35,7 @@ export async function MedalStrip({
         ? t("category", { category: tCategory(categoryKey(m.category)) })
         : t("aircraft", { aircraft: m.aircraft });
   const medal = (m: Medal, index: number) => (
+    // react-doctor-disable-next-line no-array-index-as-key -- derived static list; kinds can repeat and the order is fixed
     <li
       key={`${m.kind}-${index}`}
       title={label(m)}

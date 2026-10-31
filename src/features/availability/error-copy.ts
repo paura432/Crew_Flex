@@ -1,6 +1,7 @@
 // Client-side copy of a refused availability write (imports Notice, which holds client hooks: server
 // components must not import this module).
-import { actionErrorCopy, type NoticeState } from "@/components/ui/Notice";
+import { type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy } from "@/components/ui/action-result";
 import { translateKey, type MessageResolver } from "@/i18n/validation";
 import type { ApiErrorBody } from "@/types/api";
 

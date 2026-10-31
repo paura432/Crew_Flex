@@ -21,14 +21,18 @@ export function ViewSections({ sections, byView }: { sections: NavSection[]; byV
   const view = viewOfPath(usePathname());
   const [last, setLast] = useState(view);
   if (view !== null && view !== last) setLast(view);
-  return (byView ? sectionsOfView(sections, view ?? last) : sections).map((section) => (
-    <div key={section.label}>
-      <p className="hidden px-3 pb-2 text-[11px] font-semibold tracking-[0.16em] text-[#91aac1] uppercase lg:block">
-        {section.label}
-      </p>
-      <NavLinks items={section.items} label={section.label} />
-    </div>
-  ));
+  return (
+    <>
+      {(byView ? sectionsOfView(sections, view ?? last) : sections).map((section) => (
+        <div key={section.label}>
+          <p className="hidden px-3 pb-2 text-[11px] font-semibold tracking-[0.16em] text-[#91aac1] uppercase lg:block">
+            {section.label}
+          </p>
+          <NavLinks items={section.items} label={section.label} />
+        </div>
+      ))}
+    </>
+  );
 }
 
 /**

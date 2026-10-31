@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import type { PublicToolId, ToolsBase } from "../ids";
@@ -16,12 +15,6 @@ const BODY: Record<PublicToolId, ReactNode> = {
   knowledge: <KnowledgeTool />,
   duration: <DurationTool />,
 };
-
-/** The tab title of a tool page: its tile title (same words as the card, W3-07). */
-export async function toolMetadata(id: PublicToolId): Promise<Metadata> {
-  const t = await getTranslations("tools");
-  return { title: t(`tile.${id}.title`) };
-}
 
 /**
  * One browser-only tool with the workbench header, shared by /app/tools and the public /tools (T-145):

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import en from "../../../messages/en.json";
 import es from "../../../messages/es.json";
 import { MAGNITUDE_IDS, type ToolErrorCode } from "./engine";
-import { parseFavorites, TOOL_IDS } from "./components/ToolsHome";
+import { TOOL_IDS } from "./components/ToolsHome";
+import { parseFavorites } from "./favorites";
 
 const ERROR_CODES: ToolErrorCode[] = [
   "required",

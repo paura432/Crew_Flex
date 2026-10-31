@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { OUTREACH_CONFLICTS, OUTREACH_REPORT_MIN, type OutreachConflict } from "@/domain/outreach";
 import { distributeOutreachAction } from "../actions";
 

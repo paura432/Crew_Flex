@@ -3,8 +3,10 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { MOBILIZATION_HOURS_MAX, type NoticePreferences } from "@/domain/outreach";
 import { resolveFieldErrors } from "@/i18n/validation";
 import { toFieldErrors, type FieldErrors } from "@/lib/validation/errors";

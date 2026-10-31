@@ -3,8 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useId, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { controlClass, describedBy, Field } from "@/components/ui/Field";
-import { actionErrorCopy, callAction, Notice, type NoticeState } from "@/components/ui/Notice";
+import { controlClass, Field } from "@/components/ui/Field";
+import { describedBy } from "@/components/ui/field-ids";
+import { Notice, type NoticeState } from "@/components/ui/Notice";
+import { actionErrorCopy, callAction } from "@/components/ui/action-result";
 import { Panel } from "@/components/ui/Panel";
 import { useRovingRadio } from "@/components/ui/radio-group";
 import {
@@ -117,6 +119,7 @@ function PassportFields({
   const tRoot = useTranslations();
   const ratingIds = useId();
   const nextRatingKey = useRef(0);
+  // react-doctor-disable-next-line no-derived-useState -- initial values of an edit form; ProfileForm remounts it with key={generation}
   const [visibility, setVisibility] = useState<ProfileVisibility>(profile.visibility);
   const visibilityRadio = useRovingRadio(
     PROFILE_VISIBILITIES.length,
@@ -124,7 +127,9 @@ function PassportFields({
     (i) => setVisibility(PROFILE_VISIBILITIES[i]!),
   );
   const [primaryCategory, setPrimaryCategory] = useState(profile.primaryCategory);
+  // react-doctor-disable-next-line no-derived-useState -- initial values of an edit form; ProfileForm remounts it with key={generation}
   const [categories, setCategories] = useState<ProfessionalCategory[]>(profile.categories);
+  // react-doctor-disable-next-line no-derived-useState -- initial values of an edit form; ProfileForm remounts it with key={generation}
   const [aircraft, setAircraft] = useState<Aircraft[]>(profile.aircraft);
   const [ratings, setRatings] = useState<RatingDraft[]>(() =>
     profile.typeRatings.map((r, i) => ({
@@ -210,6 +215,7 @@ function PassportFields({
   const canAddRating =
     aircraft.length > 0 && licenceCategories.length > 0 && ratings.length < TYPE_RATINGS_MAX;
 
+  const blockedIds = new Set(profile.blockedOrganizationIds);
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
       <Notice
@@ -660,7 +666,7 @@ function PassportFields({
                     className="size-4"
                     name="blockedOrganizationIds"
                     value={o.id}
-                    defaultChecked={profile.blockedOrganizationIds.includes(o.id)}
+                    defaultChecked={blockedIds.has(o.id)}
                     disabled={pending}
                   />
                   <span className="min-w-0 break-words">{o.name}</span>

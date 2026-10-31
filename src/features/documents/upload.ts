@@ -38,6 +38,7 @@ export async function uploadDocument(
 
   let response: Response;
   try {
+    // react-doctor-disable-next-line no-fetch-response-used-without-status-check -- error responses carry the API envelope too; a success envelope is accepted only on a 2xx (see below)
     response = await fetch(
       new URL("/functions/v1/professional-documents", publicEnv.NEXT_PUBLIC_SUPABASE_URL),
       {
@@ -55,8 +56,14 @@ export async function uploadDocument(
   } catch {
     return failure("NETWORK_ERROR", "The service could not be reached. Try again.");
   }
+  // Error envelopes travel with 4xx/5xx; a success envelope only counts on a 2xx.
   const payload: unknown = await response.json().catch(() => null);
-  if (typeof payload === "object" && payload !== null && "ok" in payload) {
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "ok" in payload &&
+    (response.ok || payload.ok === false)
+  ) {
     return payload as ApiResponse<DocumentResponse>;
   }
   return failure("INTERNAL_ERROR", "Unexpected server error. Try again later.");

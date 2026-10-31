@@ -13,9 +13,9 @@ import {
   CompareTable,
   CompareToggle,
   MatchListControls,
-  matchListHref,
   MatchPager,
 } from "@/features/matching/components/MatchList";
+import { matchListHref } from "@/features/matching/list";
 import { listMatches, MAX_COMPARE, parseMatchListQuery } from "@/features/matching/list";
 import { PoolCoverageNote } from "@/features/matching/components/PoolCoverageNote";
 import { getRequirement } from "@/features/requirements/api";

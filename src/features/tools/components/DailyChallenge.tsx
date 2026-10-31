@@ -24,7 +24,8 @@ import { QUESTIONS, QUIZ_GROUPS, questionsById } from "../learning/questions";
 import { currentLearningDay, useLearningProgress } from "../learning/useLearningProgress";
 import { AwardIcon, BookOpenIcon } from "./icons";
 import { LearningMedals } from "./LearningMedals";
-import { Footnote, PressedGroup, SectionHead, ToolPanel, toolButtonClass } from "./parts";
+import { Footnote, PressedGroup, SectionHead, ToolPanel } from "./parts";
+import { toolButtonClass } from "./tool-button";
 
 export function DailyChallenge({ userId }: { userId: string }) {
   const t = useTranslations("tools.daily");

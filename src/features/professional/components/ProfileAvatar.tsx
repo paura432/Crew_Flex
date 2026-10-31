@@ -94,6 +94,27 @@ function readAsDataUrl(file: File) {
  * v1.8 «Añadir foto» / «Cambiar foto» / «Quitar foto» (N-23, T-144): JPG, PNG or WebP up to 2 MB,
  * centre-cropped to 320×320 JPEG and stored ONLY in this browser for this user. Nothing is uploaded.
  */
+/**
+ * Crops the file to a centred square, stores it as a JPEG data URL and tells the other avatars.
+ * False when the image cannot be read, is too large or the browser storage refuses it. Never throws.
+ */
+async function storePhoto(userId: string, file: File): Promise<boolean> {
+  try {
+    const image = await loadImage(await readAsDataUrl(file));
+    if (image.width > PHOTO_MAX_SIDE || image.height > PHOTO_MAX_SIDE) return false;
+    const canvas = document.createElement("canvas");
+    canvas.width = PHOTO_SIZE;
+    canvas.height = PHOTO_SIZE;
+    const { x, y, side } = centredSquare(image.width, image.height);
+    canvas.getContext("2d")!.drawImage(image, x, y, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
+    localStorage.setItem(photoKey(userId), canvas.toDataURL("image/jpeg", PHOTO_QUALITY));
+    window.dispatchEvent(new Event(CHANGE_EVENT));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function AvatarPhotoControls({
   userId,
   labels,
@@ -123,21 +144,9 @@ export function AvatarPhotoControls({
     }
     setBusy(true);
     setError("");
-    try {
-      const image = await loadImage(await readAsDataUrl(file));
-      if (image.width > PHOTO_MAX_SIDE || image.height > PHOTO_MAX_SIDE) throw new Error("size");
-      const canvas = document.createElement("canvas");
-      canvas.width = PHOTO_SIZE;
-      canvas.height = PHOTO_SIZE;
-      const { x, y, side } = centredSquare(image.width, image.height);
-      canvas.getContext("2d")!.drawImage(image, x, y, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
-      localStorage.setItem(photoKey(userId), canvas.toDataURL("image/jpeg", PHOTO_QUALITY));
-      window.dispatchEvent(new Event(CHANGE_EVENT));
-    } catch {
-      setError(labels.saveFailed);
-    } finally {
-      setBusy(false);
-    }
+    const saved = await storePhoto(userId, file);
+    if (!saved) setError(labels.saveFailed);
+    setBusy(false);
   }
 
   function remove() {

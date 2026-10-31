@@ -1,15 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { StatusChip, type Tone } from "@/components/ui/StatusChip";
-import type { VerificationStatus } from "@/domain/qualification";
+import { StatusChip } from "@/components/ui/StatusChip";
+import { VERIFICATION_TONE } from "@/features/qualifications/tones";
 import { formatDate } from "@/i18n/format";
 import type { WorkforceMember } from "../api";
-
-const VERIFICATION_TONE: Record<VerificationStatus, Tone> = {
-  verified: "ok",
-  pending: "warn",
-  rejected: "danger",
-  expired: "danger",
-};
 
 export async function WorkforceList({ members }: { members: WorkforceMember[] }) {
   const [t, tDomain, locale] = await Promise.all([

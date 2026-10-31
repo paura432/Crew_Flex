@@ -62,15 +62,17 @@ export const LOGBOOK_LIMITS = {
  */
 export const LOGBOOK_TIME_ZONE = "Europe/Madrid";
 
+// sv-SE formats as ISO `YYYY-MM-DD`.
+const LOGBOOK_DAY = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: LOGBOOK_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 /** `YYYY-MM-DD` of `now` in {@link LOGBOOK_TIME_ZONE}. */
 export function logbookToday(now: Date = new Date()): string {
-  // sv-SE formats as ISO `YYYY-MM-DD`.
-  return new Intl.DateTimeFormat("sv-SE", {
-    timeZone: LOGBOOK_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+  return LOGBOOK_DAY.format(now);
 }
 
 /** «El logbook registra actividad realizada, no futura.» — a date after today (Madrid) is refused. */

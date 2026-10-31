@@ -18,6 +18,7 @@ import {
   WrenchIcon,
 } from "./icons";
 
+import { parseFavorites } from "../favorites";
 import { TOOL_IDS, TOOLS_BASE, type ToolId, type ToolsBase } from "../ids";
 
 export { TOOL_IDS, type ToolId };
@@ -51,15 +52,6 @@ function subscribe(onChange: () => void) {
   };
 }
 
-export function parseFavorites(raw: string): ToolId[] {
-  try {
-    const stored: unknown = JSON.parse(raw);
-    return Array.isArray(stored) ? TOOL_IDS.filter((id) => stored.includes(id)) : [];
-  } catch {
-    return [];
-  }
-}
-
 /**
  * `base` and `ids`: the public copy (/tools, T-145) links inside itself and leaves out the daily
  * challenge, whose progress needs a signed-in user.
@@ -73,12 +65,14 @@ export function ToolsHome({
 }) {
   const t = useTranslations("tools");
   // Server render and first paint have no favourites; the stored ones appear after hydration.
+  const shown = new Set(ids);
   const favorites = parseFavorites(useSyncExternalStore(subscribe, readRaw, () => "[]")).filter(
-    (id) => ids.includes(id),
+    (id) => shown.has(id),
   );
+  const favoriteSet = new Set(favorites);
 
   function toggle(id: ToolId) {
-    const next = favorites.includes(id) ? favorites.filter((x) => x !== id) : [...favorites, id];
+    const next = favoriteSet.has(id) ? favorites.filter((x) => x !== id) : [...favorites, id];
     try {
       localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
     } catch {
@@ -128,7 +122,7 @@ export function ToolsHome({
           </h2>
           <div className="flex flex-wrap gap-2.5">
             {ids
-              .filter((id) => favorites.includes(id))
+              .filter((id) => favoriteSet.has(id))
               .map((id) => (
                 <Link
                   key={id}
@@ -147,7 +141,7 @@ export function ToolsHome({
       <div className="grid gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
         {ids.map((id) => {
           const title = t(`tile.${id}.title`);
-          const favorite = favorites.includes(id);
+          const favorite = favoriteSet.has(id);
           return (
             <section
               key={id}

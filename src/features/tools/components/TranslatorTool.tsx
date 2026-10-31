@@ -18,14 +18,8 @@ import {
   type TranslatorLang,
 } from "../translator/phrases";
 import { ExternalIcon, LanguagesIcon, SwapIcon } from "./icons";
-import {
-  Footnote,
-  SectionHead,
-  ToolField,
-  ToolPanel,
-  toolButtonClass,
-  toolControlClass,
-} from "./parts";
+import { Footnote, SectionHead, ToolField, ToolPanel, toolControlClass } from "./parts";
+import { toolButtonClass } from "./tool-button";
 
 export function TranslatorTool() {
   const t = useTranslations("tools.translator");
