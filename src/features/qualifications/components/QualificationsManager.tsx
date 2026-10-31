@@ -55,10 +55,8 @@ export function QualificationsManager({
   evidence?: Record<string, string[]>;
 }) {
   const t = useTranslations("qualifications");
-  const tDocuments = useTranslations("documents");
   const tDomain = useTranslations("domain");
   const tRoot = useTranslations();
-  const locale = useLocale();
   const [editing, setEditing] = useState<Qualification | null>(null);
   const [typeId, setTypeId] = useState("");
   const [rawErrors, setErrors] = useState<FieldErrors>({});
@@ -158,9 +156,6 @@ export function QualificationsManager({
     disabled: pending,
   });
 
-  const expiryHint = (type: QualificationType | null) =>
-    type?.requiresExpiry ? t("expiryRequiredHint", { code: type.code }) : t("expiryOptionalHint");
-
   return (
     <div className="space-y-6">
       <Notice
@@ -170,103 +165,28 @@ export function QualificationsManager({
 
       <Panel title={editing ? t("editTitle", { code: editing.type.code }) : t("declareTitle")}>
         {editing ? (
-          <form key={editing.id} onSubmit={onEdit} noValidate className="space-y-4">
-            <p className="text-sm text-muted">
-              {t("reviewState", { name: editing.type.name })}{" "}
-              <StatusChip tone={VERIFICATION_TONE[editing.verificationStatus]}>
-                {tDomain(`verification.${editing.verificationStatus}`)}
-              </StatusChip>
-              {editing.verificationStatus !== "pending" && (
-                <span className="mt-1 block">{t("datesResetHint")}</span>
-              )}
-            </p>
-            <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
-              <Field id="issuedAt" label={t("issued")} error={errors.issuedAt}>
-                <input {...input("issuedAt")} type="date" defaultValue={editing.issuedAt ?? ""} />
-              </Field>
-              <Field
-                id="expiresAt"
-                label={t("expires")}
-                hint={expiryHint(editing.type)}
-                error={errors.expiresAt}
-              >
-                <input
-                  {...input("expiresAt", expiryHint(editing.type))}
-                  type="date"
-                  defaultValue={editing.expiresAt ?? ""}
-                />
-              </Field>
-              <Field id="status" label={t("held")} error={errors.status}>
-                <select {...input("status")} defaultValue={editing.status}>
-                  <option value="active">{t("active")}</option>
-                  <option value="withdrawn">{t("withdrawn")}</option>
-                </select>
-              </Field>
-              <div className="flex gap-2">
-                <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-                  {pending ? tRoot("common.saving") : tRoot("common.save")}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setEditing(null);
-                    setErrors({});
-                  }}
-                  disabled={pending}
-                >
-                  {tRoot("common.cancel")}
-                </Button>
-              </div>
-            </div>
-          </form>
+          <EditForm
+            editing={editing}
+            input={input}
+            errors={errors}
+            pending={pending}
+            onSubmit={onEdit}
+            onCancel={() => {
+              setEditing(null);
+              setErrors({});
+            }}
+          />
         ) : (
-          <form onSubmit={onAdd} noValidate className="space-y-4">
-            <p className="text-sm text-muted">
-              {t.rich("intro", { b: (chunks) => <strong className="text-ink">{chunks}</strong> })}
-            </p>
-            <div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
-              <Field
-                id="qualificationTypeId"
-                label={t("qualification")}
-                error={errors.qualificationTypeId}
-              >
-                <select
-                  {...input("qualificationTypeId")}
-                  value={typeId}
-                  onChange={(e) => setTypeId(e.target.value)}
-                >
-                  <option value="">{t("select")}</option>
-                  {QUALIFICATION_CATEGORIES.map((category) => {
-                    const items = available.filter((type) => type.category === category);
-                    if (items.length === 0) return null;
-                    return (
-                      <optgroup key={category} label={tDomain(`category.${category}`)}>
-                        {items.map((type) => (
-                          <option key={type.id} value={type.id}>
-                            {type.code} · {type.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })}
-                </select>
-              </Field>
-              <Field id="issuedAt" label={t("issued")} error={errors.issuedAt}>
-                <input {...input("issuedAt")} type="date" />
-              </Field>
-              <Field
-                id="expiresAt"
-                label={t("expires")}
-                hint={expiryHint(selectedType)}
-                error={errors.expiresAt}
-              >
-                <input {...input("expiresAt", expiryHint(selectedType))} type="date" />
-              </Field>
-              <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-                {pending ? tRoot("common.saving") : t("declare")}
-              </Button>
-            </div>
-            {available.length === 0 && <p className="text-sm text-muted">{t("allDeclared")}</p>}
-          </form>
+          <DeclareForm
+            available={available}
+            typeId={typeId}
+            onType={setTypeId}
+            selectedType={selectedType}
+            input={input}
+            errors={errors}
+            pending={pending}
+            onSubmit={onAdd}
+          />
         )}
         {errors.form && <p className="mt-2 text-sm font-medium text-danger">{errors.form}</p>}
       </Panel>
@@ -289,72 +209,24 @@ export function QualificationsManager({
             >
               <ul className="divide-y divide-line">
                 {items.map((q) => (
-                  <li
+                  <QualificationRow
                     key={q.id}
-                    className="grid gap-2 py-3 text-sm sm:grid-cols-[6rem_1fr_auto_auto_auto] sm:items-center sm:gap-3"
-                  >
-                    <span className="font-mono font-semibold">{q.type.code}</span>
-                    <span className="min-w-0 text-muted">
-                      {q.type.name}
-                      <span className="mt-0.5 block text-xs tabular-nums">
-                        {q.issuedAt
-                          ? `${t("issuedOn", { date: formatDate(locale, q.issuedAt) })} · `
-                          : ""}
-                        {q.expiresAt
-                          ? t("validUntil", { date: formatDate(locale, q.expiresAt) })
-                          : t("noExpiry")}
-                        {/* BR-12: same «expires soon» / «expired» chip as the wallet; held rows only. */}
-                        {(() => {
-                          const expiry = documentExpiryState(q.expiresAt, today);
-                          return q.status === "active" &&
-                            (expiry === "soon" || expiry === "expired") ? (
-                            <span className="ml-2">
-                              <StatusChip tone={EXPIRY_TONE[expiry]}>
-                                {tDocuments(`expiry.${expiry}`)}
-                              </StatusChip>
-                            </span>
-                          ) : null;
-                        })()}
-                      </span>
-                      {evidence && <EvidenceLine titles={evidence[q.id] ?? []} />}
-                      {q.verificationStatus === "rejected" && q.reviewNote && (
-                        <span className="mt-1 block text-xs text-danger">
-                          {t("reviewReason", { reason: q.reviewNote })}
-                        </span>
-                      )}
-                    </span>
-                    <StatusChip tone={q.status === "withdrawn" ? "neutral" : "info"}>
-                      {tDomain(`held.${q.status}`)}
-                    </StatusChip>
-                    <StatusChip tone={VERIFICATION_TONE[q.verificationStatus]}>
-                      {tDomain(`verification.${q.verificationStatus}`)}
-                    </StatusChip>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={pending}
-                        onClick={() => {
-                          setEditing(q);
-                          setErrors({});
-                          setNotice(null);
-                        }}
-                      >
-                        {tRoot("common.edit")}
-                      </Button>
-                      <ConfirmButton
-                        size="sm"
-                        disabled={pending}
-                        label={tRoot("common.remove")}
-                        confirmLabel={t("confirmRemove")}
-                        cancelLabel={tRoot("common.cancel")}
-                        onConfirm={() =>
-                          run(t("removed", { code: q.type.code }), () =>
-                            deleteQualificationAction(q.id),
-                          )
-                        }
-                      />
-                    </div>
-                  </li>
+                    q={q}
+                    today={today}
+                    evidence={evidence?.[q.id]}
+                    showEvidence={evidence !== undefined}
+                    pending={pending}
+                    onEdit={() => {
+                      setEditing(q);
+                      setErrors({});
+                      setNotice(null);
+                    }}
+                    onRemove={() =>
+                      run(t("removed", { code: q.type.code }), () =>
+                        deleteQualificationAction(q.id),
+                      )
+                    }
+                  />
                 ))}
               </ul>
             </Panel>
@@ -362,5 +234,230 @@ export function QualificationsManager({
         })
       )}
     </div>
+  );
+}
+
+type InputProps = (id: string, hint?: string) => Record<string, unknown>;
+type Errors = Record<string, string | undefined>;
+
+function useExpiryHint() {
+  const t = useTranslations("qualifications");
+  return (type: QualificationType | null) =>
+    type?.requiresExpiry ? t("expiryRequiredHint", { code: type.code }) : t("expiryOptionalHint");
+}
+
+/** Dates and «held» of a declared qualification; its review state is shown, never edited. */
+function EditForm({
+  editing,
+  input,
+  errors,
+  pending,
+  onSubmit,
+  onCancel,
+}: {
+  editing: Qualification;
+  input: InputProps;
+  errors: Errors;
+  pending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+}) {
+  const t = useTranslations("qualifications");
+  const tDomain = useTranslations("domain");
+  const tRoot = useTranslations();
+  const expiryHint = useExpiryHint();
+  const onEdit = onSubmit;
+  return (
+    <form key={editing.id} onSubmit={onEdit} noValidate className="space-y-4">
+      <p className="text-sm text-muted">
+        {t("reviewState", { name: editing.type.name })}{" "}
+        <StatusChip tone={VERIFICATION_TONE[editing.verificationStatus]}>
+          {tDomain(`verification.${editing.verificationStatus}`)}
+        </StatusChip>
+        {editing.verificationStatus !== "pending" && (
+          <span className="mt-1 block">{t("datesResetHint")}</span>
+        )}
+      </p>
+      <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+        <Field id="issuedAt" label={t("issued")} error={errors.issuedAt}>
+          <input {...input("issuedAt")} type="date" defaultValue={editing.issuedAt ?? ""} />
+        </Field>
+        <Field
+          id="expiresAt"
+          label={t("expires")}
+          hint={expiryHint(editing.type)}
+          error={errors.expiresAt}
+        >
+          <input
+            {...input("expiresAt", expiryHint(editing.type))}
+            type="date"
+            defaultValue={editing.expiresAt ?? ""}
+          />
+        </Field>
+        <Field id="status" label={t("held")} error={errors.status}>
+          <select {...input("status")} defaultValue={editing.status}>
+            <option value="active">{t("active")}</option>
+            <option value="withdrawn">{t("withdrawn")}</option>
+          </select>
+        </Field>
+        <div className="flex gap-2">
+          <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+            {pending ? tRoot("common.saving") : tRoot("common.save")}
+          </Button>
+          <Button onClick={onCancel} disabled={pending}>
+            {tRoot("common.cancel")}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+/** Declare a catalogue qualification not held yet (grouped by category). */
+function DeclareForm({
+  available,
+  typeId,
+  onType,
+  selectedType,
+  input,
+  errors,
+  pending,
+  onSubmit,
+}: {
+  available: QualificationType[];
+  typeId: string;
+  onType: (id: string) => void;
+  selectedType: QualificationType | null;
+  input: InputProps;
+  errors: Errors;
+  pending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const t = useTranslations("qualifications");
+  const tDomain = useTranslations("domain");
+  const tRoot = useTranslations();
+  const expiryHint = useExpiryHint();
+  const onAdd = onSubmit;
+  return (
+    <form onSubmit={onAdd} noValidate className="space-y-4">
+      <p className="text-sm text-muted">
+        {t.rich("intro", { b: (chunks) => <strong className="text-ink">{chunks}</strong> })}
+      </p>
+      <div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
+        <Field
+          id="qualificationTypeId"
+          label={t("qualification")}
+          error={errors.qualificationTypeId}
+        >
+          <select
+            {...input("qualificationTypeId")}
+            value={typeId}
+            onChange={(e) => onType(e.target.value)}
+          >
+            <option value="">{t("select")}</option>
+            {QUALIFICATION_CATEGORIES.map((category) => {
+              const items = available.filter((type) => type.category === category);
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={category} label={tDomain(`category.${category}`)}>
+                  {items.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.code} · {type.name}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+          </select>
+        </Field>
+        <Field id="issuedAt" label={t("issued")} error={errors.issuedAt}>
+          <input {...input("issuedAt")} type="date" />
+        </Field>
+        <Field
+          id="expiresAt"
+          label={t("expires")}
+          hint={expiryHint(selectedType)}
+          error={errors.expiresAt}
+        >
+          <input {...input("expiresAt", expiryHint(selectedType))} type="date" />
+        </Field>
+        <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+          {pending ? tRoot("common.saving") : t("declare")}
+        </Button>
+      </div>
+      {available.length === 0 && <p className="text-sm text-muted">{t("allDeclared")}</p>}
+    </form>
+  );
+}
+
+/** One declared qualification: dates, expiry chip, evidence, review note, states and actions. */
+function QualificationRow({
+  q,
+  today,
+  evidence,
+  showEvidence,
+  pending,
+  onEdit,
+  onRemove,
+}: {
+  q: Qualification;
+  today: string;
+  evidence: string[] | undefined;
+  /** The wallet is on: the evidence line shows, empty or not. */
+  showEvidence: boolean;
+  pending: boolean;
+  onEdit: () => void;
+  onRemove: () => void;
+}) {
+  const t = useTranslations("qualifications");
+  const tDocuments = useTranslations("documents");
+  const tDomain = useTranslations("domain");
+  const tRoot = useTranslations();
+  const locale = useLocale();
+  return (
+    <li className="grid gap-2 py-3 text-sm sm:grid-cols-[6rem_1fr_auto_auto_auto] sm:items-center sm:gap-3">
+      <span className="font-mono font-semibold">{q.type.code}</span>
+      <span className="min-w-0 text-muted">
+        {q.type.name}
+        <span className="mt-0.5 block text-xs tabular-nums">
+          {q.issuedAt ? `${t("issuedOn", { date: formatDate(locale, q.issuedAt) })} · ` : ""}
+          {q.expiresAt ? t("validUntil", { date: formatDate(locale, q.expiresAt) }) : t("noExpiry")}
+          {/* BR-12: same «expires soon» / «expired» chip as the wallet; held rows only. */}
+          {(() => {
+            const expiry = documentExpiryState(q.expiresAt, today);
+            return q.status === "active" && (expiry === "soon" || expiry === "expired") ? (
+              <span className="ml-2">
+                <StatusChip tone={EXPIRY_TONE[expiry]}>{tDocuments(`expiry.${expiry}`)}</StatusChip>
+              </span>
+            ) : null;
+          })()}
+        </span>
+        {showEvidence && <EvidenceLine titles={evidence ?? []} />}
+        {q.verificationStatus === "rejected" && q.reviewNote && (
+          <span className="mt-1 block text-xs text-danger">
+            {t("reviewReason", { reason: q.reviewNote })}
+          </span>
+        )}
+      </span>
+      <StatusChip tone={q.status === "withdrawn" ? "neutral" : "info"}>
+        {tDomain(`held.${q.status}`)}
+      </StatusChip>
+      <StatusChip tone={VERIFICATION_TONE[q.verificationStatus]}>
+        {tDomain(`verification.${q.verificationStatus}`)}
+      </StatusChip>
+      <div className="flex gap-2">
+        <Button size="sm" disabled={pending} onClick={onEdit}>
+          {tRoot("common.edit")}
+        </Button>
+        <ConfirmButton
+          size="sm"
+          disabled={pending}
+          label={tRoot("common.remove")}
+          confirmLabel={t("confirmRemove")}
+          cancelLabel={tRoot("common.cancel")}
+          onConfirm={onRemove}
+        />
+      </div>
+    </li>
   );
 }

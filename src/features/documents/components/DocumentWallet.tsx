@@ -8,7 +8,14 @@
 // impossible by construction.
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition, type FormEvent } from "react";
+import {
+  useRef,
+  useState,
+  useTransition,
+  type FormEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { controlClass, Field } from "@/components/ui/Field";
@@ -86,7 +93,6 @@ export function DocumentWallet({
 }) {
   const t = useTranslations("documents");
   const tRoot = useTranslations();
-  const locale = useLocale() as Locale;
   const router = useRouter();
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [rawErrors, setErrors] = useState<FieldErrors>({});
@@ -108,28 +114,17 @@ export function DocumentWallet({
 
   function onUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const file = form.get("file");
-    if (!(file instanceof File) || file.size === 0) {
-      setErrors({ file: "v.document.file.required" });
+    const read = readUpload(new FormData(event.currentTarget));
+    if ("error" in read) {
+      setErrors({ file: read.error });
       return;
     }
-    if (file.size > MAX_DOCUMENT_BYTES) {
-      setErrors({ file: "v.document.file.tooLarge" });
-      return;
-    }
-    const fields = {
-      file,
-      kind: String(form.get("kind") ?? ""),
-      title: String(form.get("title") ?? "").trim() || file.name,
-      expiresAt: String(form.get("expiresAt") ?? ""),
-      qualificationId: String(form.get("qualificationId") ?? ""),
-    };
+    const { fields } = read;
     // Same file + same metadata → same key, so a retry after a lost response replays (I-1).
     const key = idempotency.keyFor({
-      name: file.name,
-      size: file.size,
-      lastModified: file.lastModified,
+      name: fields.file.name,
+      size: fields.file.size,
+      lastModified: fields.file.lastModified,
       kind: fields.kind,
       title: fields.title,
       expiresAt: fields.expiresAt,
@@ -147,11 +142,7 @@ export function DocumentWallet({
         router.refresh();
         return;
       }
-      setErrors(
-        Object.fromEntries(
-          (result.error.issues ?? []).map((i) => [i.path.split(".")[0] ?? "form", i.message]),
-        ),
-      );
+      setErrors(issueErrors(result.error.issues));
       setNotice(
         result.error.code === "PAYLOAD_TOO_LARGE"
           ? { tone: "danger", text: tRoot("v.document.file.tooLarge"), requestId: result.requestId }
@@ -261,87 +252,14 @@ export function DocumentWallet({
       />
 
       {!trash && (
-        <Panel title={t("uploadTitle")}>
-          <p className="mb-4 text-sm text-muted">{t("uploadIntro")}</p>
-          <form
-            key={formKey}
-            onSubmit={onUpload}
-            noValidate
-            className="grid gap-4 md:grid-cols-2"
-            aria-busy={pending}
-          >
-            <Field id="file" label={t("file")} hint={t("fileHint")} error={errors.file}>
-              <input
-                id="file"
-                name="file"
-                type="file"
-                accept={ACCEPT}
-                required
-                disabled={pending}
-                aria-invalid={Boolean(errors.file)}
-                aria-describedby={describedBy("file", errors.file, t("fileHint"))}
-                className="block w-full text-sm file:mr-3 file:min-h-10 pointer-coarse:file:min-h-11 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:font-semibold"
-              />
-            </Field>
-            <Field id="kind" label={t("kindLabel")} error={errors.kind}>
-              <select
-                id="kind"
-                name="kind"
-                className={controlClass}
-                defaultValue="license"
-                disabled={pending}
-              >
-                {kindOptions}
-              </select>
-            </Field>
-            <Field id="title" label={t("titleLabel")} hint={t("titleHint")} error={errors.title}>
-              <input
-                id="title"
-                name="title"
-                className={controlClass}
-                maxLength={180}
-                disabled={pending}
-                aria-describedby={describedBy("title", errors.title, t("titleHint"))}
-              />
-            </Field>
-            <Field id="expiresAt" label={t("expiresLabel")} error={errors.expiresAt}>
-              <input
-                id="expiresAt"
-                name="expiresAt"
-                type="date"
-                className={controlClass}
-                disabled={pending}
-              />
-            </Field>
-            <Field
-              id="qualificationId"
-              label={t("qualificationLabel")}
-              hint={t("qualificationHint")}
-              error={errors.qualificationId}
-            >
-              <select
-                id="qualificationId"
-                name="qualificationId"
-                className={controlClass}
-                defaultValue=""
-                disabled={pending}
-                aria-describedby={describedBy(
-                  "qualificationId",
-                  errors.qualificationId,
-                  t("qualificationHint"),
-                )}
-              >
-                {qualificationOptions}
-              </select>
-            </Field>
-            <div className="flex items-end">
-              <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
-                {pending ? tRoot("common.saving") : t("upload")}
-              </Button>
-            </div>
-          </form>
-          {errors.form && <p className="mt-2 text-sm font-medium text-danger">{errors.form}</p>}
-        </Panel>
+        <UploadPanel
+          formKey={formKey}
+          errors={errors}
+          pending={pending}
+          onSubmit={onUpload}
+          kindOptions={kindOptions}
+          qualificationOptions={qualificationOptions}
+        />
       )}
 
       <Panel
@@ -352,34 +270,10 @@ export function DocumentWallet({
           </ButtonLink>
         }
       >
-        <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label={t("filterLabel")}>
-          {WALLET_FILTERS.map((f) => (
-            <button
-              key={f}
-              type="button"
-              aria-pressed={filter === f}
-              onClick={() => setFilter(f)}
-              className="min-h-9 rounded-full border border-line bg-white px-3 text-sm font-semibold text-ink pointer-coarse:min-h-11 hover:border-navy aria-[pressed=true]:border-navy aria-[pressed=true]:bg-navy aria-[pressed=true]:text-white"
-            >
-              {t(`filter.${f}`)}
-            </button>
-          ))}
-        </div>
-        {/* A function older than N-19 sends no retention: then the trash (always empty) says nothing of it. */}
-        {(!trash || Number.isInteger(trashRetentionDays)) && (
-          <p className="mb-4 rounded-lg border border-info-bg bg-info-bg p-3 text-sm text-ink">
-            {trash ? t("trashNote", { days: trashRetentionDays }) : t("sharingNote")}
-          </p>
-        )}
-        {list.total > list.inView && (
-          <p className="mb-2 text-sm text-muted">
-            {t("truncated", { shown: list.inView, total: list.total })}
-          </p>
-        )}
+        <WalletFilters value={filter} onChange={setFilter} />
+        <ListNotes trash={trash} trashRetentionDays={trashRetentionDays} list={list} />
         {list.shown.length === 0 ? (
-          <p className="text-sm text-muted">
-            {list.inView > 0 ? t("emptyFiltered") : trash ? t("emptyTrash") : t("empty")}
-          </p>
+          <p className="text-sm text-muted">{t(emptyKey(list.inView > 0, trash))}</p>
         ) : (
           <ul className="divide-y divide-line">
             {list.shown.map((d) => {
@@ -387,164 +281,51 @@ export function DocumentWallet({
               return (
                 <li key={d.id} className="py-4">
                   {editing === d.id ? (
-                    <form
+                    <DocumentEditForm
+                      document={d}
+                      errors={errors}
+                      pending={pending}
                       onSubmit={(e) => onSave(d, e)}
-                      noValidate
-                      className="grid gap-3 md:grid-cols-2"
-                    >
-                      <Field id={`title-${d.id}`} label={t("titleLabel")} error={errors.title}>
-                        <input
-                          id={`title-${d.id}`}
-                          name="title"
-                          className={controlClass}
-                          defaultValue={d.title}
-                          maxLength={180}
-                        />
-                      </Field>
-                      <Field id={`kind-${d.id}`} label={t("kindLabel")}>
-                        <select
-                          id={`kind-${d.id}`}
-                          name="kind"
-                          className={controlClass}
-                          defaultValue={d.kind}
-                        >
-                          {kindOptions}
-                        </select>
-                      </Field>
-                      <Field
-                        id={`expires-${d.id}`}
-                        label={t("expiresLabel")}
-                        error={errors.expiresAt}
-                      >
-                        <input
-                          id={`expires-${d.id}`}
-                          name="expiresAt"
-                          type="date"
-                          className={controlClass}
-                          defaultValue={d.expiresAt ?? ""}
-                        />
-                      </Field>
-                      <Field
-                        id={`qual-${d.id}`}
-                        label={t("qualificationLabel")}
-                        error={errors.qualificationId}
-                      >
-                        <select
-                          id={`qual-${d.id}`}
-                          name="qualificationId"
-                          className={controlClass}
-                          defaultValue={d.qualificationId ?? ""}
-                        >
-                          {qualificationOptions}
-                        </select>
-                      </Field>
-                      <div className="flex gap-2 md:col-span-2">
-                        <Button type="submit" variant="primary" disabled={pending}>
-                          {tRoot("common.save")}
-                        </Button>
-                        <Button
-                          disabled={pending}
-                          onClick={() => {
-                            setEditing(null);
-                            setErrors({});
-                          }}
-                        >
-                          {tRoot("common.cancel")}
-                        </Button>
-                      </div>
-                    </form>
+                      onCancel={() => {
+                        setEditing(null);
+                        setErrors({});
+                      }}
+                      kindOptions={kindOptions}
+                      qualificationOptions={qualificationOptions}
+                    />
                   ) : (
                     <div className="grid gap-3 sm:flex sm:items-start sm:justify-between">
-                      <div className="min-w-0 space-y-1.5">
-                        <p className="font-semibold [overflow-wrap:anywhere]">{d.title}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          <StatusChip tone="info">{t(`kind.${d.kind as DocumentKind}`)}</StatusChip>
-                          <StatusChip tone="neutral">{t(`scan.${d.scanStatus}`)}</StatusChip>
-                          {expiry !== "none" && (
-                            <StatusChip tone={EXPIRY_TONE[expiry]}>
-                              {t(`expiry.${expiry}`)}
-                            </StatusChip>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted">
-                          {t(
-                            `mime.${d.mimeType === "application/pdf" ? "pdf" : d.mimeType === "image/png" ? "png" : "jpeg"}`,
-                          )}{" "}
-                          · {formatBytes(locale, d.sizeBytes)}
-                          {d.expiresAt && (
-                            <> · {t("expiresOn", { date: formatDate(locale, d.expiresAt) })}</>
-                          )}
-                          {d.qualificationId && (
-                            <>
-                              {" "}
-                              ·{" "}
-                              {t("linkedTo", {
-                                qualification: qualificationLabel.get(d.qualificationId) ?? "—",
-                              })}
-                            </>
-                          )}
-                        </p>
-                        {d.archivedAt && (
-                          <p className="text-xs text-muted">
-                            {t("archivedOn", { date: formatDate(locale, d.archivedAt) })} ·{" "}
-                            {t("purgeFrom", {
-                              date: formatDate(
-                                locale,
-                                trashPurgeDate(d.archivedAt, trashRetentionDays),
-                              ),
-                            })}
-                          </p>
-                        )}
-                      </div>
+                      <DocumentSummary
+                        document={d}
+                        expiry={expiry}
+                        qualification={
+                          d.qualificationId
+                            ? (qualificationLabel.get(d.qualificationId) ?? "—")
+                            : null
+                        }
+                        trashRetentionDays={trashRetentionDays}
+                      />
                       {trash ? (
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            disabled={pending}
-                            aria-label={t("restoreNamed", { title: d.title })}
-                            onClick={() => onArchive(d.id, false)}
-                          >
-                            {t("restore")}
-                          </Button>
-                          <ConfirmButton
-                            size="sm"
-                            disabled={pending}
-                            label={t("deleteForever")}
-                            confirmLabel={t("confirmDelete")}
-                            cancelLabel={tRoot("common.cancel")}
-                            onConfirm={() => onDelete(d.id)}
-                          />
-                        </div>
+                        <TrashActions
+                          document={d}
+                          pending={pending}
+                          onRestore={() => onArchive(d.id, false)}
+                          onDelete={() => onDelete(d.id)}
+                        />
                       ) : (
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            onClick={(event) => {
-                              viewTrigger.current = event.currentTarget;
-                              onView(d);
-                            }}
-                          >
-                            {t("open")}
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={pending}
-                            onClick={() => {
-                              setEditing(d.id);
-                              setErrors({});
-                            }}
-                          >
-                            {tRoot("common.edit")}
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={pending}
-                            aria-label={t("archiveNamed", { title: d.title })}
-                            onClick={() => onArchive(d.id, true)}
-                          >
-                            {t("archive")}
-                          </Button>
-                        </div>
+                        <WalletActions
+                          document={d}
+                          pending={pending}
+                          onOpen={(event) => {
+                            viewTrigger.current = event.currentTarget;
+                            onView(d);
+                          }}
+                          onEdit={() => {
+                            setEditing(d.id);
+                            setErrors({});
+                          }}
+                          onArchive={() => onArchive(d.id, true)}
+                        />
                       )}
                     </div>
                   )}
@@ -567,5 +348,379 @@ export function DocumentWallet({
         />
       )}
     </div>
+  );
+}
+
+type Errors = Record<string, string | undefined>;
+
+const mimeKey = (mime: string) =>
+  mime === "application/pdf" ? "pdf" : mime === "image/png" ? "png" : "jpeg";
+
+/** Upload a file with its kind, title, expiry and linked qualification. */
+function UploadPanel({
+  formKey,
+  errors,
+  pending,
+  onSubmit,
+  kindOptions,
+  qualificationOptions,
+}: {
+  /** Bumped after an upload: a fresh, empty form. */
+  formKey: number;
+  errors: Errors;
+  pending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  kindOptions: ReactNode;
+  qualificationOptions: ReactNode;
+}) {
+  const t = useTranslations("documents");
+  const tRoot = useTranslations();
+  const onUpload = onSubmit;
+  return (
+    <Panel title={t("uploadTitle")}>
+      <p className="mb-4 text-sm text-muted">{t("uploadIntro")}</p>
+      <form
+        key={formKey}
+        onSubmit={onUpload}
+        noValidate
+        className="grid gap-4 md:grid-cols-2"
+        aria-busy={pending}
+      >
+        <Field id="file" label={t("file")} hint={t("fileHint")} error={errors.file}>
+          <input
+            id="file"
+            name="file"
+            type="file"
+            accept={ACCEPT}
+            required
+            disabled={pending}
+            aria-invalid={Boolean(errors.file)}
+            aria-describedby={describedBy("file", errors.file, t("fileHint"))}
+            className="block w-full text-sm file:mr-3 file:min-h-10 pointer-coarse:file:min-h-11 file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:font-semibold"
+          />
+        </Field>
+        <Field id="kind" label={t("kindLabel")} error={errors.kind}>
+          <select
+            id="kind"
+            name="kind"
+            className={controlClass}
+            defaultValue="license"
+            disabled={pending}
+          >
+            {kindOptions}
+          </select>
+        </Field>
+        <Field id="title" label={t("titleLabel")} hint={t("titleHint")} error={errors.title}>
+          <input
+            id="title"
+            name="title"
+            className={controlClass}
+            maxLength={180}
+            disabled={pending}
+            aria-describedby={describedBy("title", errors.title, t("titleHint"))}
+          />
+        </Field>
+        <Field id="expiresAt" label={t("expiresLabel")} error={errors.expiresAt}>
+          <input
+            id="expiresAt"
+            name="expiresAt"
+            type="date"
+            className={controlClass}
+            disabled={pending}
+          />
+        </Field>
+        <Field
+          id="qualificationId"
+          label={t("qualificationLabel")}
+          hint={t("qualificationHint")}
+          error={errors.qualificationId}
+        >
+          <select
+            id="qualificationId"
+            name="qualificationId"
+            className={controlClass}
+            defaultValue=""
+            disabled={pending}
+            aria-describedby={describedBy(
+              "qualificationId",
+              errors.qualificationId,
+              t("qualificationHint"),
+            )}
+          >
+            {qualificationOptions}
+          </select>
+        </Field>
+        <div className="flex items-end">
+          <Button type="submit" variant="primary" disabled={pending} aria-busy={pending}>
+            {pending ? tRoot("common.saving") : t("upload")}
+          </Button>
+        </div>
+      </form>
+      {errors.form && <p className="mt-2 text-sm font-medium text-danger">{errors.form}</p>}
+    </Panel>
+  );
+}
+
+/** A document's title, kind, expiry and linked qualification, edited in place. */
+function DocumentEditForm({
+  document: d,
+  errors,
+  pending,
+  onSubmit,
+  onCancel,
+  kindOptions,
+  qualificationOptions,
+}: {
+  document: ProfessionalDocument;
+  errors: Errors;
+  pending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
+  kindOptions: ReactNode;
+  qualificationOptions: ReactNode;
+}) {
+  const t = useTranslations("documents");
+  const tRoot = useTranslations();
+  return (
+    <form onSubmit={onSubmit} noValidate className="grid gap-3 md:grid-cols-2">
+      <Field id={`title-${d.id}`} label={t("titleLabel")} error={errors.title}>
+        <input
+          id={`title-${d.id}`}
+          name="title"
+          className={controlClass}
+          defaultValue={d.title}
+          maxLength={180}
+        />
+      </Field>
+      <Field id={`kind-${d.id}`} label={t("kindLabel")}>
+        <select id={`kind-${d.id}`} name="kind" className={controlClass} defaultValue={d.kind}>
+          {kindOptions}
+        </select>
+      </Field>
+      <Field id={`expires-${d.id}`} label={t("expiresLabel")} error={errors.expiresAt}>
+        <input
+          id={`expires-${d.id}`}
+          name="expiresAt"
+          type="date"
+          className={controlClass}
+          defaultValue={d.expiresAt ?? ""}
+        />
+      </Field>
+      <Field id={`qual-${d.id}`} label={t("qualificationLabel")} error={errors.qualificationId}>
+        <select
+          id={`qual-${d.id}`}
+          name="qualificationId"
+          className={controlClass}
+          defaultValue={d.qualificationId ?? ""}
+        >
+          {qualificationOptions}
+        </select>
+      </Field>
+      <div className="flex gap-2 md:col-span-2">
+        <Button type="submit" variant="primary" disabled={pending}>
+          {tRoot("common.save")}
+        </Button>
+        <Button disabled={pending} onClick={onCancel}>
+          {tRoot("common.cancel")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** Title, chips (kind, scan, expiry), type, size, expiry, linked qualification and the trash dates. */
+function DocumentSummary({
+  document: d,
+  expiry,
+  qualification,
+  trashRetentionDays,
+}: {
+  document: ProfessionalDocument;
+  expiry: ReturnType<typeof documentExpiryState>;
+  /** The linked qualification's label («—» when it is gone), or null when none is linked. */
+  qualification: string | null;
+  trashRetentionDays: number;
+}) {
+  const t = useTranslations("documents");
+  const locale = useLocale() as Locale;
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <p className="font-semibold [overflow-wrap:anywhere]">{d.title}</p>
+      <div className="flex flex-wrap gap-1.5">
+        <StatusChip tone="info">{t(`kind.${d.kind as DocumentKind}`)}</StatusChip>
+        <StatusChip tone="neutral">{t(`scan.${d.scanStatus}`)}</StatusChip>
+        {expiry !== "none" && (
+          <StatusChip tone={EXPIRY_TONE[expiry]}>{t(`expiry.${expiry}`)}</StatusChip>
+        )}
+      </div>
+      <p className="text-xs text-muted">
+        {t(`mime.${mimeKey(d.mimeType)}`)} · {formatBytes(locale, d.sizeBytes)}
+        {d.expiresAt && <> · {t("expiresOn", { date: formatDate(locale, d.expiresAt) })}</>}
+        {qualification !== null && <> · {t("linkedTo", { qualification })}</>}
+      </p>
+      {d.archivedAt && (
+        <p className="text-xs text-muted">
+          {t("archivedOn", { date: formatDate(locale, d.archivedAt) })} ·{" "}
+          {t("purgeFrom", {
+            date: formatDate(locale, trashPurgeDate(d.archivedAt, trashRetentionDays)),
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function TrashActions({
+  document: d,
+  pending,
+  onRestore,
+  onDelete,
+}: {
+  document: ProfessionalDocument;
+  pending: boolean;
+  onRestore: () => void;
+  onDelete: () => void;
+}) {
+  const t = useTranslations("documents");
+  const tRoot = useTranslations();
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        size="sm"
+        disabled={pending}
+        aria-label={t("restoreNamed", { title: d.title })}
+        onClick={onRestore}
+      >
+        {t("restore")}
+      </Button>
+      <ConfirmButton
+        size="sm"
+        disabled={pending}
+        label={t("deleteForever")}
+        confirmLabel={t("confirmDelete")}
+        cancelLabel={tRoot("common.cancel")}
+        onConfirm={onDelete}
+      />
+    </div>
+  );
+}
+
+function WalletActions({
+  document: d,
+  pending,
+  onOpen,
+  onEdit,
+  onArchive,
+}: {
+  document: ProfessionalDocument;
+  pending: boolean;
+  onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
+  onEdit: () => void;
+  onArchive: () => void;
+}) {
+  const t = useTranslations("documents");
+  const tRoot = useTranslations();
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" onClick={onOpen}>
+        {t("open")}
+      </Button>
+      <Button size="sm" disabled={pending} onClick={onEdit}>
+        {tRoot("common.edit")}
+      </Button>
+      <Button
+        size="sm"
+        disabled={pending}
+        aria-label={t("archiveNamed", { title: d.title })}
+        onClick={onArchive}
+      >
+        {t("archive")}
+      </Button>
+    </div>
+  );
+}
+
+/** The upload form's fields, or the file error (missing, empty or over the size limit). */
+interface UploadFields {
+  file: File;
+  kind: string;
+  title: string;
+  expiresAt: string;
+  qualificationId: string;
+}
+
+/** The upload form's fields, or the file error that stops it before the request. */
+function readUpload(form: FormData): { error: string } | { fields: UploadFields } {
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "v.document.file.required" };
+  if (file.size > MAX_DOCUMENT_BYTES) return { error: "v.document.file.tooLarge" };
+  return {
+    fields: {
+      file,
+      kind: String(form.get("kind") ?? ""),
+      title: String(form.get("title") ?? "").trim() || file.name,
+      expiresAt: String(form.get("expiresAt") ?? ""),
+      qualificationId: String(form.get("qualificationId") ?? ""),
+    },
+  };
+}
+
+/** The function's validation issues as field errors (first path segment, else the form). */
+const issueErrors = (issues: { path: string; message: string }[] | undefined): FieldErrors =>
+  Object.fromEntries((issues ?? []).map((i) => [i.path.split(".")[0] ?? "form", i.message]));
+
+const emptyKey = (filtered: boolean, trash: boolean) =>
+  filtered ? "emptyFiltered" : trash ? "emptyTrash" : "empty";
+
+function WalletFilters({
+  value,
+  onChange,
+}: {
+  value: WalletFilter;
+  onChange: (filter: WalletFilter) => void;
+}) {
+  const t = useTranslations("documents");
+  return (
+    <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label={t("filterLabel")}>
+      {WALLET_FILTERS.map((f) => (
+        <button
+          key={f}
+          type="button"
+          aria-pressed={value === f}
+          onClick={() => onChange(f)}
+          className="min-h-9 rounded-full border border-line bg-white px-3 text-sm font-semibold text-ink pointer-coarse:min-h-11 hover:border-navy aria-[pressed=true]:border-navy aria-[pressed=true]:bg-navy aria-[pressed=true]:text-white"
+        >
+          {t(`filter.${f}`)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The sharing (or retention) note and «showing {n} of {total}» when the list was cut. */
+function ListNotes({
+  trash,
+  trashRetentionDays,
+  list,
+}: {
+  trash: boolean;
+  trashRetentionDays: number;
+  list: { total: number; inView: number };
+}) {
+  const t = useTranslations("documents");
+  return (
+    <>
+      {/* A function older than N-19 sends no retention: then the trash (always empty) says nothing of it. */}
+      {(!trash || Number.isInteger(trashRetentionDays)) && (
+        <p className="mb-4 rounded-lg border border-info-bg bg-info-bg p-3 text-sm text-ink">
+          {trash ? t("trashNote", { days: trashRetentionDays }) : t("sharingNote")}
+        </p>
+      )}
+      {list.total > list.inView && (
+        <p className="mb-2 text-sm text-muted">
+          {t("truncated", { shown: list.inView, total: list.total })}
+        </p>
+      )}
+    </>
   );
 }
